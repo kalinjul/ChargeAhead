@@ -1,0 +1,24 @@
+/* User-visible text, see AGENTS.md ("Language") — never a literal in code.
+   Matches androidApp/src/main/res/values/strings.xml in content, so both
+   car platforms show the same wording. */
+
+"app_name" = "Ladesäulen-Assistent";
+
+/* CarPlay */
+"car_list_title" = "Ladestopps";
+
+/* States — derived from ChargeStopsState by ChargeStopsViewModel.statusKey.
+   The same keys serve both CarPlay and the phone UI, so both say the same thing. */
+"status_waiting_for_location" = "Standort wird ermittelt …";
+"status_loading" = "Ladesäulen werden gesucht …";
+"status_no_stops" = "Keine Ladesäule in Fahrtrichtung gefunden.";
+"status_location_unavailable" = "Kein Standort. Ortung einschalten und Freigabe prüfen.";
+"status_sites_unavailable" = "Ladesäulendaten sind derzeit nicht erreichbar.";
+"status_demo" = "Demodaten — kein OpenChargeMap-Schlüssel hinterlegt.";
+
+/* Phone UI */
+"phone_hint_car_ui" = "Die eigentliche Bedienung findet während der Fahrt in CarPlay statt. Diese Ansicht dient nur zur Kontrolle am Telefon.";
+"phone_platform_label" = "Plattform";
+"phone_stops_heading" = "Ladestopps voraus";
+"phone_action_refresh" = "Aktualisieren";
+"phone_demo_notice" = "Kein OpenChargeMap-Schlüssel hinterlegt — die Liste zeigt erfundene Demodaten. Schlüssel als OPEN_CHARGE_MAP_API_KEY in eine .xcconfig eintragen (siehe iosApp/README.md).";

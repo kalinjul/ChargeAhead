@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Apple has to approve this entitlement for the app ID BEFORE
+	     anything can even be built (see ARCHITECTURE.md section 1.4
+	     and AGENTS.md, rules for the car UI / CarPlay). Without approval,
+	     signing and the build fail with a provisioning error, even if the
+	     entry is present here locally. The application is the
+	     longest-running item in the project and was filed in parallel
+	     with M0 (see ARCHITECTURE.md section 9, "to be started in
+	     parallel and immediately"). -->
+	<key>com.apple.developer.carplay-charging</key>
+	<true/>
+</dict>
+</plist>

@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>de</string>
+	<key>CFBundleDisplayName</key>
+	<string>Ladesäulen-Assistent</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.1</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- Actually requested from M1 on: the corridor search (ARCHITECTURE.md 5.3)
+	     requires position and heading. Without this text, iOS rejects the
+	     request without even prompting. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Der Ladesäulen-Assistent braucht deinen Standort, um erreichbare Ladestopps in Fahrtrichtung anzuzeigen.</string>
+
+	<!-- The OpenChargeMap key does not belong in the repository
+	     (ARCHITECTURE.md section 6). The value comes from the build setting
+	     OPEN_CHARGE_MAP_API_KEY, set in a non-checked-in .xcconfig
+	     (see iosApp/README.md). If it stays empty, the shared module
+	     returns demo data and labels it as such in the UI. -->
+	<key>OpenChargeMapApiKey</key>
+	<string>$(OPEN_CHARGE_MAP_API_KEY)</string>
+
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UIRequiredDeviceCapabilities</key>
+	<array>
+		<string>armv7</string>
+	</array>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+
+	<!-- Two scene roles: phone UI (SwiftUI) and CarPlay template UI.
+	     See AppDelegate.swift, which distinguishes between the two
+	     configurations based on the role. -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Phone Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>AutoApp.PhoneSceneDelegate</string>
+				</dict>
+			</array>
+			<key>CPTemplateApplicationSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>CarPlay Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>AutoApp.CarPlaySceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
+</dict>
+</plist>

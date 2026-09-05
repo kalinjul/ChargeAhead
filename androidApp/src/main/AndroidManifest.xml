@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- No network, no charging stations: the OpenChargeMap query runs over HTTPS. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Requested at runtime from M1 on (ChargeStopsScreen / MainActivity).
+         Both levels, because coarse location is entirely sufficient for a
+         150 km-radius corridor, and some users won't grant the fine one. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- Charge level from the vehicle (from M2 on). Purely opportunistic: in
+         projection, very few head units supply this data, and without it the
+         driver's manually entered value applies. The app works fully without
+         this permission. -->
+    <uses-permission android:name="com.google.android.gms.permission.CAR_FUEL" />
+
+    <!-- Since Android 11, an app only sees other apps if it declares them
+         here. Without this block, every navigation app is invisible, and the
+         hand-off fails with ActivityNotFoundException — even if Google Maps
+         is installed. Verified on the emulator:
+         "AppsFilter: de.autoapp.android -> com.google.android.apps.maps BLOCKED". -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.AutoApp">
+
+        <meta-data
+            android:name="com.google.android.gms.car.application"
+            android:resource="@xml/automotive_app_desc" />
+
+        <!-- Must sit directly under <application>: androidx.car.app.AppInfo reads this
+             value via PackageManager.getApplicationInfo(), which only sees meta-data at
+             the application level. Declared inside <service> instead, the host doesn't
+             find it and CarAppBinder.getAppInfo() throws "Min API level not declared in
+             manifest". -->
+        <meta-data
+            android:name="androidx.car.app.minCarApiLevel"
+            android:value="1" />
+
+        <activity
+            android:name=".phone.MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.AutoApp">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".car.ChargeCarAppService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.car.app.CarAppService" />
+                <category android:name="androidx.car.app.category.POI" />
+            </intent-filter>
+        </service>
+
+    </application>
+</manifest>

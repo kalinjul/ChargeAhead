@@ -1,0 +1,9 @@
+-- From schema version 1 to 2: postal address per site (M4, detail view).
+--
+-- As a migration rather than a fresh table, even though the local store is
+-- only a cache: dropping it on update would mean the first drive after
+-- every app update has no list without a network. That's exactly what it
+-- exists to prevent.
+ALTER TABLE chargeSite ADD COLUMN street TEXT;
+ALTER TABLE chargeSite ADD COLUMN postalCode TEXT;
+ALTER TABLE chargeSite ADD COLUMN town TEXT;

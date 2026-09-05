@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ladesäulen-Assistent</string>
+
+    <!-- Android Auto -->
+    <string name="car_list_title">Ladestopps</string>
+    <string name="car_title_suffix_demo">%1$s · Demodaten</string>
+    <string name="car_title_suffix_stale">%1$s · nicht aktuell</string>
+    <string name="car_row_reachable">Erreichbar</string>
+    <string name="car_row_marginal">Knapp erreichbar</string>
+    <string name="car_row_unreachable">Nicht erreichbar</string>
+
+    <string name="car_permission_message">Für Ladesäulen voraus wird der Standort gebraucht. Die Freigabe erfolgt am Telefon.</string>
+    <string name="car_permission_action">Standort freigeben</string>
+    <string name="car_waiting_for_location">Standort wird ermittelt …</string>
+    <string name="car_loading">Ladesäulen werden gesucht …</string>
+    <string name="car_no_stops">Keine Ladesäule in Fahrtrichtung gefunden.</string>
+    <string name="car_location_unavailable">Kein Standort. Ortung am Telefon einschalten und Freigabe prüfen.</string>
+    <string name="car_sites_unavailable">Ladesäulendaten sind derzeit nicht erreichbar.</string>
+
+    <string name="car_soc_title">Ladestand eintragen</string>
+    <string name="car_soc_current">Aktuell: %1$s %%</string>
+    <string name="car_soc_unset">Noch nicht eingetragen</string>
+    <string name="car_soc_percent">%1$d %%</string>
+
+    <string name="car_destination_title">Ziel wählen</string>
+    <string name="car_destination_none">Kein Ziel — es wird in Fahrtrichtung gesucht</string>
+    <string name="car_destination_clear">Ziel löschen</string>
+    <string name="car_destination_empty">Noch keine Ziele. Das erste wird am Telefon eingegeben.</string>
+    <string name="car_title_suffix_route">%1$s · %2$s</string>
+    <string name="car_route_unavailable">Keine Route — Suche in Fahrtrichtung</string>
+
+    <string name="car_detail_navigate">Navigation starten</string>
+    <string name="car_detail_no_navigation">Keine Navigations-App gefunden</string>
+    <string name="car_detail_connectors">Anschlüsse</string>
+    <string name="car_detail_source">Quelle</string>
+    <string name="car_detail_unknown_connectors">Anschlüsse unbekannt</string>
+
+    <string name="car_soc_carhardware_ask">Fahrzeugdaten freigeben</string>
+    <string name="car_soc_carhardware_asking">Freigabe am Telefon bestätigen</string>
+    <string name="car_soc_carhardware_available">Ladestand kommt aus dem Fahrzeug: %1$s</string>
+    <string name="car_soc_carhardware_none">Fahrzeug liefert keinen Ladestand</string>
+
+    <!-- Phone UI -->
+    <string name="phone_hint_car_ui">Die eigentliche Bedienung findet während der Fahrt in Android Auto statt. Diese Ansicht dient nur zur Kontrolle am Telefon.</string>
+    <string name="phone_platform_label">Plattform</string>
+    <string name="phone_stops_heading">Ladestopps voraus</string>
+    <string name="phone_action_refresh">Aktualisieren</string>
+    <string name="phone_permission_message">Ohne Standortfreigabe kann nicht gesucht werden, was voraus liegt.</string>
+    <string name="phone_permission_action">Standort freigeben</string>
+    <string name="phone_demo_notice">Kein OpenChargeMap-Schlüssel hinterlegt — die Liste zeigt erfundene Demodaten. Schlüssel als openChargeMapApiKey in local.properties eintragen.</string>
+    <string name="phone_status_waiting">Standort wird ermittelt …</string>
+    <string name="phone_status_loading">Ladesäulen werden gesucht …</string>
+    <string name="phone_status_no_stops">Keine Ladesäule in Fahrtrichtung gefunden.</string>
+    <string name="phone_status_location_unavailable">Kein Standort. Ortung einschalten und Freigabe prüfen.</string>
+    <string name="phone_status_sites_unavailable">Ladesäulendaten sind derzeit nicht erreichbar.</string>
+    <string name="phone_status_stale">Liste ist nicht aktuell.</string>
+
+    <!-- Settings -->
+    <string name="phone_action_settings">Fahrzeug</string>
+    <string name="phone_action_close">Fertig</string>
+    <string name="phone_settings_title">Fahrzeug und Ladestand</string>
+    <string name="phone_settings_intro">Beide Werte stehen im Datenblatt. Wichtig ist die <b>nutzbare</b> Kapazität, nicht die Bruttokapazität — sie ist meist einige Kilowattstunden kleiner.</string>
+    <string name="phone_field_name">Bezeichnung (frei wählbar)</string>
+    <string name="phone_field_battery">Nutzbare Kapazität in kWh</string>
+    <string name="phone_field_consumption">Verbrauch in kWh je 100 km</string>
+    <string name="phone_field_soc">Ladestand in Prozent</string>
+    <string name="phone_connectors_heading">Steckertypen, die das Fahrzeug annimmt</string>
+    <string name="phone_connectors_hint">Nichts ausgewählt heißt: nicht filtern.</string>
+    <string name="phone_error_positive_number">Bitte eine Zahl größer als null eintragen.</string>
+    <string name="phone_error_percent">Bitte einen Wert zwischen 0 und 100 eintragen.</string>
+    <string name="phone_settings_missing">Ohne Fahrzeug und Ladestand wird die Erreichbarkeit nicht berechnet — die Liste zeigt dann nur Entfernungen.</string>
+    <string name="phone_action_delete_vehicle">Fahrzeug löschen</string>
+    <string name="phone_soc_source_car">Ladestand kommt aus dem Fahrzeug</string>
+
+    <!-- Destination -->
+    <string name="phone_action_destination">Ziel</string>
+    <string name="phone_destination_title">Fahrtziel</string>
+    <string name="phone_destination_intro">Mit einem Ziel wird entlang der Strecke gesucht statt nur in Fahrtrichtung. Ohne Ziel bleibt es beim Suchbereich voraus.</string>
+    <string name="phone_destination_hint">Das Ziel muss zusätzlich im Navigationsprogramm eingegeben werden — die laufende Route von Google Maps ist für andere Apps nicht lesbar.</string>
+    <string name="phone_destination_field">Ort, Adresse oder Name</string>
+    <string name="phone_destination_search">Suchen</string>
+    <string name="phone_destination_searching">Wird gesucht …</string>
+    <string name="phone_destination_no_hits">Nichts gefunden. Andere Schreibweise versuchen.</string>
+    <string name="phone_destination_failed">Die Zielsuche ist nicht erreichbar.</string>
+    <string name="phone_destination_current">Aktuelles Ziel</string>
+    <string name="phone_destination_recent">Zuletzt benutzt</string>
+    <string name="phone_destination_clear">Ziel löschen</string>
+    <string name="phone_destination_none">Kein Ziel gesetzt</string>
+    <string name="phone_route_active">Entlang der Strecke nach %1$s</string>
+    <string name="phone_route_calculating">Route wird berechnet …</string>
+    <string name="phone_route_unavailable">Keine Route nach %1$s — es wird in Fahrtrichtung gesucht.</string>
+    <string name="phone_detail_connectors">Anschlüsse</string>
+    <string name="phone_detail_source">Angaben aus</string>
+    <string name="phone_detail_navigate">Navigation starten</string>
+    <string name="phone_detail_no_navigation">Keine Navigations-App gefunden.</string>
+    <string name="phone_detail_unknown_connectors">Anschlüsse unbekannt</string>
+    <!-- Charging networks -->
+    <!-- Short title: with the full app name there's no room left next to four
+         buttons, and the header wraps it mid-word. -->
+    <string name="phone_title_stops">Ladestopps</string>
+    <string name="phone_action_networks">Ladenetze</string>
+    <string name="phone_networks_title">Ladenetze</string>
+    <string name="phone_networks_intro">Ohne Auswahl werden alle Ladenetze gezeigt. Die Liste stammt aus den Ladesäulen der aktuellen Umgebung, nicht aus einer festen Aufzählung — was hier fehlt, gibt es hier gerade nicht.</string>
+    <string name="phone_networks_only">Nur ausgewählte Ladenetze zeigen</string>
+    <string name="phone_networks_empty">Noch keine Ladesäulen geladen — Standort freigeben und einen Moment warten.</string>
+    <string name="phone_networks_search">Ladenetz suchen</string>
+    <string name="phone_networks_all">Alle</string>
+    <string name="phone_networks_none">Keine</string>
+    <string name="phone_networks_bulk_hint">„Alle“ und „Keine“ gelten für die angezeigten Netze.</string>
+    <string name="phone_networks_no_match">Kein Ladenetz passt zu „%1$s“.</string>
+    <string name="phone_networks_filtered">Der Ladenetz-Filter ist aktiv. Was fehlt, gehört zu einem nicht gewählten Netz.</string>
+
+    <!-- Charge level from the vehicle -->
+    <string name="phone_carhardware_title">Ladestand aus dem Fahrzeug</string>
+    <string name="phone_carhardware_intro">Android Auto kann den Ladestand vom Fahrzeug liefern. Ob es das tut, entscheidet das Head-Unit — die wenigsten geben die Daten heraus. Geprüft werden kann das nur im Auto; das Ergebnis der letzten Verbindung steht hier.</string>
+    <string name="phone_carhardware_never">Noch nie geprüft. Die App war noch nicht mit Android Auto verbunden.</string>
+    <string name="phone_carhardware_checked">Zuletzt geprüft vor %1$s</string>
+    <string name="phone_carhardware_available">Das Fahrzeug liefert den Ladestand (%1$s). Er hat Vorrang vor der Eingabe.</string>
+    <string name="phone_carhardware_no_data">Das Head-Unit liefert keinen Ladestand (%1$s). Es gilt der eingetippte Wert.</string>
+    <string name="phone_carhardware_no_permission">Die Berechtigung für Fahrzeugdaten fehlt. Sie lässt sich nur im Auto erteilen.</string>
+    <string name="phone_carhardware_no_hardware">Dieses Head-Unit bietet keine Fahrzeugdaten an.</string>
+    <string name="phone_duration_minutes">%1$d Minuten</string>
+    <string name="phone_duration_hours">%1$d Stunden</string>
+    <string name="phone_duration_days">%1$d Tagen</string>
+
+    <string name="phone_attribution">Routen und Zielsuche: OpenStreetMap-Mitwirkende (ODbL). Ladesäulen: OpenChargeMap und Bundesnetzagentur.</string>
+
+    <plurals name="phone_networks_count">
+        <item quantity="one">%1$d Standort in der Umgebung</item>
+        <item quantity="other">%1$d Standorte in der Umgebung</item>
+    </plurals>
+</resources>

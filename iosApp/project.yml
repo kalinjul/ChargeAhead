@@ -1,0 +1,74 @@
+# XcodeGen spec. Generates the Xcode project reproducibly from text,
+# instead of maintaining a .pbxproj binary by hand (which barely merges
+# conflict-free under parallel changes). On a Mac:
+#
+#   brew install xcodegen
+#   cd iosApp && xcodegen generate
+#
+# The shared framework is NOT wired in here — KMP frameworks can't be
+# declared as an ordinary dependency in XcodeGen, because the generated
+# .framework only comes into existence through the Gradle build. Instead,
+# the generated Xcode target needs a "Run Script" build phase that calls
+#   ../gradlew :shared:embedAndSignAppleFrameworkForXcode
+# before compiling (standard CocoaPods-less KMP embedding, see the
+# Kotlin Multiplatform docs "Add a KMP framework to Xcode without
+# CocoaPods"). This script phase is marked as a TODO below under
+# `postCompileScripts`/`preBuildScripts`, because the concrete framework
+# target (iosArm64 vs. iosSimulatorArm64) can only be verified with an
+# actual Mac toolchain run (see ARCHITECTURE.md, open point 1).
+
+name: AutoApp
+
+options:
+  bundleIdPrefix: de.autoapp
+  deploymentTarget:
+    iOS: "16.0"
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    DEVELOPMENT_TEAM: "" # fill in before the first build in the Xcode project
+    # Empty by default, so a build without a key doesn't fail but falls
+    # back to demo data. Overridden in a local, non-checked-in
+    # Secrets.xcconfig (see README.md).
+    OPEN_CHARGE_MAP_API_KEY: ""
+
+configFiles:
+  # If the file doesn't exist, XcodeGen ignores the entry — the build then
+  # runs without a key and shows demo data.
+  Debug: Secrets.xcconfig
+  Release: Secrets.xcconfig
+
+targets:
+  AutoApp:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: AutoApp
+    info:
+      path: AutoApp/Info.plist
+      properties: {} # all keys already live in Info.plist itself
+    entitlements:
+      path: AutoApp/AutoApp.entitlements
+      properties:
+        com.apple.developer.carplay-charging: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: de.autoapp.ios
+        PRODUCT_NAME: AutoApp
+        INFOPLIST_KEY_UILaunchScreen_Generation: false # UILaunchScreen is already in Info.plist
+        # TODO(Mac build): add the framework search path for Shared.framework
+        # from shared/build/xcode-frameworks/<Configuration>/<sdk> once the
+        # first `gradlew :shared:embedAndSignAppleFrameworkForXcode` run has
+        # confirmed the actual output path (see comment above).
+        FRAMEWORK_SEARCH_PATHS:
+          - "$(inherited)"
+    preBuildScripts:
+      - name: "Build and embed Shared.framework (KMP, no CocoaPods)"
+        script: |
+          # TODO(Mac build): not runnable/verified on Linux (no Xcode,
+          # no swiftc) — see iosApp/README.md.
+          cd "$SRCROOT/.."
+          ./gradlew :shared:embedAndSignAppleFrameworkForXcode
+        basedOnDependencyAnalysis: false

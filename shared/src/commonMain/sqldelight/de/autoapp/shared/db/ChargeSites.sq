@@ -1,0 +1,66 @@
+-- Charging-station local store, and the question of which area was fetched when.
+--
+-- Two tables, because there are two questions: WHAT do we know (chargeSite)
+-- and FOR WHAT do we know that we know it completely (tileCoverage).
+-- Without the second, there'd be no way to tell whether an area has no
+-- charging station or whether nobody has ever checked there.
+
+CREATE TABLE chargeSite (
+    id          TEXT    NOT NULL PRIMARY KEY,
+    sourceId    TEXT    NOT NULL,
+    name        TEXT    NOT NULL,
+    operator    TEXT,
+    lat         REAL    NOT NULL,
+    lon         REAL    NOT NULL,
+    -- Connectors as a "type:kW:count" list. A dedicated table would be
+    -- cleaner, but connectors are never queried on their own: they're always
+    -- read and written together with their site. A join for that would be
+    -- effort without payoff. "count" may be empty — the sources often don't
+    -- state it.
+    connectors  TEXT    NOT NULL,
+    -- Postal address, if the source knows one. Individually nullable: the
+    -- sources fill in varying amounts of it.
+    street      TEXT,
+    postalCode  TEXT,
+    town        TEXT
+);
+
+-- Spatial queries always run over a rectangle.
+CREATE INDEX chargeSite_position ON chargeSite(lat, lon);
+
+CREATE TABLE tileCoverage (
+    sourceId        TEXT    NOT NULL,
+    -- Tile indices on a 0.1° grid: floor(degree * 10).
+    tileLat         INTEGER NOT NULL,
+    tileLon         INTEGER NOT NULL,
+    fetchedAtMillis INTEGER NOT NULL,
+    PRIMARY KEY (sourceId, tileLat, tileLon)
+);
+
+sitesInBox:
+SELECT * FROM chargeSite
+WHERE lat BETWEEN :south AND :north
+  AND lon BETWEEN :west AND :east;
+
+upsertSite:
+INSERT OR REPLACE INTO chargeSite(id, sourceId, name, operator, lat, lon, connectors, street, postalCode, town)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+markTileFetched:
+INSERT OR REPLACE INTO tileCoverage(sourceId, tileLat, tileLon, fetchedAtMillis)
+VALUES (?, ?, ?, ?);
+
+-- Tiles of the area that are fresh enough. The caller compares the count
+-- against the number of requested tiles: if one is missing, it refetches.
+freshTileCount:
+SELECT count(*) FROM tileCoverage
+WHERE sourceId = :sourceId
+  AND tileLat BETWEEN :minTileLat AND :maxTileLat
+  AND tileLon BETWEEN :minTileLon AND :maxTileLon
+  AND fetchedAtMillis > :notOlderThanMillis;
+
+clearCoverage:
+DELETE FROM tileCoverage WHERE sourceId = :sourceId;
+
+clearAll:
+DELETE FROM chargeSite;

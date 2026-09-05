@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Deliberately a platform theme instead of Theme.Material3.*: the UI is fully
+      Compose, the XML theme only sets up the window before Compose draws. A
+      Material3 XML theme would force in the com.google.android.material view
+      library, which this app doesn't need anywhere else.
+    -->
+    <style name="Theme.AutoApp" parent="@android:style/Theme.Material.Light.NoActionBar" />
+</resources>
