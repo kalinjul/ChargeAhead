@@ -271,6 +271,15 @@
     <string name="subs_note">Aktive Tarife werden an jeder Säule automatisch mit dem Ad-hoc-Preis verglichen.</string>
     <string name="subs_none_found">Kein Tarif gefunden.</string>
 
+    <!-- Phone: trip top bar -->
+    <string name="trip_topbar_sub">ab jetzt · %1$d Stopps</string>
+    <string name="trip_filters">Filter</string>
+    <string name="detail_stop_x_of_y">Stopp %1$d von %2$d</string>
+
+    <!-- Phone: drawer networks summary -->
+    <string name="drawer_networks_all">alle aktiv</string>
+    <string name="drawer_networks_selected">%1$d ausgewählt</string>
+
     <!-- Phone: stop detail -->
     <string name="detail_title">Ladestopp</string>
     <string name="detail_prices">Preise</string>

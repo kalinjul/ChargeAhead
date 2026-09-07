@@ -32,7 +32,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
@@ -47,8 +46,9 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
+import de.autoapp.android.phone.components.AppTopBar
+import de.autoapp.android.phone.components.TopBarIcon
 import androidx.compose.material3.DrawerValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -133,6 +133,13 @@ private fun PhoneApp() {
     val recentDestinations by settings.recentDestinations.collectAsState(initial = emptyList())
     val diagnostics by settings.socDiagnostics.collectAsState(initial = null)
     val carDebugData by settings.carDebugData.collectAsState(initial = emptyList())
+
+    val filtersCustomized = !filters.isDefault || networks.isActive
+    val networksSummary = if (networks.isActive) {
+        stringResource(R.string.drawer_networks_selected, networks.preferredOperators.size)
+    } else {
+        stringResource(R.string.drawer_networks_all)
+    }
 
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -256,34 +263,45 @@ private fun PhoneApp() {
             snackbarHost = { SnackbarHost(snackbar) },
             topBar = {
                 if (page != Page.HOME) {
-                    TopAppBar(
-                        title = {
-                            Text(
-                                stringResource(
-                                    when (page) {
-                                        Page.TRIP -> R.string.trip_title
-                                        Page.STOP_DETAIL -> R.string.detail_title
-                                        Page.GARAGE -> R.string.garage_title
-                                        Page.VEHICLE_EDIT -> R.string.phone_settings_title
-                                        Page.SUBSCRIPTIONS -> R.string.subs_title
-                                        Page.NETWORKS -> R.string.phone_networks_title
-                                        Page.CAR_DATA -> R.string.cardata_title
-                                        Page.HOME -> R.string.app_name
-                                    },
-                                ),
-                            )
+                    AppTopBar(
+                        title = when (page) {
+                            Page.TRIP -> "→ ${tripPlan?.destination?.name.orEmpty()}"
+                            Page.STOP_DETAIL -> stringResource(R.string.detail_title)
+                            Page.GARAGE -> stringResource(R.string.garage_title)
+                            Page.VEHICLE_EDIT -> stringResource(R.string.phone_settings_title)
+                            Page.SUBSCRIPTIONS -> stringResource(R.string.subs_title)
+                            Page.NETWORKS -> stringResource(R.string.phone_networks_title)
+                            Page.CAR_DATA -> stringResource(R.string.cardata_title)
+                            Page.HOME -> stringResource(R.string.app_name)
                         },
-                        navigationIcon = {
-                            IconButton(onClick = {
-                                page = when (page) {
-                                    Page.STOP_DETAIL -> Page.TRIP
-                                    Page.VEHICLE_EDIT -> Page.GARAGE
-                                    else -> Page.HOME
+                        subtitle = when (page) {
+                            Page.TRIP -> tripPlan?.let { stringResource(R.string.trip_topbar_sub, it.stops.size) }
+                            Page.STOP_DETAIL -> {
+                                val plan = tripPlan
+                                val stop = detailStop
+                                if (plan != null && stop != null && stop in plan.stops) {
+                                    stringResource(R.string.detail_stop_x_of_y, plan.stops.indexOf(stop) + 1, plan.stops.size)
+                                } else {
+                                    null
                                 }
-                            }) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_back),
-                                    contentDescription = stringResource(R.string.common_back),
+                            }
+                            Page.NETWORKS -> networksSummary
+                            else -> null
+                        },
+                        onBack = {
+                            page = when (page) {
+                                Page.STOP_DETAIL -> Page.TRIP
+                                Page.VEHICLE_EDIT -> Page.GARAGE
+                                else -> Page.HOME
+                            }
+                        },
+                        actions = {
+                            if (page == Page.TRIP) {
+                                TopBarIcon(
+                                    painterResource(R.drawable.ic_filter),
+                                    stringResource(R.string.trip_filters),
+                                    onClick = { scope.launch { drawerState.open() } },
+                                    badge = filtersCustomized,
                                 )
                             }
                         },
