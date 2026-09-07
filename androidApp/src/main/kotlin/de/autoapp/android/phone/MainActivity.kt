@@ -28,8 +28,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -316,6 +314,7 @@ private fun PhoneApp() {
                     planningInProgress = planningInProgress,
                     chargers = mapChargers,
                     belowZoom = mapBelowZoom,
+                    filtersCustomized = filtersCustomized,
                     onViewportChanged = { viewport ->
                         if (viewport == null) {
                             mapBelowZoom = true
@@ -491,151 +490,6 @@ private fun PhoneApp() {
                     }
                 },
             )
-        }
-    }
-}
-
-@Composable
-private fun HomeScreen(
-    state: de.autoapp.shared.ChargeStopsState,
-    hasPermission: Boolean,
-    planningInProgress: Boolean,
-    chargers: List<de.autoapp.shared.MapCharger>,
-    belowZoom: Boolean,
-    onViewportChanged: (de.autoapp.shared.domain.BoundingBox?) -> Unit,
-    onChargerTapped: (de.autoapp.shared.MapCharger) -> Unit,
-    onRequestPermission: () -> Unit,
-    onMenu: () -> Unit,
-    onPlan: () -> Unit,
-    onChargeNow: () -> Unit,
-    onRoutes: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(modifier = modifier) {
-        if (hasGoogleMapsKey) {
-            HomeGoogleMap(
-                position = state.position,
-                chargers = chargers,
-                hasLocationPermission = hasPermission,
-                onViewportChanged = onViewportChanged,
-                onChargerTapped = onChargerTapped,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            MapCanvas(
-                center = state.position,
-                pins = state.stops.map { MapPin(it.site.position, operatorColor(it.site.operator)) },
-                ownPosition = state.position,
-                radiusKm = 25.0,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-
-        Column(modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp)) {
-            FloatingActionButton(
-                onClick = onMenu,
-                containerColor = MaterialTheme.colorScheme.surface,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_menu),
-                    contentDescription = stringResource(R.string.home_menu),
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (!hasGoogleMapsKey) {
-                Text(
-                    stringResource(R.string.home_map_placeholder),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (hasGoogleMapsKey && belowZoom) {
-                Surface(
-                    shape = MaterialTheme.shapes.small,
-                    color = MaterialTheme.colorScheme.surface,
-                    shadowElevation = 2.dp,
-                ) {
-                    Text(
-                        stringResource(R.string.map_zoom_hint),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    )
-                }
-            }
-            if (state.isDemo) {
-                // Invented charging sites must be labeled — see AGENTS.md.
-                Text(
-                    stringResource(R.string.phone_demo_notice),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-        }
-
-        if (!hasPermission) {
-            Column(
-                modifier = Modifier.align(Alignment.Center).padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(stringResource(R.string.phone_permission_message))
-                Button(onClick = onRequestPermission) {
-                    Text(stringResource(R.string.phone_permission_action))
-                }
-            }
-        }
-
-        if (planningInProgress) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.align(Alignment.Center),
-            ) {
-                CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
-                Text(stringResource(R.string.plan_planning))
-            }
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
-        ) {
-            ExtendedFloatingActionButton(
-                onClick = onPlan,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-                icon = {
-                    Icon(painter = painterResource(R.drawable.ic_route), contentDescription = null)
-                },
-                text = { Text(stringResource(R.string.home_pill_plan)) },
-            )
-            ExtendedFloatingActionButton(
-                onClick = onChargeNow,
-                containerColor = MaterialTheme.colorScheme.surface,
-                icon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_battery),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
-                    )
-                },
-                text = { Text(stringResource(R.string.home_pill_charge_now)) },
-            )
-            FloatingActionButton(
-                onClick = onRoutes,
-                containerColor = MaterialTheme.colorScheme.surface,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_heart),
-                    contentDescription = stringResource(R.string.home_routes),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
         }
     }
 }
