@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.domain.ChargeStop
 
@@ -37,18 +38,18 @@ fun ChargeStopDetailDialog(stop: ChargeStop, onDismiss: () -> Unit) {
                 Text(
                     text = ChargeStopFormatter.secondaryLine(stop),
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 stop.site.operator?.let {
                     Text(text = it, modifier = Modifier.padding(top = 8.dp))
                 }
                 ChargeStopFormatter.addressLine(stop)?.let {
-                    Text(text = it, style = MaterialTheme.typography.bodySmall)
+                    Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
-                Text(
+                SectionLabel(
                     text = stringResource(R.string.phone_detail_connectors),
-                    style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 12.dp),
                 )
                 val connectorLines = ChargeStopFormatter.connectorLines(stop)
@@ -56,9 +57,10 @@ fun ChargeStopDetailDialog(stop: ChargeStop, onDismiss: () -> Unit) {
                     Text(
                         text = stringResource(R.string.phone_detail_unknown_connectors),
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
-                    connectorLines.forEach { Text(text = it, style = MaterialTheme.typography.bodySmall) }
+                    connectorLines.forEach { Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
 
                 ChargeStopFormatter.sourceLine(stop)?.let { source ->

@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.shared.currentTimeMillis
 import de.autoapp.shared.domain.CarDataKind
 import de.autoapp.shared.domain.CarDataPoint
@@ -37,9 +38,8 @@ fun CarDataDebugScreen(
     val byKind = points.associateBy { it.kind }
 
     Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            stringResource(R.string.cardata_intro),
-            style = MaterialTheme.typography.bodySmall,
+        Fineprint(
+            text = stringResource(R.string.cardata_intro),
             modifier = Modifier.padding(16.dp),
         )
         LazyColumn {

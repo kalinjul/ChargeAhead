@@ -20,10 +20,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.Fineprint
+import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.SoCDiagnostics
@@ -78,9 +79,8 @@ fun VehicleSettingsScreen(
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp),
     ) {
-        Text(
+        Fineprint(
             text = stringResource(R.string.phone_settings_intro),
-            style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(bottom = 16.dp),
         )
 
@@ -108,14 +108,12 @@ fun VehicleSettingsScreen(
             errorText = stringResource(R.string.phone_error_positive_number),
         )
 
-        Text(
+        SectionLabel(
             text = stringResource(R.string.phone_connectors_heading),
-            style = MaterialTheme.typography.titleSmall,
             modifier = Modifier.padding(top = 16.dp),
         )
-        Text(
+        Fineprint(
             text = stringResource(R.string.phone_connectors_hint),
-            style = MaterialTheme.typography.bodySmall,
         )
         // UNKNOWN doesn't appear: "my car accepts unknown connectors" makes
         // no sense, and the planner treats unknown connectors leniently anyway.
@@ -148,10 +146,8 @@ fun VehicleSettingsScreen(
             modifier = Modifier.padding(top = 16.dp),
         )
         if (socFromCar) {
-            Text(
+            Fineprint(
                 text = stringResource(R.string.phone_soc_source_car),
-                style = MaterialTheme.typography.bodySmall,
-                fontStyle = FontStyle.Italic,
             )
         }
 
