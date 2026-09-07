@@ -333,7 +333,9 @@ private fun PhoneApp() {
                     onChargeNow = { openChargeNow() },
                     onRoutes = { sheet = Sheet.ROUTES },
                     onStopTapped = { corridorStop = it },
-                    modifier = Modifier.fillMaxSize().padding(padding),
+                    // No scaffold padding: the map draws under the (now
+                    // dark-iconed) status bar, like every maps app.
+                    modifier = Modifier.fillMaxSize(),
                 )
 
                 Page.TRIP -> tripPlan?.let { plan ->

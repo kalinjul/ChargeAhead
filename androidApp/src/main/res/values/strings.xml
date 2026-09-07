@@ -159,7 +159,7 @@
     <string name="plan_no_results">Keine Treffer</string>
     <string name="plan_search_failed">Zielsuche nicht erreichbar</string>
     <string name="plan_vehicle_missing">Kein Fahrzeug angelegt — im Menü unter „Auto“ anlegen.</string>
-    <string name="plan_soc_label">%1$s · aktueller Ladestand: %2$d %%</string>
+    <string name="plan_soc_field">Ladestand</string>
     <string name="plan_planning">Route wird geplant …</string>
     <string name="plan_failed_no_route">Keine Route gefunden.</string>
     <string name="plan_failed_no_charger">Kein erreichbarer Schnelllader nach km %1$d — Filter lockern oder Ladestand prüfen.</string>

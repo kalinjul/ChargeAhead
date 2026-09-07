@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,9 +55,10 @@ fun PlanSheetContent(
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<Place>?>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
-    // The one number the plan stands or falls with — so it's set right here,
-    // not hidden in the garage. Prefilled from the stored value.
-    var soc by remember { mutableStateOf((initialSocPercent ?: 80.0).toFloat()) }
+    // The one number the plan stands or falls with — so it's typed right
+    // here, not hidden in the garage. Prefilled from the stored value.
+    var socText by remember { mutableStateOf((initialSocPercent ?: 80.0).roundToInt().toString()) }
+    val socPercent = socText.toIntOrNull()?.takeIf { it in 1..100 }
 
     // Debounced: Nominatim allows one request per second (ROADMAP open item 6),
     // and a request per keystroke would blow through that within a word.
@@ -81,15 +84,25 @@ fun PlanSheetContent(
                 style = MaterialTheme.typography.bodySmall,
             )
         } else {
-            Text(
-                stringResource(R.string.plan_soc_label, vehicleName, soc.roundToInt()),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            androidx.compose.material3.Slider(
-                value = soc,
-                onValueChange = { soc = it },
-                valueRange = 1f..100f,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    vehicleName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                OutlinedTextField(
+                    value = socText,
+                    onValueChange = { socText = it.filter(Char::isDigit).take(3) },
+                    label = { Text(stringResource(R.string.plan_soc_field)) },
+                    suffix = { Text("%") },
+                    isError = socPercent == null,
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
+                    ),
+                    modifier = Modifier.width(120.dp),
+                )
+            }
         }
 
         OutlinedTextField(
@@ -120,7 +133,7 @@ fun PlanSheetContent(
                     text = place.name,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onPlan(Destination(place.name, place.position), soc.toDouble()) }
+                        .clickable { socPercent?.let { onPlan(Destination(place.name, place.position), it.toDouble()) } }
                         .padding(vertical = 10.dp),
                 )
                 HorizontalDivider()
@@ -138,7 +151,7 @@ fun PlanSheetContent(
                         text = destination.name,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onPlan(destination, soc.toDouble()) }
+                            .clickable { socPercent?.let { onPlan(destination, it.toDouble()) } }
                             .padding(vertical = 10.dp),
                     )
                     HorizontalDivider()

@@ -171,31 +171,50 @@ class TripPlanner(
         val operator: String?,
     )
 
+    /**
+     * Fetched segment by segment, not as one polyline over the whole route:
+     * the sources query radially with a result cap (OpenChargeMapSource), and
+     * a single query over a 600 km route returns an arbitrary subset of a
+     * 600 km circle — of which the 3 km route buffer keeps almost nothing.
+     * Chunks keep every query at the radius the sources were built for.
+     */
     private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile): List<Candidate> {
-        val area = PolylineArea(route.points, bufferKm = STOP_BUFFER_KM)
-        val sites = try {
-            repository.sitesIn(area)
-        } catch (failure: Exception) {
-            emptyList()
-        }
-
         val cumulative = cumulativeDistances(route.points)
         val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }
+        val seen = LinkedHashMap<String, Candidate>()
 
-        return sites.mapNotNull { site ->
-            val power = site.connectors
-                .filter { it.type in usable }
-                .maxOfOrNull { it.maxPowerKw }
-                ?: return@mapNotNull null
-            if (power < MIN_DC_POWER_KW) return@mapNotNull null
-            if (area.distanceKmTo(site.position) > STOP_BUFFER_KM) return@mapNotNull null
-            Candidate(
-                site = site,
-                kmFromStart = kmAlongRoute(site.position, route.points, cumulative),
-                maxPowerKw = power,
-                operator = site.operator,
-            )
-        }.sortedBy { it.kmFromStart }
+        var startIndex = 0
+        while (startIndex < route.points.size - 1) {
+            var endIndex = startIndex + 1
+            while (endIndex < route.points.size - 1 &&
+                cumulative[endIndex] - cumulative[startIndex] < SEGMENT_FETCH_KM
+            ) {
+                endIndex++
+            }
+            val area = PolylineArea(route.points.subList(startIndex, endIndex + 1), bufferKm = STOP_BUFFER_KM)
+            val sites = try {
+                repository.sitesIn(area)
+            } catch (failure: Exception) {
+                emptyList()
+            }
+            for (site in sites) {
+                if (site.id in seen) continue
+                val power = site.connectors
+                    .filter { it.type in usable }
+                    .maxOfOrNull { it.maxPowerKw }
+                    ?: continue
+                if (power < MIN_DC_POWER_KW) continue
+                if (area.distanceKmTo(site.position) > STOP_BUFFER_KM) continue
+                seen[site.id] = Candidate(
+                    site = site,
+                    kmFromStart = kmAlongRoute(site.position, route.points, cumulative),
+                    maxPowerKw = power,
+                    operator = site.operator,
+                )
+            }
+            startIndex = endIndex
+        }
+        return seen.values.sortedBy { it.kmFromStart }
     }
 
     /**
@@ -210,8 +229,20 @@ class TripPlanner(
         filters: ChargeFilters,
         networks: NetworkPreferences,
     ): Candidate? {
+        // Both margins scale down with the reach: with 30 km left in the
+        // battery, insisting on 40 km of driving before the first stop would
+        // reject a charger 5 km away — and the plan would fail exactly when
+        // the driver needs it most.
+        // The 15 % cap matters at the bottom end: the reach already contains
+        // the 10 % reserve (RangeCalculator), and a second fat margin on a
+        // 20 km reach would exclude every reachable charger.
+        val reachAheadKm = reachKm - kmNow
+        val minAheadKm = minOf(MIN_LEG_KM, reachAheadKm * 0.2)
+        val maxAheadKm = reachAheadKm - minOf(STOP_SAFETY_KM, reachAheadKm * 0.15)
+        if (maxAheadKm <= minAheadKm) return null
+
         val window = candidates.filter {
-            it.kmFromStart > kmNow + MIN_LEG_KM && it.kmFromStart <= reachKm - STOP_SAFETY_KM
+            it.kmFromStart > kmNow + minAheadKm && it.kmFromStart <= kmNow + maxAheadKm
         }
         if (window.isEmpty()) return null
 
@@ -222,7 +253,7 @@ class TripPlanner(
 
         // Late beats strong, but only within the last stretch of the reach:
         // a 350 kW charger 30 km earlier wins against a 50 kW one at the edge.
-        val lateStart = reachKm - LATE_WINDOW_KM
+        val lateStart = kmNow + maxAheadKm - LATE_WINDOW_KM
         val late = pool.filter { it.kmFromStart >= lateStart }
         return (late.ifEmpty { pool }).maxByOrNull { it.maxPowerKw * 1000.0 + it.kmFromStart }
     }
@@ -282,6 +313,9 @@ class TripPlanner(
 
         /** Max straight-line distance from the route — same trade-off as PolylineArea (open item 8). */
         const val STOP_BUFFER_KM = 3.0
+
+        /** Candidate-fetch chunk length — the area size the sources were built for. */
+        const val SEGMENT_FETCH_KM = 80.0
 
         /** Don't burn a stop in the first minutes of a leg. */
         const val MIN_LEG_KM = 40.0

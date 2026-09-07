@@ -114,6 +114,40 @@ class TripPlannerTest {
     }
 
     @Test
+    fun `a nearly empty battery still gets a plan when a charger is close`() = runBlocking<Unit> {
+        // 15 % in an ID.4 is ~20 km of reach — the fixed 40 km minimum leg
+        // used to make this fail at km 0 with a charger 15 km away.
+        val route = straightRoute()
+        val result = planner(route, sitesAlong(route, everyKm = 15.0))
+            .plan(start, destination, id4, startSocPercent = 15.0)
+
+        val plan = assertIs<TripPlanResult.Planned>(result).plan
+        assertTrue(plan.stops.isNotEmpty())
+        assertTrue(plan.stops.first().kmFromStart < 20.0, "first stop must be within the short reach")
+    }
+
+    @Test
+    fun `candidates are fetched in source-sized segments, not one giant area`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val queriedRadii = mutableListOf<Double>()
+        val repository = object : SiteRepository {
+            override suspend fun sitesIn(area: SearchArea): List<ChargeSite> {
+                queriedRadii += area.radiusKm
+                return sitesAlong(route)
+            }
+        }
+        val result = TripPlanner(engineReturning(route), repository, DemoTariffSource())
+            .plan(start, destination, id4, startSocPercent = 90.0)
+
+        assertIs<TripPlanResult.Planned>(result)
+        assertTrue(queriedRadii.size > 1, "a 660 km route must not be one query")
+        assertTrue(
+            queriedRadii.all { it < 150.0 },
+            "every query must stay at corridor scale, got: $queriedRadii",
+        )
+    }
+
+    @Test
     fun `estimated cost accompanies the plan`() = runBlocking<Unit> {
         val route = straightRoute()
         val result = planner(route, sitesAlong(route))

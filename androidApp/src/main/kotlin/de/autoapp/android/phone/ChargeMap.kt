@@ -11,16 +11,20 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EvStation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -91,9 +95,17 @@ fun HomeGoogleMap(
                     keys = arrayOf<Any>(stop.site.id, stop.reachability),
                     state = rememberMarkerState(position = stop.site.position.toLatLng()),
                     title = stop.site.name,
+                    anchor = Offset(0.5f, 0.5f),
                     onClick = { onStopTapped(stop); true },
                 ) {
-                    ChargePin(color = stop.reachability.pinColor())
+                    ChargeBadge(color = stop.reachability.pinColor()) {
+                        Icon(
+                            imageVector = Icons.Filled.EvStation,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
             }
         }
@@ -101,25 +113,21 @@ fun HomeGoogleMap(
 }
 
 /**
- * The same pin-with-bolt the car list uses, in the same reachability colors —
- * the two surfaces must not tell different stories about the same site
- * (AGENTS.md). White under-layer for contrast on any map ground.
+ * Circular disc with a white ring — the shape Google Maps itself uses for EV
+ * POIs. Centered anchor, so the badge marks the spot instead of pointing at
+ * it. Colors are the reachability colors the car list uses; the two surfaces
+ * must not tell different stories about the same site (AGENTS.md).
  */
 @Composable
-private fun ChargePin(color: Color) {
-    Box(contentAlignment = Alignment.BottomCenter) {
-        Icon(
-            painter = painterResource(R.drawable.ic_charge_pin),
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(44.dp),
-        )
-        Icon(
-            painter = painterResource(R.drawable.ic_charge_pin),
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(36.dp),
-        )
+private fun ChargeBadge(color: Color, content: @Composable () -> Unit) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(36.dp)
+            .background(color, CircleShape)
+            .border(2.dp, Color.White, CircleShape),
+    ) {
+        content()
     }
 }
 
@@ -168,8 +176,15 @@ fun TripGoogleMap(
                 MarkerComposable(
                     keys = arrayOf(index),
                     state = rememberMarkerState(position = position.toLatLng()),
+                    anchor = Offset(0.5f, 0.5f),
                 ) {
-                    NumberedStopPin(index)
+                    ChargeBadge(color = Color(0xFF1A73E8)) {
+                        Text(
+                            text = "$index",
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelLarge,
+                        )
+                    }
                 }
             }
         }
@@ -182,27 +197,3 @@ private val FALLBACK_CENTER = LatLon(50.11, 8.68)
 private const val HOME_ZOOM = 11f
 private const val BOUNDS_PADDING_PX = 120
 
-/** Planned stop: its number in a route-colored disc — matches the list numbering. */
-@Composable
-private fun NumberedStopPin(index: Int) {
-    Box(contentAlignment = Alignment.Center) {
-        Icon(
-            painter = painterResource(R.drawable.ic_charge_pin),
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(46.dp),
-        )
-        Icon(
-            painter = painterResource(R.drawable.ic_charge_pin),
-            contentDescription = null,
-            tint = Color(0xFF1A73E8),
-            modifier = Modifier.size(38.dp),
-        )
-        Text(
-            text = "$index",
-            color = Color.White,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(bottom = 14.dp),
-        )
-    }
-}
