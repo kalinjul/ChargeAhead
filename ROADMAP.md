@@ -26,9 +26,20 @@ API key · request the BNetzA interface description by email.
 
 ---
 
-## 2. Planned: the phone UI
+## 2. The phone UI
 
-Two decisions taken on 2026-09-05, not yet built.
+Two decisions taken on 2026-09-05; **built on 2026-09-07** along the design
+mockup in `docs/mockup/index.html` (design doc:
+`docs/2026-09-07-phone-ui-design.md`). The map itself is still a placeholder
+drawing — the map-SDK decision below remains open, everything else works:
+map-first home, plan-a-route bottom sheet with charging stops from the shared
+`TripPlanner`, "Jetzt laden" (best chargers nearby with an auto-relax filter
+ladder), garage with vehicle presets and consumption slider, tariff
+subscriptions with per-site price comparison (demo price table — a real
+price API is open point 10), saved routes, and Google-Maps hand-off for the
+whole route, a section, or a single stop. iOS has the core screens (home,
+plan, charge now, trip, stop detail); garage and subscription views are
+still Android-only.
 
 **The start screen becomes a map view.** Today the phone shows the same
 plain list as the car (`ChargeStopsPhoneScreen` in
@@ -45,17 +56,25 @@ while a destination is being entered. As a bottom sheet over the map, the
 search sits above the map instead of replacing it: type, see the hits,
 watch the route and its charging stops appear underneath.
 
-Open before this can be built:
+Still open:
 
 - **Which map.** Android has Google Maps Compose and MapLibre; iOS has
   MapKit. MapLibre keeps the OSM/ODbL line already taken for Nominatim and
   OSRM and needs no Play Services, but it means a second rendering stack
-  and a tile source. This is a real decision, not a detail.
+  and a tile source. This is a real decision, not a detail. Until it's
+  taken, both platforms draw the same placeholder (grid, pins, route line,
+  own position) labeled as such.
 - **What the map shows.** Charging stops as markers is obvious. Whether
   the corridor sector, the OSRM route line, and the reachability colors
   belong on it is not.
-- **Nothing shared changes.** Both are platform-layer work: the same
-  `StateFlow<ChargeStopList>`, drawn differently.
+- **Price data.** The tariff comparison runs on a built-in demo table
+  (`DemoTariffSource`), every quote labeled an estimate. Chargeprice vs.
+  Eco-Movement is the same kind of decision as OCM was — keyed API,
+  contract test, replaceable source behind the `TariffSource` port.
+- **Charge-now availability.** "Only free right now" is deliberately not a
+  filter yet: no connected source has live occupancy. The relax ladder's
+  order (power → networks → price → distance) should later become
+  user-configurable.
 
 ---
 

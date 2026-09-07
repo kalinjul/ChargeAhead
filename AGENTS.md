@@ -116,6 +116,7 @@ data class VehicleProfile(
     val usableBatteryKwh: Double,
     val consumptionKwhPer100Km: Double,
     val acceptedConnectors: Set<ConnectorType>,   // empty = no filtering
+    val dcPeakPowerKw: Double? = null,            // null = unknown; charge-time estimates use site power alone
 )
 
 enum class SoCSourceKind { MANUAL, CAR_HARDWARE, OEM_CLOUD }
@@ -164,9 +165,26 @@ fun interface TimeProvider { fun nowMillis(): Long }
 interface SoCSource     { val kind: SoCSourceKind; val energy: Flow<EnergyState?> }
 interface SettingsStore {
     val vehicle: Flow<VehicleProfile?>
+    val vehicles: Flow<List<VehicleProfile>>      // the garage; setVehicle selects AND adds
     val manualSocPercent: Flow<Double?>
+    val chargeFilters: Flow<ChargeFilters>        // phone flows: min power, max price, max distance
+    val activeTariffIds: Flow<Set<String>>        // the driver's tariffs, see TariffCatalog
+    val savedRoutes: Flow<List<SavedRoute>>
     suspend fun setVehicle(profile: VehicleProfile?)
+    suspend fun removeVehicle(displayName: String)
     suspend fun setManualSocPercent(socPercent: Double?)
+    suspend fun setChargeFilters(filters: ChargeFilters)
+    suspend fun setActiveTariffIds(ids: Set<String>)
+    suspend fun saveRoute(route: SavedRoute); suspend fun renameSavedRoute(id: String, name: String)
+    suspend fun removeSavedRoute(id: String)
+}
+
+// The phone's planning flows, reachable as ChargeStopsFeature.planning.
+// Swift goes through PlanningBridge (iosMain) — same reasoning as the watcher.
+class PlanningFeature {
+    suspend fun planTrip(from, destination, socOverridePercent = null): TripPlanResult
+    suspend fun chargeNow(position): ChargeNowResult   // best 3, relax ladder: power → networks → price → distance
+    suspend fun quote(site): PriceQuote                // always isEstimate until a real price API exists
 }
 ```
 

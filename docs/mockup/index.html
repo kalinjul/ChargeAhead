@@ -1,0 +1,1401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ChargeAhead — EV charging mockup</title>
+<meta name="description" content="Clickable phone mockup of ChargeAhead — EV route planning with priced charging stops and Google Maps handoff.">
+<style>
+  :root{
+    --bg:#F5F7FA; --surface:#FFFFFF; --line:#DADCE0; --soft:#F1F3F4;
+    --ink:#202124; --dim:#5F6368; --faint:#80868B;
+    --blue:#1A73E8; --blue-deep:#174EA6; --green:#188038; --amber:#F9AB00; --red:#D93025;
+    --land:#EFEDE4; --water:#A6D0F5; --park:#C9E7C9; --hwy:#F9D77C; --road:#FFFFFF;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(60,64,67,.15), 0 1px 6px rgba(60,64,67,.08);
+    --shadow-float:0 2px 10px rgba(60,64,67,.28);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{background:var(--bg)}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    color:var(--ink); min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:48px 24px; overflow-x:hidden;
+  }
+  a{color:var(--blue)}
+  button{font:inherit; color:inherit; background:none; border:none; cursor:pointer}
+  button:focus-visible, a:focus-visible{outline:2px solid var(--blue); outline-offset:2px; border-radius:6px}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- page shell ---------- */
+  .stage{display:flex; align-items:center; gap:64px; flex-wrap:wrap; justify-content:center; max-width:1060px}
+  .pitch{max-width:360px; display:flex; flex-direction:column; gap:20px}
+  .wordmark{display:flex; align-items:center; gap:10px; font-size:28px; font-weight:800; letter-spacing:-.02em}
+  .wordmark svg{width:30px; height:30px; color:var(--blue)}
+  .pitch h1{font-size:34px; font-weight:800; letter-spacing:-.025em; line-height:1.15; text-wrap:balance}
+  .pitch p{color:var(--dim); line-height:1.55; font-size:15px}
+  .demo-script{display:flex; flex-direction:column; gap:10px; border-top:1px solid var(--line); padding-top:20px}
+  .demo-script .label{font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--blue)}
+  .demo-script li{list-style:none; color:var(--dim); font-size:14px; line-height:1.5; display:flex; gap:10px}
+  .demo-script li b{color:var(--ink); font-weight:600}
+  .demo-script .dot{color:var(--blue); font-weight:700}
+  .fineprint{font-size:12px; color:var(--faint); line-height:1.5}
+
+  /* ---------- phone ---------- */
+  .phone{
+    width:392px; height:800px; flex-shrink:0; position:relative;
+    background:#3C4043; border-radius:44px; padding:9px;
+    box-shadow:0 0 0 1px #2A2D30, 0 30px 70px rgba(60,64,67,.35);
+  }
+  .screen-glass{
+    position:relative; width:100%; height:100%; overflow:hidden;
+    background:var(--land); border-radius:36px;
+  }
+  .notch{position:absolute; top:13px; left:50%; transform:translateX(-50%); width:13px; height:13px; background:#0B0C0D; border-radius:50%; z-index:60; box-shadow:inset 0 0 2px 1px #1E2022}
+  .gesturebar{position:absolute; bottom:7px; left:50%; transform:translateX(-50%); width:96px; height:4px; border-radius:2px; background:rgba(32,33,36,.32); z-index:60; pointer-events:none}
+  .statusbar{
+    height:44px; display:flex; align-items:flex-end; justify-content:space-between;
+    padding:0 26px 4px; font-size:13px; font-weight:600; flex-shrink:0;
+    position:relative; z-index:5; color:var(--ink);
+  }
+  .statusbar .cell{display:flex; gap:5px; align-items:center; color:var(--dim)}
+  .sigbars{display:flex; gap:2px; align-items:flex-end}
+  .sigbars i{width:3px; background:var(--dim); border-radius:1px; display:block}
+  .batt{width:22px; height:11px; border:1px solid var(--dim); border-radius:3px; padding:1.5px}
+  .batt i{display:block; height:100%; width:70%; background:var(--green); border-radius:1px}
+
+  /* ---------- screens ---------- */
+  .screen{position:absolute; inset:0; display:none; flex-direction:column; background:var(--bg); border-radius:36px; overflow:hidden}
+  .screen.active{display:flex}
+  @media (prefers-reduced-motion:no-preference){
+    .screen.active{animation:screenIn .28s ease}
+    @keyframes screenIn{from{opacity:0; transform:translateX(14px)} to{opacity:1; transform:none}}
+  }
+  .topbar{display:flex; align-items:center; gap:8px; padding:6px 14px 10px; flex-shrink:0; background:var(--surface); border-bottom:1px solid var(--line)}
+  .topbar .title{flex:1; text-align:center; font-weight:700; font-size:15px}
+  .topbar .sub{display:block; font-size:11px; color:var(--dim); font-weight:500}
+  .iconbtn{width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; background:var(--soft); position:relative; flex-shrink:0; color:var(--dim)}
+  .iconbtn svg{width:18px; height:18px}
+  .iconbtn .badge{position:absolute; top:-2px; right:-2px; width:9px; height:9px; border-radius:50%; background:var(--blue); border:1.5px solid var(--surface); display:none}
+  .filtered .iconbtn .badge, .iconbtn.filtered .badge{display:block}
+
+  /* ---------- home: full-bleed map ---------- */
+  #scr-home{background:var(--land)}
+  .citymap{position:absolute; inset:0}
+  .citymap svg{display:block; width:100%; height:100%}
+  .topscrim{position:absolute; top:0; left:0; right:0; height:96px; background:linear-gradient(rgba(255,255,255,.92), rgba(255,255,255,0)); pointer-events:none}
+  .fab-burger{
+    position:absolute; top:56px; left:16px; z-index:10;
+    width:46px; height:46px; border-radius:50%; background:var(--surface);
+    box-shadow:var(--shadow-float); display:flex; align-items:center; justify-content:center; color:var(--dim);
+  }
+  .fab-burger svg{width:20px; height:20px}
+  .fab-burger .badge{position:absolute; top:1px; right:1px; width:10px; height:10px; border-radius:50%; background:var(--blue); border:2px solid var(--surface); display:none}
+  .homepills{
+    position:absolute; left:0; right:0; bottom:30px; z-index:10;
+    display:flex; gap:12px; justify-content:center; padding:0 16px;
+  }
+  .pill{
+    display:flex; align-items:center; gap:9px; border-radius:26px; padding:14px 21px;
+    font-size:15px; font-weight:700; box-shadow:var(--shadow-float);
+  }
+  .pill svg{width:18px; height:18px}
+  .pill:active{transform:scale(.97)}
+  .pill-blue{background:var(--blue); color:#fff}
+  .pill-white{background:var(--surface); color:var(--ink)}
+  .pill-white svg{color:var(--green)}
+  .pill-heart{padding:14px 15px}
+  .pill-heart svg{width:19px; height:19px; color:var(--red); fill:none; stroke:currentColor; stroke-width:2}
+
+  /* map bits */
+  .citylabel{font-size:10.5px; fill:var(--faint); font-weight:600; letter-spacing:.04em}
+  .waterlabel{font-size:11px; fill:#5B93C4; font-style:italic; font-weight:600}
+  .parklabel{font-size:9.5px; fill:#5B8F5B; font-weight:600}
+  .npin circle.ring{fill:#fff}
+  .npin text{font-size:11px; font-weight:800; fill:#fff; text-anchor:middle; display:none}
+  .npin.best text{display:block}
+  .npin.best circle.core{r:11}
+  .npin.hidden{display:none}
+
+  /* ---------- route: map ---------- */
+  .mapwrap{position:relative; flex-shrink:0; background:var(--land)}
+  .mapwrap svg{display:block; width:100%; height:auto}
+  .map-note{position:absolute; right:10px; bottom:8px; font-size:9px; color:#9AA0A6; letter-spacing:.04em}
+  .leg{fill:none; stroke:var(--blue); stroke-width:4.5; stroke-linecap:round; transition:opacity .2s, stroke .2s}
+  .leg.dim{opacity:.25}
+  .leg.sel{stroke:var(--blue-deep); stroke-width:6; filter:drop-shadow(0 0 4px rgba(23,78,166,.45))}
+  .traffic{fill:none; stroke-width:4.5; stroke-linecap:round; pointer-events:none}
+  .pin{cursor:pointer}
+  .pin circle.core{stroke:#fff; stroke-width:2.5; filter:drop-shadow(0 1px 1.5px rgba(60,64,67,.4))}
+  .pin text{font-size:11px; font-weight:800; fill:#fff; text-anchor:middle}
+  .pin.dimmed{opacity:.35}
+  .citydot{fill:#9AA0A6}
+  .minor{fill:none; stroke:#E3E0D6; stroke-width:2}
+  .border-line{fill:none; stroke:#C8C4B8; stroke-width:1; stroke-dasharray:3 4}
+
+  /* ---------- route: summary + actions + list ---------- */
+  .summary{display:flex; align-items:center; gap:14px; padding:10px 16px; background:var(--surface); border-top:1px solid var(--line); flex-shrink:0}
+  .summary .big{font-size:19px; font-weight:800; letter-spacing:-.01em}
+  .summary .meta{font-size:11.5px; color:var(--dim); line-height:1.45}
+  .tbadge{margin-left:auto; background:#FEF7E0; color:#B06000; font-size:11px; font-weight:700; padding:5px 9px; border-radius:8px; white-space:nowrap}
+  .actions{display:flex; gap:8px; padding:10px 16px; background:var(--surface); flex-shrink:0}
+  .btn-maps{
+    flex:1; background:var(--blue); color:#fff; font-weight:700; font-size:13.5px;
+    border-radius:12px; padding:11px 10px; display:flex; align-items:center; justify-content:center; gap:7px;
+  }
+  .btn-maps svg{width:15px; height:15px; flex-shrink:0}
+  .btn-maps:active{transform:scale(.98)}
+  .btn-ghost{
+    background:var(--surface); border:1px solid var(--line); color:var(--blue);
+    font-weight:600; font-size:13.5px; border-radius:12px; padding:11px 14px; white-space:nowrap;
+  }
+  .btn-ghost.on{border-color:var(--blue); background:#E8F0FE}
+  .selbanner{
+    display:none; margin:0 16px 8px; padding:9px 12px; border-radius:10px;
+    background:#E8F0FE; border:1px dashed #A8C7FA;
+    color:var(--blue-deep); font-size:12.5px; font-weight:600; text-align:center; flex-shrink:0;
+  }
+  .selecting .selbanner{display:block}
+  .stoplist{flex:1; overflow-y:auto; padding:10px 16px 30px; display:flex; flex-direction:column; gap:8px}
+  .terminus{display:flex; align-items:center; gap:11px; padding:9px 6px; font-size:13.5px; font-weight:600; border-radius:12px}
+  .terminus .pt{width:10px; height:10px; border-radius:50%; flex-shrink:0}
+  .terminus .tname{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left}
+  .terminus .when{margin-left:auto; color:var(--dim); font-weight:500; font-size:12.5px; white-space:nowrap; flex-shrink:0}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+  .stop{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px 13px; display:flex; gap:11px; cursor:pointer; text-align:left; width:100%}
+  .stop:active{background:var(--soft)}
+  .stop .no{
+    width:24px; height:24px; border-radius:50%; flex-shrink:0; margin-top:1px;
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#fff;
+  }
+  .stop .mid{flex:1; min-width:0}
+  .stop .name{font-size:14px; font-weight:700; display:flex; align-items:center; gap:8px}
+  .stop .name .nm{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .stop .name .stopprice{color:var(--green); white-space:nowrap; font-size:13.5px}
+  .stop .name .stopprice small{color:var(--dim); font-weight:600}
+  .stop .road{font-size:12px; color:var(--dim); margin-top:3px}
+  .sendone{
+    align-self:center; width:36px; height:36px; border-radius:11px; flex-shrink:0;
+    background:var(--surface); border:1px solid var(--line); display:flex; align-items:center; justify-content:center;
+  }
+  .sendone svg{width:16px; height:16px; color:var(--blue)}
+  .selecting .sendone{visibility:hidden}
+  .sel-pick{outline:2px solid var(--blue); outline-offset:-1px; border-radius:var(--radius)}
+  .selecting .stop:hover, .selecting .terminus:hover{background:var(--soft)}
+
+  /* ---------- detail ---------- */
+  #scr-detail .body{flex:1; overflow-y:auto; padding:12px 16px 20px; display:flex; flex-direction:column; gap:12px}
+  .det-head{padding:2px}
+  .det-head .net{display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--dim)}
+  .det-head .net i{width:9px; height:9px; border-radius:50%; display:inline-block}
+  .det-head h2{font-size:22px; font-weight:800; letter-spacing:-.02em; margin-top:5px; text-wrap:balance}
+  .det-head .addr{color:var(--dim); font-size:13px; margin-top:3px}
+  .livebar{display:flex; align-items:center; gap:8px; padding:11px 13px; font-size:13.5px; font-weight:700}
+  .pulse{width:9px; height:9px; border-radius:50%; background:var(--green); flex-shrink:0}
+  @media (prefers-reduced-motion:no-preference){
+    .pulse{animation:pulse 1.6s infinite}
+    @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(24,128,56,.4)} 55%{box-shadow:0 0 0 6px rgba(24,128,56,0)}}
+  }
+  .livebar small{color:var(--dim); font-weight:500; margin-left:auto}
+  .kv{display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--line); border-radius:var(--radius); overflow:hidden; border:1px solid var(--line); box-shadow:var(--shadow)}
+  .kv div{background:var(--surface); padding:11px 13px}
+  .kv .k{display:block; font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; color:var(--dim); font-weight:700}
+  .kv .v{display:block; font-size:14.5px; font-weight:700; margin-top:3px; white-space:nowrap}
+  .pricelist{overflow:hidden}
+  .pricerow{display:flex; align-items:center; gap:10px; padding:12px 13px; font-size:13.5px}
+  .pricerow + .pricerow{border-top:1px solid var(--line)}
+  .pricerow .who{flex:1; min-width:0}
+  .pricerow .who small{display:block; color:var(--dim); font-size:11.5px; margin-top:1px}
+  .pricerow .eur{font-weight:800; font-size:15px}
+  .pricerow.best .eur{color:var(--green)}
+  .best-tag{background:#E6F4EA; color:var(--green); font-size:10px; font-weight:800; letter-spacing:.06em; padding:3px 7px; border-radius:6px; text-transform:uppercase}
+  .amenities{display:flex; gap:7px; flex-wrap:wrap}
+  .amenities span{background:var(--soft); border-radius:999px; padding:6px 12px; font-size:12px; color:var(--dim); font-weight:600}
+  .det-actions{display:flex; flex-direction:column; gap:8px; margin-top:4px}
+
+  /* ---------- bottom sheets ---------- */
+  .overlay-backdrop{position:absolute; inset:0; background:rgba(32,33,36,.4); display:none; z-index:40; border-radius:36px}
+  .overlay-backdrop.open{display:block}
+  .sheet{
+    position:absolute; left:0; right:0; bottom:0; z-index:50; display:none;
+    background:var(--surface); border-radius:26px 26px 36px 36px;
+    padding:10px 18px 24px; max-height:660px; flex-direction:column; gap:14px; overflow-y:auto;
+    box-shadow:0 -4px 20px rgba(60,64,67,.2);
+  }
+  .sheet.open{display:flex}
+  @media (prefers-reduced-motion:no-preference){
+    .sheet.open{animation:sheetUp .3s cubic-bezier(.2,.9,.3,1)}
+    @keyframes sheetUp{from{transform:translateY(40px); opacity:.4} to{transform:none; opacity:1}}
+  }
+  .grab{width:38px; height:4px; border-radius:2px; background:var(--line); margin:0 auto; flex-shrink:0}
+  .dragzone{padding:6px 0 4px; margin:-10px -18px 0; cursor:grab; touch-action:none; flex-shrink:0}
+  .dragzone:active{cursor:grabbing}
+  .sheet.full{top:0; max-height:none; border-radius:36px; padding-top:30px}
+  .fullonly{display:none}
+  .sheet.full .fullonly{display:block}
+  .sheet h3{font-size:17px; font-weight:800}
+  .sheet .subtitle{font-size:12.5px; color:var(--dim); margin-top:-10px}
+  .cta{
+    background:var(--blue); color:#fff; font-weight:700; font-size:16px;
+    border-radius:var(--radius); padding:15px; display:flex; align-items:center; justify-content:center; gap:9px;
+  }
+  .cta svg{width:18px; height:18px}
+  .cta:active{transform:scale(.985)}
+
+  /* plan sheet */
+  .routecard{padding:6px 14px; position:relative; box-shadow:none}
+  .field{display:flex; align-items:center; gap:12px; padding:13px 0}
+  .field + .field{border-top:1px solid var(--line)}
+  .field .pt{width:10px; height:10px; border-radius:50%; flex-shrink:0}
+  .field .k{display:block; font-size:11px; color:var(--dim); text-transform:uppercase; letter-spacing:.07em; font-weight:600}
+  .field .v{font-size:15px; font-weight:600}
+  .swap{position:absolute; right:12px; top:50%; transform:translateY(-50%); width:34px; height:34px; border-radius:50%; background:var(--soft); border:1px solid var(--line); display:flex; align-items:center; justify-content:center}
+  .swap svg{width:15px; height:15px; color:var(--dim)}
+  .chiprow{display:flex; gap:8px; flex-wrap:wrap}
+  .chip{display:flex; align-items:center; gap:7px; background:var(--soft); border-radius:999px; padding:9px 14px; font-size:13px; font-weight:600}
+  .chip svg{width:15px; height:15px; color:var(--blue)}
+  .chip small{color:var(--dim); font-weight:500}
+
+  /* charge-now sheet */
+  .nearlist{display:flex; flex-direction:column; gap:8px}
+  .near{display:flex; align-items:center; gap:11px; padding:11px 12px; text-align:left}
+  .near .rank{
+    width:24px; height:24px; border-radius:50%; background:var(--blue); color:#fff; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800;
+  }
+  .near .mid{flex:1; min-width:0}
+  .near .name{font-size:14px; font-weight:700; display:flex; align-items:center; gap:7px; min-width:0}
+  .near .name i{width:8px; height:8px; border-radius:50%; flex-shrink:0}
+  .near .name .nm{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .near .meta{font-size:11.5px; color:var(--dim); margin-top:2px; white-space:nowrap}
+  .near .meta .free{color:var(--green); font-weight:600}
+  .near .meta .occ{color:var(--red); font-weight:600}
+  .near .eur{font-weight:800; font-size:14.5px; color:var(--green); white-space:nowrap}
+  .near .gobtn{
+    width:36px; height:36px; border-radius:11px; flex-shrink:0; margin-left:2px;
+    background:#E8F0FE; display:flex; align-items:center; justify-content:center;
+  }
+  .near .gobtn svg{width:16px; height:16px; color:var(--blue)}
+  .nomatch{padding:14px; font-size:13px; color:var(--dim); text-align:center}
+
+  /* ---------- drawer ---------- */
+  .drawer{
+    position:absolute; top:0; bottom:0; left:0; width:322px; z-index:50;
+    background:var(--surface); border-radius:36px 0 0 36px; display:none; flex-direction:column;
+    box-shadow:8px 0 30px rgba(60,64,67,.25);
+  }
+  .drawer.open{display:flex}
+  @media (prefers-reduced-motion:no-preference){
+    .drawer.open{animation:drawerIn .28s cubic-bezier(.2,.9,.3,1)}
+    @keyframes drawerIn{from{transform:translateX(-60px); opacity:.5} to{transform:none; opacity:1}}
+  }
+  .drawer-head{display:flex; align-items:center; gap:9px; padding:56px 20px 14px; font-size:20px; font-weight:800; letter-spacing:-.02em; border-bottom:1px solid var(--line)}
+  .drawer-head svg{width:21px; height:21px; color:var(--blue)}
+  .drawer-body{flex:1; overflow-y:auto; padding:14px 18px; display:flex; flex-direction:column; gap:16px}
+  .sectionlabel{font-size:11px; font-weight:700; letter-spacing:.09em; text-transform:uppercase; color:var(--dim); padding:2px 2px 8px}
+  .prefrow{display:flex; align-items:center; gap:11px; padding:11px 4px; font-size:14px; font-weight:600; border-top:1px solid var(--soft); width:100%; text-align:left}
+  .prefrow:first-of-type{border-top:none}
+  .prefrow svg{width:17px; height:17px; color:var(--dim); flex-shrink:0}
+  .prefrow small{display:block; font-weight:500; font-size:11.5px; color:var(--dim); margin-top:1px}
+  .prefrow .chev{margin-left:auto; color:var(--faint); font-size:18px; font-weight:400}
+  .tariff-ok{margin-left:auto; color:var(--green); font-weight:700; font-size:12px}
+  .fchips{display:flex; gap:7px; flex-wrap:wrap}
+  .fchip{
+    display:flex; align-items:center; gap:7px; border-radius:999px; padding:8px 13px;
+    font-size:12.5px; font-weight:600; background:var(--surface); border:1px solid var(--line); color:var(--dim);
+  }
+  .fchip i{width:8px; height:8px; border-radius:50%; display:inline-block; opacity:.35}
+  .fchip.on{color:var(--ink); border-color:#A8C7FA; background:#E8F0FE}
+  .fchip.on i{opacity:1}
+  .seg{display:flex; background:var(--soft); border-radius:11px; padding:3px; gap:3px}
+  .seg button{flex:1; padding:8px 4px; border-radius:8px; font-size:12.5px; font-weight:600; color:var(--dim)}
+  .seg button.on{background:var(--surface); color:var(--blue); box-shadow:var(--shadow)}
+  .sliderrow{display:flex; align-items:center; gap:12px}
+  .sliderrow input{flex:1; accent-color:var(--blue)}
+  .sliderrow output{font-size:13px; font-weight:700; min-width:82px; text-align:right}
+  .sliderrow.vert{justify-content:flex-start; gap:18px; padding:4px 2px}
+  .sliderrow.vert input{flex:0 0 auto; writing-mode:vertical-lr; direction:rtl; width:24px; height:96px}
+  .sliderrow.vert output{text-align:left; min-width:0; font-size:15px}
+  .sliderrow.vert .fineprint{display:block; margin-top:3px}
+  /* settings views (networks / car / subscriptions) */
+  .view-body{flex:1; overflow-y:auto; padding:12px 18px 26px; display:flex; flex-direction:column; gap:14px}
+  .searchwrap{display:flex; align-items:center; gap:9px; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:11px 13px; box-shadow:var(--shadow)}
+  .searchwrap svg{width:17px; height:17px; color:var(--dim); flex-shrink:0}
+  .searchwrap input{border:none; background:none; outline:none; font:inherit; font-size:14px; flex:1; min-width:0; color:var(--ink)}
+  .searchwrap input::placeholder{color:var(--faint)}
+  .listcard{padding:2px 14px}
+  .netrow{display:flex; align-items:center; gap:11px; padding:12px 4px; font-size:14px; font-weight:600; border-top:1px solid var(--soft); width:100%; text-align:left}
+  .netrow:first-of-type{border-top:none}
+  .netrow i{width:9px; height:9px; border-radius:50%; flex-shrink:0}
+  .netrow .tick{margin-left:auto; width:22px; height:22px; border-radius:50%; border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center; color:#fff; flex-shrink:0}
+  .netrow.on .tick{background:var(--blue); border-color:var(--blue)}
+  .netrow .tick svg{width:12px; height:12px}
+  .netrow .tick.del{background:#FCE8E6; border-color:#F2B8B2; color:var(--red)}
+  .netrow .tick.add{color:var(--blue); border-color:#A8C7FA; background:#E8F0FE}
+
+  /* routes sheet */
+  .routerow{display:flex; align-items:center; gap:11px; padding:11px 12px; text-align:left}
+  .routerow .mid{flex:1; min-width:0}
+  .routerow .rname{font-size:14px; font-weight:700; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-radius:6px}
+  .routerow .rname[contenteditable="true"]{outline:2px solid var(--blue); outline-offset:1px; white-space:normal}
+  .routerow .rmeta{font-size:11.5px; color:var(--dim); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block}
+  .routerow .gobtn{width:36px; height:36px; border-radius:11px; flex-shrink:0; background:#E8F0FE; display:flex; align-items:center; justify-content:center}
+  .routerow .gobtn svg{width:16px; height:16px; color:var(--blue)}
+  .routerow .heartbtn{background:#FCE8E6}
+  .routerow .heartbtn svg{color:var(--red); fill:none; stroke:var(--red); stroke-width:2}
+  .routerow .heartbtn.saved svg{fill:var(--red)}
+  .routerow .heartbtn.saved{opacity:.85}
+  .emptyhint{padding:12px; font-size:12.5px; color:var(--dim); text-align:center}
+
+  /* route actions inside the scrollable list */
+  .actions-in{display:flex; gap:8px; padding:8px 0 2px}
+  .btn-fav{
+    width:44px; flex-shrink:0; background:var(--surface); border:1px solid var(--line);
+    border-radius:12px; display:flex; align-items:center; justify-content:center;
+  }
+  .btn-fav svg{width:18px; height:18px; color:var(--red); fill:none; stroke:currentColor; stroke-width:2}
+  .btn-fav.saved{background:#FCE8E6; border-color:#F2B8B2}
+  .btn-fav.saved svg{fill:var(--red)}
+
+  /* ---------- toast ---------- */
+  .toast{
+    position:absolute; left:16px; right:16px; bottom:26px; z-index:70;
+    background:#323232; color:#fff; border-radius:14px;
+    padding:12px 15px; font-size:13px; font-weight:600; line-height:1.4;
+    display:none; align-items:center; gap:10px;
+    box-shadow:0 12px 30px rgba(0,0,0,.35);
+  }
+  .toast.show{display:flex}
+  @media (prefers-reduced-motion:no-preference){
+    .toast.show{animation:toastIn .25s ease}
+    @keyframes toastIn{from{transform:translateY(12px); opacity:0} to{transform:none; opacity:1}}
+  }
+  .toast svg{width:17px; height:17px; color:#8AB4F8; flex-shrink:0}
+  .toast .msg{flex:1}
+  .toast a{font-weight:700; white-space:nowrap; text-decoration:none; color:#8AB4F8}
+
+  @media (max-width:900px){
+    body{padding:32px 16px}
+    .stage{gap:36px}
+    .pitch{max-width:392px; text-align:center; align-items:center}
+    .demo-script{align-items:flex-start; text-align:left}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" fill="currentColor"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-7-5.4-7-11a7 7 0 1 1 14 0c0 5.6-7 11-7 11z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.6" fill="currentColor"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 7h16M7 12h10M10 17h4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-burger" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 4v13M8 4 5 7M8 4l3 3M16 20V7M16 20l-3-3M16 20l3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M7 17 17 7M10 7h7v7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><path d="M6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM18 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 17h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M5 12 6.5 7h11L19 12M5 12h14v5h-2.2M5 17V12m0 5h2.2m9.6 0H7.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="8" cy="17" r="1.4" fill="currentColor"/><circle cx="16.8" cy="17" r="1.4" fill="currentColor"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-cardpay" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10.5h18" stroke="currentColor" stroke-width="2"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.18L12 21z"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M3 17.2V21h3.8L17.8 10 14 6.2 3 17.2zM20.7 7.04a1 1 0 0 0 0-1.41L18.37 3.3a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.82-1.84z" fill="currentColor"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<div class="stage">
+
+  <!-- ======== pitch column ======== -->
+  <div class="pitch">
+    <div class="wordmark"><svg><use href="#i-bolt"/></svg>ChargeAhead</div>
+    <h1>Plan the charge. Let Google&nbsp;Maps drive.</h1>
+    <p>EV route planning across Europe: charging stops picked for your car, priced per network and tariff, with live traffic — and navigation handed straight to Google Maps.</p>
+    <div class="demo-script">
+      <div class="label">Demo script — everything is tappable</div>
+      <li><span class="dot">1</span><span><b>Charge now</b> — the three best free chargers nearby, ranked by your filters. If the filters starve the list, they're relaxed automatically: min power → networks → max price → max distance.</span></li>
+      <li><span class="dot">2</span><span><b>Plan</b> — Amsterdam → München with live traffic and priced stops.</span></li>
+      <li><span class="dot">3</span><span>Send the <b>whole route</b>, a <b>marked section</b>, or a <b>single stop</b> to Google Maps.</span></li>
+      <li><span class="dot">4</span><span><b>☰ menu</b> — car, subscriptions, and a searchable networks view. Exclude Ionity, watch everything re-plan.</span></li>
+      <li><span class="dot">5</span><span><b>♡</b> — saved and recent routes; favorite a recent one, or save a planned route right from the route view's heart button.</span></li>
+    </div>
+    <p class="fineprint">All data is fake, every button still does something. Disposable HTML mockup — the real app will be Kotlin Multiplatform with live data.</p>
+  </div>
+
+  <!-- ======== phone ======== -->
+  <div class="phone">
+    <div class="screen-glass">
+      <div class="notch"></div><div class="gesturebar"></div>
+
+      <!-- ======== screen: home (map only) ======== -->
+      <section class="screen active" id="scr-home">
+        <div class="citymap">
+          <svg viewBox="0 0 392 782" role="img" aria-label="Map of Amsterdam with nearby chargers">
+            <rect width="392" height="782" fill="#EFEDE4"/>
+            <!-- IJ river -->
+            <path d="M0 0 H392 V52 C 330 62, 300 40, 240 50 C 170 62, 90 44, 0 58 Z" fill="#A6D0F5"/>
+            <path d="M262 50 C 268 70, 258 84, 246 96 L 236 84 C 244 74, 250 62, 248 52 Z" fill="#A6D0F5"/>
+            <!-- canal belt -->
+            <path d="M96 120 C 96 260, 296 260, 296 120" fill="none" stroke="#A6D0F5" stroke-width="7"/>
+            <path d="M76 112 C 76 292, 316 292, 316 112" fill="none" stroke="#A6D0F5" stroke-width="7"/>
+            <path d="M56 104 C 56 324, 336 324, 336 104" fill="none" stroke="#A6D0F5" stroke-width="7"/>
+            <!-- Amstel -->
+            <path d="M206 782 C 196 660, 212 560, 198 460 C 192 415, 200 340, 196 290" fill="none" stroke="#A6D0F5" stroke-width="9"/>
+            <!-- Vondelpark -->
+            <ellipse cx="86" cy="472" rx="74" ry="26" transform="rotate(-24 86 472)" fill="#C9E7C9"/>
+            <!-- roads -->
+            <path d="M196 60 V 290 M60 300 C 130 330, 260 330, 336 300 M20 420 C 120 400, 270 408, 380 396 M30 560 C 140 540, 250 556, 372 540 M120 60 C 130 220, 116 420, 130 620 M282 66 C 272 240, 288 430, 274 640 M20 680 C 140 660, 260 676, 380 660" fill="none" stroke="#FFFFFF" stroke-width="5"/>
+            <path d="M60 110 C 160 140, 240 140, 332 108 M40 720 C 150 700, 260 716, 372 700" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+            <!-- A10 ring -->
+            <path d="M34 740 C 16 520, 34 300, 118 96" fill="none" stroke="#F9D77C" stroke-width="7"/>
+            <path d="M358 738 C 380 520, 366 280, 288 92" fill="none" stroke="#F9D77C" stroke-width="7"/>
+            <!-- labels -->
+            <text class="waterlabel" x="300" y="34">IJ</text>
+            <text class="citylabel" x="172" y="212">Centrum</text>
+            <text class="citylabel" x="96" y="252">Jordaan</text>
+            <text class="citylabel" x="222" y="522">De Pijp</text>
+            <text class="parklabel" x="52" y="478" transform="rotate(-24 52 478)">Vondelpark</text>
+            <text class="citylabel" x="292" y="640">Zuidoost</text>
+            <!-- charger pins (rendered class-toggled by JS) -->
+            <g class="npin" data-nid="fastned-zo"><circle class="ring" cx="300" cy="610" r="10.5"/><circle class="core" cx="300" cy="610" r="8" fill="#F6C700"/><text x="300" y="614"></text></g>
+            <g class="npin" data-nid="ionity-a4"><circle class="ring" cx="66" cy="662" r="10.5"/><circle class="core" cx="66" cy="662" r="8" fill="#37A8AE"/><text x="66" y="666"></text></g>
+            <g class="npin" data-nid="tesla-west"><circle class="ring" cx="58" cy="404" r="10.5"/><circle class="core" cx="58" cy="404" r="8" fill="#E82127"/><text x="58" y="408"></text></g>
+            <g class="npin" data-nid="allego-wp"><circle class="ring" cx="74" cy="180" r="10.5"/><circle class="core" cx="74" cy="180" r="8" fill="#93C11C"/><text x="74" y="184"></text></g>
+            <g class="npin" data-nid="shell-slt"><circle class="ring" cx="130" cy="120" r="10.5"/><circle class="core" cx="130" cy="120" r="8" fill="#ED1C24"/><text x="130" y="124"></text></g>
+            <g class="npin" data-nid="shell-mus"><circle class="ring" cx="152" cy="452" r="10.5"/><circle class="core" cx="152" cy="452" r="8" fill="#ED1C24"/><text x="152" y="456"></text></g>
+            <!-- you are here -->
+            <circle cx="196" cy="392" r="17" fill="rgba(26,115,232,.15)"/>
+            <circle cx="196" cy="392" r="7" fill="#1A73E8" stroke="#fff" stroke-width="2.5"/>
+          </svg>
+        </div>
+        <div class="topscrim"></div>
+        <div class="statusbar"><span class="num">06:28</span>
+          <span class="cell"><span class="sigbars"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i></span> 5G <span class="batt"><i></i></span></span>
+        </div>
+        <button class="fab-burger" id="btn-burger" aria-label="Menu"><svg><use href="#i-burger"/></svg><span class="badge" id="burger-badge"></span></button>
+        <div class="homepills">
+          <button class="pill pill-blue" id="btn-open-plan"><svg><use href="#i-route"/></svg>Plan</button>
+          <button class="pill pill-white" id="btn-open-charge"><svg><use href="#i-bolt"/></svg>Charge now</button>
+          <button class="pill pill-white pill-heart" id="btn-open-routes" aria-label="Saved routes"><svg><use href="#i-heart"/></svg></button>
+        </div>
+      </section>
+
+      <!-- ======== screen: route ======== -->
+      <section class="screen" id="scr-route">
+        <div class="statusbar" style="background:var(--surface)"><span class="num">06:28</span>
+          <span class="cell"><span class="sigbars"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i></span> 5G <span class="batt"><i></i></span></span>
+        </div>
+        <div class="topbar">
+          <button class="iconbtn" data-go="scr-home" aria-label="Back"><svg><use href="#i-back"/></svg></button>
+          <span class="title">Amsterdam → München<span class="sub num">departs 06:30 · live traffic</span></span>
+          <button class="iconbtn" id="btn-filter" aria-label="Filters"><svg><use href="#i-filter"/></svg><span class="badge"></span></button>
+        </div>
+
+        <div class="mapwrap">
+          <svg viewBox="0 0 392 330" role="img" aria-label="Route map Amsterdam to München with three charging stops">
+            <rect width="392" height="330" fill="#EFEDE4"/>
+            <path d="M0 0 H120 C 95 30, 70 40, 55 70 C 42 96, 20 105, 0 110 Z" fill="#A6D0F5"/>
+            <path d="M120 0 C 118 60, 124 130, 118 200 C 114 250, 120 300, 116 330" class="border-line"/>
+            <path d="M30 140 C 90 150, 150 140, 210 150 C 270 160, 330 150, 392 158" class="minor"/>
+            <path d="M180 0 C 190 60, 175 130, 190 200 C 200 260, 190 300, 196 330" class="minor"/>
+            <path d="M0 230 C 70 220, 150 235, 230 225 C 300 218, 350 228, 392 222" class="minor"/>
+            <path d="M290 40 C 285 100, 300 170, 292 240" class="minor"/>
+
+            <path id="leg0" class="leg" d="M58 54 C 90 70, 120 95, 148 118"/>
+            <path id="leg1" class="leg" d="M148 118 C 168 142, 182 165, 196 190"/>
+            <path id="leg2" class="leg" d="M196 190 C 222 210, 250 228, 276 248"/>
+            <path id="leg3" class="leg" d="M276 248 C 296 262, 318 285, 330 306"/>
+            <path class="traffic" d="M160 133 C 172 148, 180 160, 187 174" stroke="#F9AB00"/>
+            <path class="traffic" d="M181 163 187 174" stroke="#D93025"/>
+
+            <circle class="citydot" cx="95" cy="84" r="2.5"/><text class="citylabel" x="55" y="97">Utrecht</text>
+            <circle class="citydot" cx="146" cy="168" r="2.5"/><text class="citylabel" x="112" y="171">Köln</text>
+            <circle class="citydot" cx="205" cy="212" r="2.5"/><text class="citylabel" x="212" y="215">Frankfurt</text>
+            <circle class="citydot" cx="290" cy="238" r="2.5"/><text class="citylabel" x="297" y="241">Nürnberg</text>
+
+            <g class="pin ab" data-point="0"><circle class="core" cx="58" cy="54" r="10" fill="#188038"/><text x="58" y="58">A</text></g>
+            <g class="pin" id="pin1" data-point="1"><circle class="core" cx="148" cy="118" r="10" fill="#F6C700"/><text x="148" y="122">1</text></g>
+            <g class="pin" id="pin2" data-point="2"><circle class="core" cx="196" cy="190" r="10" fill="#37A8AE"/><text x="196" y="194">2</text></g>
+            <g class="pin" id="pin3" data-point="3"><circle class="core" cx="276" cy="248" r="10" fill="#FF9F00"/><text x="276" y="252">3</text></g>
+            <g class="pin ab" data-point="4"><circle class="core" cx="330" cy="306" r="10" fill="#D93025"/><text x="330" y="310">B</text></g>
+          </svg>
+          <span class="map-note">mock map · not to scale · traffic: <span style="color:#F9AB00">▬</span> slow <span style="color:#D93025">▬</span> jam</span>
+        </div>
+
+        <div class="summary">
+          <span><span class="big num">842 km</span></span>
+          <span class="meta num"><b id="sum-time">9 h 16 min</b> · <span id="sum-stops">3 stops</span><br><span id="sum-charge">68 min charging</span> · est. <b id="sum-cost">€58.69</b></span>
+          <span class="tbadge num">+14 min · A3 Köln</span>
+        </div>
+
+        <div class="selbanner" id="selbanner">Mark a section: tap its start and end point</div>
+
+        <div class="stoplist" id="stoplist"></div>
+      </section>
+
+      <!-- ======== screen: charger detail ======== -->
+      <section class="screen" id="scr-detail">
+        <div class="statusbar" style="background:var(--surface)"><span class="num">06:28</span>
+          <span class="cell"><span class="sigbars"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i></span> 5G <span class="batt"><i></i></span></span>
+        </div>
+        <div class="topbar">
+          <button class="iconbtn" data-go="scr-route" aria-label="Back to route"><svg><use href="#i-back"/></svg></button>
+          <span class="title">Charging stop <span class="sub" id="det-stopno">Stop 2 of 3</span></span>
+          <span style="width:38px"></span>
+        </div>
+        <div class="body" id="det-body"><!-- rendered --></div>
+      </section>
+
+      <!-- ======== screen: networks ======== -->
+      <section class="screen" id="scr-networks">
+        <div class="statusbar" style="background:var(--surface)"><span class="num">06:28</span>
+          <span class="cell"><span class="sigbars"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i></span> 5G <span class="batt"><i></i></span></span>
+        </div>
+        <div class="topbar">
+          <button class="iconbtn settings-back" aria-label="Back to menu"><svg><use href="#i-back"/></svg></button>
+          <span class="title">Networks<span class="sub" id="netcount-view"></span></span>
+          <span style="width:38px"></span>
+        </div>
+        <div class="view-body">
+          <div class="searchwrap"><svg><use href="#i-search"/></svg><input type="search" id="netsearch" placeholder="Search networks" aria-label="Search networks"></div>
+          <div class="card listcard" id="netlist"></div>
+        </div>
+      </section>
+
+      <!-- ======== screen: car ======== -->
+      <section class="screen" id="scr-car">
+        <div class="statusbar" style="background:var(--surface)"><span class="num">06:28</span>
+          <span class="cell"><span class="sigbars"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i></span> 5G <span class="batt"><i></i></span></span>
+        </div>
+        <div class="topbar">
+          <button class="iconbtn settings-back" aria-label="Back to menu"><svg><use href="#i-back"/></svg></button>
+          <span class="title">Car</span>
+          <span style="width:38px"></span>
+        </div>
+        <div class="view-body">
+          <div>
+            <div class="sectionlabel">Your cars</div>
+            <div class="card listcard" id="carlist"></div>
+          </div>
+          <div>
+            <div class="sectionlabel">Specs — used for stop planning</div>
+            <div class="kv num" id="carspecs"></div>
+          </div>
+          <div>
+            <div class="sectionlabel">Your consumption</div>
+            <div class="card" style="padding:13px 14px; display:flex; flex-direction:column; gap:8px">
+              <div class="sliderrow">
+                <input type="range" id="consrange" aria-label="Your consumption">
+                <output class="num" id="consout"></output>
+              </div>
+              <span class="fineprint" id="car-cons-label"></span>
+            </div>
+          </div>
+          <p class="fineprint" style="padding:0 2px">Battery, consumption and charging curve decide where you stop. The connector is always CCS — this is a fast-charging planner.</p>
+        </div>
+      </section>
+
+      <!-- ======== screen: add car ======== -->
+      <section class="screen" id="scr-addcar">
+        <div class="statusbar" style="background:var(--surface)"><span class="num">06:28</span>
+          <span class="cell"><span class="sigbars"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i></span> 5G <span class="batt"><i></i></span></span>
+        </div>
+        <div class="topbar">
+          <button class="iconbtn" id="btn-addcar-back" aria-label="Back to car"><svg><use href="#i-back"/></svg></button>
+          <span class="title">Add a car</span>
+          <span style="width:38px"></span>
+        </div>
+        <div class="view-body">
+          <div class="searchwrap"><svg><use href="#i-search"/></svg><input type="search" id="carsearch" placeholder="Search vehicles" aria-label="Search vehicles"></div>
+          <div class="card listcard" id="addcarlist"></div>
+        </div>
+      </section>
+
+      <!-- ======== screen: subscriptions ======== -->
+      <section class="screen" id="scr-subs">
+        <div class="statusbar" style="background:var(--surface)"><span class="num">06:28</span>
+          <span class="cell"><span class="sigbars"><i style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i></span> 5G <span class="batt"><i></i></span></span>
+        </div>
+        <div class="topbar">
+          <button class="iconbtn settings-back" aria-label="Back to menu"><svg><use href="#i-back"/></svg></button>
+          <span class="title">Subscriptions<span class="sub" id="subs-count-view"></span></span>
+          <span style="width:38px"></span>
+        </div>
+        <div class="view-body">
+          <div class="searchwrap"><svg><use href="#i-search"/></svg><input type="search" id="subsearch" placeholder="Search subscriptions" aria-label="Search subscriptions"></div>
+          <div class="card listcard" id="subslist"></div>
+          <p class="fineprint" style="padding:0 2px">Active subscriptions are compared against the ad-hoc price at every stop — the cheapest tariff wins automatically.</p>
+        </div>
+      </section>
+
+      <!-- ======== overlays ======== -->
+      <div class="overlay-backdrop" id="backdrop"></div>
+
+      <!-- plan-route bottom sheet -->
+      <div class="sheet" id="sheet-plan" role="dialog" aria-label="Plan a route">
+        <div class="dragzone" aria-label="Pull up for recent routes"><div class="grab"></div></div>
+        <h3>Plan a route</h3>
+        <div class="card routecard">
+          <div class="field"><span class="pt" style="background:var(--blue)"></span><span><span class="k">From</span><span class="v">Your location · Amsterdam</span></span></div>
+          <div class="field"><span class="pt" style="background:var(--red); border-radius:2px"></span><span><span class="k">To</span><span class="v">München, Sendlinger Straße 8</span></span></div>
+          <button class="swap" aria-label="Swap origin and destination"><svg><use href="#i-swap"/></svg></button>
+        </div>
+        <div class="chiprow">
+          <span class="chip" id="chip-car"><svg><use href="#i-car"/></svg>VW ID.4 Pro · 77 kWh <small>· 90 %</small></span>
+        </div>
+        <p class="fineprint" style="padding:0 2px">Departure is now, traffic is live — no timing preferences to fiddle with.</p>
+        <button class="cta" id="btn-plan"><svg><use href="#i-route"/></svg>Plan route</button>
+        <div class="fullonly">
+          <div class="sectionlabel" style="padding-top:8px">Recent</div>
+          <div id="plan-recents" style="display:flex; flex-direction:column; gap:8px"></div>
+        </div>
+      </div>
+
+      <!-- charge-now bottom sheet -->
+      <div class="sheet" id="sheet-charge" role="dialog" aria-label="Charge now">
+        <div class="dragzone" aria-label="Pull up for more chargers"><div class="grab"></div></div>
+        <h3>Charge now</h3>
+        <p class="subtitle" id="charge-subtitle">Best chargers nearby, ranked by your filters</p>
+        <div class="nearlist" id="nearlist"></div>
+        <div class="fullonly">
+          <div class="sectionlabel" style="padding-top:8px">More nearby</div>
+          <div class="nearlist" id="near-more"></div>
+          <p class="fineprint" style="padding:8px 2px 0">…the real app keeps loading as you scroll.</p>
+        </div>
+      </div>
+
+      <!-- drawer: preferences + filters -->
+      <div class="drawer" id="drawer" role="dialog" aria-label="Preferences and filters">
+        <div class="drawer-head"><svg><use href="#i-bolt"/></svg>ChargeAhead</div>
+        <div class="drawer-body" id="drawer-main">
+          <div>
+            <div class="sectionlabel">Preferences</div>
+            <button class="prefrow" id="btn-car"><svg><use href="#i-car"/></svg><span>Car<small id="car-sum"></small></span><span class="chev">›</span></button>
+            <button class="prefrow" id="btn-subs"><svg><use href="#i-cardpay"/></svg><span>Subscriptions<small id="subs-sum"></small></span><span class="chev">›</span></button>
+          </div>
+          <div>
+            <div class="sectionlabel">Filters</div>
+            <button class="prefrow" id="btn-networks"><svg><use href="#i-filter"/></svg><span>Networks<small id="netcount"></small></span><span class="chev">›</span></button>
+          </div>
+          <div>
+            <div class="sectionlabel">Minimum power</div>
+            <div class="seg" id="powerseg">
+              <button data-kw="50">50 kW</button><button data-kw="150" class="on">150 kW</button><button data-kw="300">300 kW</button>
+            </div>
+          </div>
+          <div style="display:flex; gap:10px">
+            <div style="flex:1">
+              <div class="sectionlabel">Max price</div>
+              <div class="sliderrow vert">
+                <input type="range" min="40" max="100" value="85" id="pricerange" aria-label="Maximum price">
+                <span><output class="num" id="priceout">€0.85/kWh</output><span class="fineprint">up to €1.00</span></span>
+              </div>
+            </div>
+            <div style="flex:1">
+              <div class="sectionlabel">Max distance</div>
+              <div class="sliderrow vert">
+                <input type="range" min="1" max="10" step="0.5" value="5" id="distrange" aria-label="Maximum distance for Charge now">
+                <span><output class="num" id="distout">5.0 km</output><span class="fineprint">for Charge now</span></span>
+              </div>
+            </div>
+          </div>
+          <p class="fineprint" style="padding:0 2px">Only chargers that are free right now are shown — occupied ones aren't worth the detour.</p>
+        </div>
+      </div>
+
+      <!-- saved & recent routes sheet -->
+      <div class="sheet" id="sheet-routes" role="dialog" aria-label="Saved and recent routes">
+        <div class="grab"></div>
+        <h3>Your routes</h3>
+        <div>
+          <div class="sectionlabel">Saved</div>
+          <div id="savedlist" style="display:flex; flex-direction:column; gap:8px"></div>
+        </div>
+        <div>
+          <div class="sectionlabel">Recent</div>
+          <div id="recentlist" style="display:flex; flex-direction:column; gap:8px"></div>
+        </div>
+      </div>
+
+      <!-- toast -->
+      <div class="toast" id="toast" role="status">
+        <svg><use href="#i-pin"/></svg><span class="msg" id="toast-msg"></span><a id="toast-link" target="_blank" rel="noopener">Open ↗</a>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ---------- data ---------- */
+const NETWORKS = [
+  ['Ionity','#37A8AE'],['Fastned','#F6C700'],['EnBW','#FF9F00'],
+  ['Tesla','#E82127'],['Allego','#93C11C'],['Shell Recharge','#ED1C24'],
+  ['Aral pulse','#0A64C8'],['TotalEnergies','#E10A20'],
+  ['Vattenfall InCharge','#FFDA00'],['Mer','#0E3E63'],['EWE Go','#0090D4'],
+  ['GreenWay','#57A639'],['Circle K','#EE3124'],['Pfalzwerke','#004F9F'],
+];
+
+/* chargers around the user's position, for "Charge now" */
+const NEARBY = [
+  {id:'shell-mus', network:'Shell Recharge', color:'#ED1C24', name:'Shell Museumplein', q:'Shell Recharge Museumplein, Amsterdam', km:0.4, kw:22,  price:0.39, free:1, total:2},
+  {id:'fastned-zo', network:'Fastned', color:'#F6C700', name:'Fastned Zuidoost', q:'Fastned Amsterdam Zuidoost', km:1.9, kw:300, price:0.45, free:4, total:6},
+  {id:'ionity-a4', network:'Ionity', color:'#37A8AE', name:'Ionity A4', q:'Ionity Amsterdam A4', km:3.4, kw:350, price:0.49, free:6, total:8},
+  {id:'tesla-west', network:'Tesla', color:'#E82127', name:'Tesla Amsterdam-West', q:'Tesla Supercharger Amsterdam-West', km:3.1, kw:250, price:0.52, free:8, total:12},
+  {id:'allego-wp', network:'Allego', color:'#93C11C', name:'Allego Westpoort', q:'Allego Westpoort, Amsterdam', km:2.8, kw:300, price:0.59, free:0, total:2},
+  {id:'shell-slt', network:'Shell Recharge', color:'#ED1C24', name:'Shell Sloterdijk', q:'Shell Recharge Sloterdijk, Amsterdam', km:2.6, kw:150, price:0.62, free:2, total:4},
+];
+
+const STOP2_IONITY = {
+  network:'Ionity', color:'#37A8AE', name:'Ionity Bad Camberg', addr:'A3 Raststätte Bad Camberg, 65520 Bad Camberg',
+  road:'A3 · km 421', arrive:'11:05', soc:18, leaveSoc:82, mins:28, kw:'350 kW', kwh:49,
+  avail:'4 of 8 free', connectors:'8× CCS · 350 kW',
+  prices:[['Ionity Passport Power','your subscription',0.49,true],['Ad-hoc','app or charge card',0.79,false],['EnBW mobility+ M','roaming',0.89,false]],
+  amen:['24/7','WC','Serways café','Roof','Lounge'],
+};
+const STOP2_ALT = {
+  network:'Fastned', color:'#F6C700', name:'Fastned Limburg-Nord', addr:'A3 Ausfahrt 41, 65549 Limburg an der Lahn',
+  road:'A3 · km 418', arrive:'11:02', soc:19, leaveSoc:80, mins:26, kw:'300 kW', kwh:47,
+  avail:'5 of 6 free', connectors:'6× CCS · 300 kW',
+  prices:[['Fastned Gold','your subscription',0.45,true],['Ad-hoc','app or charge card',0.69,false],['EnBW mobility+ M','roaming',0.85,false]],
+  amen:['24/7','WC','Bakery next door','Roof'],
+};
+
+const state = { stops:[
+  { network:'Fastned', color:'#F6C700', name:'Fastned Oberhausen', addr:'Brammenring 111, 46047 Oberhausen',
+    road:'A3 · km 182', arrive:'08:22', soc:34, leaveSoc:78, mins:18, kw:'300 kW', kwh:34,
+    avail:'6 of 8 free', connectors:'8× CCS · 300 kW',
+    prices:[['Fastned Gold','your subscription',0.45,true],['Ad-hoc','app or charge card',0.69,false],['EnBW mobility+ M','roaming',0.85,false]],
+    amen:['24/7','WC','Café','Roof'] },
+  STOP2_IONITY,
+  { network:'EnBW', color:'#FF9F00', name:'EnBW Feucht-Ost', addr:'A9 Rasthof Feucht-Ost, 90537 Feucht',
+    road:'A9 · km 648', arrive:'13:37', soc:21, leaveSoc:71, mins:22, kw:'300 kW', kwh:38,
+    avail:'3 of 4 free', connectors:'4× CCS · 300 kW',
+    prices:[['EnBW mobility+ M','your subscription',0.51,true],['Ad-hoc','app or charge card',0.65,false],['Ionity Passport','roaming',0.75,false]],
+    amen:['24/7','WC','Restaurant'] },
+], selecting:false, selA:null, selB:null, detailIdx:1,
+   netOn:{}, minKw:150, maxPrice:0.85, maxKm:5, carId:'id4', netQuery:'', subQuery:'', carQuery:'',
+   carDelete:false, returnScreen:'scr-home' };
+NETWORKS.forEach(n => state.netOn[n[0]] = true);
+
+/* saved & recent routes */
+const savedRoutes = [
+  {name:'Oma in Hamburg', sum:'Amsterdam → Hamburg · 466 km · 1 stop'},
+  {name:'Sommertrip Alpen', sum:'Amsterdam → Innsbruck · 930 km · 4 stops'},
+];
+const recentRoutes = [
+  {sum:'Amsterdam → München', meta:'842 km · 3 stops · today', opens:true, saved:false},
+  {sum:'Amsterdam → Berlin', meta:'664 km · 2 stops · Tue', saved:false},
+  {sum:'Amsterdam → Rotterdam', meta:'78 km · no stops · Aug 30', saved:false},
+];
+function saveRecent(i){
+  const r = recentRoutes[i];
+  if (r.saved) return;
+  r.saved = true;
+  savedRoutes.push({id:'recent-' + i, name:r.sum, sum:`${r.sum} · ${r.meta.replace(/ · [^·]+$/, '')}`});
+}
+function unsaveRecent(i){
+  const r = recentRoutes[i];
+  r.saved = false;
+  const k = savedRoutes.findIndex(s => s.id === 'recent-' + i);
+  if (k >= 0) savedRoutes.splice(k, 1);
+}
+
+/* cars & subscriptions — cons is the driver-adjusted value, seeded from the spec */
+const CARS = [
+  {id:'id4', name:'VW ID.4 Pro', batt:77, spec:19.5, cons:19.5, dc:135},
+  {id:'m3', name:'Tesla Model 3 LR', batt:75, spec:16.8, cons:16.8, dc:250},
+  {id:'megane', name:'Renault Megane E-Tech', batt:60, spec:17.2, cons:17.2, dc:130},
+];
+const SUBS = [
+  {name:'Fastned Gold', price:'€11.99/month', on:true},
+  {name:'Ionity Passport Power', price:'€11.99/month', on:true},
+  {name:'EnBW mobility+ M', price:'€7.99/month', on:true},
+  {name:'EnBW mobility+ L', price:'€17.99/month', on:false},
+  {name:'Shell Recharge Plus', price:'€4.99/month', on:false},
+  {name:'Aral pulse flex', price:'no base fee · higher kWh price', on:false},
+  {name:'Tesla Supercharger Membership', price:'€9.99/month', on:false},
+  {name:'Vattenfall InCharge Go', price:'€5.99/month', on:false},
+  {name:'Maingau EinfachStromLaden', price:'no base fee', on:false},
+  {name:'Elli Drive Highway', price:'€14.99/month', on:false},
+];
+
+/* vehicle catalog for "add a car" — batt kWh usable · spec kWh/100 km · dc peak kW */
+const CAR_CATALOG = [
+  {name:'Tesla Model Y LR', batt:75, spec:16.9, dc:250},
+  {name:'Hyundai Ioniq 5 77', batt:74, spec:18.0, dc:233},
+  {name:'Kia EV6 GT-Line', batt:74, spec:17.8, dc:236},
+  {name:'Skoda Enyaq 85', batt:77, spec:16.8, dc:175},
+  {name:'BMW i4 eDrive40', batt:81, spec:18.1, dc:205},
+  {name:'Audi Q4 e-tron 45', batt:77, spec:19.2, dc:175},
+  {name:'Mercedes EQA 250+', batt:70, spec:17.7, dc:100},
+  {name:'Polestar 2 LR', batt:79, spec:17.6, dc:205},
+  {name:'Cupra Born 77', batt:77, spec:17.0, dc:170},
+  {name:'Volvo EX30 Extended', batt:64, spec:17.5, dc:153},
+  {name:'Porsche Taycan', batt:89, spec:20.0, dc:270},
+  {name:'Fiat 500e 42', batt:37, spec:14.9, dc:85},
+  {name:'Dacia Spring 65', batt:25, spec:13.9, dc:30},
+];
+
+/* points along the route: 0=origin, 1..3=stops, 4=destination */
+const pointName = i => i === 0 ? 'Amsterdam' : i === 4 ? 'München' : state.stops[i-1].name;
+
+/* ---------- helpers ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const price2 = p => '€' + p.toFixed(2);
+
+function go(id){
+  $$('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+}
+$$('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+
+function mapsUrl(origin, dest, waypoints){
+  let u = 'https://www.google.com/maps/dir/?api=1&travelmode=driving'
+        + '&destination=' + encodeURIComponent(dest);
+  if (origin) u += '&origin=' + encodeURIComponent(origin);
+  if (waypoints && waypoints.length) u += '&waypoints=' + waypoints.map(encodeURIComponent).join('%7C');
+  return u;
+}
+
+let toastTimer;
+function toast(msg, url){
+  $('#toast-msg').textContent = msg;
+  const a = $('#toast-link');
+  if (url){ a.href = url; a.style.display = ''; } else { a.style.display = 'none'; }
+  $('#toast').classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('#toast').classList.remove('show'), 5200);
+}
+
+/* ---------- overlays (sheets + drawer share one backdrop) ---------- */
+function openOverlay(id){
+  closeOverlays();
+  $('#backdrop').classList.add('open');
+  $('#' + id).classList.add('open');
+}
+function closeOverlays(){
+  $('#backdrop').classList.remove('open');
+  $$('.sheet, .drawer').forEach(el => el.classList.remove('open', 'full'));
+}
+
+/* pull a sheet up to expand it to full height; pull down to collapse/close */
+function makeExpandable(sheetId){
+  const sheet = $('#' + sheetId);
+  const zone = sheet.querySelector('.dragzone');
+  let startY = null;
+  zone.addEventListener('pointerdown', e => { startY = e.clientY; zone.setPointerCapture(e.pointerId); });
+  zone.addEventListener('pointerup', e => {
+    if (startY === null) return;
+    const dy = e.clientY - startY;
+    startY = null;
+    if (dy < -30) sheet.classList.add('full');
+    else if (dy > 30){
+      if (sheet.classList.contains('full')) sheet.classList.remove('full');
+      else closeOverlays();
+    }
+    else sheet.classList.toggle('full');
+  });
+}
+makeExpandable('sheet-plan');
+makeExpandable('sheet-charge');
+$('#backdrop').addEventListener('click', () => {
+  if ($('#drawer').classList.contains('open')) applyFilters();
+  else closeOverlays();
+});
+$('#btn-burger').addEventListener('click', () => openOverlay('drawer'));
+$('#btn-filter').addEventListener('click', () => openOverlay('drawer'));
+$('#btn-open-plan').addEventListener('click', () => { renderPlanRecents(); openOverlay('sheet-plan'); });
+$('#btn-open-charge').addEventListener('click', () => { renderChargeNow(); openOverlay('sheet-charge'); });
+$('#btn-open-routes').addEventListener('click', () => { renderRoutes(); openOverlay('sheet-routes'); });
+
+/* settings views open full-screen; back returns to the drawer over the previous screen */
+function openSettingsView(id){
+  state.returnScreen = $('.screen.active').id;
+  closeOverlays();
+  go(id);
+}
+$('#btn-networks').addEventListener('click', () => { renderNetView(); openSettingsView('scr-networks'); });
+$('#btn-car').addEventListener('click', () => { renderCarView(); openSettingsView('scr-car'); });
+$('#btn-subs').addEventListener('click', () => { renderSubsView(); openSettingsView('scr-subs'); });
+$$('.settings-back').forEach(b => b.addEventListener('click', () => {
+  go(state.returnScreen || 'scr-home');
+  updateDrawerSummaries();
+  openOverlay('drawer');
+}));
+
+/* ---------- charge now: best 3 by filters (occupied chargers never qualify) ----------
+   If the filters starve the list (fewer than 2 hits), filters are relaxed in a fixed
+   order until it recovers: min power → networks → max price → max distance.
+   That priority should become user-customizable later. */
+const RELAX_ORDER = [
+  {key:'min power', pass:c => c.kw >= state.minKw},
+  {key:'networks', pass:c => state.netOn[c.network]},
+  {key:'max price', pass:c => c.price <= state.maxPrice},
+  {key:'max distance', pass:c => c.km <= state.maxKm},
+];
+function bestChargers(){
+  for (let n = 0; n <= RELAX_ORDER.length; n++){
+    const enforced = RELAX_ORDER.slice(n);
+    const list = NEARBY
+      .filter(c => c.free > 0 && enforced.every(f => f.pass(c)))
+      .sort((a, b) => a.price - b.price)
+      .slice(0, 3);
+    if (list.length >= 2 || n === RELAX_ORDER.length)
+      return {list, relaxed: RELAX_ORDER.slice(0, n).map(f => f.key)};
+  }
+}
+function renderChargeNow(){
+  const {list: best, relaxed} = bestChargers();
+  $('#charge-subtitle').textContent = relaxed.length
+    ? `Filters were too strict — relaxed ${relaxed.join(', then ')}`
+    : 'Best chargers nearby, ranked by your filters';
+  $('#nearlist').innerHTML = best.length ? best.map((c, i) => `
+    <div class="card near">
+      <span class="rank num">${i+1}</span>
+      <span class="mid">
+        <span class="name"><i style="background:${c.color}"></i><span class="nm">${c.name}</span></span>
+        <span class="meta num">${c.km.toFixed(1)} km · ${c.kw} kW · ${c.free > 0
+          ? `<span class="free">${c.free}/${c.total} free</span>` : '<span class="occ">occupied</span>'}</span>
+      </span>
+      <span class="eur num">${price2(c.price)}<small style="color:var(--dim); font-weight:600">/kWh</small></span>
+      <button class="gobtn" data-near="${c.id}" aria-label="Navigate to ${c.name}"><svg><use href="#i-pin"/></svg></button>
+    </div>`).join('')
+    : '<div class="card nomatch">Nothing nearby matches your filters.</div>';
+  $$('#nearlist [data-near]').forEach(b => b.addEventListener('click', () => {
+    const c = NEARBY.find(x => x.id === b.dataset.near);
+    toast(`${c.name} sent to Google Maps`, mapsUrl(null, c.q));
+  }));
+  /* highlight the winners on the home map */
+  const ids = best.map(c => c.id);
+  $$('.npin').forEach(p => {
+    const rank = ids.indexOf(p.dataset.nid);
+    p.classList.toggle('best', rank >= 0);
+    p.querySelector('text').textContent = rank >= 0 ? rank + 1 : '';
+  });
+  /* expanded sheet: the rest of the pool, by distance ("endless" in the real app) */
+  const rest = NEARBY.filter(c => !ids.includes(c.id)).sort((a, b) => a.km - b.km);
+  $('#near-more').innerHTML = rest.map((c, i) => `
+    <div class="card near">
+      <span class="rank num" style="background:#E8EAED; color:var(--dim)">${i + best.length + 1}</span>
+      <span class="mid">
+        <span class="name"><i style="background:${c.color}"></i><span class="nm">${c.name}</span></span>
+        <span class="meta num">${c.km.toFixed(1)} km · ${c.kw} kW · ${c.free > 0
+          ? `<span class="free">${c.free}/${c.total} free</span>` : '<span class="occ">occupied</span>'}</span>
+      </span>
+      <span class="eur num">${price2(c.price)}<small style="color:var(--dim); font-weight:600">/kWh</small></span>
+      <button class="gobtn" data-near="${c.id}" aria-label="Navigate to ${c.name}"><svg><use href="#i-pin"/></svg></button>
+    </div>`).join('');
+  $$('#near-more [data-near]').forEach(b => b.addEventListener('click', () => {
+    const c = NEARBY.find(x => x.id === b.dataset.near);
+    toast(`${c.name} sent to Google Maps`, mapsUrl(null, c.q));
+  }));
+}
+
+function renderPlanRecents(){
+  $('#plan-recents').innerHTML = recentRoutes.map((r, i) => `
+    <div class="card routerow">
+      <button class="mid" data-planrecent="${i}" style="text-align:left">
+        <span class="rname">${r.sum}</span>
+        <span class="rmeta num">${r.meta}</span>
+      </button>
+    </div>`).join('');
+  $$('#plan-recents [data-planrecent]').forEach(b => b.addEventListener('click', () => {
+    const r = recentRoutes[+b.dataset.planrecent];
+    if (r.opens){ closeOverlays(); go('scr-route'); }
+    else toast('Only the München route is wired up in this mockup');
+  }));
+}
+
+/* ---------- route list ---------- */
+function renderList(){
+  const rows = [];
+  rows.push(`<button class="terminus" data-point="0"><span class="pt" style="background:var(--green)"></span><span class="tname">Amsterdam, Herengracht 12</span><span class="when num">dep 06:30 · 90 %</span></button>`);
+  state.stops.forEach((s, i) => {
+    rows.push(`
+    <div style="display:flex; gap:8px">
+      <button class="stop" data-point="${i+1}" data-stop="${i}">
+        <span class="no" style="background:${s.color}">${i+1}</span>
+        <span class="mid">
+          <span class="name"><span class="nm">${s.name}</span><span class="stopprice num">${price2(s.prices[0][2])}<small>/kWh</small></span></span>
+          <span class="road num">${s.arrive} · ${s.mins} min charge</span>
+        </span>
+      </button>
+      <button class="sendone" data-sendstop="${i}" aria-label="Send ${s.name} to Google Maps"><svg><use href="#i-send"/></svg></button>
+    </div>`);
+  });
+  rows.push(`<button class="terminus" data-point="4"><span class="pt" style="background:var(--red); border-radius:2px"></span><span class="tname">München, Sendlinger Str. 8</span><span class="when num">arr 15:46 · 24 %</span></button>`);
+  rows.push(`
+    <div class="actions-in">
+      <button class="btn-maps" id="btn-send-main"><svg><use href="#i-pin"/></svg><span id="btn-send-label">Send to Maps</span></button>
+      <button class="btn-ghost ${state.selecting ? 'on' : ''}" id="btn-select">${state.selecting ? 'Cancel' : 'Select section'}</button>
+      <button class="btn-fav ${recentRoutes[0].saved ? 'saved' : ''}" id="btn-fav-route" aria-label="${recentRoutes[0].saved ? 'Remove route from saved' : 'Save this route'}"><svg><use href="#i-heart"/></svg></button>
+    </div>`);
+  $('#stoplist').innerHTML = rows.join('');
+
+  $$('#stoplist [data-sendstop]').forEach(b => b.addEventListener('click', e => {
+    e.stopPropagation();
+    const s = state.stops[+b.dataset.sendstop];
+    toast(`${s.name} sent to Google Maps`, mapsUrl(null, s.name));
+  }));
+  $$('#stoplist [data-point]').forEach(b => b.addEventListener('click', () => {
+    const pt = +b.dataset.point;
+    if (state.selecting) return pickPoint(pt);
+    if (b.dataset.stop !== undefined) openDetail(+b.dataset.stop);
+  }));
+  $('#btn-send-main').addEventListener('click', onSendMain);
+  $('#btn-select').addEventListener('click', onToggleSelect);
+  $('#btn-fav-route').addEventListener('click', () => {
+    if (recentRoutes[0].saved){
+      unsaveRecent(0);
+      toast('Removed from saved routes');
+    } else {
+      saveRecent(0);
+      toast('Route saved — find it under the heart on the home screen');
+    }
+    renderList();
+  });
+  refreshSelectionUI();
+}
+
+function updateSummary(){
+  const cost = state.stops.reduce((sum, s) => sum + s.kwh * s.prices[0][2], 0);
+  $('#sum-cost').textContent = price2(cost);
+  $('#sum-charge').textContent = state.stops.reduce((m, s) => m + s.mins, 0) + ' min charging';
+  $('#pin2').querySelector('circle').setAttribute('fill', state.stops[1].color);
+}
+
+/* ---------- maps handoff ---------- */
+function onSendMain(){
+  if (state.selecting && state.selA !== null && state.selB !== null){
+    const [a, b] = [Math.min(state.selA, state.selB), Math.max(state.selA, state.selB)];
+    const wps = [];
+    for (let i = a + 1; i < b; i++) wps.push(pointName(i));
+    toast(`Section ${pointName(a)} → ${pointName(b)} sent to Google Maps`, mapsUrl(pointName(a), pointName(b), wps));
+    exitSelect();
+  } else {
+    toast('Route with 3 charging stops sent to Google Maps', mapsUrl('Amsterdam', 'München', state.stops.map(s => s.name)));
+  }
+}
+
+/* ---------- section selection ---------- */
+function pickPoint(pt){
+  if (state.selA === null) state.selA = pt;
+  else if (state.selB === null && pt !== state.selA) state.selB = pt;
+  else { state.selA = pt; state.selB = null; }
+  refreshSelectionUI();
+}
+function refreshSelectionUI(){
+  const on = state.selecting, a = state.selA, b = state.selB;
+  const lo = (a !== null && b !== null) ? Math.min(a, b) : null;
+  const hi = (a !== null && b !== null) ? Math.max(a, b) : null;
+  $$('#stoplist [data-point]').forEach(el => {
+    const pt = +el.dataset.point;
+    el.classList.toggle('sel-pick', on && (pt === a || pt === b));
+  });
+  $$('.pin').forEach(p => {
+    const pt = +p.dataset.point;
+    p.classList.toggle('dimmed', on && lo !== null && (pt < lo || pt > hi));
+  });
+  for (let i = 0; i < 4; i++){
+    const leg = $('#leg' + i);
+    leg.classList.toggle('sel', on && lo !== null && i >= lo && i < hi);
+    leg.classList.toggle('dim', on && !(lo !== null && i >= lo && i < hi));
+  }
+  const label = $('#btn-send-label');
+  if (on && lo !== null) label.textContent = `Send ${pointName(lo)} → ${pointName(hi)}`;
+  else if (on) label.textContent = 'Send section to Maps';
+  else label.textContent = 'Send to Maps';
+  $('#selbanner').textContent = on && a !== null && b === null ? 'Now tap the end point of the section'
+    : 'Mark a section: tap its start and end point';
+}
+function exitSelect(){
+  state.selecting = false; state.selA = null; state.selB = null;
+  $('#scr-route').classList.remove('selecting');
+  $('#btn-select').classList.remove('on');
+  $('#btn-select').textContent = 'Select section';
+  refreshSelectionUI();
+}
+function onToggleSelect(){
+  if (state.selecting) return exitSelect();
+  state.selecting = true;
+  $('#scr-route').classList.add('selecting');
+  $('#btn-select').classList.add('on');
+  $('#btn-select').textContent = 'Cancel';
+  refreshSelectionUI();
+}
+$$('.pin').forEach(p => p.addEventListener('click', () => {
+  const pt = +p.dataset.point;
+  if (state.selecting) pickPoint(pt);
+  else if (pt >= 1 && pt <= 3) openDetail(pt - 1);
+}));
+
+/* ---------- charger detail ---------- */
+function openDetail(i){
+  state.detailIdx = i;
+  const s = state.stops[i];
+  $('#det-stopno').textContent = `Stop ${i+1} of 3`;
+  $('#det-body').innerHTML = `
+    <div class="det-head">
+      <span class="net"><i style="background:${s.color}"></i>${s.network}</span>
+      <h2>${s.name}</h2>
+      <div class="addr">${s.addr}</div>
+    </div>
+    <div class="card livebar"><span class="pulse"></span>${s.avail}<small>live · 12 s ago</small></div>
+    <div class="kv num">
+      <div><span class="k">Connectors</span><span class="v">${s.connectors}</span></div>
+      <div><span class="k">Planned charge</span><span class="v">${s.mins} min · ${s.soc} → ${s.leaveSoc} %</span></div>
+      <div><span class="k">Arrival</span><span class="v">${s.arrive} at ${s.soc} %</span></div>
+      <div><span class="k">Energy</span><span class="v">≈ ${s.kwh} kWh</span></div>
+    </div>
+    <div class="card pricelist">
+      ${s.prices.map(p => `
+        <div class="pricerow ${p[3] ? 'best' : ''}">
+          <span class="who">${p[0]}<small>${p[1]}</small></span>
+          ${p[3] ? '<span class="best-tag">cheapest</span>' : ''}
+          <span class="eur num">${price2(p[2])}<small style="color:var(--dim); font-weight:600">/kWh</small></span>
+        </div>`).join('')}
+    </div>
+    <div class="amenities">${s.amen.map(a => `<span>${a}</span>`).join('')}</div>
+    <div class="det-actions">
+      <button class="btn-maps" id="btn-nav-one" style="padding:14px"><svg><use href="#i-pin"/></svg>Navigate here in Google Maps</button>
+      <button class="btn-ghost" id="btn-alt" style="text-align:center">Choose a different charger</button>
+    </div>`;
+  $('#btn-nav-one').addEventListener('click', () =>
+    toast(`${s.name} sent to Google Maps`, mapsUrl(null, s.name)));
+  $('#btn-alt').addEventListener('click', () =>
+    toast('Alternatives along this leg — not in the mockup, sorry'));
+  go('scr-detail');
+}
+
+/* ---------- plan route ---------- */
+$('#btn-plan').addEventListener('click', () => {
+  const b = $('#btn-plan');
+  b.textContent = 'Planning · checking traffic…';
+  setTimeout(() => {
+    b.innerHTML = '<svg><use href="#i-route"/></svg>Plan route';
+    closeOverlays();
+    go('scr-route');
+  }, 650);
+});
+
+/* ---------- settings views ---------- */
+function netCountText(){
+  const on = NETWORKS.filter(([n]) => state.netOn[n]).length;
+  return on === NETWORKS.length ? `all ${NETWORKS.length} active` : `${on} of ${NETWORKS.length} active`;
+}
+function updateDrawerSummaries(){
+  const car = CARS.find(c => c.id === state.carId);
+  $('#car-sum').textContent = `${car.name} · ${car.batt} kWh`;
+  $('#subs-sum').textContent = `${SUBS.filter(s => s.on).length} active`;
+  $('#netcount').textContent = netCountText();
+}
+function renderNetView(){
+  const q = state.netQuery.trim().toLowerCase();
+  const hits = NETWORKS.filter(([n]) => n.toLowerCase().includes(q));
+  $('#netcount-view').textContent = netCountText();
+  $('#netlist').innerHTML = hits.length ? hits.map(([n, c]) =>
+    `<button class="netrow ${state.netOn[n] ? 'on' : ''}" data-net="${n}" role="switch" aria-checked="${state.netOn[n]}">
+       <i style="background:${c}"></i>${n}<span class="tick"><svg><use href="#i-check"/></svg></span>
+     </button>`).join('')
+    : `<div class="emptyhint">No network matches “${state.netQuery.trim()}”.</div>`;
+  $$('#netlist .netrow').forEach(b => b.addEventListener('click', () => {
+    state.netOn[b.dataset.net] = !state.netOn[b.dataset.net];
+    b.classList.toggle('on');
+    b.setAttribute('aria-checked', state.netOn[b.dataset.net]);
+    $('#netcount-view').textContent = netCountText();
+  }));
+}
+$('#netsearch').addEventListener('input', e => { state.netQuery = e.target.value; renderNetView(); });
+
+function setCar(id){
+  state.carId = id;
+  const c = CARS.find(x => x.id === id);
+  $('#chip-car').innerHTML = `<svg><use href="#i-car"/></svg>${c.name} · ${c.batt} kWh <small>· 90 %</small>`;
+}
+function renderCarView(){
+  const car = CARS.find(c => c.id === state.carId);
+  const del = state.carDelete;
+  $('#carlist').innerHTML = CARS.map(c =>
+    del
+    ? `<button class="netrow" data-delcar="${c.id}" aria-label="Remove ${c.name}">
+         ${c.name}<span class="tick del"><svg><use href="#i-close"/></svg></span>
+       </button>`
+    : `<button class="netrow ${c.id === state.carId ? 'on' : ''}" data-car="${c.id}" role="radio" aria-checked="${c.id === state.carId}">
+         ${c.name}<span class="tick"><svg><use href="#i-check"/></svg></span>
+       </button>`).join('')
+    + (del
+      ? `<button class="netrow" id="btn-deldone" style="color:var(--blue)">Done deleting</button>`
+      : `<div class="netrow">
+           <button id="btn-addcar" style="color:var(--blue); font-weight:600">Add a car…</button>
+           <button id="btn-delcar" style="color:var(--red); font-weight:600; margin-left:auto">Delete a car…</button>
+         </div>`);
+  const range = c => Math.round(c.batt / c.cons * 100);
+  $('#carspecs').innerHTML = `
+    <div><span class="k">Battery</span><span class="v">${car.batt} kWh usable</span></div>
+    <div><span class="k">DC peak power</span><span class="v">${car.dc} kW</span></div>
+    <div><span class="k">Connector</span><span class="v">CCS</span></div>
+    <div><span class="k">Est. range</span><span class="v" id="car-range">≈ ${range(car)} km</span></div>`;
+  $('#car-cons-label').textContent = `spec says ${car.spec.toFixed(1)} — adjust to how you actually drive`;
+  const slider = $('#consrange'), out = $('#consout');
+  slider.min = 12; slider.max = 28; slider.step = 0.1; slider.value = car.cons;
+  out.textContent = `${car.cons.toFixed(1)} kWh/100 km`;
+  slider.oninput = () => {
+    car.cons = +slider.value;
+    out.textContent = `${car.cons.toFixed(1)} kWh/100 km`;
+    $('#car-range').textContent = `≈ ${range(car)} km`;
+  };
+  $$('#carlist [data-car]').forEach(b => b.addEventListener('click', () => {
+    setCar(b.dataset.car);
+    renderCarView();
+  }));
+  $$('#carlist [data-delcar]').forEach(b => b.addEventListener('click', () => {
+    if (CARS.length === 1) return toast('Keep at least one car — the planner needs it');
+    const i = CARS.findIndex(c => c.id === b.dataset.delcar);
+    const gone = CARS.splice(i, 1)[0];
+    if (state.carId === gone.id) setCar(CARS[0].id);
+    toast(`${gone.name} removed`);
+    renderCarView();
+  }));
+  if (del) $('#btn-deldone').addEventListener('click', () => { state.carDelete = false; renderCarView(); });
+  else {
+    $('#btn-addcar').addEventListener('click', () => {
+      state.carQuery = ''; $('#carsearch').value = '';
+      renderAddCarView();
+      go('scr-addcar');
+    });
+    $('#btn-delcar').addEventListener('click', () => { state.carDelete = true; renderCarView(); });
+  }
+}
+
+function renderAddCarView(){
+  const q = state.carQuery.trim().toLowerCase();
+  const owned = new Set(CARS.map(c => c.name));
+  const hits = CAR_CATALOG.filter(c => !owned.has(c.name) && c.name.toLowerCase().includes(q));
+  $('#addcarlist').innerHTML = hits.length ? hits.map((c, i) =>
+    `<button class="netrow" data-add="${i}">
+       <span>${c.name}<small style="display:block; font-weight:500; font-size:11.5px; color:var(--dim)" class="num">${c.batt} kWh · ${c.spec.toFixed(1)} kWh/100 km · ${c.dc} kW DC</small></span>
+       <span class="tick add"><svg><use href="#i-plus"/></svg></span>
+     </button>`).join('')
+    : `<div class="emptyhint">No vehicle matches “${state.carQuery.trim()}”.</div>`;
+  $$('#addcarlist [data-add]').forEach(b => b.addEventListener('click', () => {
+    const c = hits[+b.dataset.add];
+    const id = c.name.toLowerCase().replace(/\W+/g, '-');
+    CARS.push({id, name:c.name, batt:c.batt, spec:c.spec, cons:c.spec, dc:c.dc});
+    setCar(id);
+    go('scr-car');
+    renderCarView();
+    toast(`${c.name} added to your garage`);
+  }));
+}
+$('#carsearch').addEventListener('input', e => { state.carQuery = e.target.value; renderAddCarView(); });
+$('#btn-addcar-back').addEventListener('click', () => { go('scr-car'); renderCarView(); });
+
+function renderSubsView(){
+  const q = state.subQuery.trim().toLowerCase();
+  const hits = SUBS.map((s, i) => [s, i]).filter(([s]) => s.name.toLowerCase().includes(q));
+  $('#subs-count-view').textContent = `${SUBS.filter(s => s.on).length} active`;
+  $('#subslist').innerHTML = hits.length ? hits.map(([s, i]) =>
+    `<button class="netrow ${s.on ? 'on' : ''}" data-sub="${i}" role="switch" aria-checked="${s.on}">
+       <span>${s.name}<small style="display:block; font-weight:500; font-size:11.5px; color:var(--dim)">${s.price}</small></span>
+       <span class="tick"><svg><use href="#i-check"/></svg></span>
+     </button>`).join('')
+    : `<div class="emptyhint">No subscription matches “${state.subQuery.trim()}”.</div>`;
+  $$('#subslist [data-sub]').forEach(b => b.addEventListener('click', () => {
+    const s = SUBS[+b.dataset.sub];
+    s.on = !s.on;
+    b.classList.toggle('on');
+    b.setAttribute('aria-checked', s.on);
+    $('#subs-count-view').textContent = `${SUBS.filter(x => x.on).length} active`;
+  }));
+}
+$('#subsearch').addEventListener('input', e => { state.subQuery = e.target.value; renderSubsView(); });
+$$('#powerseg button').forEach(b => b.addEventListener('click', () => {
+  $$('#powerseg button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  state.minKw = +b.dataset.kw;
+}));
+$('#pricerange').addEventListener('input', e => {
+  state.maxPrice = e.target.value / 100;
+  $('#priceout').textContent = `€${state.maxPrice.toFixed(2)}/kWh`;
+});
+$('#distrange').addEventListener('input', e => {
+  state.maxKm = +e.target.value;
+  $('#distout').textContent = `${state.maxKm.toFixed(1)} km`;
+});
+
+function filtersDefault(){
+  return NETWORKS.every(([n]) => state.netOn[n]) && state.minKw === 150
+      && state.maxPrice === 0.85 && state.maxKm === 5;
+}
+
+/* ---------- saved & recent routes ---------- */
+function renderRoutes(){
+  $('#savedlist').innerHTML = savedRoutes.length ? savedRoutes.map((r, i) => `
+    <div class="card routerow">
+      <span class="mid">
+        <span class="rname" data-saved="${i}">${r.name}</span>
+        <span class="rmeta num">${r.sum}</span>
+      </span>
+      <button class="gobtn" data-rename="${i}" aria-label="Rename ${r.name}"><svg><use href="#i-pen"/></svg></button>
+    </div>`).join('')
+    : '<div class="card emptyhint">Nothing saved yet — tap the heart on a recent route.</div>';
+
+  $('#recentlist').innerHTML = recentRoutes.map((r, i) => `
+    <div class="card routerow">
+      <button class="mid" data-openroute="${i}" style="text-align:left">
+        <span class="rname">${r.sum}</span>
+        <span class="rmeta num">${r.meta}</span>
+      </button>
+      <button class="gobtn heartbtn ${r.saved ? 'saved' : ''}" data-fav="${i}" aria-label="Save ${r.sum}"><svg><use href="#i-heart"/></svg></button>
+    </div>`).join('');
+
+  $$('#savedlist [data-rename]').forEach(b => b.addEventListener('click', () => {
+    const el = $(`#savedlist [data-saved="${b.dataset.rename}"]`);
+    el.contentEditable = 'true'; el.focus();
+    document.getSelection().selectAllChildren(el);
+    const done = () => {
+      el.contentEditable = 'false';
+      savedRoutes[+b.dataset.rename].name = el.textContent.trim() || savedRoutes[+b.dataset.rename].name;
+      el.textContent = savedRoutes[+b.dataset.rename].name;
+    };
+    el.addEventListener('blur', done, {once:true});
+    el.addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); el.blur(); } });
+  }));
+  $$('#recentlist [data-fav]').forEach(b => b.addEventListener('click', () => {
+    if (recentRoutes[+b.dataset.fav].saved) return;
+    saveRecent(+b.dataset.fav);
+    renderRoutes();
+    toast('Saved — tap the pencil to give it a name');
+  }));
+  $$('#recentlist [data-openroute]').forEach(b => b.addEventListener('click', () => {
+    const r = recentRoutes[+b.dataset.openroute];
+    if (r.opens){ closeOverlays(); go('scr-route'); }
+    else toast('Only the München route is wired up in this mockup');
+  }));
+}
+/* filters apply when the drawer closes — tapping next to it is the "done" */
+function applyFilters(){
+  const wasIonity = state.stops[1] === STOP2_IONITY;
+  state.stops[1] = state.netOn['Ionity'] ? STOP2_IONITY : STOP2_ALT;
+  const dot = !filtersDefault();
+  $('#btn-filter').classList.toggle('filtered', dot);
+  $('#burger-badge').style.display = dot ? 'block' : 'none';
+  renderList(); updateSummary(); renderChargeNow(); closeOverlays();
+  const routeActive = $('#scr-route').classList.contains('active');
+  if (routeActive && wasIonity && state.stops[1] === STOP2_ALT)
+    toast('Route re-planned without Ionity — stop 2 is now ' + STOP2_ALT.name);
+  else if (routeActive && !wasIonity && state.stops[1] === STOP2_IONITY)
+    toast('Route re-planned — Ionity Bad Camberg is back');
+}
+
+/* ---------- init ---------- */
+renderList(); updateSummary(); updateDrawerSummaries(); renderChargeNow();
+</script>
+</body>
+</html>
