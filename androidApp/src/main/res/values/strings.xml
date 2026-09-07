@@ -180,6 +180,11 @@
 
     <!-- Phone: plan sheet -->
     <string name="plan_title">Route planen</string>
+    <string name="plan_from">Von</string>
+    <string name="plan_from_current">Dein Standort</string>
+    <string name="plan_to">Nach</string>
+    <string name="plan_cta">Route planen</string>
+    <string name="plan_soc_hint">Ladestand jetzt</string>
     <string name="plan_search_hint">Ziel suchen</string>
     <string name="plan_no_results">Keine Treffer</string>
     <string name="plan_search_failed">Zielsuche nicht erreichbar</string>

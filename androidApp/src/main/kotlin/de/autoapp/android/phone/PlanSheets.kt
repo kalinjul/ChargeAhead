@@ -1,21 +1,31 @@
 package de.autoapp.android.phone
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -28,8 +38,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.AppCard
+import de.autoapp.android.phone.components.AppChip
+import de.autoapp.android.phone.components.Fineprint
+import de.autoapp.android.phone.components.SectionLabel
+import de.autoapp.android.phone.theme.ChargeAheadColors
+import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.core.ChargeNowResult
 import de.autoapp.shared.core.RelaxedFilter
 import de.autoapp.shared.domain.Destination
@@ -59,6 +77,7 @@ fun PlanSheetContent(
     // here, not hidden in the garage. Prefilled from the stored value.
     var socText by remember { mutableStateOf((initialSocPercent ?: 80.0).roundToInt().toString()) }
     val socPercent = socText.toIntOrNull()?.takeIf { it in 1..100 }
+    var chosen by remember { mutableStateOf<Destination?>(null) }
 
     // Debounced: Nominatim allows one request per second (ROADMAP open item 6),
     // and a request per keystroke would blow through that within a word.
@@ -74,8 +93,8 @@ fun PlanSheetContent(
         searching = false
     }
 
-    Column(modifier = modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.plan_title), style = MaterialTheme.typography.titleLarge)
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Text(stringResource(R.string.plan_title), style = MaterialTheme.typography.titleMedium)
 
         if (vehicleName == null) {
             Text(
@@ -83,36 +102,76 @@ fun PlanSheetContent(
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    vehicleName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    value = socText,
-                    onValueChange = { socText = it.filter(Char::isDigit).take(3) },
-                    label = { Text(stringResource(R.string.plan_soc_field)) },
-                    suffix = { Text("%") },
-                    isError = socPercent == null,
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number,
-                    ),
-                    modifier = Modifier.width(120.dp),
-                )
+        }
+
+        // The mockup's routecard: From is fixed, To is the live search field.
+        AppCard {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+            ) {
+                Box(Modifier.size(10.dp).background(MaterialTheme.colorScheme.primary, CircleShape))
+                Column {
+                    SectionLabel(stringResource(R.string.plan_from), modifier = Modifier.padding(0.dp))
+                    Text(stringResource(R.string.plan_from_current), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 3.dp),
+            ) {
+                Box(Modifier.size(10.dp).background(MaterialTheme.colorScheme.error, RoundedCornerShape(2.dp)))
+                Column(Modifier.weight(1f)) {
+                    SectionLabel(stringResource(R.string.plan_to), modifier = Modifier.padding(0.dp))
+                    BasicTextField(
+                        value = query,
+                        onValueChange = { query = it; chosen = null },
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        singleLine = true,
+                        decorationBox = { inner ->
+                            if (query.isEmpty()) {
+                                Text(
+                                    stringResource(R.string.plan_search_hint),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = ChargeAheadColors.faint,
+                                )
+                            }
+                            inner()
+                        },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                    )
+                }
+                if (searching) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             }
         }
 
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            label = { Text(stringResource(R.string.plan_search_hint)) },
-            singleLine = true,
-            trailingIcon = { if (searching) CircularProgressIndicator(modifier = Modifier.padding(8.dp)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        vehicleName?.let { name ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                AppChip(text = name, icon = painterResource(R.drawable.ic_car))
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    ) {
+                        BasicTextField(
+                            value = socText,
+                            onValueChange = { socText = it.filter(Char::isDigit).take(3) },
+                            textStyle = MaterialTheme.typography.labelMedium.tabular.copy(
+                                color = if (socPercent == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                            ),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.width(28.dp),
+                        )
+                        Text("%", style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                Fineprint(stringResource(R.string.plan_soc_hint))
+            }
+        }
 
         when {
             results == null -> Text(
@@ -120,41 +179,51 @@ fun PlanSheetContent(
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )
-
-            results!!.isEmpty() && query.trim().length >= 3 && !searching -> Text(
+            results!!.isEmpty() && query.trim().length >= 3 && !searching && chosen == null -> Text(
                 stringResource(R.string.plan_no_results),
                 style = MaterialTheme.typography.bodySmall,
             )
         }
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            items(results.orEmpty(), key = { it.name + it.position.lat }) { place ->
-                Text(
-                    text = place.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { socPercent?.let { onPlan(Destination(place.name, place.position), it.toDouble()) } }
-                        .padding(vertical = 10.dp),
-                )
-                HorizontalDivider()
+        Button(
+            onClick = { chosen?.let { destination -> socPercent?.let { onPlan(destination, it.toDouble()) } } },
+            enabled = chosen != null && socPercent != null && vehicleName != null,
+            shape = MaterialTheme.shapes.medium,
+            contentPadding = PaddingValues(15.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(9.dp))
+            Text(stringResource(R.string.plan_cta), style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp))
+        }
+
+        // Results while typing; recents when idle — the expanded sheet's "fullonly".
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f, fill = false)) {
+            if (chosen == null) {
+                items(results.orEmpty(), key = { it.name + it.position.lat }) { place ->
+                    AppCard(onClick = {
+                        chosen = Destination(place.name, place.position)
+                        query = place.name
+                        results = emptyList()
+                    }) {
+                        Text(
+                            place.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        )
+                    }
+                }
             }
             if (query.trim().length < 3 && recent.isNotEmpty()) {
-                item {
-                    Text(
-                        stringResource(R.string.plan_recent),
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(top = 8.dp),
-                    )
-                }
+                item { SectionLabel(stringResource(R.string.plan_recent), modifier = Modifier.padding(top = 8.dp)) }
                 items(recent, key = { "recent-${it.name}-${it.position.lat}" }) { destination ->
-                    Text(
-                        text = destination.name,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { socPercent?.let { onPlan(destination, it.toDouble()) } }
-                            .padding(vertical = 10.dp),
-                    )
-                    HorizontalDivider()
+                    AppCard(onClick = { chosen = destination; query = destination.name }) {
+                        Text(
+                            destination.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        )
+                    }
                 }
             }
         }

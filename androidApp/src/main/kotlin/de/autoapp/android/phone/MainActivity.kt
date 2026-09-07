@@ -27,6 +27,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
+import de.autoapp.android.phone.components.AppSheet
 import de.autoapp.android.phone.components.AppTopBar
 import de.autoapp.android.phone.components.TopBarIcon
 import androidx.compose.material3.DrawerValue
@@ -419,7 +420,7 @@ private fun PhoneApp() {
     when (sheet) {
         Sheet.NONE -> Unit
 
-        Sheet.PLAN -> ModalBottomSheet(onDismissRequest = { sheet = Sheet.NONE }) {
+        Sheet.PLAN -> AppSheet(onDismissRequest = { sheet = Sheet.NONE }) {
             PlanSheetContent(
                 recent = recentDestinations,
                 vehicleName = vehicle?.displayName,
