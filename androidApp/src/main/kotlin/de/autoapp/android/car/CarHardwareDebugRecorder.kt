@@ -59,7 +59,10 @@ class CarHardwareDebugRecorder(
         }
 
         // Streamed values, each behind its own car permission.
-        energyListener = listenOrRecordDenied(CarDataKind.BATTERY_PERCENT, PERMISSION_ENERGY) {
+        energyListener = listenOrRecordDenied(
+            listOf(CarDataKind.BATTERY_PERCENT, CarDataKind.RANGE, CarDataKind.ENERGY_IS_LOW),
+            PERMISSION_ENERGY,
+        ) {
             OnCarDataAvailableListener<EnergyLevel> { level ->
                 record(CarDataKind.BATTERY_PERCENT, level.batteryPercent.toPoint { "${it.roundToInt()} %" })
                 record(
@@ -70,7 +73,7 @@ class CarHardwareDebugRecorder(
             }.also { info.addEnergyLevelListener(executor, it) }
         }
 
-        speedListener = listenOrRecordDenied(CarDataKind.SPEED, PERMISSION_SPEED) {
+        speedListener = listenOrRecordDenied(listOf(CarDataKind.SPEED), PERMISSION_SPEED) {
             OnCarDataAvailableListener<Speed> { speed ->
                 record(
                     CarDataKind.SPEED,
@@ -79,7 +82,7 @@ class CarHardwareDebugRecorder(
             }.also { info.addSpeedListener(executor, it) }
         }
 
-        mileageListener = listenOrRecordDenied(CarDataKind.ODOMETER, PERMISSION_MILEAGE) {
+        mileageListener = listenOrRecordDenied(listOf(CarDataKind.ODOMETER), PERMISSION_MILEAGE) {
             OnCarDataAvailableListener<Mileage> { mileage ->
                 record(
                     CarDataKind.ODOMETER,
@@ -99,22 +102,24 @@ class CarHardwareDebugRecorder(
 
     /**
      * Registers a listener if its permission is granted; otherwise records
-     * NO_PERMISSION for [kind] so the debug view can say what to fix.
+     * NO_PERMISSION for **every** data point that listener would feed —
+     * marking only one of them would send whoever reads the debug view
+     * hunting for a data problem that is a permission problem.
      * Registration itself may also throw SecurityException — same outcome.
      */
     private fun <T> listenOrRecordDenied(
-        kind: CarDataKind,
+        kinds: List<CarDataKind>,
         permission: String,
         register: () -> OnCarDataAvailableListener<T>,
     ): OnCarDataAvailableListener<T>? {
         if (carContext.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
-            record(kind, CarDataStatus.NO_PERMISSION)
+            kinds.forEach { record(it, CarDataStatus.NO_PERMISSION) }
             return null
         }
         return try {
             register()
         } catch (denied: SecurityException) {
-            record(kind, CarDataStatus.NO_PERMISSION)
+            kinds.forEach { record(it, CarDataStatus.NO_PERMISSION) }
             null
         }
     }
