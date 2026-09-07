@@ -86,13 +86,30 @@ interface SoCSource {
 
 /** What the driver has configured. Outlives the process. */
 interface SettingsStore {
+    /** The selected vehicle — what every calculation runs on. */
     val vehicle: Flow<VehicleProfile?>
+
+    /**
+     * The whole garage, selected vehicle included. [setVehicle] keeps both in
+     * sync: selecting a profile that isn't in the garage yet adds it.
+     */
+    val vehicles: Flow<List<VehicleProfile>>
+
     val manualSocPercent: Flow<Double?>
 
     /** `null` means: no destination set, the corridor ahead in the direction of travel applies. */
     val destination: Flow<Destination?>
 
     val networks: Flow<NetworkPreferences>
+
+    /** Hard limits for the phone flows (planning, "charge now"). */
+    val chargeFilters: Flow<ChargeFilters>
+
+    /** The tariffs the driver actually holds, by [Tariff.id]. */
+    val activeTariffIds: Flow<Set<String>>
+
+    /** Routes kept under a chosen name. Order is the driver's save order, newest first. */
+    val savedRoutes: Flow<List<SavedRoute>>
 
     /**
      * The outcome of the last attempt to read the charge level from the
@@ -110,7 +127,18 @@ interface SettingsStore {
     val recentDestinations: Flow<List<Destination>>
 
     suspend fun setVehicle(profile: VehicleProfile?)
+
+    /** Removes from the garage; if it was the selected vehicle, the first remaining one takes over. */
+    suspend fun removeVehicle(displayName: String)
+
     suspend fun setManualSocPercent(socPercent: Double?)
+
+    suspend fun setChargeFilters(filters: ChargeFilters)
+    suspend fun setActiveTariffIds(ids: Set<String>)
+
+    suspend fun saveRoute(route: SavedRoute)
+    suspend fun renameSavedRoute(id: String, name: String)
+    suspend fun removeSavedRoute(id: String)
 
     /** Sets the destination and adds it to the history. `null` clears the destination. */
     suspend fun setDestination(destination: Destination?)

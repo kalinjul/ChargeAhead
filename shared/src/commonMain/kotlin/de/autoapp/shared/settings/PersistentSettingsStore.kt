@@ -1,9 +1,11 @@
 package de.autoapp.shared.settings
 
+import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.NetworkPreferences
+import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCDiagnostics
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.VehicleProfile
@@ -31,15 +33,65 @@ class PersistentSettingsStore(
     private val mutableVehicle = MutableStateFlow(readVehicle())
     override val vehicle: StateFlow<VehicleProfile?> = mutableVehicle.asStateFlow()
 
+    // A pre-garage install has its one vehicle only in the legacy keys;
+    // adopting it here keeps that vehicle visible in the new garage list.
+    private val mutableVehicles = MutableStateFlow(
+        readGarage().ifEmpty { listOfNotNull(readVehicle()) },
+    )
+    override val vehicles: StateFlow<List<VehicleProfile>> = mutableVehicles.asStateFlow()
+
     private val mutableManualSoc = MutableStateFlow(readManualSoc())
     override val manualSocPercent: StateFlow<Double?> = mutableManualSoc.asStateFlow()
 
     override suspend fun setVehicle(profile: VehicleProfile?) {
+        // The selected vehicle stays on the legacy keys so the car UIs and
+        // older installs read it unchanged; the garage is bookkeeping on top.
         storage.putString(KEY_NAME, profile?.displayName)
         storage.putString(KEY_BATTERY_KWH, profile?.usableBatteryKwh?.toString())
         storage.putString(KEY_CONSUMPTION, profile?.consumptionKwhPer100Km?.toString())
         storage.putString(KEY_CONNECTORS, profile?.acceptedConnectors?.joinToString(",") { it.name })
+        storage.putString(KEY_DC_PEAK, profile?.dcPeakPowerKw?.toString())
         mutableVehicle.value = profile
+
+        if (profile != null) {
+            val updated = mutableVehicles.value
+                .filterNot { it.displayName == profile.displayName } + profile
+            writeGarage(updated)
+        }
+    }
+
+    override suspend fun removeVehicle(displayName: String) {
+        val remaining = mutableVehicles.value.filterNot { it.displayName == displayName }
+        writeGarage(remaining)
+        if (mutableVehicle.value?.displayName == displayName) {
+            setVehicle(remaining.firstOrNull())
+        }
+    }
+
+    private fun writeGarage(vehicles: List<VehicleProfile>) {
+        storage.putString(
+            KEY_GARAGE,
+            vehicles.takeIf { it.isNotEmpty() }?.let { list ->
+                json.encodeToString(
+                    list.map {
+                        StoredVehicle(
+                            name = it.displayName,
+                            batteryKwh = it.usableBatteryKwh,
+                            consumption = it.consumptionKwhPer100Km,
+                            connectors = it.acceptedConnectors.map(ConnectorType::name),
+                            dcPeakKw = it.dcPeakPowerKw,
+                        )
+                    },
+                )
+            },
+        )
+        mutableVehicles.value = vehicles
+    }
+
+    private fun readGarage(): List<VehicleProfile> {
+        val raw = storage.getStringOrNull(KEY_GARAGE) ?: return emptyList()
+        val stored = runCatching { json.decodeFromString<List<StoredVehicle>>(raw) }.getOrElse { return emptyList() }
+        return stored.mapNotNull { it.toProfileOrNull() }
     }
 
     private val mutableDestination = MutableStateFlow(readDestinations().firstOrNull { it.current }?.toDomain())
@@ -92,6 +144,84 @@ class PersistentSettingsStore(
         return NetworkPreferences(onlyPreferred, preferred)
     }
 
+    private val mutableFilters = MutableStateFlow(readFilters())
+    override val chargeFilters: StateFlow<ChargeFilters> = mutableFilters.asStateFlow()
+
+    override suspend fun setChargeFilters(filters: ChargeFilters) {
+        storage.putString(
+            KEY_CHARGE_FILTERS,
+            json.encodeToString(StoredFilters(filters.minPowerKw, filters.maxPriceEuroPerKwh, filters.maxDistanceKm)),
+        )
+        mutableFilters.value = filters
+    }
+
+    private fun readFilters(): ChargeFilters {
+        val raw = storage.getStringOrNull(KEY_CHARGE_FILTERS) ?: return ChargeFilters()
+        val stored = runCatching { json.decodeFromString<StoredFilters>(raw) }.getOrNull() ?: return ChargeFilters()
+        return ChargeFilters(stored.minPowerKw, stored.maxPrice, stored.maxDistanceKm)
+    }
+
+    private val mutableTariffs = MutableStateFlow(readTariffIds())
+    override val activeTariffIds: StateFlow<Set<String>> = mutableTariffs.asStateFlow()
+
+    override suspend fun setActiveTariffIds(ids: Set<String>) {
+        storage.putString(
+            KEY_ACTIVE_TARIFFS,
+            ids.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it.toList()) },
+        )
+        mutableTariffs.value = ids
+    }
+
+    private fun readTariffIds(): Set<String> =
+        storage.getStringOrNull(KEY_ACTIVE_TARIFFS)
+            ?.let { raw -> runCatching { json.decodeFromString<List<String>>(raw) }.getOrNull() }
+            ?.toSet()
+            .orEmpty()
+
+    private val mutableSavedRoutes = MutableStateFlow(readSavedRoutes())
+    override val savedRoutes: StateFlow<List<SavedRoute>> = mutableSavedRoutes.asStateFlow()
+
+    override suspend fun saveRoute(route: SavedRoute) {
+        writeSavedRoutes(listOf(route) + mutableSavedRoutes.value.filterNot { it.id == route.id })
+    }
+
+    override suspend fun renameSavedRoute(id: String, name: String) {
+        writeSavedRoutes(mutableSavedRoutes.value.map { if (it.id == id) it.copy(name = name) else it })
+    }
+
+    override suspend fun removeSavedRoute(id: String) {
+        writeSavedRoutes(mutableSavedRoutes.value.filterNot { it.id == id })
+    }
+
+    private fun writeSavedRoutes(routes: List<SavedRoute>) {
+        storage.putString(
+            KEY_SAVED_ROUTES,
+            routes.takeIf { it.isNotEmpty() }?.let { list ->
+                json.encodeToString(
+                    list.map {
+                        StoredSavedRoute(
+                            id = it.id,
+                            name = it.name,
+                            destName = it.destination.name,
+                            lat = it.destination.position.lat,
+                            lon = it.destination.position.lon,
+                            summary = it.summary,
+                        )
+                    },
+                )
+            },
+        )
+        mutableSavedRoutes.value = routes
+    }
+
+    private fun readSavedRoutes(): List<SavedRoute> {
+        val raw = storage.getStringOrNull(KEY_SAVED_ROUTES) ?: return emptyList()
+        val stored = runCatching { json.decodeFromString<List<StoredSavedRoute>>(raw) }.getOrElse { return emptyList() }
+        return stored.map {
+            SavedRoute(it.id, it.name, Destination(it.destName, LatLon(it.lat, it.lon)), it.summary)
+        }
+    }
+
     private val mutableDiagnostics = MutableStateFlow(readDiagnostics())
     override val socDiagnostics: StateFlow<SoCDiagnostics?> = mutableDiagnostics.asStateFlow()
 
@@ -134,6 +264,7 @@ class PersistentSettingsStore(
             usableBatteryKwh = battery,
             consumptionKwhPer100Km = consumption,
             acceptedConnectors = readConnectors(),
+            dcPeakPowerKw = storage.getStringOrNull(KEY_DC_PEAK)?.toDoubleOrNull(),
         )
     }
 
@@ -161,6 +292,46 @@ class PersistentSettingsStore(
 
     private fun readManualSoc(): Double? =
         storage.getStringOrNull(KEY_MANUAL_SOC)?.toDoubleOrNull()?.coerceIn(0.0, 100.0)
+
+    @Serializable
+    private data class StoredVehicle(
+        val name: String,
+        val batteryKwh: Double,
+        val consumption: Double,
+        val connectors: List<String> = emptyList(),
+        val dcPeakKw: Double? = null,
+    ) {
+        /** Same forgiveness as the legacy keys: broken numbers cost the entry, not the garage. */
+        fun toProfileOrNull(): VehicleProfile? {
+            if (batteryKwh <= 0.0 || consumption <= 0.0) return null
+            return VehicleProfile(
+                displayName = name,
+                usableBatteryKwh = batteryKwh,
+                consumptionKwhPer100Km = consumption,
+                acceptedConnectors = connectors
+                    .mapNotNull { stored -> ConnectorType.entries.firstOrNull { it.name == stored } }
+                    .toSet(),
+                dcPeakPowerKw = dcPeakKw,
+            )
+        }
+    }
+
+    @Serializable
+    private data class StoredFilters(
+        val minPowerKw: Double,
+        val maxPrice: Double,
+        val maxDistanceKm: Double,
+    )
+
+    @Serializable
+    private data class StoredSavedRoute(
+        val id: String,
+        val name: String,
+        val destName: String,
+        val lat: Double,
+        val lon: Double,
+        val summary: String? = null,
+    )
 
     @Serializable
     private data class StoredDiagnostics(
@@ -193,6 +364,11 @@ class PersistentSettingsStore(
         const val KEY_BATTERY_KWH = "vehicle.usableBatteryKwh"
         const val KEY_CONSUMPTION = "vehicle.consumptionKwhPer100Km"
         const val KEY_CONNECTORS = "vehicle.acceptedConnectors"
+        const val KEY_DC_PEAK = "vehicle.dcPeakPowerKw"
+        const val KEY_GARAGE = "vehicle.garage"
         const val KEY_MANUAL_SOC = "energy.manualSocPercent"
+        const val KEY_CHARGE_FILTERS = "filters.charge"
+        const val KEY_ACTIVE_TARIFFS = "tariffs.active"
+        const val KEY_SAVED_ROUTES = "routes.saved"
     }
 }

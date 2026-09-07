@@ -66,6 +66,12 @@ class ChargeStopsFeature(
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
     /** Called by [close] — this is where the creator releases its own resources. */
     private val onClose: () -> Unit = {},
+    /**
+     * The phone's planning flows, assembled by the factory on the same
+     * repository and settings. `null` in tests that assemble by hand and
+     * don't need it.
+     */
+    val planning: PlanningFeature? = null,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
@@ -321,6 +327,7 @@ class ChargeStopsFeature(
                     // would hide the very options needed to undo it.
                     availableOperators = sites.toOperatorOptions(),
                     networkFilterActive = networks.isActive,
+                    position = fix.position,
                 ),
             )
         } catch (cancellation: CancellationException) {

@@ -47,6 +47,8 @@ data class ChargeStopsState(
     val availableOperators: List<OperatorOption> = emptyList(),
     /** The charging-network filter is currently active. Explains a short or empty list. */
     val networkFilterActive: Boolean = false,
+    /** Last computed position — what the phone map centers on. `null` before the first fix. */
+    val position: de.autoapp.shared.domain.LatLon? = null,
 ) {
     enum class RouteStatus {
         /** No destination set — the corridor along the direction of travel applies. */

@@ -14,6 +14,13 @@ data class VehicleProfile(
     val usableBatteryKwh: Double,
     val consumptionKwhPer100Km: Double,
     val acceptedConnectors: Set<ConnectorType>,
+    /**
+     * DC charging peak, for charge-time estimates in trip planning. Added at
+     * the end with a default so existing callers and stored profiles stay
+     * valid; `null` means "unknown" and the site's connector power is used
+     * alone.
+     */
+    val dcPeakPowerKw: Double? = null,
 ) {
     init {
         require(usableBatteryKwh > 0.0) { "usableBatteryKwh must be positive" }
