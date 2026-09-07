@@ -13,19 +13,31 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.EvStation
+import androidx.compose.material.icons.filled.MyLocation
+import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -83,30 +95,92 @@ fun HomeGoogleMap(
         }
     }
 
-    GoogleMap(
-        cameraPositionState = cameraPositionState,
-        properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
-        uiSettings = MapUiSettings(zoomControlsEnabled = false),
-        modifier = modifier,
-    ) {
-        stops.forEach { stop ->
-            key(stop.site.id) {
-                MarkerComposable(
-                    keys = arrayOf<Any>(stop.site.id, stop.reachability),
-                    state = rememberMarkerState(position = stop.site.position.toLatLng()),
-                    title = stop.site.name,
-                    anchor = Offset(0.5f, 0.5f),
-                    onClick = { onStopTapped(stop); true },
-                ) {
-                    ChargeBadge(color = stop.reachability.pinColor()) {
-                        Icon(
-                            imageVector = Icons.Filled.EvStation,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp),
-                        )
+    val scope = rememberCoroutineScope()
+
+    Box(modifier = modifier) {
+        GoogleMap(
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+            // The SDK's own buttons render at the map's top edge — on a
+            // fullscreen map that's inside the status bar, unreachable. Our
+            // replacements sit below, top right.
+            uiSettings = MapUiSettings(
+                zoomControlsEnabled = false,
+                myLocationButtonEnabled = false,
+                compassEnabled = false,
+            ),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            stops.forEach { stop ->
+                key(stop.site.id) {
+                    MarkerComposable(
+                        keys = arrayOf<Any>(stop.site.id, stop.reachability),
+                        state = rememberMarkerState(position = stop.site.position.toLatLng()),
+                        title = stop.site.name,
+                        anchor = Offset(0.5f, 0.5f),
+                        onClick = { onStopTapped(stop); true },
+                    ) {
+                        ChargeBadge(color = stop.reachability.pinColor()) {
+                            Icon(
+                                imageVector = Icons.Filled.EvStation,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
                     }
                 }
+            }
+        }
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(12.dp),
+        ) {
+            SmallFloatingActionButton(
+                onClick = {
+                    position?.let {
+                        scope.launch {
+                            cameraPositionState.animate(
+                                CameraUpdateFactory.newLatLngZoom(it.toLatLng(), HOME_ZOOM),
+                            )
+                        }
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.surface,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.MyLocation,
+                    contentDescription = stringResource(R.string.map_my_location),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+            SmallFloatingActionButton(
+                onClick = {
+                    scope.launch {
+                        cameraPositionState.animate(
+                            CameraUpdateFactory.newCameraPosition(
+                                CameraPosition.Builder(cameraPositionState.position)
+                                    .bearing(0f)
+                                    .tilt(0f)
+                                    .build(),
+                            ),
+                        )
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.surface,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Navigation,
+                    contentDescription = stringResource(R.string.map_compass),
+                    tint = Color(0xFFD93025),
+                    // Counter-rotated like a real compass needle: it points
+                    // north however the map is turned.
+                    modifier = Modifier.rotate(-cameraPositionState.position.bearing),
+                )
             }
         }
     }

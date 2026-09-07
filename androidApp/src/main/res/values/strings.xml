@@ -139,6 +139,8 @@
     <string name="home_menu">Menü</string>
     <string name="home_map_placeholder">Kartenplatzhalter — Karten-SDK folgt</string>
     <string name="home_no_position">Kein Standort — Ortung und Freigabe prüfen</string>
+    <string name="map_my_location">Auf meinen Standort zentrieren</string>
+    <string name="map_compass">Karte nach Norden ausrichten</string>
 
     <!-- Phone: drawer -->
     <string name="drawer_preferences">Einstellungen</string>
