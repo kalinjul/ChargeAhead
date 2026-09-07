@@ -4,7 +4,9 @@ import de.autoapp.shared.core.ChargeNowRanker
 import de.autoapp.shared.core.ChargeNowResult
 import de.autoapp.shared.core.TripPlanResult
 import de.autoapp.shared.core.TripPlanner
+import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeSite
+import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.PriceQuote
@@ -12,7 +14,15 @@ import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.TariffSource
+import de.autoapp.shared.domain.ViewportArea
 import kotlinx.coroutines.flow.first
+
+/** A charger as the map shows it: the site, its strongest DC power, and what it costs. */
+data class MapCharger(
+    val site: ChargeSite,
+    val maxPowerKw: Double,
+    val quote: PriceQuote,
+)
 
 /**
  * The phone's planning flows: trip with charging stops, "charge now", and
@@ -84,11 +94,47 @@ class PlanningFeature(
     suspend fun quote(site: ChargeSite): PriceQuote =
         tariffs.quote(site, settings.activeTariffIds.first())
 
+    /**
+     * The chargers the map should show for its current viewport.
+     *
+     * Filtered by the physical filters (networks, minimum power) — the map
+     * shows what exists and qualifies, not what's cheap; price and distance
+     * are ranking concerns and stay in [chargeNow]. Capped strongest-first:
+     * when a dense city exceeds the cap, the HPC sites are the ones worth
+     * keeping visible.
+     */
+    suspend fun chargersIn(viewport: BoundingBox): List<MapCharger> {
+        val filters = settings.chargeFilters.first()
+        val networks = settings.networks.first()
+        val tariffIds = settings.activeTariffIds.first()
+
+        val sites = try {
+            repository.sitesIn(ViewportArea(viewport))
+        } catch (failure: Exception) {
+            emptyList()
+        }
+
+        return sites.mapNotNull { site ->
+            if (!networks.allows(site.operator)) return@mapNotNull null
+            val power = site.connectors
+                .filter { it.type == ConnectorType.CCS2 || it.type == ConnectorType.TESLA_NACS }
+                .maxOfOrNull { it.maxPowerKw }
+                ?: return@mapNotNull null
+            if (power < filters.minPowerKw) return@mapNotNull null
+            MapCharger(site, power, tariffs.quote(site, tariffIds))
+        }
+            .sortedByDescending { it.maxPowerKw }
+            .take(MAX_MAP_CHARGERS)
+    }
+
     companion object {
         /** Assumed start charge when the driver never entered one. */
         const val DEFAULT_ASSUMED_SOC_PERCENT = 80.0
 
         const val RELAX_FETCH_FACTOR = 3.0
         const val MIN_FETCH_RADIUS_KM = 15.0
+
+        /** More markers than this and the map is unreadable anyway. */
+        const val MAX_MAP_CHARGERS = 200
     }
 }

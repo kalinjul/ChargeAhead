@@ -75,6 +75,9 @@ import de.autoapp.shared.core.TripPlanResult
 import de.autoapp.shared.core.ChargeNowResult
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.Destination
+import de.autoapp.shared.domain.MapLabelStyle
+import de.autoapp.shared.domain.Reachability
+import de.autoapp.shared.domain.distanceKmTo
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCSourceKind
@@ -160,6 +163,7 @@ private fun PhoneApp() {
     val filters by settings.chargeFilters.collectAsState(initial = ChargeFilters())
     val activeTariffs by settings.activeTariffIds.collectAsState(initial = emptySet())
     val savedRoutes by settings.savedRoutes.collectAsState(initial = emptyList())
+    val mapLabelStyle by settings.mapLabelStyle.collectAsState(initial = MapLabelStyle.PRICE)
     val recentDestinations by settings.recentDestinations.collectAsState(initial = emptyList())
     val diagnostics by settings.socDiagnostics.collectAsState(initial = null)
 
@@ -175,6 +179,8 @@ private fun PhoneApp() {
     var chargeNow by remember { mutableStateOf<ChargeNowResult?>(null) }
     var chargeNowLoading by remember { mutableStateOf(false) }
     var corridorStop by remember { mutableStateOf<de.autoapp.shared.domain.ChargeStop?>(null) }
+    var mapChargers by remember { mutableStateOf<List<de.autoapp.shared.MapCharger>>(emptyList()) }
+    var mapBelowZoom by remember { mutableStateOf(false) }
 
     var hasPermission by remember { mutableStateOf(context.hasLocationPermission()) }
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -271,8 +277,10 @@ private fun PhoneApp() {
                     vehicleName = vehicle?.displayName,
                     activeTariffCount = activeTariffs.size,
                     filters = filters,
+                    labelStyle = mapLabelStyle,
                     onOpen = { target -> page = target; scope.launch { drawerState.close() } },
                     onFilters = { updated -> scope.launch { settings.setChargeFilters(updated) } },
+                    onLabelStyle = { style -> scope.launch { settings.setMapLabelStyle(style) } },
                 )
             }
         },
@@ -320,6 +328,29 @@ private fun PhoneApp() {
                     state = state,
                     hasPermission = hasPermission,
                     planningInProgress = planningInProgress,
+                    chargers = mapChargers,
+                    belowZoom = mapBelowZoom,
+                    onViewportChanged = { viewport ->
+                        if (viewport == null) {
+                            mapBelowZoom = true
+                            mapChargers = emptyList()
+                        } else {
+                            mapBelowZoom = false
+                            scope.launch {
+                                mapChargers = planning?.chargersIn(viewport).orEmpty()
+                            }
+                        }
+                    },
+                    onChargerTapped = { charger ->
+                        // The corridor dialog fits: same site type, and
+                        // reachability honestly UNKNOWN — the map doesn't rate.
+                        corridorStop = de.autoapp.shared.domain.ChargeStop(
+                            site = charger.site,
+                            distanceKm = state.position?.distanceKmTo(charger.site.position) ?: 0.0,
+                            reachability = Reachability.UNKNOWN,
+                            socOnArrivalPercent = null,
+                        )
+                    },
                     onRequestPermission = {
                         permissionLauncher.launch(
                             arrayOf(
@@ -332,7 +363,6 @@ private fun PhoneApp() {
                     onPlan = { sheet = Sheet.PLAN },
                     onChargeNow = { openChargeNow() },
                     onRoutes = { sheet = Sheet.ROUTES },
-                    onStopTapped = { corridorStop = it },
                     // No scaffold padding: the map draws under the (now
                     // dark-iconed) status bar, like every maps app.
                     modifier = Modifier.fillMaxSize(),
@@ -479,21 +509,25 @@ private fun HomeScreen(
     state: de.autoapp.shared.ChargeStopsState,
     hasPermission: Boolean,
     planningInProgress: Boolean,
+    chargers: List<de.autoapp.shared.MapCharger>,
+    belowZoom: Boolean,
+    onViewportChanged: (de.autoapp.shared.domain.BoundingBox?) -> Unit,
+    onChargerTapped: (de.autoapp.shared.MapCharger) -> Unit,
     onRequestPermission: () -> Unit,
     onMenu: () -> Unit,
     onPlan: () -> Unit,
     onChargeNow: () -> Unit,
     onRoutes: () -> Unit,
-    onStopTapped: (de.autoapp.shared.domain.ChargeStop) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
         if (hasGoogleMapsKey) {
             HomeGoogleMap(
                 position = state.position,
-                stops = state.stops,
+                chargers = chargers,
                 hasLocationPermission = hasPermission,
-                onStopTapped = onStopTapped,
+                onViewportChanged = onViewportChanged,
+                onChargerTapped = onChargerTapped,
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
@@ -528,6 +562,19 @@ private fun HomeScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+            if (hasGoogleMapsKey && belowZoom) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 2.dp,
+                ) {
+                    Text(
+                        stringResource(R.string.map_zoom_hint),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
             }
             if (state.isDemo) {
                 // Invented charging sites must be labeled — see AGENTS.md.
@@ -608,8 +655,10 @@ private fun DrawerContent(
     vehicleName: String?,
     activeTariffCount: Int,
     filters: ChargeFilters,
+    labelStyle: MapLabelStyle,
     onOpen: (Page) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
+    onLabelStyle: (MapLabelStyle) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -690,6 +739,26 @@ private fun DrawerContent(
             value = filters.maxDistanceKm.toFloat(),
             onValueChange = { onFilters(filters.copy(maxDistanceKm = (it * 2).roundToInt() / 2.0)) },
             valueRange = 1f..10f,
+        )
+
+        Text(stringResource(R.string.drawer_map_label), style = MaterialTheme.typography.bodyMedium)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = labelStyle == MapLabelStyle.PRICE,
+                onClick = { onLabelStyle(MapLabelStyle.PRICE) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+            ) { Text(stringResource(R.string.drawer_label_price)) }
+            SegmentedButton(
+                selected = labelStyle == MapLabelStyle.FREE_CHARGERS,
+                onClick = {},
+                enabled = false,
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+            ) { Text(stringResource(R.string.drawer_label_free)) }
+        }
+        Text(
+            stringResource(R.string.drawer_label_free_note),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Text(

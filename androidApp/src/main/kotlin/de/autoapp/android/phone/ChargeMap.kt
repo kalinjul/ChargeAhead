@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.EvStation
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.Icon
@@ -48,9 +47,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
 import de.autoapp.android.BuildConfig
 import de.autoapp.android.R
-import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.LatLon
-import de.autoapp.shared.domain.Reachability
 
 /**
  * The real map (decision 2026-09-07: Google Maps Compose — the key was
@@ -66,19 +63,45 @@ val hasGoogleMapsKey: Boolean get() = BuildConfig.HAS_GOOGLE_MAPS_KEY
 
 private fun LatLon.toLatLng() = LatLng(lat, lon)
 
-/** Home map: live corridor stops around the own position. */
+/**
+ * Home map: viewport-driven. The map reports every settled camera position
+ * upward (`null` below [MIN_CHARGER_ZOOM]); the caller loads the chargers for
+ * it and passes them back down. No coupling to the car's corridor feature —
+ * the map shows what the camera looks at, not what lies in driving direction.
+ */
 @Composable
 fun HomeGoogleMap(
     position: LatLon?,
-    stops: List<ChargeStop>,
+    chargers: List<de.autoapp.shared.MapCharger>,
     hasLocationPermission: Boolean,
-    onStopTapped: (ChargeStop) -> Unit,
+    onViewportChanged: (de.autoapp.shared.domain.BoundingBox?) -> Unit,
+    onChargerTapped: (de.autoapp.shared.MapCharger) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val cameraPositionState = rememberCameraPositionState {
         this.position = CameraPosition.fromLatLngZoom(
             (position ?: FALLBACK_CENTER).toLatLng(),
             HOME_ZOOM,
+        )
+    }
+
+    // Debounced camera-idle: load once the camera settles, not per frame of
+    // a fling. Also fires for the initial position.
+    LaunchedEffect(cameraPositionState.isMoving) {
+        if (cameraPositionState.isMoving) return@LaunchedEffect
+        kotlinx.coroutines.delay(350)
+        if (cameraPositionState.position.zoom < MIN_CHARGER_ZOOM) {
+            onViewportChanged(null)
+            return@LaunchedEffect
+        }
+        val bounds = cameraPositionState.projection?.visibleRegion?.latLngBounds ?: return@LaunchedEffect
+        onViewportChanged(
+            de.autoapp.shared.domain.BoundingBox(
+                south = bounds.southwest.latitude,
+                west = bounds.southwest.longitude,
+                north = bounds.northeast.latitude,
+                east = bounds.northeast.longitude,
+            ),
         )
     }
 
@@ -111,23 +134,19 @@ fun HomeGoogleMap(
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
-            stops.forEach { stop ->
-                key(stop.site.id) {
+            chargers.forEach { charger ->
+                val label = charger.quote.best
+                    ?.let { "${it.euroPerKwh.twoDecimals()} €" }
+                    ?: "⚡"
+                key(charger.site.id) {
                     MarkerComposable(
-                        keys = arrayOf<Any>(stop.site.id, stop.reachability),
-                        state = rememberMarkerState(position = stop.site.position.toLatLng()),
-                        title = stop.site.name,
+                        keys = arrayOf(charger.site.id, label),
+                        state = rememberMarkerState(position = charger.site.position.toLatLng()),
+                        title = charger.site.name,
                         anchor = Offset(0.5f, 0.5f),
-                        onClick = { onStopTapped(stop); true },
+                        onClick = { onChargerTapped(charger); true },
                     ) {
-                        ChargeBadge(color = stop.reachability.pinColor()) {
-                            Icon(
-                                imageVector = Icons.Filled.EvStation,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        }
+                        PricePill(label)
                     }
                 }
             }
@@ -187,11 +206,29 @@ fun HomeGoogleMap(
 }
 
 /**
- * Circular disc with a white ring — the shape Google Maps itself uses for EV
- * POIs. Centered anchor, so the badge marks the spot instead of pointing at
- * it. Colors are the reachability colors the car list uses; the two surfaces
- * must not tell different stories about the same site (AGENTS.md).
+ * Small white price pill, like the hotel/POI price chips in Google Maps.
+ * Neutral by design: color-coding reachability on a map read as arbitrary
+ * noise (design interview 2026-09-07) — the marker states the one fact the
+ * driver compares at map scale, and everything else is one tap away.
  */
+@Composable
+private fun PricePill(text: String) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .border(1.dp, Color(0xFFDADCE0), androidx.compose.foundation.shape.RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color(0xFF202124),
+        )
+    }
+}
+
+/** Circular disc with a white ring — the planned-stop badges on the trip map. */
 @Composable
 private fun ChargeBadge(color: Color, content: @Composable () -> Unit) {
     Box(
@@ -203,14 +240,6 @@ private fun ChargeBadge(color: Color, content: @Composable () -> Unit) {
     ) {
         content()
     }
-}
-
-/** Reachability → the colors the car UI already uses; unknown stays neutral, not falsely green. */
-private fun Reachability.pinColor(): Color = when (this) {
-    Reachability.REACHABLE -> Color(0xFF188038)
-    Reachability.MARGINAL -> Color(0xFFF9AB00)
-    Reachability.UNREACHABLE -> Color(0xFFD93025)
-    Reachability.UNKNOWN -> Color(0xFF1A73E8)
 }
 
 /** Trip map: the planned route with its charging stops, framed to fit. */
@@ -269,5 +298,8 @@ fun TripGoogleMap(
 /** Frankfurt — dead center of the target market, only shown before the first fix. */
 private val FALLBACK_CENTER = LatLon(50.11, 8.68)
 private const val HOME_ZOOM = 11f
+
+/** Below this, no chargers load and none show — the map stays clean and cheap. */
+const val MIN_CHARGER_ZOOM = 10f
 private const val BOUNDS_PADDING_PX = 120
 

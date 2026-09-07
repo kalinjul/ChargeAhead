@@ -141,6 +141,11 @@
     <string name="home_no_position">Kein Standort — Ortung und Freigabe prüfen</string>
     <string name="map_my_location">Auf meinen Standort zentrieren</string>
     <string name="map_compass">Karte nach Norden ausrichten</string>
+    <string name="map_zoom_hint">Zum Anzeigen der Ladesäulen reinzoomen</string>
+    <string name="drawer_map_label">Karten-Beschriftung</string>
+    <string name="drawer_label_price">Preis</string>
+    <string name="drawer_label_free">Freie Säulen</string>
+    <string name="drawer_label_free_note">„Freie Säulen" folgt, sobald eine Quelle Live-Belegung liefert.</string>
 
     <!-- Phone: drawer -->
     <string name="drawer_preferences">Einstellungen</string>

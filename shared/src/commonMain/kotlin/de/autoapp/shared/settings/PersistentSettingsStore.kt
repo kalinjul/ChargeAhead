@@ -4,6 +4,7 @@ import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.MapLabelStyle
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCDiagnostics
@@ -222,6 +223,19 @@ class PersistentSettingsStore(
         }
     }
 
+    private val mutableMapLabel = MutableStateFlow(readMapLabelStyle())
+    override val mapLabelStyle: StateFlow<MapLabelStyle> = mutableMapLabel.asStateFlow()
+
+    override suspend fun setMapLabelStyle(style: MapLabelStyle) {
+        storage.putString(KEY_MAP_LABEL, style.name)
+        mutableMapLabel.value = style
+    }
+
+    private fun readMapLabelStyle(): MapLabelStyle =
+        storage.getStringOrNull(KEY_MAP_LABEL)
+            ?.let { stored -> MapLabelStyle.entries.firstOrNull { it.name == stored } }
+            ?: MapLabelStyle.PRICE
+
     private val mutableDiagnostics = MutableStateFlow(readDiagnostics())
     override val socDiagnostics: StateFlow<SoCDiagnostics?> = mutableDiagnostics.asStateFlow()
 
@@ -370,5 +384,6 @@ class PersistentSettingsStore(
         const val KEY_CHARGE_FILTERS = "filters.charge"
         const val KEY_ACTIVE_TARIFFS = "tariffs.active"
         const val KEY_SAVED_ROUTES = "routes.saved"
+        const val KEY_MAP_LABEL = "map.labelStyle"
     }
 }
