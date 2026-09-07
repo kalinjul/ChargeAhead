@@ -1,28 +1,27 @@
 package de.autoapp.android.phone
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import de.autoapp.android.R
-import de.autoapp.shared.domain.TariffCatalog
 import androidx.compose.ui.unit.dp
+import de.autoapp.android.R
+import de.autoapp.android.phone.components.AppCard
+import de.autoapp.android.phone.components.Fineprint
+import de.autoapp.android.phone.components.SearchField
+import de.autoapp.android.phone.components.TickRow
+import de.autoapp.shared.domain.TariffCatalog
 
 /**
  * Which tariffs the driver holds. The active set feeds every price
@@ -38,48 +37,40 @@ fun SubscriptionsScreen(
     var search by remember { mutableStateOf("") }
     val hits = TariffCatalog.all.filter { it.displayName.contains(search.trim(), ignoreCase = true) }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        OutlinedTextField(
+    Column(
+        modifier = modifier.fillMaxSize().padding(horizontal = 18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        SearchField(
             value = search,
             onValueChange = { search = it },
-            label = { Text(stringResource(R.string.subs_search)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            placeholder = stringResource(R.string.subs_search),
+            modifier = Modifier.padding(top = 14.dp),
         )
-        Text(
-            stringResource(R.string.subs_note),
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
+        Fineprint(stringResource(R.string.subs_note))
         if (hits.isEmpty()) {
             Text(
                 stringResource(R.string.subs_none_found),
-                modifier = Modifier.padding(16.dp),
             )
         }
         LazyColumn {
-            items(hits, key = { it.id }) { tariff ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(tariff.displayName, style = MaterialTheme.typography.titleSmall)
-                        Text(
-                            tariff.monthlyFeeEuro
+            item {
+                AppCard {
+                    hits.forEachIndexed { index, tariff ->
+                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                        val checked = tariff.id in activeIds
+                        TickRow(
+                            label = tariff.displayName,
+                            sublabel = tariff.monthlyFeeEuro
                                 ?.let { stringResource(R.string.subs_fee, it.twoDecimals()) }
                                 ?: stringResource(R.string.subs_no_fee),
-                            style = MaterialTheme.typography.bodySmall,
+                            checked = checked,
+                            onClick = {
+                                onChange(if (checked) activeIds - tariff.id else activeIds + tariff.id)
+                            },
                         )
                     }
-                    Switch(
-                        checked = tariff.id in activeIds,
-                        onCheckedChange = { active ->
-                            onChange(if (active) activeIds + tariff.id else activeIds - tariff.id)
-                        },
-                    )
                 }
-                HorizontalDivider()
             }
         }
     }

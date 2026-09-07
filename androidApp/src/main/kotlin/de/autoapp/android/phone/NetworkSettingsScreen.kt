@@ -5,11 +5,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,6 +21,10 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.AppCard
+import de.autoapp.android.phone.components.Fineprint
+import de.autoapp.android.phone.components.SearchField
+import de.autoapp.android.phone.components.TickRow
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.OperatorKey
 import de.autoapp.shared.domain.OperatorOption
@@ -59,10 +61,10 @@ fun NetworkSettingsScreen(
         }
     }
 
-    Column(modifier = modifier.padding(16.dp)) {
-        Text(
+    Column(modifier = modifier.padding(horizontal = 18.dp)) {
+        Fineprint(
             text = stringResource(R.string.phone_networks_intro),
-            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(top = 16.dp),
         )
 
         Row(
@@ -75,25 +77,24 @@ fun NetworkSettingsScreen(
             )
             Text(
                 text = stringResource(R.string.phone_networks_only),
+                style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.padding(start = 12.dp),
             )
         }
 
         if (available.isEmpty()) {
-            Text(
+            Fineprint(
                 text = stringResource(R.string.phone_networks_empty),
-                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 16.dp),
             )
             return@Column
         }
 
-        OutlinedTextField(
+        SearchField(
             value = search,
             onValueChange = { search = it },
-            label = { Text(stringResource(R.string.phone_networks_search)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            placeholder = stringResource(R.string.phone_networks_search),
+            modifier = Modifier.padding(top = 16.dp),
         )
 
         Row(
@@ -102,6 +103,7 @@ fun NetworkSettingsScreen(
         ) {
             OutlinedButton(
                 enabled = shown.isNotEmpty(),
+                shape = MaterialTheme.shapes.small,
                 onClick = {
                     val updated = preferences.preferredOperators + shown.map { it.key }
                     onChange(preferences.copy(preferredOperators = updated))
@@ -111,6 +113,7 @@ fun NetworkSettingsScreen(
             }
             OutlinedButton(
                 enabled = shown.isNotEmpty(),
+                shape = MaterialTheme.shapes.small,
                 onClick = {
                     val updated = preferences.preferredOperators - shown.map { it.key }.toSet()
                     onChange(preferences.copy(preferredOperators = updated))
@@ -124,52 +127,42 @@ fun NetworkSettingsScreen(
         // The hint only appears while searching: without search text,
         // "displayed" equals "all", where it would just be noise.
         if (search.isNotBlank()) {
-            Text(
+            Fineprint(
                 text = stringResource(R.string.phone_networks_bulk_hint),
-                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
 
         if (shown.isEmpty()) {
-            Text(
+            Fineprint(
                 text = stringResource(R.string.phone_networks_no_match, search.trim()),
-                style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(top = 16.dp),
             )
             return@Column
         }
 
         LazyColumn(modifier = Modifier.padding(top = 8.dp)) {
-            // Key from position: operator names come from the data sources,
-            // and two identical keys crash the app mid-composition. This
-            // must not depend on external data.
-            itemsIndexed(shown, key = { index, _ -> "netz-$index" }) { _, option ->
-                val checked = option.key in preferences.preferredOperators
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Checkbox(
-                        checked = checked,
-                        onCheckedChange = { nowChecked ->
-                            val updated = if (nowChecked) {
-                                preferences.preferredOperators + option.key
-                            } else {
-                                preferences.preferredOperators - option.key
-                            }
-                            onChange(preferences.copy(preferredOperators = updated))
-                        },
-                    )
-                    Column {
-                        Text(option.displayName)
-                        Text(
-                            text = pluralStringResource(
-                                R.plurals.phone_networks_count,
-                                option.siteCount,
-                                option.siteCount,
-                            ),
-                            style = MaterialTheme.typography.bodySmall,
+            item {
+                AppCard {
+                    // Key from position: operator names come from the data sources,
+                    // and two identical keys crash the app mid-composition. This
+                    // must not depend on external data.
+                    shown.forEachIndexed { index, option ->
+                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                        val checked = option.key in preferences.preferredOperators
+                        TickRow(
+                            label = option.displayName,
+                            sublabel = pluralStringResource(R.plurals.phone_networks_count, option.siteCount, option.siteCount),
+                            checked = checked,
+                            dotColor = operatorColor(option.displayName),
+                            onClick = {
+                                val updated = if (checked) {
+                                    preferences.preferredOperators - option.key
+                                } else {
+                                    preferences.preferredOperators + option.key
+                                }
+                                onChange(preferences.copy(preferredOperators = updated))
+                            },
                         )
                     }
                 }
