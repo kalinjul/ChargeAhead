@@ -132,6 +132,7 @@
     </plurals>
 
     <!-- Phone: map home -->
+    <string name="common_back">Zurück</string>
     <string name="home_pill_plan">Planen</string>
     <string name="home_pill_charge_now">Jetzt laden</string>
     <string name="home_routes">Gespeicherte Routen</string>

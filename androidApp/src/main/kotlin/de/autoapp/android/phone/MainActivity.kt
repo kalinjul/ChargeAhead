@@ -9,7 +9,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -18,7 +20,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -87,8 +93,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Explicit edge-to-edge: with a light theme this also flips the
+        // status-bar icons to dark — without it they stay white on our white
+        // surfaces and vanish.
+        enableEdgeToEdge()
         setContent {
-            MaterialTheme(colorScheme = LightMapsScheme) {
+            MaterialTheme(colorScheme = LightMapsScheme, typography = StandardTypography) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     PhoneApp()
                 }
@@ -103,6 +113,32 @@ private val LightMapsScheme = lightColorScheme(
     tertiary = Color(0xFF188038),
     error = Color(0xFFD93025),
 )
+
+/**
+ * The platform's standard sans (Roboto) across every role. Newer Material 3
+ * versions ship an expressive default type that reads foreign on Android —
+ * pinning [FontFamily.SansSerif] keeps the app looking like the OS it runs on.
+ */
+private val StandardTypography = androidx.compose.material3.Typography().run {
+    val sans = androidx.compose.ui.text.font.FontFamily.SansSerif
+    copy(
+        displayLarge = displayLarge.copy(fontFamily = sans),
+        displayMedium = displayMedium.copy(fontFamily = sans),
+        displaySmall = displaySmall.copy(fontFamily = sans),
+        headlineLarge = headlineLarge.copy(fontFamily = sans),
+        headlineMedium = headlineMedium.copy(fontFamily = sans),
+        headlineSmall = headlineSmall.copy(fontFamily = sans),
+        titleLarge = titleLarge.copy(fontFamily = sans),
+        titleMedium = titleMedium.copy(fontFamily = sans),
+        titleSmall = titleSmall.copy(fontFamily = sans),
+        bodyLarge = bodyLarge.copy(fontFamily = sans),
+        bodyMedium = bodyMedium.copy(fontFamily = sans),
+        bodySmall = bodySmall.copy(fontFamily = sans),
+        labelLarge = labelLarge.copy(fontFamily = sans),
+        labelMedium = labelMedium.copy(fontFamily = sans),
+        labelSmall = labelSmall.copy(fontFamily = sans),
+    )
+}
 
 private enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS }
 
@@ -207,9 +243,25 @@ private fun PhoneApp() {
         savedRoutes.firstOrNull { it.destination.position == plan.destination.position }
     }
 
+    // System back walks the same hierarchy the visible back arrows do —
+    // without this, the first back gesture kills the whole activity.
+    BackHandler(
+        enabled = drawerState.isOpen || sheet != Sheet.NONE || page != Page.HOME,
+    ) {
+        when {
+            drawerState.isOpen -> scope.launch { drawerState.close() }
+            sheet != Sheet.NONE -> sheet = Sheet.NONE
+            page == Page.STOP_DETAIL -> page = Page.TRIP
+            page == Page.VEHICLE_EDIT -> page = Page.GARAGE
+            else -> page = Page.HOME
+        }
+    }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
-        gesturesEnabled = page == Page.HOME,
+        // Open only via the burger: the edge swipe fights the map's pan
+        // gesture and wins far too often.
+        gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet {
                 DrawerContent(
@@ -251,8 +303,8 @@ private fun PhoneApp() {
                                 }
                             }) {
                                 Icon(
-                                    painter = painterResource(R.drawable.ic_destination),
-                                    contentDescription = stringResource(R.string.phone_action_close),
+                                    painter = painterResource(R.drawable.ic_back),
+                                    contentDescription = stringResource(R.string.common_back),
                                 )
                             }
                         },
@@ -448,7 +500,7 @@ private fun HomeScreen(
             )
         }
 
-        Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
+        Column(modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp)) {
             FloatingActionButton(
                 onClick = onMenu,
                 containerColor = MaterialTheme.colorScheme.surface,
@@ -461,7 +513,7 @@ private fun HomeScreen(
         }
 
         Column(
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             if (!hasGoogleMapsKey) {
@@ -507,7 +559,7 @@ private fun HomeScreen(
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
         ) {
             ExtendedFloatingActionButton(
                 onClick = onPlan,
@@ -553,7 +605,15 @@ private fun DrawerContent(
     onOpen: (Page) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
 ) {
-    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier
+            // The drawer draws edge-to-edge; without the inset its header
+            // sits under the (white-on-white) status bar.
+            .statusBarsPadding()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
 
         Text(stringResource(R.string.drawer_preferences), style = MaterialTheme.typography.titleSmall)
