@@ -11,16 +11,30 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.key
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerComposable
 import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
 import de.autoapp.android.BuildConfig
+import de.autoapp.android.R
 import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.Reachability
 
 /**
  * The real map (decision 2026-09-07: Google Maps Compose — the key was
@@ -72,14 +86,49 @@ fun HomeGoogleMap(
         modifier = modifier,
     ) {
         stops.forEach { stop ->
-            Marker(
-                state = rememberMarkerState(position = stop.site.position.toLatLng()),
-                title = stop.site.name,
-                snippet = stop.site.operator,
-                onClick = { onStopTapped(stop); true },
-            )
+            key(stop.site.id) {
+                MarkerComposable(
+                    keys = arrayOf<Any>(stop.site.id, stop.reachability),
+                    state = rememberMarkerState(position = stop.site.position.toLatLng()),
+                    title = stop.site.name,
+                    onClick = { onStopTapped(stop); true },
+                ) {
+                    ChargePin(color = stop.reachability.pinColor())
+                }
+            }
         }
     }
+}
+
+/**
+ * The same pin-with-bolt the car list uses, in the same reachability colors —
+ * the two surfaces must not tell different stories about the same site
+ * (AGENTS.md). White under-layer for contrast on any map ground.
+ */
+@Composable
+private fun ChargePin(color: Color) {
+    Box(contentAlignment = Alignment.BottomCenter) {
+        Icon(
+            painter = painterResource(R.drawable.ic_charge_pin),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(44.dp),
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_charge_pin),
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(36.dp),
+        )
+    }
+}
+
+/** Reachability → the colors the car UI already uses; unknown stays neutral, not falsely green. */
+private fun Reachability.pinColor(): Color = when (this) {
+    Reachability.REACHABLE -> Color(0xFF188038)
+    Reachability.MARGINAL -> Color(0xFFF9AB00)
+    Reachability.UNREACHABLE -> Color(0xFFD93025)
+    Reachability.UNKNOWN -> Color(0xFF1A73E8)
 }
 
 /** Trip map: the planned route with its charging stops, framed to fit. */
@@ -115,10 +164,14 @@ fun TripGoogleMap(
             )
         }
         stops.forEach { (index, position) ->
-            Marker(
-                state = rememberMarkerState(position = position.toLatLng()),
-                title = "$index",
-            )
+            key(index) {
+                MarkerComposable(
+                    keys = arrayOf(index),
+                    state = rememberMarkerState(position = position.toLatLng()),
+                ) {
+                    NumberedStopPin(index)
+                }
+            }
         }
         Marker(state = rememberMarkerState(position = destination.toLatLng()))
     }
@@ -128,3 +181,28 @@ fun TripGoogleMap(
 private val FALLBACK_CENTER = LatLon(50.11, 8.68)
 private const val HOME_ZOOM = 11f
 private const val BOUNDS_PADDING_PX = 120
+
+/** Planned stop: its number in a route-colored disc — matches the list numbering. */
+@Composable
+private fun NumberedStopPin(index: Int) {
+    Box(contentAlignment = Alignment.Center) {
+        Icon(
+            painter = painterResource(R.drawable.ic_charge_pin),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(46.dp),
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_charge_pin),
+            contentDescription = null,
+            tint = Color(0xFF1A73E8),
+            modifier = Modifier.size(38.dp),
+        )
+        Text(
+            text = "$index",
+            color = Color.White,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(bottom = 14.dp),
+        )
+    }
+}
