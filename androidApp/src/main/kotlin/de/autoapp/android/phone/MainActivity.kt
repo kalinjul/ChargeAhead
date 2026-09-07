@@ -59,6 +59,7 @@ import de.autoapp.shared.domain.distanceKmTo
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCSourceKind
+import de.autoapp.shared.domain.VehiclePreset
 import de.autoapp.shared.PlanningFeature
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -88,7 +89,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-internal enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS, CAR_DATA }
+internal enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, ADD_CAR, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS, CAR_DATA }
 
 private enum class Sheet { NONE, PLAN, CHARGE_NOW, ROUTES }
 
@@ -215,6 +216,7 @@ private fun PhoneApp() {
             sheet != Sheet.NONE -> sheet = Sheet.NONE
             page == Page.STOP_DETAIL -> page = Page.TRIP
             page == Page.VEHICLE_EDIT -> page = Page.GARAGE
+            page == Page.ADD_CAR -> page = Page.GARAGE
             else -> page = Page.HOME
         }
     }
@@ -248,6 +250,7 @@ private fun PhoneApp() {
                             Page.TRIP -> "→ ${tripPlan?.destination?.name.orEmpty()}"
                             Page.STOP_DETAIL -> stringResource(R.string.detail_title)
                             Page.GARAGE -> stringResource(R.string.garage_title)
+                            Page.ADD_CAR -> stringResource(R.string.garage_add_title)
                             Page.VEHICLE_EDIT -> stringResource(R.string.phone_settings_title)
                             Page.SUBSCRIPTIONS -> stringResource(R.string.subs_title)
                             Page.NETWORKS -> stringResource(R.string.phone_networks_title)
@@ -272,6 +275,7 @@ private fun PhoneApp() {
                             page = when (page) {
                                 Page.STOP_DETAIL -> Page.TRIP
                                 Page.VEHICLE_EDIT -> Page.GARAGE
+                                Page.ADD_CAR -> Page.GARAGE
                                 else -> Page.HOME
                             }
                         },
@@ -378,7 +382,19 @@ private fun PhoneApp() {
                     onRemove = { scope.launch { settings.removeVehicle(it) } },
                     onSocChange = { scope.launch { settings.setManualSocPercent(it) } },
                     onOpenAdvanced = { page = Page.VEHICLE_EDIT },
-                    snackbar = snackbar,
+                    onOpenAdd = { page = Page.ADD_CAR },
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                )
+
+                Page.ADD_CAR -> AddCarScreen(
+                    owned = vehicles.map { it.displayName }.toSet(),
+                    onAdd = { preset ->
+                        scope.launch {
+                            settings.setVehicle(preset.toProfile())
+                            snackbar.showSnackbar(context.getString(R.string.garage_added, preset.name))
+                        }
+                        page = Page.GARAGE
+                    },
                     modifier = Modifier.fillMaxSize().padding(padding),
                 )
 

@@ -275,6 +275,8 @@
     <string name="garage_none_found">Kein Fahrzeug gefunden.</string>
     <string name="garage_preset_line">%1$s kWh · %2$s kWh/100 km · %3$d kW DC</string>
     <string name="garage_advanced">Werte anpassen (Batterie, Anschlüsse)</string>
+    <string name="garage_connector">Anschluss</string>
+    <string name="garage_connector_ccs">CCS</string>
 
     <!-- Phone: subscriptions -->
     <string name="subs_title">Abos</string>
