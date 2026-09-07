@@ -14,7 +14,7 @@ struct ContentView: View {
                 Section {
                     LabeledContent(
                         NSLocalizedString("phone_platform_label", comment: ""),
-                        value: platformName()
+                        value: Platform_iosKt.platformName()
                     )
                     Text(NSLocalizedString("phone_hint_car_ui", comment: ""))
                         .font(.footnote)

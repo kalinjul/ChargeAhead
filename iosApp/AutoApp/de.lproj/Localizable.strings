@@ -22,3 +22,31 @@
 "phone_stops_heading" = "Ladestopps voraus";
 "phone_action_refresh" = "Aktualisieren";
 "phone_demo_notice" = "Kein OpenChargeMap-Schlüssel hinterlegt — die Liste zeigt erfundene Demodaten. Schlüssel als OPEN_CHARGE_MAP_API_KEY in eine .xcconfig eintragen (siehe iosApp/README.md).";
+
+/* Phone: map home and planning (design mockup in docs/mockup) */
+"home_map_placeholder" = "Kartenplatzhalter — Karten-SDK folgt";
+"phone_demo_notice_short" = "Demodaten — kein OpenChargeMap-Schlüssel";
+"home_pill_plan" = "Planen";
+"home_pill_charge_now" = "Jetzt laden";
+"home_diagnostics" = "Liste";
+"home_no_position" = "Kein Standort — Ortung und Freigabe prüfen";
+"plan_title" = "Route planen";
+"plan_search_hint" = "Ziel suchen";
+"plan_planning" = "Route wird geplant …";
+"plan_vehicle_missing" = "Kein Fahrzeug angelegt.";
+"plan_failed_no_route" = "Keine Route gefunden.";
+"plan_failed_no_charger" = "Kein erreichbarer Schnelllader auf der Strecke.";
+"trip_stops_heading" = "Ladestopps";
+"trip_summary_time_fmt" = "%@ unterwegs · davon %@ laden";
+"trip_summary_cost_fmt" = "Ladekosten ≈ %.2f € · ";
+"trip_summary_arrival_fmt" = "Ankunft mit %d %%";
+"trip_send_maps" = "An Maps senden";
+"trip_estimate_note" = "Preise sind Schätzwerte — eine echte Tarif-API folgt.";
+"cn_title" = "Jetzt laden";
+"cn_relaxed_note" = "Filter zu streng — sie wurden gelockert.";
+"cn_empty" = "Keine Schnelllader in der Nähe gefunden.";
+"cn_loading" = "Ladesäulen werden gesucht …";
+"detail_title" = "Ladestopp";
+"detail_prices" = "Preise";
+"detail_plan_fmt" = "%d min · %d %% → %d %%";
+"phone_detail_navigate" = "Navigation starten";

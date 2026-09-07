@@ -17,12 +17,17 @@ final class ChargeStopsViewModel: ObservableObject {
     /// `ObservableObject`, they're swapped out manually.
     var onStateChange: ((ChargeStopsState) -> Void)?
 
-    private let feature: ChargeStopsFeature
+    /// One settings store for the whole process — the feature reads the same
+    /// flows the settings UI writes (see AGENTS.md, "One SettingsStore instance").
+    static let settingsStore: SettingsStore = IosEntryPointsKt.createSettingsStore()
+
+    let feature: ChargeStopsFeature
     private let watcher: ChargeStopsWatcher
 
     init() {
         let feature = IosEntryPointsKt.createChargeStopsFeature(
-            openChargeMapKey: ChargeStopsViewModel.apiKeyFromBundle()
+            openChargeMapKey: ChargeStopsViewModel.apiKeyFromBundle(),
+            settingsStore: ChargeStopsViewModel.settingsStore
         )
         self.feature = feature
         self.watcher = ChargeStopsWatcher(feature: feature)
@@ -80,16 +85,16 @@ extension ChargeStopsViewModel {
             return "status_demo"
         }
         let phase = state.phase
-        if phase == ChargeStopsStatePhase.waitingForLocation {
+        if phase == ChargeStopsState.Phase.waitingForLocation {
             return "status_waiting_for_location"
         }
-        if phase == ChargeStopsStatePhase.loading {
+        if phase == ChargeStopsState.Phase.loading {
             return "status_loading"
         }
-        if phase == ChargeStopsStatePhase.ready {
+        if phase == ChargeStopsState.Phase.ready {
             return "status_no_stops"
         }
-        if state.failure == ChargeStopsStateFailureReason.locationUnavailable {
+        if state.failure == ChargeStopsState.FailureReason.locationUnavailable {
             return "status_location_unavailable"
         }
         return "status_sites_unavailable"

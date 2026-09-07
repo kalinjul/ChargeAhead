@@ -18,7 +18,7 @@ class PhoneSceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         let window = UIWindow(windowScene: windowScene)
-        window.rootViewController = UIHostingController(rootView: ContentView())
+        window.rootViewController = UIHostingController(rootView: HomeMapView())
         self.window = window
         window.makeKeyAndVisible()
     }

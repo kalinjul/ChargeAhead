@@ -46,9 +46,9 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: AutoApp
-    info:
-      path: AutoApp/Info.plist
-      properties: {} # all keys already live in Info.plist itself
+    # No `info:` block: XcodeGen would REGENERATE the plist and silently
+    # drop the hand-maintained keys (CarPlay scene manifest). The existing
+    # file is used as-is instead.
     entitlements:
       path: AutoApp/AutoApp.entitlements
       properties:
@@ -57,18 +57,24 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: de.autoapp.ios
         PRODUCT_NAME: AutoApp
+        GENERATE_INFOPLIST_FILE: false
+        INFOPLIST_FILE: AutoApp/Info.plist
         INFOPLIST_KEY_UILaunchScreen_Generation: false # UILaunchScreen is already in Info.plist
-        # TODO(Mac build): add the framework search path for Shared.framework
-        # from shared/build/xcode-frameworks/<Configuration>/<sdk> once the
-        # first `gradlew :shared:embedAndSignAppleFrameworkForXcode` run has
-        # confirmed the actual output path (see comment above).
+        # Confirmed by the first Mac build (2026-09-07): the embed task writes
+        # the framework to shared/build/xcode-frameworks/<Configuration>/<sdk>.
         FRAMEWORK_SEARCH_PATHS:
           - "$(inherited)"
+          - "$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-framework"
+          - "Shared"
     preBuildScripts:
       - name: "Build and embed Shared.framework (KMP, no CocoaPods)"
         script: |
-          # TODO(Mac build): not runnable/verified on Linux (no Xcode,
-          # no swiftc) — see iosApp/README.md.
           cd "$SRCROOT/.."
+          # Xcode's script phases don't inherit the shell's JAVA_HOME; take
+          # the JDK Gradle was verified with, or whatever the machine has.
+          export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home 2>/dev/null || true)}"
           ./gradlew :shared:embedAndSignAppleFrameworkForXcode
         basedOnDependencyAnalysis: false
