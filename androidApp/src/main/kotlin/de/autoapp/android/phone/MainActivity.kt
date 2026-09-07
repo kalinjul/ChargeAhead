@@ -14,32 +14,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -56,7 +38,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -107,7 +88,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS, CAR_DATA }
+internal enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS, CAR_DATA }
 
 private enum class Sheet { NONE, PLAN, CHARGE_NOW, ROUTES }
 
@@ -244,10 +225,11 @@ private fun PhoneApp() {
         // gesture and wins far too often.
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
                 DrawerContent(
                     vehicleName = vehicle?.displayName,
                     activeTariffCount = activeTariffs.size,
+                    networksSummary = networksSummary,
                     filters = filters,
                     labelStyle = mapLabelStyle,
                     onOpen = { target -> page = target; scope.launch { drawerState.close() } },
@@ -491,134 +473,6 @@ private fun PhoneApp() {
                 },
             )
         }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DrawerContent(
-    vehicleName: String?,
-    activeTariffCount: Int,
-    filters: ChargeFilters,
-    labelStyle: MapLabelStyle,
-    onOpen: (Page) -> Unit,
-    onFilters: (ChargeFilters) -> Unit,
-    onLabelStyle: (MapLabelStyle) -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            // The drawer draws edge-to-edge; without the inset its header
-            // sits under the (white-on-white) status bar.
-            .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
-
-        Text(stringResource(R.string.drawer_preferences), style = MaterialTheme.typography.titleSmall)
-        NavigationDrawerItem(
-            label = {
-                Column {
-                    Text(stringResource(R.string.drawer_car))
-                    Text(
-                        vehicleName ?: stringResource(R.string.drawer_car_none),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
-            selected = false,
-            onClick = { onOpen(Page.GARAGE) },
-        )
-        NavigationDrawerItem(
-            label = {
-                Column {
-                    Text(stringResource(R.string.drawer_subscriptions))
-                    Text(
-                        stringResource(R.string.drawer_subs_count, activeTariffCount),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
-            selected = false,
-            onClick = { onOpen(Page.SUBSCRIPTIONS) },
-        )
-
-        HorizontalDivider()
-        Text(stringResource(R.string.drawer_filters), style = MaterialTheme.typography.titleSmall)
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.drawer_networks)) },
-            selected = false,
-            onClick = { onOpen(Page.NETWORKS) },
-        )
-
-        Text(stringResource(R.string.drawer_min_power), style = MaterialTheme.typography.bodyMedium)
-        val powerSteps = listOf(50.0, 150.0, 300.0)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            powerSteps.forEachIndexed { index, step ->
-                SegmentedButton(
-                    selected = filters.minPowerKw == step,
-                    onClick = { onFilters(filters.copy(minPowerKw = step)) },
-                    shape = SegmentedButtonDefaults.itemShape(index = index, count = powerSteps.size),
-                ) {
-                    Text("${step.roundToInt()} kW")
-                }
-            }
-        }
-
-        Text(
-            stringResource(R.string.drawer_max_price, filters.maxPriceEuroPerKwh.twoDecimals()),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Slider(
-            value = filters.maxPriceEuroPerKwh.toFloat(),
-            onValueChange = { onFilters(filters.copy(maxPriceEuroPerKwh = (it * 100).roundToInt() / 100.0)) },
-            valueRange = 0.4f..1.0f,
-        )
-
-        Text(
-            stringResource(R.string.drawer_max_distance, filters.maxDistanceKm.oneDecimal()),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Slider(
-            value = filters.maxDistanceKm.toFloat(),
-            onValueChange = { onFilters(filters.copy(maxDistanceKm = (it * 2).roundToInt() / 2.0)) },
-            valueRange = 1f..10f,
-        )
-
-        Text(stringResource(R.string.drawer_map_label), style = MaterialTheme.typography.bodyMedium)
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
-                selected = labelStyle == MapLabelStyle.PRICE,
-                onClick = { onLabelStyle(MapLabelStyle.PRICE) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-            ) { Text(stringResource(R.string.drawer_label_price)) }
-            SegmentedButton(
-                selected = labelStyle == MapLabelStyle.FREE_CHARGERS,
-                onClick = {},
-                enabled = false,
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-            ) { Text(stringResource(R.string.drawer_label_free)) }
-        }
-        Text(
-            stringResource(R.string.drawer_label_free_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-
-        HorizontalDivider()
-        Text(stringResource(R.string.drawer_debug), style = MaterialTheme.typography.titleSmall)
-        NavigationDrawerItem(
-            label = { Text(stringResource(R.string.drawer_cardata)) },
-            selected = false,
-            onClick = { onOpen(Page.CAR_DATA) },
-        )
-
-        Text(
-            stringResource(R.string.drawer_availability_note),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
