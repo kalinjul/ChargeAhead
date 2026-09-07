@@ -44,15 +44,18 @@ import kotlin.math.roundToInt
 @Composable
 fun PlanSheetContent(
     recent: List<Destination>,
-    vehicleMissing: Boolean,
-    socAssumedPercent: Int?,
+    vehicleName: String?,
+    initialSocPercent: Double?,
     onSearch: suspend (String) -> List<Place>?,
-    onPlan: (Destination) -> Unit,
+    onPlan: (Destination, Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<Place>?>(emptyList()) }
     var searching by remember { mutableStateOf(false) }
+    // The one number the plan stands or falls with — so it's set right here,
+    // not hidden in the garage. Prefilled from the stored value.
+    var soc by remember { mutableStateOf((initialSocPercent ?: 80.0).toFloat()) }
 
     // Debounced: Nominatim allows one request per second (ROADMAP open item 6),
     // and a request per keystroke would blow through that within a word.
@@ -71,16 +74,21 @@ fun PlanSheetContent(
     Column(modifier = modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.plan_title), style = MaterialTheme.typography.titleLarge)
 
-        if (vehicleMissing) {
+        if (vehicleName == null) {
             Text(
                 stringResource(R.string.plan_vehicle_missing),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )
-        } else if (socAssumedPercent != null) {
+        } else {
             Text(
-                stringResource(R.string.plan_soc_assumed, socAssumedPercent),
-                style = MaterialTheme.typography.bodySmall,
+                stringResource(R.string.plan_soc_label, vehicleName, soc.roundToInt()),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            androidx.compose.material3.Slider(
+                value = soc,
+                onValueChange = { soc = it },
+                valueRange = 1f..100f,
             )
         }
 
@@ -112,7 +120,7 @@ fun PlanSheetContent(
                     text = place.name,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onPlan(Destination(place.name, place.position)) }
+                        .clickable { onPlan(Destination(place.name, place.position), soc.toDouble()) }
                         .padding(vertical = 10.dp),
                 )
                 HorizontalDivider()
@@ -130,7 +138,7 @@ fun PlanSheetContent(
                         text = destination.name,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onPlan(destination) }
+                            .clickable { onPlan(destination, soc.toDouble()) }
                             .padding(vertical = 10.dp),
                     )
                     HorizontalDivider()

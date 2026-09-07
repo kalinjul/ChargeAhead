@@ -198,13 +198,16 @@ private fun PhoneApp() {
         }
     }
 
-    fun planTo(destination: Destination) {
+    fun planTo(destination: Destination, socPercent: Double) {
         val from = state.position ?: return
         sheet = Sheet.NONE
         planningInProgress = true
         scope.launch {
+            // Persisted, not just used: the garage and the car UI read the
+            // same value, and the next plan starts from it.
+            settings.setManualSocPercent(socPercent)
             feature.setDestination(destination)
-            when (val result = planning?.planTrip(from, destination)) {
+            when (val result = planning?.planTrip(from, destination, socOverridePercent = socPercent)) {
                 is TripPlanResult.Planned -> {
                     tripPlan = result.plan
                     page = Page.TRIP
@@ -415,12 +418,8 @@ private fun PhoneApp() {
         Sheet.PLAN -> ModalBottomSheet(onDismissRequest = { sheet = Sheet.NONE }) {
             PlanSheetContent(
                 recent = recentDestinations,
-                vehicleMissing = vehicle == null,
-                socAssumedPercent = if (manualSoc == null && state.socSource != SoCSourceKind.CAR_HARDWARE) {
-                    PlanningFeature.DEFAULT_ASSUMED_SOC_PERCENT.roundToInt()
-                } else {
-                    null
-                },
+                vehicleName = vehicle?.displayName,
+                initialSocPercent = manualSoc,
                 onSearch = { query ->
                     runCatching { feature.searchDestinations(query) }.getOrNull()
                 },
@@ -449,7 +448,12 @@ private fun PhoneApp() {
             RoutesSheetContent(
                 saved = savedRoutes,
                 recent = recentDestinations,
-                onOpen = { destination -> sheet = Sheet.NONE; planTo(destination) },
+                // Reopening a route from the list keeps the stored charge
+                // level; adjusting it is what the plan sheet is for.
+                onOpen = { destination ->
+                    sheet = Sheet.NONE
+                    planTo(destination, manualSoc ?: PlanningFeature.DEFAULT_ASSUMED_SOC_PERCENT)
+                },
                 onRename = { route, name -> scope.launch { settings.renameSavedRoute(route.id, name) } },
                 onDelete = { route -> scope.launch { settings.removeSavedRoute(route.id) } },
                 onFavorite = { destination ->
