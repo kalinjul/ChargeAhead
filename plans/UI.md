@@ -1,4 +1,2 @@
-- Full UI update
-- Robot Font Family everywhere
-- The planning and charge now menus look very unfinished and won't open to the fullscreen, please have a look how the mock up handled it
-- sidebar menu also looks awful, please also check out the mock upp for this
+Done — see docs/superpowers/specs/2026-09-07-ui-overhaul-design.md and
+docs/superpowers/plans/2026-09-07-ui-overhaul.md.
