@@ -295,11 +295,17 @@
 
     <!-- Phone: stop detail -->
     <string name="detail_title">Ladestopp</string>
-    <string name="detail_prices">Preise</string>
     <string name="detail_price_adhoc">Ad-hoc</string>
     <string name="detail_price_roaming">Roaming</string>
     <string name="detail_price_subscription">Abo</string>
-    <string name="detail_plan">Geplanter Halt</string>
-    <string name="detail_plan_value">%1$d min · %2$d %% → %3$d %%</string>
-    <string name="detail_energy">≈ %1$d kWh für %2$s €</string>
+    <string name="detail_kv_connectors">Anschlüsse</string>
+    <string name="detail_kv_charge">Geplanter Halt</string>
+    <string name="detail_kv_charge_value">%1$d min · %2$d → %3$d %%</string>
+    <string name="detail_kv_arrival">Ankunft</string>
+    <string name="detail_kv_arrival_value">%1$s bei %2$d %%</string>
+    <string name="detail_kv_energy">Energie</string>
+    <string name="detail_kv_energy_value">≈ %1$d kWh</string>
+    <string name="detail_connector_value">%1$d× CCS · %2$d kW</string>
+    <string name="detail_cheapest">Günstigster</string>
+    <string name="detail_navigate_maps">In Google Maps navigieren</string>
 </resources>
