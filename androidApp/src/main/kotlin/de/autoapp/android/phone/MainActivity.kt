@@ -339,6 +339,7 @@ private fun PhoneApp() {
                     TripPlanScreen(
                         plan = plan,
                         startPosition = state.position,
+                        startSocPercent = manualSoc,
                         isSaved = currentSaved != null,
                         isEstimate = plan.stops.any { it.quote.isEstimate },
                         hasLocationPermission = hasPermission,

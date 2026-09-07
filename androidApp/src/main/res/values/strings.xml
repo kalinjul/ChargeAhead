@@ -207,6 +207,13 @@
     <string name="trip_select_cancel">Abbrechen</string>
     <string name="trip_send_selected">Senden: %1$s → %2$s</string>
     <string name="trip_section_hint">Start und Ende des Abschnitts antippen</string>
+    <string name="trip_dep_now">ab jetzt · %1$d %%</string>
+    <string name="trip_dep_now_unknown">ab jetzt</string>
+    <string name="trip_arr">an %1$s · %2$d %%</string>
+    <string name="trip_send_stop">%1$s an Maps senden</string>
+    <string name="trip_summary_stops">%1$d Stopps</string>
+    <string name="trip_summary_charging">%1$s laden</string>
+    <string name="trip_section_hint_second">Jetzt den Endpunkt antippen</string>
     <string name="trip_save">Route speichern</string>
     <string name="trip_saved">Route gespeichert — unter ♥ zu finden</string>
     <string name="trip_unsaved">Aus den Favoriten entfernt</string>
