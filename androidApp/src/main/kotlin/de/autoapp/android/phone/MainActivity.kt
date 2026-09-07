@@ -432,7 +432,7 @@ private fun PhoneApp() {
             )
         }
 
-        Sheet.CHARGE_NOW -> ModalBottomSheet(onDismissRequest = { sheet = Sheet.NONE }) {
+        Sheet.CHARGE_NOW -> AppSheet(onDismissRequest = { sheet = Sheet.NONE }) {
             if (state.position == null) {
                 Text(
                     stringResource(R.string.home_no_position),

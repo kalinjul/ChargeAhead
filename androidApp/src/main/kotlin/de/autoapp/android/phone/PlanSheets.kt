@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -28,6 +29,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +48,10 @@ import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.AppChip
 import de.autoapp.android.phone.components.Fineprint
+import de.autoapp.android.phone.components.GoButton
+import de.autoapp.android.phone.components.NetworkDot
+import de.autoapp.android.phone.components.PriceText
+import de.autoapp.android.phone.components.RankBadge
 import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
@@ -269,44 +276,58 @@ fun ChargeNowSheetContent(
                         MaterialTheme.colorScheme.error
                     },
                 )
-                result.candidates.forEachIndexed { index, candidate ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "${index + 1} · ${candidate.site.name}",
-                                style = MaterialTheme.typography.titleSmall,
-                            )
-                            Text(
-                                stringResource(
-                                    R.string.cn_distance_power,
-                                    candidate.distanceKm.oneDecimal(),
-                                    candidate.maxPowerKw.roundToInt(),
-                                ),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                        candidate.quote.best?.let { best ->
-                            Text(
-                                stringResource(R.string.cn_price, best.euroPerKwh.twoDecimals()),
-                                style = MaterialTheme.typography.titleSmall,
-                                color = MaterialTheme.colorScheme.tertiary,
-                                modifier = Modifier.padding(end = 8.dp),
-                            )
-                        }
-                        IconButton(onClick = { onNavigate(candidate) }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_destination),
-                                contentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f, fill = false)) {
+                    itemsIndexed(result.candidates, key = { _, c -> c.site.id }) { index, candidate ->
+                        ChargerRow(rank = index + 1, ranked = true, candidate = candidate, onNavigate = onNavigate)
+                    }
+                    if (result.more.isNotEmpty()) {
+                        item { SectionLabel(stringResource(R.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
+                        itemsIndexed(result.more, key = { _, c -> "more-${c.site.id}" }) { index, candidate ->
+                            ChargerRow(rank = result.candidates.size + index + 1, ranked = false, candidate = candidate, onNavigate = onNavigate)
                         }
                     }
-                    HorizontalDivider()
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ChargerRow(
+    rank: Int,
+    ranked: Boolean,
+    candidate: de.autoapp.shared.core.ChargeNowCandidate,
+    onNavigate: (de.autoapp.shared.core.ChargeNowCandidate) -> Unit,
+) {
+    AppCard {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(11.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+        ) {
+            RankBadge(
+                number = rank,
+                color = if (ranked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+                textColor = if (ranked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    NetworkDot(operatorColor(candidate.site.operator), size = 8.dp)
+                    Text(candidate.site.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Text(
+                    stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
+                    style = MaterialTheme.typography.bodySmall.tabular,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+            candidate.quote.best?.let { PriceText(it.euroPerKwh) }
+            GoButton(
+                icon = painterResource(R.drawable.ic_destination),
+                contentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
+                onClick = { onNavigate(candidate) },
+            )
         }
     }
 }
