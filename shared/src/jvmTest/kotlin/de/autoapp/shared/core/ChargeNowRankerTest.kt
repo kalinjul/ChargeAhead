@@ -117,4 +117,32 @@ class ChargeNowRankerTest {
         assertTrue(result.relaxed.isEmpty())
         assertTrue(result.candidates.none { it.site.id == "demo:ionity" })
     }
+
+    @Test
+    fun `the rest of the pool comes along, nearest first`() {
+        val result = rank(
+            listOf(
+                site("ionity", "Ionity", 350.0, 3.0),         // ad-hoc 0.79 — priciest, misses top 3
+                site("tesla", "Tesla", 250.0, 3.0),           // 0.55
+                site("vattenfall", "Vattenfall", 150.0, 2.0), // 0.59
+                site("fastned", "Fastned", 300.0, 1.0),       // 0.69
+                site("wallbox", "Stadtwerke", 22.0, 0.2),     // AC — never appears anywhere
+            ),
+        )
+        assertEquals(listOf("demo:ionity"), result.more.map { it.site.id })
+    }
+
+    @Test
+    fun `more is sorted by distance, not by price`() {
+        val result = rank(
+            listOf(
+                site("a", "Tesla", 250.0, 1.0),      // 0.55 — top 3
+                site("b", "Vattenfall", 150.0, 1.0), // 0.59 — top 3
+                site("c", "Fastned", 300.0, 1.0),    // 0.69 — top 3
+                site("far-cheap", "Tesla", 250.0, 9.0),
+                site("near-pricey", "Ionity", 350.0, 4.0),
+            ),
+        )
+        assertEquals(listOf("demo:near-pricey", "demo:far-cheap"), result.more.map { it.site.id })
+    }
 }

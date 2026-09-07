@@ -23,6 +23,8 @@ enum class RelaxedFilter { MIN_POWER, NETWORKS, MAX_PRICE, MAX_DISTANCE }
 data class ChargeNowResult(
     val candidates: List<ChargeNowCandidate>,
     val relaxed: List<RelaxedFilter>,
+    /** Everything DC-qualified that missed the top spots, nearest first — the expanded sheet scrolls on. */
+    val more: List<ChargeNowCandidate> = emptyList(),
 )
 
 /**
@@ -83,9 +85,11 @@ object ChargeNowRanker {
                 .sortedBy { it.quote.best?.euroPerKwh ?: Double.MAX_VALUE }
                 .take(MAX_RESULTS)
             if (hits.size >= MIN_RESULTS || relaxCount == ladder.size) {
+                val chosen = hits.map { it.site.id }.toSet()
                 return ChargeNowResult(
                     candidates = hits,
                     relaxed = ladder.take(relaxCount).map { it.first },
+                    more = candidates.filter { it.site.id !in chosen }.sortedBy { it.distanceKm },
                 )
             }
         }
