@@ -67,6 +67,11 @@ phone. That app must therefore be present and in developer mode.
 
 ## Installing the app and starting the DHU
 
+**Shortcut:** `tools/start-dhu.sh` does the forward, verifies the head-unit
+server is actually running on the phone (the pitfall below), and starts the
+DHU. It picks the one real phone among the connected devices on its own;
+with several phones, pass a serial.
+
 ```bash
 ./gradlew :androidApp:installDebug
 ```
