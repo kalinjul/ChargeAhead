@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
@@ -449,7 +448,7 @@ private fun PhoneApp() {
             }
         }
 
-        Sheet.ROUTES -> ModalBottomSheet(onDismissRequest = { sheet = Sheet.NONE }) {
+        Sheet.ROUTES -> AppSheet(onDismissRequest = { sheet = Sheet.NONE }) {
             RoutesSheetContent(
                 saved = savedRoutes,
                 recent = recentDestinations,

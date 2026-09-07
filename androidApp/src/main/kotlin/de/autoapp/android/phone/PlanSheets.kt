@@ -30,6 +30,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -360,67 +361,73 @@ fun RoutesSheetContent(
         )
     }
 
-    LazyColumn(modifier = modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        item { Text(stringResource(R.string.routes_title), style = MaterialTheme.typography.titleLarge) }
-        item {
-            Text(
-                stringResource(R.string.routes_saved),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-        if (saved.isEmpty()) {
-            item { Text(stringResource(R.string.routes_empty), style = MaterialTheme.typography.bodySmall) }
-        }
-        items(saved, key = { it.id }) { route ->
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onOpen(route.destination) }
-                        .padding(vertical = 8.dp),
-                ) {
-                    Text(route.name, style = MaterialTheme.typography.titleSmall)
-                    route.summary?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                }
-                TextButton(onClick = { renaming = route }) { Text(stringResource(R.string.routes_rename)) }
-                IconButton(onClick = { onDelete(route) }) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_remove),
-                        contentDescription = stringResource(R.string.routes_delete),
-                    )
+    Column(modifier = modifier) {
+        LazyColumn(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item { Text(stringResource(R.string.routes_title), style = MaterialTheme.typography.titleMedium) }
+            item { SectionLabel(stringResource(R.string.routes_saved)) }
+            if (saved.isEmpty()) {
+                item {
+                    AppCard {
+                        Text(
+                            stringResource(R.string.routes_empty),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(14.dp),
+                        )
+                    }
                 }
             }
-            HorizontalDivider()
-        }
-        item {
-            Text(
-                stringResource(R.string.routes_recent),
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.padding(top = 12.dp),
-            )
-        }
-        items(recent, key = { "recent-${it.name}-${it.position.lat}" }) { destination ->
-            val alreadySaved = saved.any { it.destination.position == destination.position }
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    destination.name,
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable { onOpen(destination) }
-                        .padding(vertical = 8.dp),
-                )
-                IconButton(onClick = { if (!alreadySaved) onFavorite(destination) }) {
-                    Icon(
-                        painter = painterResource(
-                            if (alreadySaved) R.drawable.ic_heart_filled else R.drawable.ic_heart,
-                        ),
-                        contentDescription = stringResource(R.string.routes_save_recent),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
+            items(saved, key = { it.id }) { route ->
+                AppCard {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+                    ) {
+                        Column(Modifier.weight(1f).clickable { onOpen(route.destination) }) {
+                            Text(route.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            route.summary?.let {
+                                Text(it, style = MaterialTheme.typography.bodySmall.tabular, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        GoButton(painterResource(R.drawable.ic_pen), stringResource(R.string.routes_rename), onClick = { renaming = route })
+                        GoButton(
+                            painterResource(R.drawable.ic_remove),
+                            stringResource(R.string.routes_delete),
+                            onClick = { onDelete(route) },
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
                 }
             }
-            HorizontalDivider()
+            item { SectionLabel(stringResource(R.string.routes_recent), modifier = Modifier.padding(top = 8.dp)) }
+            items(recent, key = { "recent-${it.name}-${it.position.lat}" }) { destination ->
+                val alreadySaved = saved.any { it.destination.position == destination.position }
+                AppCard {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+                    ) {
+                        Text(
+                            destination.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f).clickable { onOpen(destination) },
+                        )
+                        GoButton(
+                            icon = painterResource(if (alreadySaved) R.drawable.ic_heart_filled else R.drawable.ic_heart),
+                            contentDescription = stringResource(R.string.routes_save_recent),
+                            onClick = { if (!alreadySaved) onFavorite(destination) },
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            tint = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
         }
     }
 }
