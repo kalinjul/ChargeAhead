@@ -58,12 +58,13 @@ watch the route and its charging stops appear underneath.
 
 Still open:
 
-- **Which map.** Android has Google Maps Compose and MapLibre; iOS has
-  MapKit. MapLibre keeps the OSM/ODbL line already taken for Nominatim and
-  OSRM and needs no Play Services, but it means a second rendering stack
-  and a tile source. This is a real decision, not a detail. Until it's
-  taken, both platforms draw the same placeholder (grid, pins, route line,
-  own position) labeled as such.
+- **Which map — decided 2026-09-07: Google Maps Compose on Android.** The
+  key exists (`googleMapsApiKey` in `local.properties` → manifest
+  placeholder), and navigation hands off to Google Maps anyway. Without a
+  key the app falls back to the labeled placeholder instead of Google's
+  blank grey — same philosophy as the demo data. iOS still draws the
+  placeholder; the Maps iOS SDK needs SPM wiring and a key in
+  `Secrets.xcconfig`, and is the next iOS step.
 - **What the map shows.** Charging stops as markers is obvious. Whether
   the corridor sector, the OSRM route line, and the reachability colors
   belong on it is not.

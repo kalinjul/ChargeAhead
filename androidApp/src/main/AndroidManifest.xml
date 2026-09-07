@@ -38,6 +38,12 @@
             android:name="com.google.android.gms.car.application"
             android:resource="@xml/automotive_app_desc" />
 
+        <!-- Filled from local.properties (googleMapsApiKey) at build time;
+             empty is valid — the phone UI then shows its labeled placeholder. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${googleMapsApiKey}" />
+
         <!-- Must sit directly under <application>: androidx.car.app.AppInfo reads this
              value via PackageManager.getApplicationInfo(), which only sees meta-data at
              the application level. Declared inside <service> instead, the host doesn't

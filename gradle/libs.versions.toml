@@ -19,6 +19,8 @@ composeBom = "2026.06.01"
 coreKtx = "1.17.0"
 lifecycle = "2.10.0"
 playServicesLocation = "21.4.0"
+playServicesMaps = "20.0.0"
+mapsCompose = "6.6.0"
 
 [libraries]
 # --- shared (Kotlin Multiplatform) ---
@@ -57,6 +59,10 @@ androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+
+# --- Map (decision 2026-09-07: Google Maps Compose; key from local.properties) ---
+maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
+play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 

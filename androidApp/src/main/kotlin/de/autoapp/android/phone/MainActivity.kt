@@ -287,6 +287,7 @@ private fun PhoneApp() {
                         startPosition = state.position,
                         isSaved = currentSaved != null,
                         isEstimate = plan.stops.any { it.quote.isEstimate },
+                        hasLocationPermission = hasPermission,
                         onOpenStop = { detailStop = it; page = Page.STOP_DETAIL },
                         onSendToMaps = ::sendToMaps,
                         onToggleSave = {
@@ -429,13 +430,23 @@ private fun HomeScreen(
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
-        MapCanvas(
-            center = state.position,
-            pins = state.stops.map { MapPin(it.site.position, operatorColor(it.site.operator)) },
-            ownPosition = state.position,
-            radiusKm = 25.0,
-            modifier = Modifier.fillMaxSize(),
-        )
+        if (hasGoogleMapsKey) {
+            HomeGoogleMap(
+                position = state.position,
+                stops = state.stops,
+                hasLocationPermission = hasPermission,
+                onStopTapped = onStopTapped,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            MapCanvas(
+                center = state.position,
+                pins = state.stops.map { MapPin(it.site.position, operatorColor(it.site.operator)) },
+                ownPosition = state.position,
+                radiusKm = 25.0,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
 
         Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
             FloatingActionButton(
@@ -453,11 +464,13 @@ private fun HomeScreen(
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(
-                stringResource(R.string.home_map_placeholder),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (!hasGoogleMapsKey) {
+                Text(
+                    stringResource(R.string.home_map_placeholder),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (state.isDemo) {
                 // Invented charging sites must be labeled — see AGENTS.md.
                 Text(

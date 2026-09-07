@@ -17,6 +17,12 @@ val openChargeMapApiKey: String = Properties().apply {
     if (file.exists()) file.inputStream().use(::load)
 }.getProperty("openChargeMapApiKey").orEmpty().trim()
 
+/** Same mechanism, same reasoning: `googleMapsApiKey` in `local.properties`. Empty = placeholder map. */
+val googleMapsApiKey: String = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use(::load)
+}.getProperty("googleMapsApiKey").orEmpty().trim()
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
@@ -38,6 +44,10 @@ android {
             "OPEN_CHARGE_MAP_API_KEY",
             "\"${openChargeMapApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
+
+        // The Maps SDK reads its key from the manifest, not from code.
+        manifestPlaceholders["googleMapsApiKey"] = googleMapsApiKey
+        buildConfigField("boolean", "HAS_GOOGLE_MAPS_KEY", (googleMapsApiKey.isNotEmpty()).toString())
     }
 
     buildTypes {
@@ -79,4 +89,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     implementation(libs.play.services.location)
+
+    // Map — the phone shows a labeled placeholder when the key is missing
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
 }

@@ -51,6 +51,7 @@ fun TripPlanScreen(
     startPosition: LatLon?,
     isSaved: Boolean,
     isEstimate: Boolean,
+    hasLocationPermission: Boolean,
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: (String) -> Unit,
     onToggleSave: () -> Unit,
@@ -91,13 +92,23 @@ fun TripPlanScreen(
     )
 
     Column(modifier = modifier.fillMaxSize()) {
-        MapCanvas(
-            center = null,
-            pins = pins,
-            routePoints = plan.route.points,
-            ownPosition = startPosition,
-            modifier = Modifier.fillMaxWidth().height(220.dp),
-        )
+        if (hasGoogleMapsKey) {
+            TripGoogleMap(
+                routePoints = plan.route.points,
+                stops = plan.stops.mapIndexed { index, stop -> (index + 1) to stop.site.position },
+                destination = plan.destination.position,
+                hasLocationPermission = hasLocationPermission,
+                modifier = Modifier.fillMaxWidth().height(220.dp),
+            )
+        } else {
+            MapCanvas(
+                center = null,
+                pins = pins,
+                routePoints = plan.route.points,
+                ownPosition = startPosition,
+                modifier = Modifier.fillMaxWidth().height(220.dp),
+            )
+        }
 
         TripSummary(plan)
 
