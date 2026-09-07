@@ -50,7 +50,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -61,7 +60,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -69,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import de.autoapp.android.ChargeStopsFeatureProvider
 import de.autoapp.android.R
+import de.autoapp.android.phone.theme.ChargeAheadTheme
 import de.autoapp.shared.core.PlannedStop
 import de.autoapp.shared.core.TripPlan
 import de.autoapp.shared.core.TripPlanResult
@@ -101,46 +100,13 @@ class MainActivity : ComponentActivity() {
         // surfaces and vanish.
         enableEdgeToEdge()
         setContent {
-            MaterialTheme(colorScheme = LightMapsScheme, typography = StandardTypography) {
+            ChargeAheadTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     PhoneApp()
                 }
             }
         }
     }
-}
-
-/** Light, maps-adjacent look — the design decision from the mockup: no dark mode, no neon. */
-private val LightMapsScheme = lightColorScheme(
-    primary = Color(0xFF1A73E8),
-    tertiary = Color(0xFF188038),
-    error = Color(0xFFD93025),
-)
-
-/**
- * The platform's standard sans (Roboto) across every role. Newer Material 3
- * versions ship an expressive default type that reads foreign on Android —
- * pinning [FontFamily.SansSerif] keeps the app looking like the OS it runs on.
- */
-private val StandardTypography = androidx.compose.material3.Typography().run {
-    val sans = androidx.compose.ui.text.font.FontFamily.SansSerif
-    copy(
-        displayLarge = displayLarge.copy(fontFamily = sans),
-        displayMedium = displayMedium.copy(fontFamily = sans),
-        displaySmall = displaySmall.copy(fontFamily = sans),
-        headlineLarge = headlineLarge.copy(fontFamily = sans),
-        headlineMedium = headlineMedium.copy(fontFamily = sans),
-        headlineSmall = headlineSmall.copy(fontFamily = sans),
-        titleLarge = titleLarge.copy(fontFamily = sans),
-        titleMedium = titleMedium.copy(fontFamily = sans),
-        titleSmall = titleSmall.copy(fontFamily = sans),
-        bodyLarge = bodyLarge.copy(fontFamily = sans),
-        bodyMedium = bodyMedium.copy(fontFamily = sans),
-        bodySmall = bodySmall.copy(fontFamily = sans),
-        labelLarge = labelLarge.copy(fontFamily = sans),
-        labelMedium = labelMedium.copy(fontFamily = sans),
-        labelSmall = labelSmall.copy(fontFamily = sans),
-    )
 }
 
 private enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS, CAR_DATA }
