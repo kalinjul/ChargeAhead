@@ -23,7 +23,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -90,6 +89,7 @@ fun PlanSheetContent(
     // Debounced: Nominatim allows one request per second (ROADMAP open item 6),
     // and a request per keystroke would blow through that within a word.
     LaunchedEffect(query) {
+        if (chosen != null) { searching = false; return@LaunchedEffect }
         val trimmed = query.trim()
         if (trimmed.length < 3) {
             results = emptyList()
@@ -246,8 +246,8 @@ fun ChargeNowSheetContent(
     onNavigate: (de.autoapp.shared.core.ChargeNowCandidate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.cn_title), style = MaterialTheme.typography.titleLarge)
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.cn_title), style = MaterialTheme.typography.titleMedium)
 
         when {
             loading -> {

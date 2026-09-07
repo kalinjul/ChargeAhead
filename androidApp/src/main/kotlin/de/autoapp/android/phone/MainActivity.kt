@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -59,7 +60,6 @@ import de.autoapp.shared.domain.distanceKmTo
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCSourceKind
-import de.autoapp.shared.domain.VehiclePreset
 import de.autoapp.shared.PlanningFeature
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -258,7 +258,7 @@ private fun PhoneApp() {
                             Page.HOME -> stringResource(R.string.app_name)
                         },
                         subtitle = when (page) {
-                            Page.TRIP -> tripPlan?.let { stringResource(R.string.trip_topbar_sub, it.stops.size) }
+                            Page.TRIP -> tripPlan?.let { pluralStringResource(R.plurals.trip_topbar_sub, it.stops.size, it.stops.size) }
                             Page.STOP_DETAIL -> {
                                 val plan = tripPlan
                                 val stop = detailStop

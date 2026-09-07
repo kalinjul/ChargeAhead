@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -320,7 +321,7 @@ private fun TripSummary(plan: TripPlan) {
                     buildString {
                         append(minutesText(plan.totalMinutes))
                         append(" · ")
-                        append(stringResource(R.string.trip_summary_stops, plan.stops.size))
+                        append(pluralStringResource(R.plurals.trip_summary_stops, plan.stops.size, plan.stops.size))
                     },
                     style = MaterialTheme.typography.bodySmall.tabular,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

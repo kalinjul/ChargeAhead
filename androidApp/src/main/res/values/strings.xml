@@ -189,18 +189,13 @@
     <string name="plan_no_results">Keine Treffer</string>
     <string name="plan_search_failed">Zielsuche nicht erreichbar</string>
     <string name="plan_vehicle_missing">Kein Fahrzeug angelegt — im Menü unter „Auto“ anlegen.</string>
-    <string name="plan_soc_field">Ladestand</string>
     <string name="plan_planning">Route wird geplant …</string>
     <string name="plan_failed_no_route">Keine Route gefunden.</string>
     <string name="plan_failed_no_charger">Kein erreichbarer Schnelllader nach km %1$d — Filter lockern oder Ladestand prüfen.</string>
     <string name="plan_recent">Zuletzt</string>
 
     <!-- Phone: trip plan -->
-    <string name="trip_title">Geplante Route</string>
     <string name="trip_summary_distance">%1$d km</string>
-    <string name="trip_summary_time">%1$s unterwegs · davon %2$s laden</string>
-    <string name="trip_summary_cost">Ladekosten ≈ %1$s €</string>
-    <string name="trip_summary_arrival">Ankunft mit %1$d %%</string>
     <string name="trip_stop_line">%1$s · %2$d min · %3$d kW</string>
     <string name="trip_send_maps">An Maps senden</string>
     <string name="trip_select_section">Abschnitt wählen</string>
@@ -211,7 +206,6 @@
     <string name="trip_dep_now_unknown">ab jetzt</string>
     <string name="trip_arr">an %1$s · %2$d %%</string>
     <string name="trip_send_stop">%1$s an Maps senden</string>
-    <string name="trip_summary_stops">%1$d Stopps</string>
     <string name="trip_summary_charging">%1$s laden</string>
     <string name="trip_section_hint_second">Jetzt den Endpunkt antippen</string>
     <string name="trip_save">Route speichern</string>
@@ -233,7 +227,6 @@
     <string name="cn_empty">Keine Schnelllader in der Nähe gefunden.</string>
     <string name="cn_loading">Ladesäulen werden gesucht …</string>
     <string name="cn_distance_power">%1$s km · %2$d kW</string>
-    <string name="cn_price">%1$s €/kWh</string>
     <string name="cn_navigate">Navigation starten zu %1$s</string>
     <string name="cn_more">Mehr in der Nähe</string>
 
@@ -287,7 +280,14 @@
     <string name="subs_none_found">Kein Tarif gefunden.</string>
 
     <!-- Phone: trip top bar -->
-    <string name="trip_topbar_sub">ab jetzt · %1$d Stopps</string>
+    <plurals name="trip_topbar_sub">
+        <item quantity="one">ab jetzt · %1$d Stopp</item>
+        <item quantity="other">ab jetzt · %1$d Stopps</item>
+    </plurals>
+    <plurals name="trip_summary_stops">
+        <item quantity="one">%1$d Stopp</item>
+        <item quantity="other">%1$d Stopps</item>
+    </plurals>
     <string name="trip_filters">Filter</string>
     <string name="detail_stop_x_of_y">Stopp %1$d von %2$d</string>
 

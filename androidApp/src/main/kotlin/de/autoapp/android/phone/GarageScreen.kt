@@ -70,6 +70,7 @@ fun GarageScreen(
                             checked = vehicle.displayName == selected?.displayName,
                             tick = if (deleteMode) TickStyle.DELETE else TickStyle.CHECK,
                             onClick = { if (deleteMode) onRemove(vehicle.displayName) else onSelect(vehicle) },
+                            contentDescription = if (deleteMode) stringResource(R.string.garage_remove_one, vehicle.displayName) else null,
                         )
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
