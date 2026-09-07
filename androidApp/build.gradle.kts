@@ -33,10 +33,10 @@ android {
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "de.autoapp.android"
+        applicationId = "org.julakali.chargeahead"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 2
+        versionCode = 3
         versionName = "0.2.0-M1"
 
         buildConfigField(
