@@ -15,6 +15,10 @@
          driver's manually entered value applies. The app works fully without
          this permission. -->
     <uses-permission android:name="com.google.android.gms.permission.CAR_FUEL" />
+    <!-- Only for the debug view (CarHardwareDebugRecorder); the app itself
+         computes nothing from speed or mileage. -->
+    <uses-permission android:name="com.google.android.gms.permission.CAR_SPEED" />
+    <uses-permission android:name="com.google.android.gms.permission.CAR_MILEAGE" />
 
     <!-- Since Android 11, an app only sees other apps if it declares them
          here. Without this block, every navigation app is invisible, and the

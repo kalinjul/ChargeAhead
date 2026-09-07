@@ -147,6 +147,24 @@
     <string name="drawer_label_free">Freie Säulen</string>
     <string name="drawer_label_free_note">„Freie Säulen" folgt, sobald eine Quelle Live-Belegung liefert.</string>
 
+    <!-- Phone: car data debug view -->
+    <string name="drawer_debug">Debug</string>
+    <string name="drawer_cardata">Fahrzeugdaten (Android Auto)</string>
+    <string name="cardata_title">Fahrzeugdaten</string>
+    <string name="cardata_intro">Alles, was das Fahrzeug über Android Auto zuletzt geliefert hat. Aufgezeichnet wird nur während einer Verbindung mit dem Auto; die meisten Head-Units liefern für die meisten Werte nichts — genau das zeigt diese Ansicht.</string>
+    <string name="cardata_never">noch nie empfangen</string>
+    <string name="cardata_age">vor %1$s</string>
+    <string name="cardata_no_permission">keine Berechtigung</string>
+    <string name="cardata_no_data">keine Daten vom Fahrzeug</string>
+    <string name="cardata_no_hardware">kein Fahrzeugzugriff auf diesem Gerät</string>
+    <string name="cardata_kind_model">Modell</string>
+    <string name="cardata_kind_energy_profile">Ladeanschlüsse (laut Fahrzeug)</string>
+    <string name="cardata_kind_battery">Ladestand</string>
+    <string name="cardata_kind_range">Restreichweite</string>
+    <string name="cardata_kind_energy_low">Energiestand niedrig</string>
+    <string name="cardata_kind_speed">Geschwindigkeit</string>
+    <string name="cardata_kind_odometer">Kilometerstand</string>
+
     <!-- Phone: drawer -->
     <string name="drawer_preferences">Einstellungen</string>
     <string name="drawer_car">Auto</string>

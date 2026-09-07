@@ -143,7 +143,7 @@ private val StandardTypography = androidx.compose.material3.Typography().run {
     )
 }
 
-private enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS }
+private enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS, CAR_DATA }
 
 private enum class Sheet { NONE, PLAN, CHARGE_NOW, ROUTES }
 
@@ -166,6 +166,7 @@ private fun PhoneApp() {
     val mapLabelStyle by settings.mapLabelStyle.collectAsState(initial = MapLabelStyle.PRICE)
     val recentDestinations by settings.recentDestinations.collectAsState(initial = emptyList())
     val diagnostics by settings.socDiagnostics.collectAsState(initial = null)
+    val carDebugData by settings.carDebugData.collectAsState(initial = emptyList())
 
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -300,6 +301,7 @@ private fun PhoneApp() {
                                         Page.VEHICLE_EDIT -> R.string.phone_settings_title
                                         Page.SUBSCRIPTIONS -> R.string.subs_title
                                         Page.NETWORKS -> R.string.phone_networks_title
+                                        Page.CAR_DATA -> R.string.cardata_title
                                         Page.HOME -> R.string.app_name
                                     },
                                 ),
@@ -427,6 +429,11 @@ private fun PhoneApp() {
                 Page.SUBSCRIPTIONS -> SubscriptionsScreen(
                     activeIds = activeTariffs,
                     onChange = { scope.launch { settings.setActiveTariffIds(it) } },
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                )
+
+                Page.CAR_DATA -> CarDataDebugScreen(
+                    points = carDebugData,
                     modifier = Modifier.fillMaxSize().padding(padding),
                 )
 
@@ -759,6 +766,14 @@ private fun DrawerContent(
             stringResource(R.string.drawer_label_free_note),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        HorizontalDivider()
+        Text(stringResource(R.string.drawer_debug), style = MaterialTheme.typography.titleSmall)
+        NavigationDrawerItem(
+            label = { Text(stringResource(R.string.drawer_cardata)) },
+            selected = false,
+            onClick = { onOpen(Page.CAR_DATA) },
         )
 
         Text(

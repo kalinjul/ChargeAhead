@@ -121,6 +121,13 @@ interface SettingsStore {
     val socDiagnostics: Flow<SoCDiagnostics?>
 
     /**
+     * Everything the car hardware last delivered, one point per
+     * [CarDataKind] — written by the car session, read by the phone's debug
+     * view. Survives the drive, so it can be inspected at the desk.
+     */
+    val carDebugData: Flow<List<CarDataPoint>>
+
+    /**
      * Recently used destinations, newest first.
      *
      * The only way to set a destination in the car: typing at the wheel is
@@ -151,4 +158,7 @@ interface SettingsStore {
     suspend fun setNetworks(preferences: NetworkPreferences)
 
     suspend fun recordSoCDiagnostics(diagnostics: SoCDiagnostics)
+
+    /** Upserts by [CarDataPoint.kind]: the debug view shows the latest state per data point. */
+    suspend fun recordCarDataPoint(point: CarDataPoint)
 }

@@ -1,5 +1,8 @@
 package de.autoapp.shared.settings
 
+import de.autoapp.shared.domain.CarDataKind
+import de.autoapp.shared.domain.CarDataPoint
+import de.autoapp.shared.domain.CarDataStatus
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Destination
@@ -223,6 +226,31 @@ class PersistentSettingsStore(
         }
     }
 
+    private val mutableCarData = MutableStateFlow(readCarData())
+    override val carDebugData: StateFlow<List<CarDataPoint>> = mutableCarData.asStateFlow()
+
+    override suspend fun recordCarDataPoint(point: CarDataPoint) {
+        val updated = mutableCarData.value.filterNot { it.kind == point.kind } + point
+        storage.putString(
+            KEY_CAR_DEBUG,
+            json.encodeToString(
+                updated.map { StoredCarData(it.kind.name, it.status.name, it.value, it.observedAtMillis) },
+            ),
+        )
+        mutableCarData.value = updated
+    }
+
+    private fun readCarData(): List<CarDataPoint> {
+        val raw = storage.getStringOrNull(KEY_CAR_DEBUG) ?: return emptyList()
+        val stored = runCatching { json.decodeFromString<List<StoredCarData>>(raw) }.getOrElse { return emptyList() }
+        return stored.mapNotNull {
+            // Entries from a newer app version are skipped, not guessed at.
+            val kind = CarDataKind.entries.firstOrNull { k -> k.name == it.kind } ?: return@mapNotNull null
+            val status = CarDataStatus.entries.firstOrNull { s -> s.name == it.status } ?: return@mapNotNull null
+            CarDataPoint(kind, status, it.value, it.observedAtMillis)
+        }
+    }
+
     private val mutableMapLabel = MutableStateFlow(readMapLabelStyle())
     override val mapLabelStyle: StateFlow<MapLabelStyle> = mutableMapLabel.asStateFlow()
 
@@ -348,6 +376,14 @@ class PersistentSettingsStore(
     )
 
     @Serializable
+    private data class StoredCarData(
+        val kind: String,
+        val status: String,
+        val value: String? = null,
+        val observedAtMillis: Long,
+    )
+
+    @Serializable
     private data class StoredDiagnostics(
         val checkedAtMillis: Long,
         val outcome: String,
@@ -385,5 +421,6 @@ class PersistentSettingsStore(
         const val KEY_ACTIVE_TARIFFS = "tariffs.active"
         const val KEY_SAVED_ROUTES = "routes.saved"
         const val KEY_MAP_LABEL = "map.labelStyle"
+        const val KEY_CAR_DEBUG = "car.debugData"
     }
 }

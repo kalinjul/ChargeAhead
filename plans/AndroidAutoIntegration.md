@@ -1,0 +1,1 @@
+- Have a look at the screenshots, the Android auto Screen should look as provided in the screens.
