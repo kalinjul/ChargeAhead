@@ -130,4 +130,128 @@
         <item quantity="one">%1$d Standort in der Umgebung</item>
         <item quantity="other">%1$d Standorte in der Umgebung</item>
     </plurals>
+
+    <!-- Phone: map home -->
+    <string name="home_pill_plan">Planen</string>
+    <string name="home_pill_charge_now">Jetzt laden</string>
+    <string name="home_routes">Gespeicherte Routen</string>
+    <string name="home_menu">Menü</string>
+    <string name="home_map_placeholder">Kartenplatzhalter — Karten-SDK folgt</string>
+    <string name="home_no_position">Kein Standort — Ortung und Freigabe prüfen</string>
+
+    <!-- Phone: drawer -->
+    <string name="drawer_preferences">Einstellungen</string>
+    <string name="drawer_car">Auto</string>
+    <string name="drawer_subscriptions">Abos</string>
+    <string name="drawer_filters">Filter</string>
+    <string name="drawer_networks">Netzwerke</string>
+    <string name="drawer_min_power">Mindestleistung</string>
+    <string name="drawer_max_price">Maximalpreis: %1$s €/kWh</string>
+    <string name="drawer_max_distance">Max. Entfernung (Jetzt laden): %1$s km</string>
+    <string name="drawer_availability_note">Ein Nur-frei-Filter folgt, sobald eine Quelle Live-Belegung liefert.</string>
+    <string name="drawer_car_none">Kein Fahrzeug angelegt</string>
+    <string name="drawer_subs_count">%1$d aktiv</string>
+
+    <!-- Phone: plan sheet -->
+    <string name="plan_title">Route planen</string>
+    <string name="plan_search_hint">Ziel suchen</string>
+    <string name="plan_no_results">Keine Treffer</string>
+    <string name="plan_search_failed">Zielsuche nicht erreichbar</string>
+    <string name="plan_vehicle_missing">Kein Fahrzeug angelegt — im Menü unter „Auto“ anlegen.</string>
+    <string name="plan_soc_assumed">Ladestand nicht eingetragen — mit %1$d %% angenommen.</string>
+    <string name="plan_planning">Route wird geplant …</string>
+    <string name="plan_failed_no_route">Keine Route gefunden.</string>
+    <string name="plan_failed_no_charger">Kein erreichbarer Schnelllader nach km %1$d — Filter lockern oder Ladestand prüfen.</string>
+    <string name="plan_recent">Zuletzt</string>
+
+    <!-- Phone: trip plan -->
+    <string name="trip_title">Geplante Route</string>
+    <string name="trip_summary_distance">%1$d km</string>
+    <string name="trip_summary_time">%1$s unterwegs · davon %2$s laden</string>
+    <string name="trip_summary_cost">Ladekosten ≈ %1$s €</string>
+    <string name="trip_summary_arrival">Ankunft mit %1$d %%</string>
+    <string name="trip_stop_line">%1$s · %2$d min · %3$d kW</string>
+    <string name="trip_send_maps">An Maps senden</string>
+    <string name="trip_select_section">Abschnitt wählen</string>
+    <string name="trip_select_cancel">Abbrechen</string>
+    <string name="trip_send_selected">Senden: %1$s → %2$s</string>
+    <string name="trip_section_hint">Start und Ende des Abschnitts antippen</string>
+    <string name="trip_save">Route speichern</string>
+    <string name="trip_saved">Route gespeichert — unter ♥ zu finden</string>
+    <string name="trip_unsaved">Aus den Favoriten entfernt</string>
+    <string name="trip_estimate_note">Preise sind Schätzwerte — eine echte Tarif-API folgt.</string>
+    <string name="trip_start">Start</string>
+    <string name="trip_destination">Ziel</string>
+    <string name="trip_maps_sent">An Google Maps übergeben</string>
+
+    <!-- Phone: charge now -->
+    <string name="cn_title">Jetzt laden</string>
+    <string name="cn_subtitle">Beste Ladesäulen in der Nähe, günstigste zuerst</string>
+    <string name="cn_relaxed">Filter zu streng — gelockert: %1$s</string>
+    <string name="cn_relax_min_power">Mindestleistung</string>
+    <string name="cn_relax_networks">Netzwerke</string>
+    <string name="cn_relax_max_price">Maximalpreis</string>
+    <string name="cn_relax_max_distance">Entfernung</string>
+    <string name="cn_empty">Keine Schnelllader in der Nähe gefunden.</string>
+    <string name="cn_loading">Ladesäulen werden gesucht …</string>
+    <string name="cn_distance_power">%1$s km · %2$d kW</string>
+    <string name="cn_price">%1$s €/kWh</string>
+    <string name="cn_navigate">Navigation starten zu %1$s</string>
+
+    <!-- Phone: saved routes -->
+    <string name="routes_title">Deine Routen</string>
+    <string name="routes_saved">Gespeichert</string>
+    <string name="routes_recent">Zuletzt</string>
+    <string name="routes_empty">Noch nichts gespeichert — das Herz an einer Route antippen.</string>
+    <string name="routes_rename">Umbenennen</string>
+    <string name="routes_delete">Löschen</string>
+    <string name="routes_save_recent">Als Favorit speichern</string>
+    <string name="routes_rename_title">Route umbenennen</string>
+    <string name="routes_ok">Speichern</string>
+    <string name="routes_cancel">Abbrechen</string>
+
+    <!-- Phone: garage -->
+    <string name="garage_title">Auto</string>
+    <string name="garage_your_cars">Deine Autos</string>
+    <string name="garage_add">Auto hinzufügen …</string>
+    <string name="garage_delete">Auto entfernen …</string>
+    <string name="garage_delete_done">Fertig</string>
+    <string name="garage_remove_one">%1$s entfernen</string>
+    <string name="garage_specs">Daten — Grundlage der Planung</string>
+    <string name="garage_battery">Batterie</string>
+    <string name="garage_battery_value">%1$s kWh nutzbar</string>
+    <string name="garage_dc">DC-Spitze</string>
+    <string name="garage_dc_value">%1$d kW</string>
+    <string name="garage_dc_unknown">unbekannt</string>
+    <string name="garage_range">Reichweite</string>
+    <string name="garage_range_value">≈ %1$d km</string>
+    <string name="garage_consumption">Dein Verbrauch: %1$s kWh/100 km</string>
+    <string name="garage_consumption_hint">Datenblatt sagt %1$s — an die eigene Fahrweise anpassen.</string>
+    <string name="garage_soc">Ladestand: %1$d %%</string>
+    <string name="garage_soc_unset">Ladestand: nicht eingetragen</string>
+    <string name="garage_search">Fahrzeug suchen</string>
+    <string name="garage_added">%1$s steht jetzt in der Garage</string>
+    <string name="garage_add_title">Auto hinzufügen</string>
+    <string name="garage_no_car_yet">Noch kein Auto — eins aus der Liste wählen.</string>
+    <string name="garage_none_found">Kein Fahrzeug gefunden.</string>
+    <string name="garage_preset_line">%1$s kWh · %2$s kWh/100 km · %3$d kW DC</string>
+    <string name="garage_advanced">Werte anpassen (Batterie, Anschlüsse)</string>
+
+    <!-- Phone: subscriptions -->
+    <string name="subs_title">Abos</string>
+    <string name="subs_search">Tarif suchen</string>
+    <string name="subs_fee">%1$s €/Monat</string>
+    <string name="subs_no_fee">ohne Grundgebühr</string>
+    <string name="subs_note">Aktive Tarife werden an jeder Säule automatisch mit dem Ad-hoc-Preis verglichen.</string>
+    <string name="subs_none_found">Kein Tarif gefunden.</string>
+
+    <!-- Phone: stop detail -->
+    <string name="detail_title">Ladestopp</string>
+    <string name="detail_prices">Preise</string>
+    <string name="detail_price_adhoc">Ad-hoc</string>
+    <string name="detail_price_roaming">Roaming</string>
+    <string name="detail_price_subscription">Abo</string>
+    <string name="detail_plan">Geplanter Halt</string>
+    <string name="detail_plan_value">%1$d min · %2$d %% → %3$d %%</string>
+    <string name="detail_energy">≈ %1$d kWh für %2$s €</string>
 </resources>

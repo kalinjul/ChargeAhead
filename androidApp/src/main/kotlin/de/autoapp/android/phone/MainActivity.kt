@@ -1,46 +1,61 @@
 package de.autoapp.android.phone
 
 import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.TextButton as M3TextButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -48,54 +63,84 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import de.autoapp.android.ChargeStopsFeatureProvider
 import de.autoapp.android.R
-import de.autoapp.shared.ChargeStopFormatter
-import de.autoapp.shared.ChargeStopsState
-import de.autoapp.shared.domain.ChargeStop
+import de.autoapp.shared.core.PlannedStop
+import de.autoapp.shared.core.TripPlan
+import de.autoapp.shared.core.TripPlanResult
+import de.autoapp.shared.core.ChargeNowResult
+import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.Destination
-import de.autoapp.shared.domain.Place
+import de.autoapp.shared.domain.NetworkPreferences
+import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCSourceKind
-import de.autoapp.shared.platformName
+import de.autoapp.shared.PlanningFeature
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /**
- * Phone UI for verification. Actual operation happens in Android Auto (see
- * ChargeStopsScreen); this mainly lets you check that location, API key, and
- * data source work together, without needing a head unit.
+ * The phone app: map-first, the flows from the design mockup (docs/mockup) —
+ * plan a route with charging stops, "charge now", garage, subscriptions,
+ * filters, saved routes. Navigation stays the enum-page pattern from before;
+ * the flows are simple enough that a navigation library would only add
+ * ceremony.
  */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
+            MaterialTheme(colorScheme = LightMapsScheme) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    ChargeStopsPhoneScreen()
+                    PhoneApp()
                 }
             }
         }
     }
 }
 
+/** Light, maps-adjacent look — the design decision from the mockup: no dark mode, no neon. */
+private val LightMapsScheme = lightColorScheme(
+    primary = Color(0xFF1A73E8),
+    tertiary = Color(0xFF188038),
+    error = Color(0xFFD93025),
+)
+
+private enum class Page { HOME, TRIP, STOP_DETAIL, GARAGE, VEHICLE_EDIT, SUBSCRIPTIONS, NETWORKS }
+
+private enum class Sheet { NONE, PLAN, CHARGE_NOW, ROUTES }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChargeStopsPhoneScreen() {
+private fun PhoneApp() {
     val context = LocalContext.current
     val settings = remember { ChargeStopsFeatureProvider.settingsStore(context) }
     val feature = remember { ChargeStopsFeatureProvider.create(context) }
+    val planning = remember { feature.planning }
+
     val state by feature.state.collectAsState()
     val vehicle by settings.vehicle.collectAsState(initial = null)
+    val vehicles by settings.vehicles.collectAsState(initial = emptyList())
     val manualSoc by settings.manualSocPercent.collectAsState(initial = null)
-    val networks by settings.networks.collectAsState(initial = de.autoapp.shared.domain.NetworkPreferences())
-    val diagnostics by settings.socDiagnostics.collectAsState(initial = null)
-    val scope = rememberCoroutineScope()
-
-    val destination by settings.destination.collectAsState(initial = null)
+    val networks by settings.networks.collectAsState(initial = NetworkPreferences())
+    val filters by settings.chargeFilters.collectAsState(initial = ChargeFilters())
+    val activeTariffs by settings.activeTariffIds.collectAsState(initial = emptySet())
+    val savedRoutes by settings.savedRoutes.collectAsState(initial = emptyList())
     val recentDestinations by settings.recentDestinations.collectAsState(initial = emptyList())
+    val diagnostics by settings.socDiagnostics.collectAsState(initial = null)
 
-    var openPage by remember { mutableStateOf(Page.STOPS) }
-    var detailStop by remember { mutableStateOf<ChargeStop?>(null) }
+    val scope = rememberCoroutineScope()
+    val snackbar = remember { SnackbarHostState() }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+
+    var page by remember { mutableStateOf(Page.HOME) }
+    var sheet by remember { mutableStateOf(Sheet.NONE) }
+    var tripPlan by remember { mutableStateOf<TripPlan?>(null) }
+    var planningInProgress by remember { mutableStateOf(false) }
+    var detailStop by remember { mutableStateOf<PlannedStop?>(null) }
+    var chargeNow by remember { mutableStateOf<ChargeNowResult?>(null) }
+    var chargeNowLoading by remember { mutableStateOf(false) }
+    var corridorStop by remember { mutableStateOf<de.autoapp.shared.domain.ChargeStop?>(null) }
+
     var hasPermission by remember { mutableStateOf(context.hasLocationPermission()) }
-
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
@@ -108,53 +153,180 @@ private fun ChargeStopsPhoneScreen() {
         onDispose { feature.close() }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        stringResource(
-                            when (openPage) {
-                                Page.STOPS -> R.string.phone_title_stops
-                                Page.VEHICLE -> R.string.phone_settings_title
-                                Page.DESTINATION -> R.string.phone_destination_title
-                                Page.NETWORKS -> R.string.phone_networks_title
-                            },
-                        ),
+    fun sendToMaps(url: String) {
+        try {
+            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            scope.launch { snackbar.showSnackbar(context.getString(R.string.trip_maps_sent)) }
+        } catch (notFound: ActivityNotFoundException) {
+            Toast.makeText(context, R.string.phone_detail_no_navigation, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    fun planTo(destination: Destination) {
+        val from = state.position ?: return
+        sheet = Sheet.NONE
+        planningInProgress = true
+        scope.launch {
+            feature.setDestination(destination)
+            when (val result = planning?.planTrip(from, destination)) {
+                is TripPlanResult.Planned -> {
+                    tripPlan = result.plan
+                    page = Page.TRIP
+                }
+
+                is TripPlanResult.NoVehicle ->
+                    snackbar.showSnackbar(context.getString(R.string.plan_vehicle_missing))
+
+                is TripPlanResult.NoChargerInReach ->
+                    snackbar.showSnackbar(
+                        context.getString(R.string.plan_failed_no_charger, result.afterKm.roundToInt()),
                     )
-                },
-                actions = {
-                    if (openPage != Page.STOPS) {
-                        TextButton(onClick = { openPage = Page.STOPS }) {
-                            Text(stringResource(R.string.phone_action_close))
-                        }
-                    } else {
-                        TextButton(onClick = { openPage = Page.DESTINATION }) {
-                            Text(stringResource(R.string.phone_action_destination))
-                        }
-                        TextButton(onClick = { openPage = Page.NETWORKS }) {
-                            Text(stringResource(R.string.phone_action_networks))
-                        }
-                        TextButton(onClick = { openPage = Page.VEHICLE }) {
-                            Text(stringResource(R.string.phone_action_settings))
-                        }
-                        // As an icon rather than a word: with four text
-                        // buttons there's no room left for the title, and
-                        // the header wraps it mid-word.
-                        IconButton(onClick = { feature.refresh() }) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_refresh),
-                                contentDescription = stringResource(R.string.phone_action_refresh),
-                            )
-                        }
-                    }
-                },
-            )
+
+                is TripPlanResult.NoRoute, null ->
+                    snackbar.showSnackbar(context.getString(R.string.plan_failed_no_route))
+            }
+            planningInProgress = false
+        }
+    }
+
+    fun openChargeNow() {
+        val position = state.position
+        sheet = Sheet.CHARGE_NOW
+        if (position == null) {
+            chargeNow = null
+            return
+        }
+        chargeNowLoading = true
+        scope.launch {
+            chargeNow = planning?.chargeNow(position)
+            chargeNowLoading = false
+        }
+    }
+
+    val currentSaved = tripPlan?.let { plan ->
+        savedRoutes.firstOrNull { it.destination.position == plan.destination.position }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        gesturesEnabled = page == Page.HOME,
+        drawerContent = {
+            ModalDrawerSheet {
+                DrawerContent(
+                    vehicleName = vehicle?.displayName,
+                    activeTariffCount = activeTariffs.size,
+                    filters = filters,
+                    onOpen = { target -> page = target; scope.launch { drawerState.close() } },
+                    onFilters = { updated -> scope.launch { settings.setChargeFilters(updated) } },
+                )
+            }
         },
-    ) { padding ->
-        when (openPage) {
-            Page.VEHICLE -> {
-                VehicleSettingsScreen(
+    ) {
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbar) },
+            topBar = {
+                if (page != Page.HOME) {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                stringResource(
+                                    when (page) {
+                                        Page.TRIP -> R.string.trip_title
+                                        Page.STOP_DETAIL -> R.string.detail_title
+                                        Page.GARAGE -> R.string.garage_title
+                                        Page.VEHICLE_EDIT -> R.string.phone_settings_title
+                                        Page.SUBSCRIPTIONS -> R.string.subs_title
+                                        Page.NETWORKS -> R.string.phone_networks_title
+                                        Page.HOME -> R.string.app_name
+                                    },
+                                ),
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = {
+                                page = when (page) {
+                                    Page.STOP_DETAIL -> Page.TRIP
+                                    Page.VEHICLE_EDIT -> Page.GARAGE
+                                    else -> Page.HOME
+                                }
+                            }) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_destination),
+                                    contentDescription = stringResource(R.string.phone_action_close),
+                                )
+                            }
+                        },
+                    )
+                }
+            },
+        ) { padding ->
+            when (page) {
+                Page.HOME -> HomeScreen(
+                    state = state,
+                    hasPermission = hasPermission,
+                    planningInProgress = planningInProgress,
+                    onRequestPermission = {
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                            ),
+                        )
+                    },
+                    onMenu = { scope.launch { drawerState.open() } },
+                    onPlan = { sheet = Sheet.PLAN },
+                    onChargeNow = { openChargeNow() },
+                    onRoutes = { sheet = Sheet.ROUTES },
+                    onStopTapped = { corridorStop = it },
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                )
+
+                Page.TRIP -> tripPlan?.let { plan ->
+                    TripPlanScreen(
+                        plan = plan,
+                        startPosition = state.position,
+                        isSaved = currentSaved != null,
+                        isEstimate = plan.stops.any { it.quote.isEstimate },
+                        onOpenStop = { detailStop = it; page = Page.STOP_DETAIL },
+                        onSendToMaps = ::sendToMaps,
+                        onToggleSave = {
+                            scope.launch {
+                                val existing = currentSaved
+                                if (existing != null) {
+                                    settings.removeSavedRoute(existing.id)
+                                    snackbar.showSnackbar(context.getString(R.string.trip_unsaved))
+                                } else {
+                                    settings.saveRoute(plan.toSavedRoute())
+                                    snackbar.showSnackbar(context.getString(R.string.trip_saved))
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize().padding(padding),
+                    )
+                } ?: run { page = Page.HOME }
+
+                Page.STOP_DETAIL -> detailStop?.let { stop ->
+                    StopDetailScreen(
+                        stop = stop,
+                        onSendToMaps = ::sendToMaps,
+                        modifier = Modifier.fillMaxSize().padding(padding),
+                    )
+                } ?: run { page = Page.TRIP }
+
+                Page.GARAGE -> GarageScreen(
+                    vehicles = vehicles,
+                    selected = vehicle,
+                    socPercent = manualSoc,
+                    socFromCar = state.socSource == SoCSourceKind.CAR_HARDWARE,
+                    onSelect = { scope.launch { settings.setVehicle(it) } },
+                    onRemove = { scope.launch { settings.removeVehicle(it) } },
+                    onSocChange = { scope.launch { settings.setManualSocPercent(it) } },
+                    onOpenAdvanced = { page = Page.VEHICLE_EDIT },
+                    snackbar = snackbar,
+                    modifier = Modifier.fillMaxSize().padding(padding),
+                )
+
+                Page.VEHICLE_EDIT -> VehicleSettingsScreen(
                     vehicle = vehicle,
                     socPercent = manualSoc,
                     socFromCar = state.socSource == SoCSourceKind.CAR_HARDWARE,
@@ -163,292 +335,303 @@ private fun ChargeStopsPhoneScreen() {
                     diagnostics = diagnostics,
                     modifier = Modifier.fillMaxSize().padding(padding),
                 )
-                return@Scaffold
-            }
 
-            Page.DESTINATION -> {
-                DestinationScreen(
-                    current = destination,
-                    recent = recentDestinations,
-                    // null means "unreachable" and is different from an
-                    // empty results list.
-                    onSearch = { query ->
-                        runCatching { feature.searchDestinations(query) }.getOrNull()
-                    },
-                    onSelect = { chosen ->
-                        scope.launch { feature.setDestination(chosen) }
-                        openPage = Page.STOPS
-                    },
+                Page.SUBSCRIPTIONS -> SubscriptionsScreen(
+                    activeIds = activeTariffs,
+                    onChange = { scope.launch { settings.setActiveTariffIds(it) } },
                     modifier = Modifier.fillMaxSize().padding(padding),
                 )
-                return@Scaffold
-            }
 
-            Page.NETWORKS -> {
-                NetworkSettingsScreen(
+                Page.NETWORKS -> NetworkSettingsScreen(
                     preferences = networks,
                     available = state.availableOperators,
                     onChange = { scope.launch { settings.setNetworks(it) } },
                     modifier = Modifier.fillMaxSize().padding(padding),
                 )
-                return@Scaffold
             }
+        }
+    }
 
-            Page.STOPS -> Unit
+    corridorStop?.let { stop ->
+        ChargeStopDetailDialog(stop = stop, onDismiss = { corridorStop = null })
+    }
+
+    when (sheet) {
+        Sheet.NONE -> Unit
+
+        Sheet.PLAN -> ModalBottomSheet(onDismissRequest = { sheet = Sheet.NONE }) {
+            PlanSheetContent(
+                recent = recentDestinations,
+                vehicleMissing = vehicle == null,
+                socAssumedPercent = if (manualSoc == null && state.socSource != SoCSourceKind.CAR_HARDWARE) {
+                    PlanningFeature.DEFAULT_ASSUMED_SOC_PERCENT.roundToInt()
+                } else {
+                    null
+                },
+                onSearch = { query ->
+                    runCatching { feature.searchDestinations(query) }.getOrNull()
+                },
+                onPlan = ::planTo,
+            )
         }
 
-        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            Text(
-                text = stringResource(R.string.phone_platform_label) + ": " + platformName(),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-            Text(
-                text = stringResource(R.string.phone_hint_car_ui),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            )
-
-            if (state.isDemo) {
-                // Presenting made-up charging sites as real ones would, in
-                // an app for the car, not just be sloppy but dangerous.
+        Sheet.CHARGE_NOW -> ModalBottomSheet(onDismissRequest = { sheet = Sheet.NONE }) {
+            if (state.position == null) {
                 Text(
-                    text = stringResource(R.string.phone_demo_notice),
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    stringResource(R.string.home_no_position),
+                    modifier = Modifier.padding(24.dp),
                 )
-            }
-
-            routeText(state)?.let { text ->
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-
-            if (state.networkFilterActive) {
-                Text(
-                    text = stringResource(R.string.phone_networks_filtered),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
-
-            if (vehicle == null || manualSoc == null) {
-                // Without both, reachability stays UNKNOWN. That's not an
-                // error, but the driver should know why no colors or
-                // arrival percentages appear.
-                Text(
-                    text = stringResource(R.string.phone_settings_missing),
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
-            }
-
-            HorizontalDivider()
-
-            if (!hasPermission) {
-                MissingPermission(
-                    onRequest = {
-                        permissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                            ),
-                        )
+            } else {
+                ChargeNowSheetContent(
+                    result = chargeNow,
+                    loading = chargeNowLoading,
+                    onNavigate = { candidate ->
+                        sendToMaps(de.autoapp.shared.core.MapsHandoff.navigateUrl(candidate.site.position))
                     },
                 )
-                return@Column
             }
+        }
 
-            statusText(state)?.let { status ->
-                Text(text = status, modifier = Modifier.padding(16.dp))
-            }
-
-            Text(
-                text = stringResource(R.string.phone_stops_heading),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(16.dp),
+        Sheet.ROUTES -> ModalBottomSheet(onDismissRequest = { sheet = Sheet.NONE }) {
+            RoutesSheetContent(
+                saved = savedRoutes,
+                recent = recentDestinations,
+                onOpen = { destination -> sheet = Sheet.NONE; planTo(destination) },
+                onRename = { route, name -> scope.launch { settings.renameSavedRoute(route.id, name) } },
+                onDelete = { route -> scope.launch { settings.removeSavedRoute(route.id) } },
+                onFavorite = { destination ->
+                    scope.launch {
+                        settings.saveRoute(
+                            SavedRoute(
+                                id = destination.routeId(),
+                                name = destination.name,
+                                destination = destination,
+                            ),
+                        )
+                    }
+                },
             )
-            detailStop?.let { stop ->
-                ChargeStopDetailDialog(stop = stop, onDismiss = { detailStop = null })
-            }
+        }
+    }
+}
 
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(state.stops, key = { it.site.id }) { stop ->
-                    ChargeStopRow(stop, onClick = { detailStop = stop })
+@Composable
+private fun HomeScreen(
+    state: de.autoapp.shared.ChargeStopsState,
+    hasPermission: Boolean,
+    planningInProgress: Boolean,
+    onRequestPermission: () -> Unit,
+    onMenu: () -> Unit,
+    onPlan: () -> Unit,
+    onChargeNow: () -> Unit,
+    onRoutes: () -> Unit,
+    onStopTapped: (de.autoapp.shared.domain.ChargeStop) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier) {
+        MapCanvas(
+            center = state.position,
+            pins = state.stops.map { MapPin(it.site.position, operatorColor(it.site.operator)) },
+            ownPosition = state.position,
+            radiusKm = 25.0,
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
+            FloatingActionButton(
+                onClick = onMenu,
+                containerColor = MaterialTheme.colorScheme.surface,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_menu),
+                    contentDescription = stringResource(R.string.home_menu),
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                stringResource(R.string.home_map_placeholder),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (state.isDemo) {
+                // Invented charging sites must be labeled — see AGENTS.md.
+                Text(
+                    stringResource(R.string.phone_demo_notice),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+
+        if (!hasPermission) {
+            Column(
+                modifier = Modifier.align(Alignment.Center).padding(32.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(stringResource(R.string.phone_permission_message))
+                Button(onClick = onRequestPermission) {
+                    Text(stringResource(R.string.phone_permission_action))
                 }
-                // Attribution requirement: OpenStreetMap is licensed under ODbL.
-                item {
+            }
+        }
+
+        if (planningInProgress) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.align(Alignment.Center),
+            ) {
+                CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
+                Text(stringResource(R.string.plan_planning))
+            }
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 24.dp),
+        ) {
+            ExtendedFloatingActionButton(
+                onClick = onPlan,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+                icon = {
+                    Icon(painter = painterResource(R.drawable.ic_route), contentDescription = null)
+                },
+                text = { Text(stringResource(R.string.home_pill_plan)) },
+            )
+            ExtendedFloatingActionButton(
+                onClick = onChargeNow,
+                containerColor = MaterialTheme.colorScheme.surface,
+                icon = {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_battery),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                    )
+                },
+                text = { Text(stringResource(R.string.home_pill_charge_now)) },
+            )
+            FloatingActionButton(
+                onClick = onRoutes,
+                containerColor = MaterialTheme.colorScheme.surface,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_heart),
+                    contentDescription = stringResource(R.string.home_routes),
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DrawerContent(
+    vehicleName: String?,
+    activeTariffCount: Int,
+    filters: ChargeFilters,
+    onOpen: (Page) -> Unit,
+    onFilters: (ChargeFilters) -> Unit,
+) {
+    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge)
+
+        Text(stringResource(R.string.drawer_preferences), style = MaterialTheme.typography.titleSmall)
+        NavigationDrawerItem(
+            label = {
+                Column {
+                    Text(stringResource(R.string.drawer_car))
                     Text(
-                        text = stringResource(R.string.phone_attribution),
+                        vehicleName ?: stringResource(R.string.drawer_car_none),
                         style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(16.dp),
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MissingPermission(onRequest: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Text(stringResource(R.string.phone_permission_message))
-        Button(onClick = onRequest) {
-            Text(stringResource(R.string.phone_permission_action))
-        }
-    }
-}
-
-/** A word about the situation — or nothing, when the list speaks for itself. */
-@Composable
-private fun statusText(state: ChargeStopsState): String? = when (state.phase) {
-    ChargeStopsState.Phase.WAITING_FOR_LOCATION -> stringResource(R.string.phone_status_waiting)
-
-    ChargeStopsState.Phase.LOADING ->
-        if (state.stops.isEmpty()) stringResource(R.string.phone_status_loading) else null
-
-    ChargeStopsState.Phase.READY ->
-        if (state.stops.isEmpty()) stringResource(R.string.phone_status_no_stops) else null
-
-    ChargeStopsState.Phase.FAILED -> when (state.failure) {
-        ChargeStopsState.FailureReason.LOCATION_UNAVAILABLE ->
-            stringResource(R.string.phone_status_location_unavailable)
-
-        ChargeStopsState.FailureReason.SITES_UNAVAILABLE, null ->
-            if (state.stops.isEmpty()) {
-                stringResource(R.string.phone_status_sites_unavailable)
-            } else {
-                stringResource(R.string.phone_status_stale)
-            }
-    }
-}
-
-/** Which page is currently open. Sufficient without a navigation library. */
-private enum class Page { STOPS, VEHICLE, DESTINATION, NETWORKS }
-
-/** A sentence about whether the search is along the route or by heading. */
-@Composable
-private fun routeText(state: ChargeStopsState): String? {
-    val name = state.destination?.name ?: return null
-    return when (state.routeStatus) {
-        ChargeStopsState.RouteStatus.ACTIVE -> stringResource(R.string.phone_route_active, name)
-        ChargeStopsState.RouteStatus.CALCULATING -> stringResource(R.string.phone_route_calculating)
-        ChargeStopsState.RouteStatus.UNAVAILABLE ->
-            stringResource(R.string.phone_route_unavailable, name)
-
-        ChargeStopsState.RouteStatus.NONE -> null
-    }
-}
-
-@Composable
-private fun ChargeStopRow(stop: ChargeStop, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = listOfNotNull(stop.site.name, stop.site.operator).joinToString(" · "),
-            style = MaterialTheme.typography.titleSmall,
+            },
+            selected = false,
+            onClick = { onOpen(Page.GARAGE) },
         )
-        Text(text = ChargeStopFormatter.primaryLine(stop))
+        NavigationDrawerItem(
+            label = {
+                Column {
+                    Text(stringResource(R.string.drawer_subscriptions))
+                    Text(
+                        stringResource(R.string.drawer_subs_count, activeTariffCount),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
+            selected = false,
+            onClick = { onOpen(Page.SUBSCRIPTIONS) },
+        )
+
+        HorizontalDivider()
+        Text(stringResource(R.string.drawer_filters), style = MaterialTheme.typography.titleSmall)
+        NavigationDrawerItem(
+            label = { Text(stringResource(R.string.drawer_networks)) },
+            selected = false,
+            onClick = { onOpen(Page.NETWORKS) },
+        )
+
+        Text(stringResource(R.string.drawer_min_power), style = MaterialTheme.typography.bodyMedium)
+        val powerSteps = listOf(50.0, 150.0, 300.0)
+        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            powerSteps.forEachIndexed { index, step ->
+                SegmentedButton(
+                    selected = filters.minPowerKw == step,
+                    onClick = { onFilters(filters.copy(minPowerKw = step)) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = powerSteps.size),
+                ) {
+                    Text("${step.roundToInt()} kW")
+                }
+            }
+        }
+
         Text(
-            text = ChargeStopFormatter.secondaryLine(stop),
+            stringResource(R.string.drawer_max_price, filters.maxPriceEuroPerKwh.twoDecimals()),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = filters.maxPriceEuroPerKwh.toFloat(),
+            onValueChange = { onFilters(filters.copy(maxPriceEuroPerKwh = (it * 100).roundToInt() / 100.0)) },
+            valueRange = 0.4f..1.0f,
+        )
+
+        Text(
+            stringResource(R.string.drawer_max_distance, filters.maxDistanceKm.oneDecimal()),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Slider(
+            value = filters.maxDistanceKm.toFloat(),
+            onValueChange = { onFilters(filters.copy(maxDistanceKm = (it * 2).roundToInt() / 2.0)) },
+            valueRange = 1f..10f,
+        )
+
+        Text(
+            stringResource(R.string.drawer_availability_note),
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-    HorizontalDivider()
 }
 
-private fun android.content.Context.hasLocationPermission(): Boolean =
+private fun TripPlan.toSavedRoute(): SavedRoute = SavedRoute(
+    id = destination.routeId(),
+    name = destination.name,
+    destination = destination,
+    summary = "${route.distanceKm.roundToInt()} km · ${stops.size} Stopps",
+)
+
+private fun Destination.routeId(): String = "dest:${position.lat},${position.lon}"
+
+private fun Context.hasLocationPermission(): Boolean =
     ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
         PackageManager.PERMISSION_GRANTED ||
         ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
         PackageManager.PERMISSION_GRANTED
-
-/**
- * The same information as in the car, so the two UIs don't drift apart —
- * just as a dialog instead of its own screen.
- */
-@Composable
-private fun ChargeStopDetailDialog(stop: ChargeStop, onDismiss: () -> Unit) {
-    val context = LocalContext.current
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stop.site.name) },
-        text = {
-            Column {
-                Text(ChargeStopFormatter.primaryLine(stop))
-                Text(
-                    text = ChargeStopFormatter.secondaryLine(stop),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-
-                stop.site.operator?.let {
-                    Text(text = it, modifier = Modifier.padding(top = 8.dp))
-                }
-                ChargeStopFormatter.addressLine(stop)?.let {
-                    Text(text = it, style = MaterialTheme.typography.bodySmall)
-                }
-
-                Text(
-                    text = stringResource(R.string.phone_detail_connectors),
-                    style = MaterialTheme.typography.titleSmall,
-                    modifier = Modifier.padding(top = 12.dp),
-                )
-                val connectorLines = ChargeStopFormatter.connectorLines(stop)
-                if (connectorLines.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.phone_detail_unknown_connectors),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                } else {
-                    connectorLines.forEach { Text(text = it, style = MaterialTheme.typography.bodySmall) }
-                }
-
-                ChargeStopFormatter.sourceLine(stop)?.let { source ->
-                    Text(
-                        text = stringResource(R.string.phone_detail_source) + ": " + source,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 12.dp),
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            M3TextButton(onClick = { context.startNavigationTo(stop); onDismiss() }) {
-                Text(stringResource(R.string.phone_detail_navigate))
-            }
-        },
-        dismissButton = {
-            M3TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.phone_action_close))
-            }
-        },
-    )
-}
-
-/**
- * Coordinates **and** name: the coordinates lead exactly there, the name
- * appears to the driver as the destination.
- */
-private fun android.content.Context.startNavigationTo(stop: ChargeStop) {
-    val position = stop.site.position
-    val label = Uri.encode(stop.site.name)
-    val uri = Uri.parse("geo:${position.lat},${position.lon}?q=${position.lat},${position.lon}($label)")
-
-    try {
-        startActivity(Intent(Intent.ACTION_VIEW, uri))
-    } catch (notFound: ActivityNotFoundException) {
-        Toast.makeText(this, getString(R.string.phone_detail_no_navigation), Toast.LENGTH_LONG).show()
-    }
-}
