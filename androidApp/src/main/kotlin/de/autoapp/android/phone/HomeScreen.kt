@@ -7,8 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -23,7 +21,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
@@ -68,13 +65,6 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
             )
         }
-
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .height(96.dp)
-                .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.92f), Color.Transparent))),
-        )
 
         Box(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp)) {
             Surface(
