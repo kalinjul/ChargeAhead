@@ -10,5 +10,19 @@
   },
   "enabledPlugins": {
     "chrisbanes-skills@chrisbanes-skills": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PROJECT_DIR:-.}/tools/link-local-properties.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking local.properties"
+          }
+        ]
+      }
+    ]
   }
 }

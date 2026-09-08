@@ -111,6 +111,14 @@ keys"). It's git-ignored, so a fresh clone **and every new worktree** needs
 its own; without it `:androidApp:assembleDebug` fails with `SDK location not
 found` before compiling anything.
 
+In a worktree, `tools/link-local-properties.sh` takes care of that: it
+replaces a keyless `local.properties` with a symlink to the main checkout's.
+A `SessionStart` hook in `.claude/settings.json` runs it, so nobody has to
+think about it. A worktree without the keys is the more insidious case
+anyway — it builds, but the app then shows demo data and a placeholder map,
+which reads like a bug in the code. The script leaves a `local.properties`
+that carries entries of its own untouched.
+
 Tests that need to run coroutines live in `shared/src/jvmTest` and use
 `runBlocking`. That avoids the `kotlinx-coroutines-test` dependency;
 `runBlocking` doesn't exist in `commonTest`.

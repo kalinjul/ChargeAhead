@@ -80,8 +80,8 @@ The tile cache intentionally survives restarts. To force a fresh fetch,
 delete it:
 
 ```bash
-adb -s <serial> shell run-as de.autoapp.android \
-  rm -f /data/data/de.autoapp.android/databases/charge_sites.db
+adb -s <serial> shell run-as org.julakali.chargeahead \
+  rm -f /data/data/org.julakali.chargeahead/databases/charge_sites.db
 ```
 
 That's how to check whether a change to the sources actually takes effect —

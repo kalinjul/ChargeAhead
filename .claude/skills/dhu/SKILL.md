@@ -104,7 +104,7 @@ like GrapheneOS, `android.permission.INTERNET` is a revocable permission and
 is off for freshly installed apps:
 
 ```bash
-adb -s <serial> shell pm grant de.autoapp.android android.permission.INTERNET
+adb -s <serial> shell pm grant org.julakali.chargeahead android.permission.INTERNET
 ```
 
 If the UI shows the permission screen instead, the location is missing — in

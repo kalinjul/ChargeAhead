@@ -9,8 +9,12 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
-PKG=de.autoapp.android
-ACTIVITY="$PKG/.phone.MainActivity"
+# The application id is not the Kotlin package: the code lives under
+# de.autoapp.android, the installed app is org.julakali.chargeahead. So the
+# activity has to be named fully qualified — the "$PKG/.Foo" shorthand
+# resolves against the application id and silently misses.
+PKG=org.julakali.chargeahead
+ACTIVITY="$PKG/de.autoapp.android.phone.MainActivity"
 AVD="${APP_AVD:-Medium_Phone_API_36.0}"
 EMULATOR_BIN="${ANDROID_EMULATOR:-$HOME/Android/Sdk/emulator/emulator}"
 
