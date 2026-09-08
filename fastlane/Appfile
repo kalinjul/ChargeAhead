@@ -1,0 +1,16 @@
+# Applies to every lane in the Fastfile. Values that are secrets stay out of
+# here and arrive through the environment (docs/ci-cd.md).
+
+package_name("org.julakali.chargeahead")
+
+# supply/upload_to_play_store also reads SUPPLY_JSON_KEY on its own; the
+# explicit entry exists so the file's role is visible at the place where
+# someone looks for it. Conditional, because a build-only lane must work
+# without Play credentials at all.
+json_key_file(ENV["PLAY_JSON_KEY_FILE"]) if ENV["PLAY_JSON_KEY_FILE"]
+
+for_platform :ios do
+  # The bundle identifier from iosApp/project.yml. Nothing reads it yet --
+  # the iOS lanes are unverified (see Fastfile).
+  app_identifier("de.autoapp.ios")
+end

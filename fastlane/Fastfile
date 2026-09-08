@@ -1,0 +1,123 @@
+# Why fastlane and not a handful of shell steps in the workflow: the second
+# platform is already planned (ARCHITECTURE.md section 1.4, CarPlay). Play
+# upload and TestFlight upload then live in one place with the same shape,
+# and the GitHub job stays a thin wrapper that only supplies secrets. See
+# docs/ci-cd.md.
+
+default_platform(:android)
+
+platform :android do
+  desc "Build the signed release bundle (no upload, no Play credentials needed)"
+  lane :build_release do |options|
+    version_code = (options[:version_code] || ENV["VERSION_CODE"] || 0).to_i
+    version_name = options[:version_name] || ENV["VERSION_NAME"]
+
+    UI.user_error!("version_code must be > 0 -- pass version_code: or set VERSION_CODE") if version_code <= 0
+
+    # androidApp/build.gradle.kts reads both from the environment -- the same
+    # channel the signing data and the API keys arrive through, so there is
+    # exactly one way into the build instead of two.
+    ENV["VERSION_CODE"] = version_code.to_s
+    ENV["VERSION_NAME"] = version_name if version_name
+
+    UI.message("Building versionCode #{version_code}, versionName #{version_name || '(default from build.gradle.kts)'}")
+
+    # The daemon stays on: gradle/actions/setup-gradle relies on it to write
+    # the build cache back at the end of the job.
+    gradle(task: ":androidApp:bundleRelease", flags: "--stacktrace")
+  end
+
+  desc "Build and ship to the internal test track"
+  lane :internal do |options|
+    version_code = options[:version_code] || next_version_code
+    build_release(version_code: version_code, version_name: options[:version_name])
+
+    upload_to_play_store(
+      track: "internal",
+      release_status: "completed",
+      aab: lane_context[SharedValues::GRADLE_AAB_OUTPUT_PATH],
+      skip_upload_apk: true,
+      # Store listing, images and changelogs are maintained in the Play
+      # Console, not in this repository. Without these flags supply would
+      # wipe the listing with the empty fastlane/metadata directory.
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      skip_upload_changelogs: true,
+    )
+  end
+
+  # Play rejects any upload whose versionCode is not strictly higher than
+  # every code already in the account -- including tracks this release does
+  # not touch, and including drafts. Asking Play beats deriving a number
+  # locally: a CI run number restarts at 1 after a repository move, and a
+  # re-cut tag would produce the same number twice.
+  private_lane :next_version_code do
+    codes = %w[internal alpha beta production].flat_map do |track|
+      begin
+        google_play_track_version_codes(track: track)
+      rescue StandardError => e
+        # A track that never had a release answers with an error rather than
+        # an empty list -- that is not a failure, there is just nothing to beat.
+        UI.important("Track '#{track}': no version codes (#{e.message})")
+        []
+      end
+    end
+
+    highest = codes.map(&:to_i).max || 0
+    if highest.zero?
+      UI.user_error!(
+        "Play reports no version code at all. The very first bundle has to be uploaded " \
+        "through the Play Console by hand -- the API cannot create the app entry.",
+      )
+    end
+
+    highest + 1
+  end
+end
+
+platform :ios do
+  # NOTHING BELOW HAS EVER RUN. It was written on Linux, against no Mac, no
+  # Xcode and no App Store Connect account (AGENTS.md, "Swift on this
+  # machine"). It is a starting point with the known-required steps in the
+  # right order, not a working lane -- expect to correct it on the first Mac
+  # run. The release workflow therefore does not call it (see
+  # .github/workflows/release.yml).
+  #
+  # Open before the first run:
+  #   1. Apple's approval for com.apple.developer.carplay-charging. Without
+  #      it, signing fails no matter what is configured here.
+  #   2. Signing strategy: App Store Connect API key plus automatic signing
+  #      (below), or fastlane match with a certificates repository. match is
+  #      the better fit as soon as a second machine signs.
+  #   3. Where the build number comes from -- Info.plist is hand-maintained
+  #      here (iosApp/project.yml deliberately does not regenerate it).
+  desc "UNVERIFIED: build and ship to TestFlight (needs a macOS runner)"
+  lane :beta do |options|
+    build_number = options[:build_number] || ENV["VERSION_CODE"]
+    UI.user_error!("build_number missing") if build_number.to_s.empty?
+
+    app_store_connect_api_key(
+      key_id: ENV.fetch("APP_STORE_CONNECT_KEY_ID"),
+      issuer_id: ENV.fetch("APP_STORE_CONNECT_ISSUER_ID"),
+      key_content: ENV.fetch("APP_STORE_CONNECT_KEY_CONTENT"),
+      is_key_content_base64: true,
+    )
+
+    # The .xcodeproj is not checked in; it is generated from project.yml
+    # (iosApp/README.md). brew install xcodegen has to have run on the runner.
+    sh("cd ../iosApp && xcodegen generate")
+
+    increment_build_number(build_number: build_number, xcodeproj: "iosApp/AutoApp.xcodeproj")
+
+    build_app(
+      project: "iosApp/AutoApp.xcodeproj",
+      scheme: "AutoApp",
+      export_method: "app-store",
+      # The KMP framework is built by the target's own pre-build script phase
+      # (project.yml), so no separate Gradle call is needed here.
+    )
+
+    upload_to_testflight(skip_waiting_for_build_processing: true)
+  end
+end
