@@ -28,6 +28,7 @@
 - It should be possible to add a new car that is not yet in the list
 - ~~The MG4 Urban 54 kWh should be added~~ — done
 - The consumption slider should get a reset button
+- Car data should be filled in from a data source like gaia-charge/evdb (respect attribution). Can be done statically through some update script. Move to backend later.
 
 # Drawer
 - The minimum power should also offer 11 kW as an option
@@ -36,3 +37,6 @@
 - The sliders have a very large vertical thumb; it can be smaller
 - The buttons for "Send to Maps" should be consistent. In planning it is a flag, elsewhere an arrow. It should always be a flag.
 - Clicking a charging station on the map should show the station's details in a bottom sheet
+
+# Misc
+- A license screen is required, reachable from the drawer. Use some gradle license plugin to generate license information from dependencies.
