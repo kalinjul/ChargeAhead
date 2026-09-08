@@ -171,6 +171,16 @@ class ChargeStopFormatterTest {
     }
 
     @Test
+    fun addressLine_worksOnABareSite() {
+        // The charge-now sheet has candidates, not stops.
+        val withAddress = site.copy(
+            address = Address(street = "Hauptstr. 5", postalCode = "85095", town = "Denkendorf"),
+        )
+
+        assertEquals("Hauptstr. 5, 85095 Denkendorf", ChargeStopFormatter.addressLine(withAddress))
+    }
+
+    @Test
     fun connectorLines_showsAllConnectorsStrongestFirst() {
         val lines = ChargeStopFormatter.connectorLines(detailStop(site))
 

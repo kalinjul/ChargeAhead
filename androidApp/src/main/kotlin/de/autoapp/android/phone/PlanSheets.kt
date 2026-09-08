@@ -55,6 +55,7 @@ import de.autoapp.android.phone.components.RankBadge
 import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
+import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.core.ChargeNowResult
 import de.autoapp.shared.core.RelaxedFilter
 import de.autoapp.shared.domain.Destination
@@ -304,7 +305,7 @@ private fun ChargerRow(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(11.dp),
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 13.dp),
         ) {
             RankBadge(
                 number = rank,
@@ -314,7 +315,14 @@ private fun ChargerRow(
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     NetworkDot(operatorColor(candidate.site.operator), size = 8.dp)
-                    Text(candidate.site.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // The network decides where the tap goes — the site name is
+                    // usually just the town again, the address line covers it.
+                    Text(
+                        candidate.site.operator ?: candidate.site.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
                 Text(
                     stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
@@ -322,6 +330,18 @@ private fun ChargerRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp),
                 )
+                ChargeStopFormatter.addressLine(candidate.site)?.let { address ->
+                    Text(
+                        address,
+                        style = MaterialTheme.typography.bodySmall.tabular,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        // Two lines, not one: town and postal code are the
+                        // point of this line, and they sit at the end.
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp),
+                    )
+                }
             }
             candidate.quote.best?.let { PriceText(it.euroPerKwh) }
             GoButton(
