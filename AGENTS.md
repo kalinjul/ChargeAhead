@@ -49,13 +49,67 @@ Dependency direction: `androidApp`/`iosApp` → `shared`. Never the reverse.
 
 ## Build
 
+Every agent-initiated Gradle command goes through the `gradle-run` wrapper
+from the `chrisbanes-skills` plugin (see "Agent skills"). It returns a
+bounded JSON summary instead of the full build log, and keeps the log on
+disk rather than in the conversation. `python3` is a prerequisite.
+
+Resolve `<skill-dir>` once per session and reuse it. The plugin cache path
+carries the plugin version, so don't memorise it — it changes on every
+upstream release:
+
 ```bash
-./gradlew :androidApp:assembleDebug     # build Android
-./gradlew :shared:jvmTest               # tests for the shared logic (JVM target)
-./gradlew :androidApp:installDebug      # onto a device/emulator
-./gradlew :shared:compileKotlinIosSimulatorArm64   # compile iosMain (works on Linux!)
+ls -d ~/.claude/plugins/cache/chrisbanes-skills/chrisbanes-skills/*/skills/gradle-run | tail -1
+```
+
+Open one workflow, keep its ID, and close it when the last validation
+passed:
+
+```bash
+python3 <skill-dir>/scripts/gradle_run.py create
+python3 <skill-dir>/scripts/gradle_run.py finish --workflow <id>
+```
+
+`create`, each `run`, and `finish` are each the *entire* shell command for
+that tool call — no pipes, no `&&`, no variable assignment around them.
+
+The tasks that matter here, each as one `run`:
+
+```bash
+python3 <skill-dir>/scripts/gradle_run.py run --workflow <id> --scope targeted \
+  --question "Does the Android app still build?" -- \
+  ./gradlew :androidApp:assembleDebug
+
+python3 <skill-dir>/scripts/gradle_run.py run --workflow <id> --scope targeted \
+  --question "Do the shared tests pass?" -- \
+  ./gradlew :shared:jvmTest
+
+python3 <skill-dir>/scripts/gradle_run.py run --workflow <id> --scope targeted \
+  --question "Does iosMain still compile?" -- \
+  ./gradlew :shared:compileKotlinIosSimulatorArm64
+
+python3 <skill-dir>/scripts/gradle_run.py run --workflow <id> --scope targeted \
+  --question "Does the app install on the device?" -- \
+  ./gradlew :androidApp:installDebug
+```
+
+`:shared:compileKotlinIosSimulatorArm64` works on Linux. `--question` must
+be a real verification question; quote it and its answer when reporting.
+The wrapper adds `--console=plain --no-scan` itself.
+
+The Swift check stays outside the wrapper, because it isn't Gradle:
+
+```bash
 tools/check-swift.sh                    # Swift syntax check (see below)
 ```
+
+A human at a terminal can of course run the bare `./gradlew` task — it's the
+part after `--`. The wrapper is the rule for agents.
+
+Gradle needs `local.properties` with `sdk.dir` (plus the API keys from "API
+keys"). It's git-ignored, so a fresh clone **and every new worktree** needs
+its own; without it `:androidApp:assembleDebug` fails with `SDK location not
+found` before compiling anything.
 
 Tests that need to run coroutines live in `shared/src/jvmTest` and use
 `runBlocking`. That avoids the `kotlinx-coroutines-test` dependency;
@@ -69,6 +123,51 @@ The `build.gradle.kts` files, `settings.gradle.kts`, and the version catalog
 are maintained centrally. Agents contributing source code don't change them
 without being asked — if a dependency is missing, report it instead of
 adding it yourself.
+
+## Agent skills
+
+Two kinds of skills apply here, both configured in the repository so every
+contributor gets the same set.
+
+**Repository-owned skills** live in `.claude/skills/` and load automatically
+— nothing to install:
+
+- `app-laufen-lassen` — build, install, and drive the phone app on a device
+- `dhu` — the Android Auto Desktop Head Unit for the car surface
+
+**Chris Banes' Kotlin/Compose skills** come from an external marketplace,
+registered in `.claude/settings.json`. Because the source is a third-party
+GitHub repository, Claude Code will not pull it in silently. Each
+contributor runs both steps once, after trusting the repository folder:
+
+```bash
+claude plugin marketplace add chrisbanes/skills   # clones the catalog
+claude plugin install chrisbanes-skills@chrisbanes-skills
+```
+
+Inside a running session the same two steps are `/plugin marketplace add
+chrisbanes/skills` and `/plugin install chrisbanes-skills@chrisbanes-skills`.
+
+The first step is easy to skip, because `settings.json` already makes the
+marketplace *name* known. Skipping it yields `Plugin "chrisbanes-skills" not
+found in marketplace "chrisbanes-skills"` — the name resolves, but no
+catalog has been fetched behind it.
+
+Until the install completes, Claude Code reports the plugin as not
+installed. The skills are namespaced
+(`/chrisbanes-skills:compose-performance` and so on) and cover Compose state
+and effects, recomposition performance, component and slot APIs, animations,
+focus and D-pad navigation, Compose UI testing, coroutines and Flow
+modelling, Kotlin control flow, and KMP-aware API design — all directly
+relevant to `shared/` and `androidApp/`.
+
+The plugin also brings `gradle-run`, whose wrapper script the "Build"
+section above now uses for every Gradle command. That skill is the reason
+the build commands look the way they do, so the plugin is a prerequisite for
+building here, not an optional extra.
+
+Per-user overrides belong in `.claude/settings.local.json`, which is
+git-ignored. Don't put personal preferences into `.claude/settings.json`.
 
 ## The shared contract (as of M1)
 

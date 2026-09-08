@@ -42,6 +42,7 @@ object VehicleCatalog {
         VehiclePreset("Polestar 2 LR", 79.0, 17.6, 205.0),
         VehiclePreset("Cupra Born 77", 77.0, 17.0, 170.0),
         VehiclePreset("Volvo EX30 Extended", 64.0, 17.5, 153.0),
+        VehiclePreset("MG4 Urban 54", 52.8, 16.0, 87.0),
         VehiclePreset("Porsche Taycan", 89.0, 20.0, 270.0),
         VehiclePreset("Fiat 500e 42", 37.0, 14.9, 85.0),
         VehiclePreset("Dacia Spring 65", 25.0, 13.9, 30.0),
