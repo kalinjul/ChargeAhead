@@ -1,0 +1,14 @@
+{
+  "extraKnownMarketplaces": {
+    "chrisbanes-skills": {
+      "source": {
+        "source": "github",
+        "repo": "chrisbanes/skills"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "chrisbanes-skills@chrisbanes-skills": true
+  }
+}

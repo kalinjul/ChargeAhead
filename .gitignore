@@ -5,6 +5,9 @@ local.properties
 *.iml
 .kotlin/
 .DS_Store
+
+# Per-user Claude Code overrides; .claude/settings.json is shared (AGENTS.md).
+.claude/settings.local.json
 xcuserdata/
 *.xcodeproj/project.xcworkspace/
 *.xcodeproj/xcuserdata/
