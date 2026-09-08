@@ -140,7 +140,8 @@ class PersistentSettingsStore(
     }
 
     private fun readNetworks(): NetworkPreferences {
-        val onlyPreferred = storage.getStringOrNull(KEY_ONLY_PREFERRED)?.toBooleanStrictOrNull() ?: false
+        val onlyPreferred = storage.getStringOrNull(KEY_ONLY_PREFERRED)?.toBooleanStrictOrNull()
+            ?: NetworkPreferences().onlyPreferred
         val preferred = storage.getStringOrNull(KEY_PREFERRED_NETWORKS)
             ?.let { raw -> runCatching { json.decodeFromString<List<String>>(raw) }.getOrNull() }
             ?.toSet()

@@ -3,10 +3,12 @@ package de.autoapp.shared.settings
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.VehicleProfile
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -202,6 +204,26 @@ class PersistentSettingsStoreTest {
         PersistentSettingsStore(storage).setDestination(tricky)
 
         assertEquals(tricky, PersistentSettingsStore(storage).destination.value)
+    }
+
+    // --- Network filter ---
+
+    @Test
+    fun aNewStore_hasTheNetworkFilterSwitchedOn() {
+        // Default on, so a first selection takes effect immediately — without
+        // a selection isActive stays false and nothing is filtered anyway.
+        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+
+        assertTrue(store.networks.value.onlyPreferred)
+        assertFalse(store.networks.value.isActive)
+    }
+
+    @Test
+    fun aSwitchedOffNetworkFilter_survivesARestart() = runBlocking {
+        val storage = InMemoryKeyValueStorage()
+        PersistentSettingsStore(storage).setNetworks(NetworkPreferences(onlyPreferred = false))
+
+        assertFalse(PersistentSettingsStore(storage).networks.value.onlyPreferred)
     }
 
     @Test

@@ -7,9 +7,12 @@ package de.autoapp.shared.domain
  * selected anything should see everything, and so should someone who enables
  * the filter but selects nothing. Treating an empty list as "show nothing"
  * would be the least friendly possible interpretation.
+ *
+ * Default on: with no selection it filters nothing anyway, and the first
+ * ticked network then takes effect without hunting for a second switch.
  */
 data class NetworkPreferences(
-    val onlyPreferred: Boolean = false,
+    val onlyPreferred: Boolean = true,
     /** Normalized keys, see [OperatorKey]. */
     val preferredOperators: Set<String> = emptySet(),
 ) {
