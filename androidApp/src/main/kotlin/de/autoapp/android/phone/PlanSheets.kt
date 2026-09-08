@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -53,6 +54,7 @@ import de.autoapp.android.phone.components.NetworkDot
 import de.autoapp.android.phone.components.PriceText
 import de.autoapp.android.phone.components.RankBadge
 import de.autoapp.android.phone.components.SectionLabel
+import de.autoapp.android.phone.components.sheetListPadding
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.ChargeStopFormatter
@@ -210,7 +212,11 @@ fun PlanSheetContent(
         }
 
         // Results while typing; recents when idle — the expanded sheet's "fullonly".
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f, fill = false)) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = sheetListPadding(),
+            modifier = Modifier.weight(1f, fill = false),
+        ) {
             val shownResults = results.orEmpty()
             if (chosen == null && shownResults.isNotEmpty()) {
                 item {
@@ -307,13 +313,19 @@ fun ChargeNowSheetContent(
 
         when {
             loading -> {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
+                ) {
                     CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
                     Text(stringResource(R.string.cn_loading))
                 }
             }
 
-            result == null || result.candidates.isEmpty() -> Text(stringResource(R.string.cn_empty))
+            result == null || result.candidates.isEmpty() -> Text(
+                stringResource(R.string.cn_empty),
+                modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
+            )
 
             else -> {
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -333,7 +345,11 @@ fun ChargeNowSheetContent(
                         MaterialTheme.colorScheme.error
                     },
                 )
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f, fill = false)) {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    contentPadding = sheetListPadding(),
+                    modifier = Modifier.weight(1f, fill = false),
+                ) {
                     itemsIndexed(result.candidates, key = { _, c -> c.site.id }) { index, candidate ->
                         ChargerRow(rank = index + 1, ranked = true, candidate = candidate, onNavigate = onNavigate)
                     }
@@ -437,7 +453,11 @@ fun RoutesSheetContent(
     }
 
     Column(modifier = modifier) {
-        LazyColumn(modifier = Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = sheetListPadding(),
+            modifier = Modifier.weight(1f, fill = false),
+        ) {
             item { Text(stringResource(R.string.routes_title), style = MaterialTheme.typography.titleMedium) }
             item { SectionLabel(stringResource(R.string.routes_saved)) }
             if (saved.isEmpty()) {

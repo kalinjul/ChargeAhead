@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -51,11 +54,21 @@ fun AppSheet(onDismissRequest: () -> Unit, modifier: Modifier = Modifier, conten
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
+            // No bottom padding here: it would end the scroll viewport 48dp
+            // above the sheet's edge — a dead white strip under every list.
+            // Lists bring their own inset via [sheetListPadding]; static
+            // endings pad themselves.
             modifier = Modifier
                 .padding(horizontal = 18.dp)
-                .navigationBarsPadding()
-                .imePadding()
-                .padding(bottom = 24.dp),
+                .imePadding(),
         ) { content() }
     }
 }
+
+/**
+ * Bottom inset for the list that ends a sheet: rows scroll under the gesture
+ * area to the sheet's edge, the last one rests above it.
+ */
+@Composable
+fun sheetListPadding(): PaddingValues =
+    WindowInsets.navigationBars.add(WindowInsets(bottom = 24.dp)).asPaddingValues()
