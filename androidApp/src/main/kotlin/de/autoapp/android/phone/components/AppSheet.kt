@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,11 +41,13 @@ fun AppSheet(onDismissRequest: () -> Unit, modifier: Modifier = Modifier, conten
                     .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
             )
         },
-        // Fullscreen means "up to the status bar", not under it — and the
-        // default insets pad the bottom a second time on top of our own
-        // navigationBarsPadding, which rendered as a white bar under the list.
-        contentWindowInsets = { WindowInsets(0) },
-        modifier = modifier.statusBarsPadding(),
+        // Top inset only: the default also padded the bottom, doubling our own
+        // navigationBarsPadding into a white bar under the list. The status bar
+        // must be handled HERE and not via Modifier.statusBarsPadding — a
+        // displaced surface breaks the sheet's internal offset math, which
+        // shows up as a white band at the bottom while dragging.
+        contentWindowInsets = { WindowInsets.statusBars },
+        modifier = modifier,
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
