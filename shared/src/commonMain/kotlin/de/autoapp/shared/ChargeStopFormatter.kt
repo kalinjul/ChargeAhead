@@ -1,5 +1,7 @@
 package de.autoapp.shared
 
+import de.autoapp.shared.core.ChargeNowCandidate
+import de.autoapp.shared.core.PlannedStop
 import de.autoapp.shared.domain.Address
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ChargeStop
@@ -47,21 +49,11 @@ object ChargeStopFormatter {
     }
 
     /**
-     * e.g. "6 Ladepunkte" (charge points) — but only when the source gives a
-     * count for every connector. If even one count is missing, the sum would
-     * be a guess, so the line says so instead. In the OCM sample this applied
-     * to 54 of 123 sites.
-     *
      * Never empty: this line has a fixed slot in both car UIs, and an empty
      * line reads as an app bug.
      */
-    private fun connectorSummary(stop: ChargeStop): String {
-        val counts = stop.site.connectors.map { it.count }
-        if (counts.isEmpty() || counts.any { it == null }) return "Ladepunkte unbekannt"
-
-        val total = counts.filterNotNull().sum()
-        return if (total == 1) "1 Ladepunkt" else "$total Ladepunkte"
-    }
+    private fun connectorSummary(stop: ChargeStop): String =
+        chargePointSummary(stop.site) ?: "Ladepunkte unbekannt"
 
     private fun strongestConnector(connectors: List<Connector>): Connector? =
         connectors.maxByOrNull { it.maxPowerKw }
@@ -118,6 +110,72 @@ object ChargeStopFormatter {
         "ocm" to "OpenChargeMap",
         "demo" to "Demodaten",
     )
+
+    // --- Car rows: planned trip stops ---
+
+    /** e.g. "1. Testladepark" — numbered so the car list reads as an itinerary. */
+    fun plannedStopTitle(ordinal: Int, stop: PlannedStop): String = "$ordinal. ${stop.site.name}"
+
+    /** e.g. "Nach 142 km · Ankunft ca. 18 %". */
+    fun plannedStopPrimaryLine(stop: PlannedStop): String =
+        "Nach ${formatDistanceKm(stop.kmFromStart)} · Ankunft ca. ${formatWholeNumber(stop.arrivalSocPercent)} %"
+
+    /** e.g. "150 kW · 6 Ladepunkte · ca. 25 min laden". */
+    fun plannedStopSecondaryLine(stop: PlannedStop): String =
+        listOfNotNull(
+            "${formatPowerKw(stop.maxPowerKw)} kW",
+            chargePointSummary(stop.site),
+            "ca. ${formatWholeNumber(stop.chargeMinutes)} min laden",
+        ).joinToString(" · ")
+
+    /** A bare distance for message texts, same rules as the row lines. */
+    fun distanceLabel(distanceKm: Double): String = formatDistanceKm(distanceKm)
+
+    // --- Car rows: charge now ---
+
+    /** e.g. "350 m · EnBW" — meters below one kilometer, the operator when known. */
+    fun chargeNowPrimaryLine(candidate: ChargeNowCandidate): String =
+        listOfNotNull(
+            formatShortDistance(candidate.distanceKm),
+            candidate.site.operator,
+        ).joinToString(" · ")
+
+    /** e.g. "150 kW · 6 Ladepunkte · ca. 0,54 €/kWh". */
+    fun chargeNowSecondaryLine(candidate: ChargeNowCandidate): String =
+        listOfNotNull(
+            "${formatPowerKw(candidate.maxPowerKw)} kW",
+            chargePointSummary(candidate.site),
+            candidate.quote.best?.let { price ->
+                val prefix = if (candidate.quote.isEstimate) "ca. " else ""
+                "$prefix${formatEuro(price.euroPerKwh)}/kWh"
+            },
+        ).joinToString(" · ")
+
+    /**
+     * Total installed charge points — `null` when any connector lacks a count
+     * (OCM omits it for about half the sites); the row then simply drops the
+     * segment instead of showing a guessed sum.
+     */
+    private fun chargePointSummary(site: ChargeSite): String? {
+        val counts = site.connectors.map { it.count }
+        if (counts.isEmpty() || counts.any { it == null }) return null
+
+        val total = counts.filterNotNull().sum()
+        return if (total == 1) "1 Ladepunkt" else "$total Ladepunkte"
+    }
+
+    // Rounded to 10 m — GPS isn't better, and "347 m" would suggest it is.
+    private fun formatShortDistance(distanceKm: Double): String =
+        if (distanceKm < 1.0) {
+            "${round(distanceKm * 100.0).toLong() * 10} m"
+        } else {
+            formatDistanceKm(distanceKm)
+        }
+
+    private fun formatEuro(value: Double): String {
+        val cents = round(value * 100.0).toLong()
+        return "${cents / 100},${(cents % 100).toString().padStart(2, '0')} €"
+    }
 
     /**
      * Display name of a connector type, also used by settings screens. Public

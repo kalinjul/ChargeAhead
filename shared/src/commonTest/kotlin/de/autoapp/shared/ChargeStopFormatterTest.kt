@@ -1,12 +1,17 @@
 package de.autoapp.shared
 
+import de.autoapp.shared.core.ChargeNowCandidate
+import de.autoapp.shared.core.PlannedStop
 import de.autoapp.shared.domain.Address
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.PriceKind
+import de.autoapp.shared.domain.PriceQuote
 import de.autoapp.shared.domain.Reachability
+import de.autoapp.shared.domain.TariffPrice
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -209,5 +214,104 @@ class ChargeStopFormatterTest {
     @Test
     fun sourceLine_withoutSourceInfo_isNull() {
         assertNull(ChargeStopFormatter.sourceLine(detailStop(site)))
+    }
+
+    // --- Car rows: planned trip stops ---
+
+    private fun plannedStop(site: ChargeSite = this.site) = PlannedStop(
+        site = site,
+        kmFromStart = 142.3,
+        arrivalSocPercent = 18.4,
+        departureSocPercent = 80.0,
+        chargeKwh = 40.0,
+        chargeMinutes = 25.4,
+        etaMinutesFromStart = 120.0,
+        maxPowerKw = 150.0,
+        quote = PriceQuote(emptyList(), isEstimate = true),
+    )
+
+    @Test
+    fun plannedStopTitle_numbersTheStop() {
+        assertEquals("1. Testladepark", ChargeStopFormatter.plannedStopTitle(1, plannedStop()))
+    }
+
+    @Test
+    fun plannedStopPrimaryLine_showsProgressAndArrival() {
+        assertEquals("Nach 142 km · Ankunft ca. 18 %", ChargeStopFormatter.plannedStopPrimaryLine(plannedStop()))
+    }
+
+    @Test
+    fun plannedStopSecondaryLine_showsPowerCountAndChargeTime() {
+        assertEquals(
+            "150 kW · 6 Ladepunkte · ca. 25 min laden",
+            ChargeStopFormatter.plannedStopSecondaryLine(plannedStop()),
+        )
+    }
+
+    @Test
+    fun plannedStopSecondaryLine_withMissingCount_skipsTheCount() {
+        // A sum of guessed ones would be worse than leaving the count out.
+        val partiallyCounted = site.copy(
+            connectors = listOf(
+                Connector(ConnectorType.CCS2, maxPowerKw = 150.0, count = 4),
+                Connector(ConnectorType.TYPE2, maxPowerKw = 22.0, count = null),
+            ),
+        )
+
+        assertEquals(
+            "150 kW · ca. 25 min laden",
+            ChargeStopFormatter.plannedStopSecondaryLine(plannedStop(partiallyCounted)),
+        )
+    }
+
+    @Test
+    fun distanceLabel_formatsLikeTheRowLines() {
+        assertEquals("142 km", ChargeStopFormatter.distanceLabel(142.3))
+        assertEquals("8,4 km", ChargeStopFormatter.distanceLabel(8.4))
+    }
+
+    // --- Car rows: charge now ---
+
+    private fun candidate(
+        distanceKm: Double = 2.5,
+        site: ChargeSite = this.site,
+        priceEuroPerKwh: Double? = null,
+    ) = ChargeNowCandidate(
+        site = site,
+        distanceKm = distanceKm,
+        maxPowerKw = 150.0,
+        quote = PriceQuote(
+            prices = priceEuroPerKwh?.let { listOf(TariffPrice("Test", it, PriceKind.AD_HOC)) }.orEmpty(),
+            isEstimate = true,
+        ),
+    )
+
+    @Test
+    fun chargeNowPrimaryLine_underOneKilometer_showsMeters() {
+        assertEquals("350 m · TestNetz", ChargeStopFormatter.chargeNowPrimaryLine(candidate(distanceKm = 0.347)))
+    }
+
+    @Test
+    fun chargeNowPrimaryLine_fromOneKilometer_showsKilometers() {
+        assertEquals("2,5 km · TestNetz", ChargeStopFormatter.chargeNowPrimaryLine(candidate(distanceKm = 2.5)))
+    }
+
+    @Test
+    fun chargeNowPrimaryLine_withoutOperator_showsOnlyTheDistance() {
+        val anonymous = site.copy(operator = null)
+        assertEquals("2,5 km", ChargeStopFormatter.chargeNowPrimaryLine(candidate(site = anonymous)))
+    }
+
+    @Test
+    fun chargeNowSecondaryLine_showsPowerCountAndEstimatedPrice() {
+        assertEquals(
+            "150 kW · 6 Ladepunkte · ca. 0,54 €/kWh",
+            ChargeStopFormatter.chargeNowSecondaryLine(candidate(priceEuroPerKwh = 0.54)),
+        )
+    }
+
+    @Test
+    fun chargeNowSecondaryLine_withoutPrice_showsPowerAndCount() {
+        assertEquals("150 kW · 6 Ladepunkte", ChargeStopFormatter.chargeNowSecondaryLine(candidate()))
     }
 }
