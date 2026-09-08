@@ -43,12 +43,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
-import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.Fineprint
-import de.autoapp.android.phone.components.GoButton
-import de.autoapp.android.phone.components.PriceText
-import de.autoapp.android.phone.components.RankBadge
+import de.autoapp.android.phone.components.StationCard
 import de.autoapp.android.phone.theme.tabular
+import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.core.MapsHandoff
 import de.autoapp.shared.core.PlannedStop
 import de.autoapp.shared.core.TripPlan
@@ -181,24 +179,25 @@ fun TripPlanScreen(
             }
             items(plan.stops.size) { index ->
                 val stop = plan.stops[index]
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) {
-                        StopCard(
-                            index = index + 1,
-                            stop = stop,
-                            selected = selecting && (selectionA == index + 1 || selectionB == index + 1),
-                            onClick = { if (selecting) pick(index + 1) else onOpenStop(stop) },
-                        )
-                    }
-                    if (!selecting) {
-                        GoButton(
-                            icon = painterResource(R.drawable.ic_send),
-                            contentDescription = stringResource(R.string.trip_send_stop, stop.site.name),
-                            onClick = { onSendToMaps(MapsHandoff.navigateUrl(stop.site.position)) },
-                            containerColor = MaterialTheme.colorScheme.surface,
-                        )
-                    }
-                }
+                StationCard(
+                    rank = index + 1,
+                    badgeColor = operatorColor(stop.site.operator),
+                    title = stop.site.operator ?: stop.site.name,
+                    metaLine = stringResource(R.string.trip_stop_power, stop.maxPowerKw.roundToInt()),
+                    address = ChargeStopFormatter.addressLine(stop.site),
+                    extraLine = stringResource(
+                        R.string.trip_stop_eta_charge,
+                        etaText(stop.etaMinutesFromStart - stop.chargeMinutes),
+                        stop.chargeMinutes.roundToInt(),
+                    ),
+                    priceEuroPerKwh = stop.quote.best?.euroPerKwh,
+                    selected = selecting && (selectionA == index + 1 || selectionB == index + 1),
+                    onClick = { if (selecting) pick(index + 1) else onOpenStop(stop) },
+                    // Section-select mode repurposes the card tap; hide the send
+                    // button so the two tap targets can't be confused.
+                    onSend = if (selecting) null else ({ onSendToMaps(MapsHandoff.navigateUrl(stop.site.position)) }),
+                    sendContentDescription = stringResource(R.string.trip_send_stop, stop.site.name),
+                )
             }
             item {
                 TerminusRow(
@@ -377,37 +376,6 @@ private fun TerminusRow(
             style = MaterialTheme.typography.bodySmall.tabular,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-    }
-}
-
-@Composable
-private fun StopCard(index: Int, stop: PlannedStop, selected: Boolean, onClick: () -> Unit) {
-    AppCard(
-        onClick = onClick,
-        modifier = if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium) else Modifier,
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(11.dp),
-            modifier = Modifier.padding(horizontal = 13.dp, vertical = 12.dp),
-        ) {
-            RankBadge(index, operatorColor(stop.site.operator))
-            Column(Modifier.weight(1f)) {
-                Text(stop.site.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    stringResource(
-                        R.string.trip_stop_line,
-                        etaText(stop.etaMinutesFromStart - stop.chargeMinutes),
-                        stop.chargeMinutes.roundToInt(),
-                        stop.maxPowerKw.roundToInt(),
-                    ),
-                    style = MaterialTheme.typography.bodySmall.tabular,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 3.dp),
-                )
-            }
-            stop.quote.best?.let { PriceText(it.euroPerKwh) }
-        }
     }
 }
 

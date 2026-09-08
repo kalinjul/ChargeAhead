@@ -196,7 +196,8 @@
 
     <!-- Phone: trip plan -->
     <string name="trip_summary_distance">%1$d km</string>
-    <string name="trip_stop_line">%1$s · %2$d min · %3$d kW</string>
+    <string name="trip_stop_power">%1$d kW</string>
+    <string name="trip_stop_eta_charge">Ankunft %1$s · %2$d min laden</string>
     <string name="trip_send_maps">An Maps senden</string>
     <string name="trip_select_section">Abschnitt wählen</string>
     <string name="trip_select_cancel">Abbrechen</string>

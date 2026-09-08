@@ -29,7 +29,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
@@ -50,10 +49,8 @@ import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.AppChip
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.GoButton
-import de.autoapp.android.phone.components.NetworkDot
-import de.autoapp.android.phone.components.PriceText
-import de.autoapp.android.phone.components.RankBadge
 import de.autoapp.android.phone.components.SectionLabel
+import de.autoapp.android.phone.components.StationCard
 import de.autoapp.android.phone.components.sheetListPadding
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
@@ -351,12 +348,12 @@ fun ChargeNowSheetContent(
                     modifier = Modifier.weight(1f, fill = false),
                 ) {
                     itemsIndexed(result.candidates, key = { _, c -> c.site.id }) { index, candidate ->
-                        ChargerRow(rank = index + 1, ranked = true, candidate = candidate, onNavigate = onNavigate)
+                        ChargeNowCard(rank = index + 1, candidate = candidate, onNavigate = onNavigate)
                     }
                     if (result.more.isNotEmpty()) {
                         item { SectionLabel(stringResource(R.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
                         itemsIndexed(result.more, key = { _, c -> "more-${c.site.id}" }) { index, candidate ->
-                            ChargerRow(rank = result.candidates.size + index + 1, ranked = false, candidate = candidate, onNavigate = onNavigate)
+                            ChargeNowCard(rank = result.candidates.size + index + 1, candidate = candidate, onNavigate = onNavigate)
                         }
                     }
                 }
@@ -366,62 +363,23 @@ fun ChargeNowSheetContent(
 }
 
 @Composable
-private fun ChargerRow(
+private fun ChargeNowCard(
     rank: Int,
-    ranked: Boolean,
     candidate: de.autoapp.shared.core.ChargeNowCandidate,
     onNavigate: (de.autoapp.shared.core.ChargeNowCandidate) -> Unit,
 ) {
-    AppCard {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(11.dp),
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 13.dp),
-        ) {
-            RankBadge(
-                number = rank,
-                color = if (ranked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
-                textColor = if (ranked) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    NetworkDot(operatorColor(candidate.site.operator), size = 8.dp)
-                    // The network decides where the tap goes — the site name is
-                    // usually just the town again, the address line covers it.
-                    Text(
-                        candidate.site.operator ?: candidate.site.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                Text(
-                    stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
-                    style = MaterialTheme.typography.bodySmall.tabular,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-                ChargeStopFormatter.addressLine(candidate.site)?.let { address ->
-                    Text(
-                        address,
-                        style = MaterialTheme.typography.bodySmall.tabular,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        // Two lines, not one: town and postal code are the
-                        // point of this line, and they sit at the end.
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(top = 2.dp),
-                    )
-                }
-            }
-            candidate.quote.best?.let { PriceText(it.euroPerKwh) }
-            GoButton(
-                icon = painterResource(R.drawable.ic_destination),
-                contentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
-                onClick = { onNavigate(candidate) },
-            )
-        }
-    }
+    StationCard(
+        rank = rank,
+        badgeColor = operatorColor(candidate.site.operator),
+        // The network decides where the tap goes — the site name is
+        // usually just the town again, the address line covers it.
+        title = candidate.site.operator ?: candidate.site.name,
+        metaLine = stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
+        address = ChargeStopFormatter.addressLine(candidate.site),
+        priceEuroPerKwh = candidate.quote.best?.euroPerKwh,
+        onSend = { onNavigate(candidate) },
+        sendContentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
+    )
 }
 
 private fun RelaxedFilter.labelRes(): Int = when (this) {
