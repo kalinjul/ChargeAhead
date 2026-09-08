@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.enableEdgeToEdge
@@ -76,10 +77,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Explicit edge-to-edge: with a light theme this also flips the
-        // status-bar icons to dark — without it they stay white on our white
-        // surfaces and vanish.
-        enableEdgeToEdge()
+        // The app is light-only, but enableEdgeToEdge() reads the SYSTEM theme:
+        // in system dark mode the status-bar icons went white and vanished over
+        // the light map. Pin the light style so they stay dark.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
+        )
         setContent {
             ChargeAheadTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
