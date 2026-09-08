@@ -13,8 +13,10 @@ import de.autoapp.shared.domain.EnergyState
 import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LocationSource
 import de.autoapp.shared.domain.NetworkPreferences
+import de.autoapp.shared.data.OperatorCatalog
 import de.autoapp.shared.domain.OperatorKey
 import de.autoapp.shared.domain.OperatorOption
+import de.autoapp.shared.domain.OperatorOptions
 import de.autoapp.shared.domain.Geocoder
 import de.autoapp.shared.domain.Place
 import de.autoapp.shared.domain.RouteEngine
@@ -59,6 +61,7 @@ class ChargeStopsFeature(
     private val routeEngine: RouteEngine? = null,
     private val geocoder: Geocoder? = null,
     private val routeBufferKm: Double = RoutedRouteProvider.DEFAULT_BUFFER_KM,
+    private val operatorCatalog: OperatorCatalog? = null,
     private val settingsStore: SettingsStore? = null,
     private val socSource: SoCSource? = null,
     private val reserveSocPercent: Double = DEFAULT_RESERVE_SOC_PERCENT,
@@ -162,6 +165,17 @@ class ChargeStopsFeature(
             settingsStore?.networks?.collect { updated ->
                 networks = updated
                 recomputeLatest()
+            }
+        }
+
+        scope.launch {
+            val cached = operatorCatalog?.options().orEmpty()
+            if (cached.isEmpty()) return@launch
+            recomputeMutex.withLock {
+                // A live recompute may already have won the race; its list is fresher.
+                if (mutableState.value.availableOperators.isEmpty()) {
+                    publish(mutableState.value.copy(availableOperators = cached))
+                }
             }
         }
     }
@@ -344,21 +358,8 @@ class ChargeStopsFeature(
         }
     }
 
-    /**
-     * The charging networks in the area, alphabetically.
-     *
-     * This list is shown only on the phone, where the user is looking for a
-     * name they already know — "where's Ionity?" is answered by alphabetical
-     * order, not by frequency order. How often a network occurs is still
-     * shown on each line.
-     */
     private fun List<de.autoapp.shared.domain.ChargeSite>.toOperatorOptions(): List<OperatorOption> =
-        mapNotNull { site -> OperatorKey.of(site.operator)?.let { it to site.operator!! } }
-            .groupBy({ it.first }, { it.second })
-            .mapNotNull { (key, names) ->
-                OperatorKey.displayName(names)?.let { OperatorOption(key, it, names.size) }
-            }
-            .sortedBy { OperatorKey.folded(it.displayName) }
+        OperatorOptions.fromNames(map { it.operator })
 
     private fun publish(next: ChargeStopsState) {
         mutableState.value = next

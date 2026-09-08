@@ -62,6 +62,7 @@ import de.autoapp.shared.domain.distanceKmTo
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCSourceKind
+import de.autoapp.shared.ChargeStopsState
 import de.autoapp.shared.PlanningFeature
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -430,6 +431,8 @@ private fun PhoneApp() {
                 Page.NETWORKS -> NetworkSettingsScreen(
                     preferences = networks,
                     available = state.availableOperators,
+                    loading = state.phase == ChargeStopsState.Phase.WAITING_FOR_LOCATION ||
+                        state.phase == ChargeStopsState.Phase.LOADING,
                     onChange = { scope.launch { settings.setNetworks(it) } },
                     modifier = Modifier.fillMaxSize().padding(padding),
                 )

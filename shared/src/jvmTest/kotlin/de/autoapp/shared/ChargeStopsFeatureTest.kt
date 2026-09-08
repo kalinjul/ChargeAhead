@@ -12,6 +12,9 @@ import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.TimeProvider
 import de.autoapp.shared.domain.VehicleProfile
 import de.autoapp.shared.data.ManualSoCSource
+import de.autoapp.shared.data.OperatorCatalog
+import de.autoapp.shared.db.DatabaseDriverFactory
+import de.autoapp.shared.db.createChargeSiteDatabase
 import de.autoapp.shared.settings.InMemoryKeyValueStorage
 import de.autoapp.shared.settings.PersistentSettingsStore
 import de.autoapp.shared.domain.destination
@@ -411,5 +414,24 @@ class ChargeStopsFeatureTest {
 
             feature.close()
         }
+    }
+
+    @Test
+    fun `seeds the network picker from the local store before the first fix`() = runBlocking {
+        val database = createChargeSiteDatabase(DatabaseDriverFactory())
+        database.chargeSitesQueries.upsertSite("a", "test", "Ladepark a", "IONITY GmbH", 48.9, 11.4, "CCS2:150.0:4", null, null, null)
+        database.chargeSitesQueries.upsertSite("b", "test", "Ladepark b", "Ionity", 48.8, 11.3, "CCS2:150.0:4", null, null, null)
+
+        val feature = ChargeStopsFeature(
+            locationSource = ControllableLocationSource(),
+            repository = FixedSiteRepository(emptyList()),
+            operatorCatalog = OperatorCatalog(database),
+            dispatcher = Dispatchers.Unconfined,
+        )
+        feature.start()
+
+        assertEquals(listOf("Ionity"), feature.currentState.availableOperators.map { it.displayName })
+        assertEquals(2, feature.currentState.availableOperators.single().siteCount)
+        feature.close()
     }
 }

@@ -64,3 +64,10 @@ DELETE FROM tileCoverage WHERE sourceId = :sourceId;
 
 clearAll:
 DELETE FROM chargeSite;
+
+-- The networks picker wants its list before the first live fetch: what the
+-- store already knows is good enough to seed it.
+operatorCounts:
+SELECT operator, COUNT(*) AS sites FROM chargeSite
+WHERE operator IS NOT NULL
+GROUP BY operator;

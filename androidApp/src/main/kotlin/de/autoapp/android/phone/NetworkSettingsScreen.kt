@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -47,6 +49,7 @@ import de.autoapp.shared.domain.OperatorOption
 fun NetworkSettingsScreen(
     preferences: NetworkPreferences,
     available: List<OperatorOption>,
+    loading: Boolean,
     onChange: (NetworkPreferences) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -83,10 +86,23 @@ fun NetworkSettingsScreen(
         }
 
         if (available.isEmpty()) {
-            Fineprint(
-                text = stringResource(R.string.phone_networks_empty),
-                modifier = Modifier.padding(top = 16.dp),
-            )
+            if (loading) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 16.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    Fineprint(
+                        text = stringResource(R.string.phone_networks_loading),
+                        modifier = Modifier.padding(start = 10.dp),
+                    )
+                }
+            } else {
+                Fineprint(
+                    text = stringResource(R.string.phone_networks_empty),
+                    modifier = Modifier.padding(top = 16.dp),
+                )
+            }
             return@Column
         }
 

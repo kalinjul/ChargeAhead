@@ -5,6 +5,7 @@ import de.autoapp.shared.data.BnetzaSource
 import de.autoapp.shared.data.CombinedSoCSource
 import de.autoapp.shared.data.MergingSiteRepository
 import de.autoapp.shared.data.DemoSiteSource
+import de.autoapp.shared.data.OperatorCatalog
 import de.autoapp.shared.data.DemoTariffSource
 import de.autoapp.shared.data.ManualSoCSource
 import de.autoapp.shared.data.NominatimGeocoder
@@ -91,6 +92,7 @@ object ChargeStopsFeatureFactory {
         return ChargeStopsFeature(
             locationSource = locationSource,
             repository = repository,
+            operatorCatalog = OperatorCatalog(database),
             settingsStore = settingsStore,
             socSource = CombinedSoCSource(
                 manual = ManualSoCSource(settingsStore, timeProvider),

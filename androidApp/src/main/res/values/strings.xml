@@ -104,6 +104,7 @@
     <string name="phone_networks_intro">Ohne Auswahl werden alle Ladenetze gezeigt. Die Liste stammt aus den Ladesäulen der aktuellen Umgebung, nicht aus einer festen Aufzählung — was hier fehlt, gibt es hier gerade nicht.</string>
     <string name="phone_networks_only">Nur ausgewählte auf Karte anzeigen</string>
     <string name="phone_networks_empty">Noch keine Ladesäulen geladen — Standort freigeben und einen Moment warten.</string>
+    <string name="phone_networks_loading">Ladenetze werden geladen …</string>
     <string name="phone_networks_search">Ladenetz suchen</string>
     <string name="phone_networks_all">Alle</string>
     <string name="phone_networks_none">Keine</string>
