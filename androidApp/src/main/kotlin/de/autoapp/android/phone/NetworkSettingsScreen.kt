@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -13,8 +14,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,8 +31,11 @@ import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SearchField
 import de.autoapp.android.phone.components.TickRow
 import de.autoapp.shared.domain.NetworkPreferences
-import de.autoapp.shared.domain.OperatorKey
 import de.autoapp.shared.domain.OperatorOption
+import de.autoapp.shared.domain.OperatorOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 /**
  * Selecting charging networks.
@@ -44,6 +50,10 @@ import de.autoapp.shared.domain.OperatorOption
  * one tap selects every spelling variant of that network without touching
  * the rest of the selection. That's the reason the search is more than just
  * a reading aid.
+ *
+ * Without a search term the driver's own networks come first: they are the
+ * ones you return to in order to change something, and they'd otherwise sit
+ * scattered through a list of hundreds.
  */
 @Composable
 fun NetworkSettingsScreen(
@@ -54,13 +64,28 @@ fun NetworkSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     var search by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf("") }
 
-    val shown = remember(available, search) {
-        val needle = OperatorKey.folded(search.trim())
-        if (needle.isEmpty()) {
-            available
-        } else {
-            available.filter { OperatorKey.folded(it.displayName).contains(needle) }
+    // Filtering only follows the typing after a pause. Every keystroke folds
+    // and scans the whole list, which on a few hundred networks is felt in
+    // the field itself. Clearing is exempt: there the full list is already
+    // known, and waiting for it would feel broken.
+    LaunchedEffect(search) {
+        if (search.isNotEmpty()) delay(SEARCH_DEBOUNCE_MS)
+        query = search
+    }
+
+    // null means "not computed yet" — only ever the case on the first pass,
+    // because produceState keeps the previous list while the next one is
+    // being built. So the spinner shows up once, and later filtering doesn't
+    // make the list flicker.
+    val shown by produceState<List<OperatorOption>?>(null, available, query) {
+        // The selection is read once per pass on purpose: reordering while
+        // the driver is ticking would pull the row out from under their
+        // finger.
+        val selected = preferences.preferredOperators
+        value = withContext(Dispatchers.Default) {
+            OperatorOptions.forPicker(available, query, selected)
         }
     }
 
@@ -113,25 +138,40 @@ fun NetworkSettingsScreen(
             modifier = Modifier.padding(top = 16.dp),
         )
 
+        val options = shown
+        if (options == null) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 16.dp),
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Fineprint(
+                    text = stringResource(R.string.phone_networks_filtering),
+                    modifier = Modifier.padding(start = 10.dp),
+                )
+            }
+            return@Column
+        }
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         ) {
             OutlinedButton(
-                enabled = shown.isNotEmpty(),
+                enabled = options.isNotEmpty(),
                 shape = MaterialTheme.shapes.small,
                 onClick = {
-                    val updated = preferences.preferredOperators + shown.map { it.key }
+                    val updated = preferences.preferredOperators + options.map { it.key }
                     onChange(preferences.copy(preferredOperators = updated))
                 },
             ) {
                 Text(stringResource(R.string.phone_networks_all))
             }
             OutlinedButton(
-                enabled = shown.isNotEmpty(),
+                enabled = options.isNotEmpty(),
                 shape = MaterialTheme.shapes.small,
                 onClick = {
-                    val updated = preferences.preferredOperators - shown.map { it.key }.toSet()
+                    val updated = preferences.preferredOperators - options.map { it.key }.toSet()
                     onChange(preferences.copy(preferredOperators = updated))
                 },
                 modifier = Modifier.padding(start = 8.dp),
@@ -142,47 +182,54 @@ fun NetworkSettingsScreen(
 
         // The hint only appears while searching: without search text,
         // "displayed" equals "all", where it would just be noise.
-        if (search.isNotBlank()) {
+        if (query.isNotBlank()) {
             Fineprint(
                 text = stringResource(R.string.phone_networks_bulk_hint),
                 modifier = Modifier.padding(top = 8.dp),
             )
         }
 
-        if (shown.isEmpty()) {
+        if (options.isEmpty()) {
             Fineprint(
-                text = stringResource(R.string.phone_networks_no_match, search.trim()),
+                text = stringResource(R.string.phone_networks_no_match, query.trim()),
                 modifier = Modifier.padding(top = 16.dp),
             )
             return@Column
         }
 
-        LazyColumn(modifier = Modifier.padding(top = 8.dp)) {
-            item {
-                AppCard {
-                    // Key from position: operator names come from the data sources,
-                    // and two identical keys crash the app mid-composition. This
-                    // must not depend on external data.
-                    shown.forEachIndexed { index, option ->
-                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                        val checked = option.key in preferences.preferredOperators
-                        TickRow(
-                            label = option.displayName,
-                            sublabel = pluralStringResource(R.plurals.phone_networks_count, option.siteCount, option.siteCount),
-                            checked = checked,
-                            dotColor = operatorColor(option.displayName),
-                            onClick = {
-                                val updated = if (checked) {
-                                    preferences.preferredOperators - option.key
-                                } else {
-                                    preferences.preferredOperators + option.key
-                                }
-                                onChange(preferences.copy(preferredOperators = updated))
-                            },
-                        )
-                    }
+        // The rows are laid out lazily, not all at once inside a single item:
+        // in a well-covered area the list runs to a few hundred networks, and
+        // composing all of them is what made opening this screen slow.
+        //
+        // Deliberately no key from the data: operator names come from the
+        // sources, and two identical keys crash the app mid-composition.
+        AppCard(modifier = Modifier.padding(top = 8.dp)) {
+            LazyColumn {
+                itemsIndexed(options) { index, option ->
+                    if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                    val checked = option.key in preferences.preferredOperators
+                    TickRow(
+                        label = option.displayName,
+                        sublabel = pluralStringResource(R.plurals.phone_networks_count, option.siteCount, option.siteCount),
+                        checked = checked,
+                        dotColor = operatorColor(option.displayName),
+                        onClick = {
+                            val updated = if (checked) {
+                                preferences.preferredOperators - option.key
+                            } else {
+                                preferences.preferredOperators + option.key
+                            }
+                            onChange(preferences.copy(preferredOperators = updated))
+                        },
+                    )
                 }
             }
         }
     }
 }
+
+/**
+ * Long enough that a fast typist filters once instead of per letter, short
+ * enough that a finished word feels immediate.
+ */
+private const val SEARCH_DEBOUNCE_MS = 250L

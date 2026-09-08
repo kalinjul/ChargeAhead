@@ -1,8 +1,8 @@
 # Charging network filter
-- The search field needs an (x) button at the end to clear the input
-- Search is very slow because it runs after every keystroke. It needs a debounce.
-- Displaying the networks is slow because there are so many entries. This probably needs a loading indicator, and the filtering must not run on the UI thread.
-- When no search term is entered, the selected networks should be shown at the top of the result list.
+- ~~The search field needs an (x) button at the end to clear the input~~ — done
+- ~~Search is very slow because it runs after every keystroke. It needs a debounce.~~ — done
+- ~~Displaying the networks is slow because there are so many entries. This probably needs a loading indicator, and the filtering must not run on the UI thread.~~ — done
+- ~~When no search term is entered, the selected networks should be shown at the top of the result list.~~ — done
 
 # Planning
 - When searching for destinations, the result list should appear in an overlay (AutoComplete text field).
