@@ -26,7 +26,7 @@
 
 # Car
 - It should be possible to add a new car that is not yet in the list
-- The MG4 Urban 54 kWh should be added
+- ~~The MG4 Urban 54 kWh should be added~~ — done
 - The consumption slider should get a reset button
 
 # Drawer
