@@ -101,6 +101,16 @@ class ChargeStopsFeature(
      */
     val currentState: ChargeStopsState get() = mutableState.value
 
+    private val mutableFix = MutableStateFlow<Fix?>(null)
+
+    /** Last location fix — for screens that plan on demand instead of following the stops list. */
+    val currentFix: StateFlow<Fix?> = mutableFix.asStateFlow()
+
+    private val mutableEnergy = MutableStateFlow<EnergyState?>(null)
+
+    /** Latest combined charge state: the car's measurement when it delivers one, otherwise the manual entry. */
+    val currentEnergy: StateFlow<EnergyState?> = mutableEnergy.asStateFlow()
+
     private var locationJob: Job? = null
     private var settingsJob: Job? = null
     private var latestFix: Fix? = null
@@ -152,6 +162,7 @@ class ChargeStopsFeature(
         scope.launch {
             socSource?.energy?.collect { updated ->
                 energy = updated
+                mutableEnergy.value = updated
                 recomputeLatest()
             }
         }
@@ -175,6 +186,33 @@ class ChargeStopsFeature(
                 if (mutableState.value.availableOperators.isEmpty()) {
                     publish(mutableState.value.copy(availableOperators = cached))
                 }
+            }
+        }
+    }
+
+    /**
+     * Tracks location and charge state without computing charging stops — for
+     * the car UI, which plans on demand and has no corridor list to feed.
+     * Use either [start] or [startSensors] per instance, not both.
+     */
+    fun startSensors() {
+        if (locationJob?.isActive == true) return
+        locationJob = scope.launch {
+            locationSource.updates
+                // The fix stays null; screens keep saying they are waiting for
+                // a location instead of planning from a stale one.
+                .catch { error -> logWarning("Location stream ended", error) }
+                .collect { raw ->
+                    val fix = courseTracker.update(raw)
+                    latestFix = fix
+                    mutableFix.value = fix
+                }
+        }
+
+        scope.launch {
+            socSource?.energy?.collect { updated ->
+                energy = updated
+                mutableEnergy.value = updated
             }
         }
     }
@@ -293,6 +331,7 @@ class ChargeStopsFeature(
         val fix = courseTracker.update(rawFix)
         val hadNoFix = latestFix == null
         latestFix = fix
+        mutableFix.value = fix
 
         // A destination might have been set before the first location arrived.
         if (hadNoFix) ensureRoute()
