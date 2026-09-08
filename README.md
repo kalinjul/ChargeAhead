@@ -11,6 +11,7 @@ Shared logic in Kotlin Multiplatform, car UI native twice.
 - **[AGENTS.md](AGENTS.md)** — conventions and the shared contract
 - **[docs/android-auto-testen.md](docs/android-auto-testen.md)** — seeing the app in the Desktop Head Unit
 - **[iosApp/README.md](iosApp/README.md)** — what to do on a Mac
+- **[docs/ci-cd.md](docs/ci-cd.md)** — CI, releasing to the Play Store, secrets
 
 ## Status: M1 — corridor and real data
 

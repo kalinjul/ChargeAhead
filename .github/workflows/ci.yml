@@ -1,0 +1,123 @@
+# Build and test on main and on every pull request against main.
+#
+# Deliberately three jobs, not one: the Kotlin/Native job downloads the
+# ~1 GB Konan toolchain and would otherwise stretch the Android feedback
+# from a few minutes to well over ten.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Superseded pull request runs are pointless; a superseded main run is not
+# (it is the one that says whether main is green).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+# No secrets are handed to any job here, on purpose. Pull requests from forks
+# never get them, so CI has to be green without: the app then falls back to
+# labeled demo data and to the map placeholder (README.md, "OpenChargeMap
+# key"), which keeps that path continuously exercised.
+jobs:
+  android:
+    name: Android build + shared tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # Accepts the SDK licenses and puts the command line tools on PATH;
+      # AGP downloads what is missing beyond that itself.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platforms;android-36
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build debug APK
+        run: ./gradlew :androidApp:assembleDebug
+
+      - name: Shared tests (JVM target)
+        # The live contract tests against OpenChargeMap, OSRM and Nominatim
+        # stay off (they only run with OCM_LIVE=1 and friends): a test that
+        # goes red because a third-party service hiccups says nothing about
+        # this repository. AGENTS.md, "Tests".
+        run: ./gradlew :shared:jvmTest
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            shared/build/reports/tests/
+            shared/build/test-results/
+          retention-days: 7
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: androidApp-debug
+          path: androidApp/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+  ios-kotlin:
+    name: Kotlin/Native (iosMain)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Cache Kotlin/Native toolchain
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      # Compiles, but does not link: linkDebugFrameworkIos* needs Apple's
+      # linker and is skipped by the Kotlin plugin on a non-macOS host. So
+      # this checks iosMain against the real CoreLocation/Foundation/UIKit
+      # cinterop bindings -- and produces no framework and no Objective-C
+      # header (shared/build.gradle.kts says the same at more length).
+      - name: Compile iosMain
+        run: ./gradlew :shared:compileKotlinIosSimulatorArm64
+
+  swift-syntax:
+    name: Swift syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # swiftc -parse finds syntax errors and nothing else -- no type errors,
+      # no resolved imports. A real check needs a Mac (iosApp/README.md).
+      # If the runner image has no Swift, that is worth a warning but not a
+      # red build: the check was never load-bearing.
+      - name: Check Swift syntax
+        run: |
+          if ! command -v swiftc >/dev/null 2>&1; then
+            echo "::warning title=Swift unchecked::No swiftc on the runner -- the Swift files in iosApp/ are syntactically unverified in this run."
+            exit 0
+          fi
+          tools/check-swift.sh
