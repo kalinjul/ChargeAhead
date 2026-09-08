@@ -234,7 +234,10 @@ private fun PhoneApp() {
                     networksSummary = networksSummary,
                     filters = filters,
                     labelStyle = mapLabelStyle,
-                    onOpen = { target -> page = target; scope.launch { drawerState.close() } },
+                    // Close first, then navigate: the page swap disposes the
+                    // map and its jank freezes a concurrently running drawer
+                    // animation — the drawer then just hangs there, open.
+                    onOpen = { target -> scope.launch { drawerState.close(); page = target } },
                     onFilters = { updated -> scope.launch { settings.setChargeFilters(updated) } },
                     onLabelStyle = { style -> scope.launch { settings.setMapLabelStyle(style) } },
                 )
