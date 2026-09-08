@@ -28,7 +28,7 @@ data class ChargeNowResult(
 )
 
 /**
- * The best charging sites around the current position, cheapest first.
+ * The best charging sites around the current position — cheap and near first: ranked by price plus a per-kilometer detour penalty.
  *
  * When the filters starve the list below [MIN_RESULTS], they are relaxed in a
  * fixed order until it recovers: minimum power first (a slower charger beats
@@ -82,7 +82,7 @@ object ChargeNowRanker {
             val enforced = ladder.drop(relaxCount)
             val hits = candidates
                 .filter { candidate -> enforced.all { (_, passes) -> passes(candidate) } }
-                .sortedBy { it.quote.best?.euroPerKwh ?: Double.MAX_VALUE }
+                .sortedBy { it.effectivePrice() }
                 .take(MAX_RESULTS)
             if (hits.size >= MIN_RESULTS || relaxCount == ladder.size) {
                 val chosen = hits.map { it.site.id }.toSet()
@@ -96,6 +96,17 @@ object ChargeNowRanker {
         // Unreachable: the loop always returns on its last iteration.
         return ChargeNowResult(emptyList(), RelaxedFilter.entries.toList())
     }
+
+    // Price alone let a cheap charger 30 km out crowd out the one next door:
+    // weigh the detour at 2 ct/kWh per km, so distance costs what it feels like.
+    private fun ChargeNowCandidate.effectivePrice(): Double =
+        (quote.best?.euroPerKwh ?: NO_PRICE_EURO_PER_KWH) + distanceKm * DETOUR_EURO_PER_KWH_PER_KM
+
+    private const val DETOUR_EURO_PER_KWH_PER_KM = 0.02
+
+    // Far above any real tariff: unpriced sites sink below every priced one
+    // but still order by distance among themselves.
+    private const val NO_PRICE_EURO_PER_KWH = 10.0
 
     private const val MIN_DC_POWER_KW = 50.0
 }

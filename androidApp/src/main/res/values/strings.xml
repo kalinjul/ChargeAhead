@@ -218,7 +218,7 @@
 
     <!-- Phone: charge now -->
     <string name="cn_title">Jetzt laden</string>
-    <string name="cn_subtitle">Beste Ladesäulen in der Nähe, günstigste zuerst</string>
+    <string name="cn_subtitle">Beste Ladesäulen in der Nähe – günstig und nah zuerst</string>
     <string name="cn_relaxed">Filter zu streng — gelockert: %1$s</string>
     <string name="cn_relax_min_power">Mindestleistung</string>
     <string name="cn_relax_networks">Netzwerke</string>

@@ -145,4 +145,37 @@ class ChargeNowRankerTest {
         )
         assertEquals(listOf("demo:near-pricey", "demo:far-cheap"), result.more.map { it.site.id })
     }
+
+    @Test
+    fun `a generous distance filter must not crowd out the station next door`() {
+        // The reported bug: max distance opened wide, and the 1.4 km station
+        // matching every filter vanished behind cheap chargers half an hour out.
+        val result = rank(
+            listOf(
+                site("next-door", "Vattenfall", 150.0, 1.4), // 0.59
+                site("far-1", "Tesla", 250.0, 25.0),         // 0.55
+                site("far-2", "Tesla", 250.0, 28.0),         // 0.55
+                site("far-3", "Tesla", 250.0, 30.0),         // 0.55
+            ),
+            filters = ChargeFilters(maxDistanceKm = 35.0),
+        )
+        assertTrue(result.relaxed.isEmpty())
+        assertEquals("demo:next-door", result.candidates.first().site.id)
+    }
+
+    @Test
+    fun `a real saving still beats a short detour`() {
+        // 2 ct/kWh per km: 3 km extra must be bought with >6 ct — Tesla brings 24.
+        val result = rank(
+            listOf(
+                site("near-pricey", "Ionity", 350.0, 1.0), // 0.79 + 0.02
+                site("far-cheaper", "Tesla", 250.0, 4.0),  // 0.55 + 0.08
+                site("mid", "EnBW", 150.0, 2.0),           // 0.65 + 0.04
+            ),
+        )
+        assertEquals(
+            listOf("demo:far-cheaper", "demo:mid", "demo:near-pricey"),
+            result.candidates.map { it.site.id },
+        )
+    }
 }
