@@ -1,0 +1,6 @@
+- Use ViewModels, KMP-Compliant so they can be reused in iOS later on (https://kotlinlang.org/docs/multiplatform/compose-viewmodel.html)
+- Use Navigation3 library for navigation (https://kotlinlang.org/docs/multiplatform/compose-navigation-3.html#multiplatform-support)
+- Use Room for database access
+- Use Koin for dependency injection (NO ANNOTATIONS!)
+- Use MVI-like pattern as in "Now in android", see https://github.com/android/nowinandroid/blob/main/feature/interests/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/interests/impl/InterestsViewModel.kt
+- Write Skills and/or docs for all the above if required
