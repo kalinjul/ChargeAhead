@@ -106,6 +106,39 @@ class NominatimGeocoderTest {
     }
 
     @Test
+    fun mapsTheBrokenDownAddress() = runBlocking {
+        // Two towns of the same name are only distinguishable by their
+        // address — the destination list shows it next to each result.
+        val body = """
+            [{"name":"München Hauptbahnhof",
+              "display_name":"München Hauptbahnhof, Klinikviertel, München, Bayern, 80335, Deutschland",
+              "lat":"48.1407253","lon":"11.5569426",
+              "address":{"road":"Bayerstraße","house_number":"10a","postcode":"80335","city":"München"}}]
+        """.trimIndent()
+
+        val address = requireNotNull(geocoderRespondingWith(body).search("x").single().address)
+
+        assertEquals("Bayerstraße 10a", address.street)
+        assertEquals("80335", address.postalCode)
+        assertEquals("München", address.town)
+    }
+
+    @Test
+    fun aVillageCountsAsTown() = runBlocking {
+        val body = """
+            [{"name":"Kipfenberg","lat":"48.9","lon":"11.4",
+              "address":{"village":"Kipfenberg","postcode":"85110"}}]
+        """.trimIndent()
+
+        assertEquals("Kipfenberg", geocoderRespondingWith(body).search("x").single().address?.town)
+    }
+
+    @Test
+    fun withoutAnAddressObject_thePlaceStillArrives() = runBlocking {
+        assertNull(geocoderRespondingWith(hauptbahnhof).search("x").single().address)
+    }
+
+    @Test
     fun sendsTheRequiredUserAgentAndTheFormat() = runBlocking {
         var seenRequest: HttpRequestData? = null
         geocoderRespondingWith("[]") { seenRequest = it }.search("München")
@@ -115,6 +148,7 @@ class NominatimGeocoderTest {
         assertEquals(OpenChargeMapSource.USER_AGENT, request.headers[HttpHeaders.UserAgent])
         assertEquals("jsonv2", request.url.parameters["format"])
         assertEquals("München", request.url.parameters["q"])
+        assertEquals("1", request.url.parameters["addressdetails"])
         assertNull(request.url.parameters["viewbox"])
     }
 

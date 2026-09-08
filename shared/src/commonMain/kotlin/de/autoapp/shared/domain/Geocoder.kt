@@ -7,6 +7,8 @@ data class Place(
     /** Full description to distinguish places with the same name. */
     val description: String,
     val position: LatLon,
+    /** Broken-down address where the source knows one — same-name towns need it. */
+    val address: Address? = null,
 )
 
 /**

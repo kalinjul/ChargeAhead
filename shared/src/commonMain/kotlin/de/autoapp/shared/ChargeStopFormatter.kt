@@ -1,5 +1,6 @@
 package de.autoapp.shared
 
+import de.autoapp.shared.domain.Address
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.Connector
@@ -68,8 +69,9 @@ object ChargeStopFormatter {
     /** e.g. "Hauptstr. 5, 85095 Denkendorf" — or `null` if nothing is known. */
     fun addressLine(stop: ChargeStop): String? = addressLine(stop.site)
 
-    fun addressLine(site: ChargeSite): String? {
-        val address = site.address ?: return null
+    fun addressLine(site: ChargeSite): String? = site.address?.let(::addressLine)
+
+    fun addressLine(address: Address): String? {
         val place = listOfNotNull(address.postalCode, address.town).joinToString(" ")
         return listOfNotNull(address.street, place.takeIf { it.isNotBlank() })
             .joinToString(", ")

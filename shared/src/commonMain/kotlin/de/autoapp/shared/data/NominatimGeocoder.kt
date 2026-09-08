@@ -1,5 +1,6 @@
 package de.autoapp.shared.data
 
+import de.autoapp.shared.domain.Address
 import de.autoapp.shared.domain.Geocoder
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Place
@@ -41,8 +42,7 @@ class NominatimGeocoder(
             parameter("q", query)
             parameter("format", "jsonv2")
             parameter("limit", limit)
-            // The broken-down address isn't needed; display_name is enough.
-            parameter("addressdetails", 0)
+            parameter("addressdetails", 1)
             near?.let {
                 // viewbox biases toward nearby results without forcing them:
                 // without bounded=1, distant destinations stay findable.
@@ -79,6 +79,7 @@ internal data class NominatimPlace(
     /** Nominatim returns coordinates as strings, not numbers. */
     val lat: String? = null,
     val lon: String? = null,
+    val address: NominatimAddress? = null,
 ) {
     fun toPlace(): Place? {
         val latitude = lat?.toDoubleOrNull() ?: return null
@@ -91,6 +92,31 @@ internal data class NominatimPlace(
             ?: full?.substringBefore(",")?.trim()
             ?: return null
 
-        return Place(name = short, description = full ?: short, position = LatLon(latitude, longitude))
+        return Place(
+            name = short,
+            description = full ?: short,
+            position = LatLon(latitude, longitude),
+            address = address?.toAddress(),
+        )
     }
+}
+
+@Serializable
+internal data class NominatimAddress(
+    val road: String? = null,
+    @SerialName("house_number") val houseNumber: String? = null,
+    val postcode: String? = null,
+    val city: String? = null,
+    val town: String? = null,
+    val village: String? = null,
+    val municipality: String? = null,
+    val hamlet: String? = null,
+) {
+    fun toAddress(): Address? = Address(
+        street = listOfNotNull(road, houseNumber).joinToString(" ").takeIf { it.isNotBlank() },
+        postalCode = postcode,
+        // Nominatim files the town under whichever size class it has — only
+        // one of these is ever set.
+        town = city ?: town ?: village ?: municipality ?: hamlet,
+    ).takeIf { !it.isEmpty }
 }

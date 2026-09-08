@@ -227,6 +227,7 @@
     <string name="cn_empty">Keine Schnelllader in der Nähe gefunden.</string>
     <string name="cn_loading">Ladesäulen werden gesucht …</string>
     <string name="cn_distance_power">%1$s km · %2$d kW</string>
+    <string name="plan_result_distance">%1$s km</string>
     <string name="cn_navigate">Navigation starten zu %1$s</string>
     <string name="cn_more">Mehr in der Nähe</string>
 

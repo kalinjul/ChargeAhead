@@ -444,6 +444,7 @@ private fun PhoneApp() {
                 recent = recentDestinations,
                 vehicleName = vehicle?.displayName,
                 initialSocPercent = manualSoc,
+                from = state.position,
                 onSearch = { query ->
                     runCatching { feature.searchDestinations(query) }.getOrNull()
                 },

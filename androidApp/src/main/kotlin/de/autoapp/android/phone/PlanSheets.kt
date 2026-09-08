@@ -59,8 +59,10 @@ import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.core.ChargeNowResult
 import de.autoapp.shared.core.RelaxedFilter
 import de.autoapp.shared.domain.Destination
+import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Place
 import de.autoapp.shared.domain.SavedRoute
+import de.autoapp.shared.domain.distanceKmTo
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -74,6 +76,7 @@ fun PlanSheetContent(
     recent: List<Destination>,
     vehicleName: String?,
     initialSocPercent: Double?,
+    from: LatLon?,
     onSearch: suspend (String) -> List<Place>?,
     onPlan: (Destination, Double) -> Unit,
     modifier: Modifier = Modifier,
@@ -208,36 +211,88 @@ fun PlanSheetContent(
 
         // Results while typing; recents when idle — the expanded sheet's "fullonly".
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.weight(1f, fill = false)) {
-            if (chosen == null) {
-                items(results.orEmpty(), key = { it.name + it.position.lat }) { place ->
-                    AppCard(onClick = {
-                        chosen = Destination(place.name, place.position)
-                        query = place.name
-                        results = emptyList()
-                    }) {
-                        Text(
-                            place.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        )
+            val shownResults = results.orEmpty()
+            if (chosen == null && shownResults.isNotEmpty()) {
+                item {
+                    AppCard {
+                        shownResults.forEachIndexed { index, place ->
+                            if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            PlaceRow(
+                                title = place.name,
+                                detail = place.detailLine(),
+                                distanceKm = from?.distanceKmTo(place.position),
+                                onClick = {
+                                    chosen = Destination(place.name, place.position)
+                                    query = place.name
+                                    results = emptyList()
+                                },
+                            )
+                        }
                     }
                 }
             }
             if (query.trim().length < 3 && recent.isNotEmpty()) {
                 item { SectionLabel(stringResource(R.string.plan_recent), modifier = Modifier.padding(top = 8.dp)) }
-                items(recent, key = { "recent-${it.name}-${it.position.lat}" }) { destination ->
-                    AppCard(onClick = { chosen = destination; query = destination.name }) {
-                        Text(
-                            destination.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                        )
+                item {
+                    AppCard {
+                        recent.forEachIndexed { index, destination ->
+                            if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            PlaceRow(
+                                title = destination.name,
+                                detail = null,
+                                distanceKm = from?.distanceKmTo(destination.position),
+                                onClick = { chosen = destination; query = destination.name },
+                            )
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/**
+ * The structured address when it says more than the name again — otherwise
+ * the description chain, which is what tells two same-name towns apart.
+ */
+private fun Place.detailLine(): String? =
+    address?.takeIf { it.street != null || it.postalCode != null }?.let(ChargeStopFormatter::addressLine)
+        ?: description.removePrefix("$name, ").takeIf { it != name }
+
+/** A destination row: name, where it is, how far away — the standard list look. */
+@Composable
+private fun PlaceRow(title: String, detail: String?, distanceKm: Double?, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(11.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            detail?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 2.dp),
+                )
+            }
+        }
+        distanceKm?.let {
+            Text(
+                stringResource(R.string.plan_result_distance, it.asKmLabel()),
+                style = MaterialTheme.typography.bodySmall.tabular,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** Below 10 km the decimal matters; above it, it's noise. */
+private fun Double.asKmLabel(): String =
+    if (this >= 10) roundToInt().toString() else oneDecimal()
 
 /** The best chargers nearby. States: loading, empty, list — plus the relax notice. */
 @Composable
