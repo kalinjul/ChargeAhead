@@ -14,7 +14,6 @@ import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LocationSource
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.data.OperatorCatalog
-import de.autoapp.shared.domain.OperatorKey
 import de.autoapp.shared.domain.OperatorOption
 import de.autoapp.shared.domain.OperatorOptions
 import de.autoapp.shared.domain.Geocoder
