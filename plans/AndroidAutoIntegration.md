@@ -1,1 +1,2 @@
-- Have a look at the screenshots, the Android auto Screen should look as provided in the screens.
+- Have a look at the screenshots, the Android auto Screen should look as provided in the screens and also have the functionality (interview me if anything is unclear about that.).
+- If the Car provides the battery status, please also always check on the current value so the user doesnt need to put their own percentage in.

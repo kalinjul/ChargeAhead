@@ -3,38 +3,41 @@
     <string name="app_name">Ladesäulen-Assistent</string>
 
     <!-- Android Auto -->
-    <string name="car_list_title">Ladestopps</string>
     <string name="car_title_suffix_demo">%1$s · Demodaten</string>
-    <string name="car_title_suffix_stale">%1$s · nicht aktuell</string>
-    <string name="car_row_reachable">Erreichbar</string>
-    <string name="car_row_marginal">Knapp erreichbar</string>
-    <string name="car_row_unreachable">Nicht erreichbar</string>
 
     <string name="car_permission_message">Für Ladesäulen voraus wird der Standort gebraucht. Die Freigabe erfolgt am Telefon.</string>
     <string name="car_permission_action">Standort freigeben</string>
     <string name="car_waiting_for_location">Standort wird ermittelt …</string>
-    <string name="car_loading">Ladesäulen werden gesucht …</string>
-    <string name="car_no_stops">Keine Ladesäule in Fahrtrichtung gefunden.</string>
-    <string name="car_location_unavailable">Kein Standort. Ortung am Telefon einschalten und Freigabe prüfen.</string>
-    <string name="car_sites_unavailable">Ladesäulendaten sind derzeit nicht erreichbar.</string>
+
+    <string name="car_home_enter_destination">Ziel eingeben</string>
+    <string name="car_home_charge_now">Jetzt laden</string>
+    <string name="car_home_no_favorites">Noch keine Favoriten — Routen lassen sich am Telefon speichern.</string>
+
+    <string name="car_search_empty">Keine Treffer. Am besten mit Ort suchen, z. B. „Hbf Kiel“.</string>
+
+    <string name="car_route_planning">Route wird geplant …</string>
+    <string name="car_route_send_all">Ganze Route an Maps senden</string>
+    <string name="car_route_sent_to_phone">Route auf dem Telefon geöffnet — dort Navigation starten</string>
+    <string name="car_route_navigate">Navigation starten</string>
+    <string name="car_route_no_vehicle">Kein Fahrzeugprofil. Bitte am Telefon in der Garage anlegen.</string>
+    <string name="car_route_no_route">Keine Route zum Ziel gefunden.</string>
+    <string name="car_route_no_charger">Nach %1$s kein erreichbarer Schnelllader mehr auf der Strecke.</string>
+    <string name="car_route_direct">Keine Ladestopps nötig — das Ziel ist ohne Laden erreichbar.</string>
+
+    <string name="car_now_loading">Ladesäulen werden gesucht …</string>
+    <string name="car_now_empty">Kein Schnelllader in der Nähe gefunden.</string>
+    <string name="car_now_relaxed">Ohne Filter: %1$s</string>
+    <string name="car_relax_power">Leistung</string>
+    <string name="car_relax_networks">Netzwerke</string>
+    <string name="car_relax_price">Preis</string>
+    <string name="car_relax_distance">Entfernung</string>
+
+    <string name="car_no_navigation_app">Keine Navigations-App gefunden</string>
 
     <string name="car_soc_title">Ladestand eintragen</string>
     <string name="car_soc_current">Aktuell: %1$s %%</string>
     <string name="car_soc_unset">Noch nicht eingetragen</string>
     <string name="car_soc_percent">%1$d %%</string>
-
-    <string name="car_destination_title">Ziel wählen</string>
-    <string name="car_destination_none">Kein Ziel — es wird in Fahrtrichtung gesucht</string>
-    <string name="car_destination_clear">Ziel löschen</string>
-    <string name="car_destination_empty">Noch keine Ziele. Das erste wird am Telefon eingegeben.</string>
-    <string name="car_title_suffix_route">%1$s · %2$s</string>
-    <string name="car_route_unavailable">Keine Route — Suche in Fahrtrichtung</string>
-
-    <string name="car_detail_navigate">Navigation starten</string>
-    <string name="car_detail_no_navigation">Keine Navigations-App gefunden</string>
-    <string name="car_detail_connectors">Anschlüsse</string>
-    <string name="car_detail_source">Quelle</string>
-    <string name="car_detail_unknown_connectors">Anschlüsse unbekannt</string>
 
     <string name="car_soc_carhardware_ask">Fahrzeugdaten freigeben</string>
     <string name="car_soc_carhardware_asking">Freigabe am Telefon bestätigen</string>
