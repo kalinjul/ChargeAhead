@@ -142,12 +142,19 @@ fun HomeScreen(
         }
 
         if (planningInProgress) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 3.dp,
                 modifier = Modifier.align(Alignment.Center),
             ) {
-                CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
-                Text(stringResource(R.string.plan_planning))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
+                    Text(stringResource(R.string.plan_planning))
+                }
             }
         }
 
