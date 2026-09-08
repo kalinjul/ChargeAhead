@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,13 +41,18 @@ fun AppSheet(onDismissRequest: () -> Unit, modifier: Modifier = Modifier, conten
                     .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
             )
         },
-        modifier = modifier,
+        // Fullscreen means "up to the status bar", not under it — and the
+        // default insets pad the bottom a second time on top of our own
+        // navigationBarsPadding, which rendered as a white bar under the list.
+        contentWindowInsets = { WindowInsets(0) },
+        modifier = modifier.statusBarsPadding(),
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier
                 .padding(horizontal = 18.dp)
                 .navigationBarsPadding()
+                .imePadding()
                 .padding(bottom = 24.dp),
         ) { content() }
     }
