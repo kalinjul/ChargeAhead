@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -19,12 +20,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
 
-/** The mockup's `.searchwrap`: bordered, rounded, magnifier left, no underline. */
+/**
+ * The mockup's `.searchwrap`: bordered, rounded, magnifier left, no underline.
+ *
+ * The clear button only exists while there is something to clear — an
+ * always-present (x) next to an empty field invites a tap that does nothing.
+ */
 @Composable
 fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     TextField(
@@ -38,6 +45,20 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(17.dp),
             )
+        },
+        trailingIcon = if (value.isEmpty()) {
+            null
+        } else {
+            {
+                IconButton(onClick = { onValueChange("") }) {
+                    Icon(
+                        painterResource(R.drawable.ic_remove),
+                        contentDescription = stringResource(R.string.phone_search_clear),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(17.dp),
+                    )
+                }
+            }
         },
         singleLine = true,
         shape = MaterialTheme.shapes.small,
