@@ -61,13 +61,13 @@ class OpenChargeMapSource(
         // chain of circles and queried section by section — the bounding
         // rectangle of a route would be uselessly large.
         is PolylineArea -> area.radialCover()
-            .flatMap { queryCircle(it) }
+            .flatMap { queryCircle(it, networks) }
             .distinctBy { it.id }
 
-        else -> queryCircle(area)
+        else -> queryCircle(area, networks)
     }
 
-    private suspend fun queryCircle(area: SearchArea): List<ChargeSite> {
+    private suspend fun queryCircle(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite> {
         val response: List<OcmPoi> = httpClient.get(baseUrl) {
             header(HttpHeaders.UserAgent, USER_AGENT)
             // Deliberately duplicated: OCM accepts the key both as a header
@@ -84,6 +84,10 @@ class OpenChargeMapSource(
             parameter("distance", area.radiusKm)
             parameter("distanceunit", "KM")
             parameter("maxresults", maxResults)
+            if (networks.isNotEmpty()) {
+                val ids = networks.flatMap { it.operatorIds }.toSortedSet().joinToString(",")
+                parameter("operatorid", ids)
+            }
         }.body()
 
         return response.mapNotNull(::toChargeSite)
