@@ -14,7 +14,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,6 +26,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.AppSlider
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.PrefRow
 import de.autoapp.android.phone.components.SectionLabel
@@ -104,13 +104,13 @@ internal fun DrawerContent(
 
         Column {
             SectionLabel(stringResource(R.string.drawer_max_price, filters.maxPriceEuroPerKwh.twoDecimals()))
-            Slider(
+            AppSlider(
                 value = filters.maxPriceEuroPerKwh.toFloat(),
                 onValueChange = { onFilters(filters.copy(maxPriceEuroPerKwh = (it * 100).roundToInt() / 100.0)) },
                 valueRange = 0.4f..1.0f,
             )
             SectionLabel(stringResource(R.string.drawer_max_distance, filters.maxDistanceKm.oneDecimal()))
-            Slider(
+            AppSlider(
                 value = filters.maxDistanceKm.toFloat(),
                 onValueChange = { onFilters(filters.copy(maxDistanceKm = (it * 2).roundToInt() / 2.0)) },
                 valueRange = 1f..10f,

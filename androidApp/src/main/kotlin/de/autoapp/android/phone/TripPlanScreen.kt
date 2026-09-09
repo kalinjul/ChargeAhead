@@ -180,9 +180,13 @@ fun TripPlanScreen(
                     title = stop.site.operator ?: stop.site.name,
                     metaLine = stringResource(R.string.trip_stop_power, stop.maxPowerKw.roundToInt()),
                     address = ChargeStopFormatter.addressLine(stop.site),
+                    // etaMinutesFromStart counts to departure, so the charge
+                    // time comes off it for the arrival — and the SOC next to
+                    // it is the one on arrival, before charging.
                     extraLine = stringResource(
                         R.string.trip_stop_eta_charge,
                         etaText(stop.etaMinutesFromStart - stop.chargeMinutes),
+                        stop.arrivalSocPercent.roundToInt(),
                         stop.chargeMinutes.roundToInt(),
                     ),
                     priceEuroPerKwh = stop.quote.best?.euroPerKwh,

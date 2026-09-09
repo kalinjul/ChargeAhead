@@ -36,10 +36,10 @@
 - ~~The minimum power should also offer 11 kW as an option~~ — done
 
 # UI
-- The sliders have a very large vertical thumb; it can be smaller
-- The buttons for "Send to Maps" should be consistent. In planning it is a flag, elsewhere an arrow. It should always be a flag.
-- Clicking a charging station on the map should show the station's details in a bottom sheet
-- A planned route should show the projected SOC at each stop after the time of arrival
+- ~~The sliders have a very large vertical thumb; it can be smaller~~ — done
+- ~~The buttons for "Send to Maps" should be consistent. In planning it is a flag, elsewhere an arrow. It should always be a flag.~~ — done
+- ~~Clicking a charging station on the map should show the station's details in a bottom sheet~~ — done
+- ~~A planned route should show the projected SOC at each stop after the time of arrival~~ — done
 
 # Misc
 - A license screen is required, reachable from the drawer. Use some gradle license plugin to generate license information from dependencies.
