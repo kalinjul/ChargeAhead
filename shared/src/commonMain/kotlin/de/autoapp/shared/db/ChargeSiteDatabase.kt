@@ -116,9 +116,10 @@ interface ChargeSiteDao {
 }
 
 // exportSchema = false for the same reason verifyMigrations was off under
-// SQLDelight: a schema snapshot per version costs more than it buys. A
-// future schema change gets a hand-written Migration plus a test, exactly
-// like the 1.sqm it replaces had.
+// SQLDelight: a schema snapshot per version costs more than it buys. The
+// tables are a regenerable cache, so a schema bump just drops and refetches
+// — see fallbackToDestructiveMigration in DatabaseFactory. No hand-written
+// Migration objects.
 @Database(entities = [ChargeSiteEntity::class, TileCoverageEntity::class], version = 2, exportSchema = false)
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)
 abstract class ChargeSiteDatabase : RoomDatabase() {
