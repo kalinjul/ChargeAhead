@@ -12,6 +12,8 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -21,6 +23,7 @@ import de.autoapp.shared.currentTimeMillis
 import de.autoapp.shared.domain.CarDataKind
 import de.autoapp.shared.domain.CarDataPoint
 import de.autoapp.shared.domain.CarDataStatus
+import de.autoapp.shared.ui.CarDataViewModel
 
 /**
  * Everything the car hardware last delivered, one row per data point —
@@ -30,6 +33,15 @@ import de.autoapp.shared.domain.CarDataStatus
  * Rows without a recording say so instead of hiding: seeing "noch nie
  * empfangen" per data point is the entire purpose of a debug view.
  */
+@Composable
+fun CarDataDebugRoute(
+    modifier: Modifier = Modifier,
+    viewModel: CarDataViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    CarDataDebugScreen(points = uiState.points, modifier = modifier)
+}
+
 @Composable
 fun CarDataDebugScreen(
     points: List<CarDataPoint>,

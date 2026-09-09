@@ -32,11 +32,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -55,14 +55,17 @@ import de.autoapp.android.phone.components.sheetListPadding
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.ChargeStopFormatter
-import de.autoapp.shared.core.ChargeNowResult
 import de.autoapp.shared.core.RelaxedFilter
 import de.autoapp.shared.domain.Destination
-import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Place
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.distanceKmTo
-import kotlinx.coroutines.delay
+import de.autoapp.shared.ui.ChargeNowUiState
+import de.autoapp.shared.ui.ChargeNowViewModel
+import de.autoapp.shared.ui.PlanSheetUiState
+import de.autoapp.shared.ui.PlanSheetViewModel
+import de.autoapp.shared.ui.RoutesUiState
+import de.autoapp.shared.ui.RoutesViewModel
 import kotlin.math.roundToInt
 
 /**
@@ -71,38 +74,33 @@ import kotlin.math.roundToInt
  * rotary controller.
  */
 @Composable
+fun PlanSheetRoute(
+    onPlan: (Destination, Double) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: PlanSheetViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    PlanSheetContent(
+        uiState = uiState,
+        onQueryChange = viewModel::onQueryChanged,
+        onDestinationChosen = viewModel::onDestinationChosen,
+        onSocChange = viewModel::onSocChanged,
+        onPlan = onPlan,
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun PlanSheetContent(
-    recent: List<Destination>,
-    vehicleName: String?,
-    initialSocPercent: Double?,
-    from: LatLon?,
-    onSearch: suspend (String) -> List<Place>?,
+    uiState: PlanSheetUiState,
+    onQueryChange: (String) -> Unit,
+    onDestinationChosen: (Destination) -> Unit,
+    onSocChange: (String) -> Unit,
     onPlan: (Destination, Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var query by remember { mutableStateOf("") }
-    var results by remember { mutableStateOf<List<Place>?>(emptyList()) }
-    var searching by remember { mutableStateOf(false) }
-    // The one number the plan stands or falls with — so it's typed right
-    // here, not hidden in the garage. Prefilled from the stored value.
-    var socText by remember { mutableStateOf((initialSocPercent ?: 80.0).roundToInt().toString()) }
-    val socPercent = socText.toIntOrNull()?.takeIf { it in 1..100 }
-    var chosen by remember { mutableStateOf<Destination?>(null) }
-
-    // Debounced: Nominatim allows one request per second (ROADMAP open item 6),
-    // and a request per keystroke would blow through that within a word.
-    LaunchedEffect(query) {
-        if (chosen != null) { searching = false; return@LaunchedEffect }
-        val trimmed = query.trim()
-        if (trimmed.length < 3) {
-            results = emptyList()
-            return@LaunchedEffect
-        }
-        searching = true
-        delay(600)
-        results = onSearch(trimmed)
-        searching = false
-    }
+    val vehicleName = uiState.vehicleName
+    val socPercent = uiState.socPercent
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(stringResource(R.string.plan_title), style = MaterialTheme.typography.titleMedium)
@@ -138,12 +136,12 @@ fun PlanSheetContent(
                 Column(Modifier.weight(1f)) {
                     SectionLabel(stringResource(R.string.plan_to), modifier = Modifier.padding(0.dp))
                     BasicTextField(
-                        value = query,
-                        onValueChange = { query = it; chosen = null },
+                        value = uiState.query,
+                        onValueChange = onQueryChange,
                         textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                         singleLine = true,
                         decorationBox = { inner ->
-                            if (query.isEmpty()) {
+                            if (uiState.query.isEmpty()) {
                                 Text(
                                     stringResource(R.string.plan_search_hint),
                                     style = MaterialTheme.typography.bodyLarge,
@@ -155,7 +153,7 @@ fun PlanSheetContent(
                         modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
                     )
                 }
-                if (searching) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                if (uiState.searching) CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
             }
         }
 
@@ -168,8 +166,8 @@ fun PlanSheetContent(
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
                     ) {
                         BasicTextField(
-                            value = socText,
-                            onValueChange = { socText = it.filter(Char::isDigit).take(3) },
+                            value = uiState.socInput,
+                            onValueChange = onSocChange,
                             textStyle = MaterialTheme.typography.labelMedium.tabular.copy(
                                 color = if (socPercent == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                             ),
@@ -185,20 +183,21 @@ fun PlanSheetContent(
         }
 
         when {
-            results == null -> Text(
+            uiState.results == null -> Text(
                 stringResource(R.string.plan_search_failed),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall,
             )
-            results!!.isEmpty() && query.trim().length >= 3 && !searching && chosen == null -> Text(
+            uiState.results.orEmpty().isEmpty() && !uiState.isQueryTooShort &&
+                !uiState.searching && uiState.chosen == null -> Text(
                 stringResource(R.string.plan_no_results),
                 style = MaterialTheme.typography.bodySmall,
             )
         }
 
         Button(
-            onClick = { chosen?.let { destination -> socPercent?.let { onPlan(destination, it.toDouble()) } } },
-            enabled = chosen != null && socPercent != null && vehicleName != null,
+            onClick = { uiState.chosen?.let { destination -> socPercent?.let { onPlan(destination, it.toDouble()) } } },
+            enabled = uiState.canPlan,
             shape = MaterialTheme.shapes.medium,
             contentPadding = PaddingValues(15.dp),
             modifier = Modifier.fillMaxWidth(),
@@ -214,8 +213,8 @@ fun PlanSheetContent(
             contentPadding = sheetListPadding(),
             modifier = Modifier.weight(1f, fill = false),
         ) {
-            val shownResults = results.orEmpty()
-            if (chosen == null && shownResults.isNotEmpty()) {
+            val shownResults = uiState.results.orEmpty()
+            if (uiState.chosen == null && shownResults.isNotEmpty()) {
                 item {
                     AppCard {
                         shownResults.forEachIndexed { index, place ->
@@ -223,28 +222,24 @@ fun PlanSheetContent(
                             PlaceRow(
                                 title = place.name,
                                 detail = place.detailLine(),
-                                distanceKm = from?.distanceKmTo(place.position),
-                                onClick = {
-                                    chosen = Destination(place.name, place.position)
-                                    query = place.name
-                                    results = emptyList()
-                                },
+                                distanceKm = uiState.from?.distanceKmTo(place.position),
+                                onClick = { onDestinationChosen(Destination(place.name, place.position)) },
                             )
                         }
                     }
                 }
             }
-            if (query.trim().length < 3 && recent.isNotEmpty()) {
+            if (uiState.isQueryTooShort && uiState.recent.isNotEmpty()) {
                 item { SectionLabel(stringResource(R.string.plan_recent), modifier = Modifier.padding(top = 8.dp)) }
                 item {
                     AppCard {
-                        recent.forEachIndexed { index, destination ->
+                        uiState.recent.forEachIndexed { index, destination ->
                             if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                             PlaceRow(
                                 title = destination.name,
                                 detail = null,
-                                distanceKm = from?.distanceKmTo(destination.position),
-                                onClick = { chosen = destination; query = destination.name },
+                                distanceKm = uiState.from?.distanceKmTo(destination.position),
+                                onClick = { onDestinationChosen(destination) },
                             )
                         }
                     }
@@ -297,19 +292,33 @@ private fun PlaceRow(title: String, detail: String?, distanceKm: Double?, onClic
 private fun Double.asKmLabel(): String =
     if (this >= 10) roundToInt().toString() else oneDecimal()
 
-/** The best chargers nearby. States: loading, empty, list — plus the relax notice. */
+@Composable
+fun ChargeNowRoute(
+    onNavigate: (de.autoapp.shared.core.ChargeNowCandidate) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: ChargeNowViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    ChargeNowSheetContent(uiState = uiState, onNavigate = onNavigate, modifier = modifier)
+}
+
+/** The best chargers nearby. States: no position, loading, empty, list — plus the relax notice. */
 @Composable
 fun ChargeNowSheetContent(
-    result: ChargeNowResult?,
-    loading: Boolean,
+    uiState: ChargeNowUiState,
     onNavigate: (de.autoapp.shared.core.ChargeNowCandidate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.cn_title), style = MaterialTheme.typography.titleMedium)
 
-        when {
-            loading -> {
+        when (uiState) {
+            ChargeNowUiState.NoPosition -> Text(
+                stringResource(R.string.home_no_position),
+                modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
+            )
+
+            ChargeNowUiState.Loading -> {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
@@ -319,12 +328,15 @@ fun ChargeNowSheetContent(
                 }
             }
 
-            result == null || result.candidates.isEmpty() -> Text(
-                stringResource(R.string.cn_empty),
-                modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
-            )
-
-            else -> {
+            is ChargeNowUiState.Ready -> {
+                val result = uiState.result
+                if (result.candidates.isEmpty()) {
+                    Text(
+                        stringResource(R.string.cn_empty),
+                        modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
+                    )
+                    return@Column
+                }
                 val context = androidx.compose.ui.platform.LocalContext.current
                 Text(
                     if (result.relaxed.isEmpty()) {
@@ -353,7 +365,11 @@ fun ChargeNowSheetContent(
                     if (result.more.isNotEmpty()) {
                         item { SectionLabel(stringResource(R.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
                         itemsIndexed(result.more, key = { _, c -> "more-${c.site.id}" }) { index, candidate ->
-                            ChargeNowCard(rank = result.candidates.size + index + 1, candidate = candidate, onNavigate = onNavigate)
+                            ChargeNowCard(
+                                rank = result.candidates.size + index + 1,
+                                candidate = candidate,
+                                onNavigate = onNavigate,
+                            )
                         }
                     }
                 }
@@ -389,17 +405,34 @@ private fun RelaxedFilter.labelRes(): Int = when (this) {
     RelaxedFilter.MAX_DISTANCE -> R.string.cn_relax_max_distance
 }
 
+@Composable
+fun RoutesRoute(
+    onOpen: (Destination) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: RoutesViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    RoutesSheetContent(
+        uiState = uiState,
+        onOpen = onOpen,
+        onRename = viewModel::onRenamed,
+        onDelete = viewModel::onDeleted,
+        onFavorite = viewModel::onFavourited,
+        modifier = modifier,
+    )
+}
+
 /** Saved routes on top, recent destinations below with a quick-favorite heart. */
 @Composable
 fun RoutesSheetContent(
-    saved: List<SavedRoute>,
-    recent: List<Destination>,
+    uiState: RoutesUiState,
     onOpen: (Destination) -> Unit,
     onRename: (SavedRoute, String) -> Unit,
     onDelete: (SavedRoute) -> Unit,
     onFavorite: (Destination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val saved = uiState.saved
     var renaming by remember { mutableStateOf<SavedRoute?>(null) }
 
     renaming?.let { route ->
@@ -456,7 +489,7 @@ fun RoutesSheetContent(
                 }
             }
             item { SectionLabel(stringResource(R.string.routes_recent), modifier = Modifier.padding(top = 8.dp)) }
-            items(recent, key = { "recent-${it.name}-${it.position.lat}" }) { destination ->
+            items(uiState.recent, key = { "recent-${it.name}-${it.position.lat}" }) { destination ->
                 val alreadySaved = saved.any { it.destination.position == destination.position }
                 AppCard {
                     Row(

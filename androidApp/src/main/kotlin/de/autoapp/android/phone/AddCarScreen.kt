@@ -8,9 +8,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -20,25 +18,46 @@ import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SearchField
 import de.autoapp.android.phone.components.TickRow
 import de.autoapp.android.phone.components.TickStyle
-import de.autoapp.shared.domain.VehicleCatalog
 import de.autoapp.shared.domain.VehiclePreset
+import de.autoapp.shared.ui.AddCarUiState
+import de.autoapp.shared.ui.AddCarViewModel
 import kotlin.math.roundToInt
+
+@Composable
+fun AddCarRoute(
+    onAdded: (VehiclePreset) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: AddCarViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    AddCarScreen(
+        uiState = uiState,
+        onSearchChange = viewModel::onQueryChanged,
+        onAdd = { preset ->
+            viewModel.onPresetAdded(preset)
+            onAdded(preset)
+        },
+        modifier = modifier,
+    )
+}
 
 /** The mockup's add-car screen: search the catalog, tap the +. */
 @Composable
-fun AddCarScreen(owned: Set<String>, onAdd: (VehiclePreset) -> Unit, modifier: Modifier = Modifier) {
-    var search by remember { mutableStateOf("") }
-    val hits = VehicleCatalog.all.filter {
-        it.name !in owned && it.name.contains(search.trim(), ignoreCase = true)
-    }
+fun AddCarScreen(
+    uiState: AddCarUiState,
+    onSearchChange: (String) -> Unit,
+    onAdd: (VehiclePreset) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val hits = uiState.matches
 
     Column(
         modifier = modifier.padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         SearchField(
-            value = search,
-            onValueChange = { search = it },
+            value = uiState.query,
+            onValueChange = onSearchChange,
             placeholder = stringResource(R.string.garage_search),
             modifier = Modifier.padding(top = 12.dp),
         )

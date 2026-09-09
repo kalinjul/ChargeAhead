@@ -14,12 +14,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -30,12 +26,8 @@ import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SearchField
 import de.autoapp.android.phone.components.TickRow
-import de.autoapp.shared.domain.NetworkPreferences
-import de.autoapp.shared.domain.OperatorOption
-import de.autoapp.shared.domain.OperatorOptions
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
+import de.autoapp.shared.ui.NetworksUiState
+import de.autoapp.shared.ui.NetworksViewModel
 
 /**
  * Selecting charging networks.
@@ -56,39 +48,32 @@ import kotlinx.coroutines.withContext
  * scattered through a list of hundreds.
  */
 @Composable
+fun NetworksRoute(
+    modifier: Modifier = Modifier,
+    viewModel: NetworksViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    NetworkSettingsScreen(
+        uiState = uiState,
+        onSearchChange = viewModel::onSearchChanged,
+        onOnlyPreferredChange = viewModel::onOnlyPreferredChanged,
+        onOperatorToggle = viewModel::onOperatorToggled,
+        onSelectAllShown = viewModel::onAllShownSelected,
+        onSelectNoneShown = viewModel::onNoShownSelected,
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun NetworkSettingsScreen(
-    preferences: NetworkPreferences,
-    available: List<OperatorOption>,
-    loading: Boolean,
-    onChange: (NetworkPreferences) -> Unit,
+    uiState: NetworksUiState,
+    onSearchChange: (String) -> Unit,
+    onOnlyPreferredChange: (Boolean) -> Unit,
+    onOperatorToggle: (String) -> Unit,
+    onSelectAllShown: () -> Unit,
+    onSelectNoneShown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var search by remember { mutableStateOf("") }
-    var query by remember { mutableStateOf("") }
-
-    // Filtering only follows the typing after a pause. Every keystroke folds
-    // and scans the whole list, which on a few hundred networks is felt in
-    // the field itself. Clearing is exempt: there the full list is already
-    // known, and waiting for it would feel broken.
-    LaunchedEffect(search) {
-        if (search.isNotEmpty()) delay(SEARCH_DEBOUNCE_MS)
-        query = search
-    }
-
-    // null means "not computed yet" — only ever the case on the first pass,
-    // because produceState keeps the previous list while the next one is
-    // being built. So the spinner shows up once, and later filtering doesn't
-    // make the list flicker.
-    val shown by produceState<List<OperatorOption>?>(null, available, query) {
-        // The selection is read once per pass on purpose: reordering while
-        // the driver is ticking would pull the row out from under their
-        // finger.
-        val selected = preferences.preferredOperators
-        value = withContext(Dispatchers.Default) {
-            OperatorOptions.forPicker(available, query, selected)
-        }
-    }
-
     Column(modifier = modifier.padding(horizontal = 18.dp)) {
         Fineprint(
             text = stringResource(R.string.phone_networks_intro),
@@ -100,8 +85,8 @@ fun NetworkSettingsScreen(
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
             Switch(
-                checked = preferences.onlyPreferred,
-                onCheckedChange = { onChange(preferences.copy(onlyPreferred = it)) },
+                checked = uiState.preferences.onlyPreferred,
+                onCheckedChange = onOnlyPreferredChange,
             )
             Text(
                 text = stringResource(R.string.phone_networks_only),
@@ -110,8 +95,8 @@ fun NetworkSettingsScreen(
             )
         }
 
-        if (available.isEmpty()) {
-            if (loading) {
+        if (uiState.available.isEmpty()) {
+            if (uiState.loading) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.padding(top = 16.dp),
@@ -132,13 +117,13 @@ fun NetworkSettingsScreen(
         }
 
         SearchField(
-            value = search,
-            onValueChange = { search = it },
+            value = uiState.search,
+            onValueChange = onSearchChange,
             placeholder = stringResource(R.string.phone_networks_search),
             modifier = Modifier.padding(top = 16.dp),
         )
 
-        val options = shown
+        val options = uiState.shown
         if (options == null) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -160,20 +145,14 @@ fun NetworkSettingsScreen(
             OutlinedButton(
                 enabled = options.isNotEmpty(),
                 shape = MaterialTheme.shapes.small,
-                onClick = {
-                    val updated = preferences.preferredOperators + options.map { it.key }
-                    onChange(preferences.copy(preferredOperators = updated))
-                },
+                onClick = onSelectAllShown,
             ) {
                 Text(stringResource(R.string.phone_networks_all))
             }
             OutlinedButton(
                 enabled = options.isNotEmpty(),
                 shape = MaterialTheme.shapes.small,
-                onClick = {
-                    val updated = preferences.preferredOperators - options.map { it.key }.toSet()
-                    onChange(preferences.copy(preferredOperators = updated))
-                },
+                onClick = onSelectNoneShown,
                 modifier = Modifier.padding(start = 8.dp),
             ) {
                 Text(stringResource(R.string.phone_networks_none))
@@ -182,7 +161,7 @@ fun NetworkSettingsScreen(
 
         // The hint only appears while searching: without search text,
         // "displayed" equals "all", where it would just be noise.
-        if (query.isNotBlank()) {
+        if (uiState.query.isNotBlank()) {
             Fineprint(
                 text = stringResource(R.string.phone_networks_bulk_hint),
                 modifier = Modifier.padding(top = 8.dp),
@@ -191,7 +170,7 @@ fun NetworkSettingsScreen(
 
         if (options.isEmpty()) {
             Fineprint(
-                text = stringResource(R.string.phone_networks_no_match, query.trim()),
+                text = stringResource(R.string.phone_networks_no_match, uiState.query.trim()),
                 modifier = Modifier.padding(top = 16.dp),
             )
             return@Column
@@ -207,29 +186,16 @@ fun NetworkSettingsScreen(
             LazyColumn {
                 itemsIndexed(options) { index, option ->
                     if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                    val checked = option.key in preferences.preferredOperators
+                    val checked = option.key in uiState.preferences.preferredOperators
                     TickRow(
                         label = option.displayName,
                         sublabel = pluralStringResource(R.plurals.phone_networks_count, option.siteCount, option.siteCount),
                         checked = checked,
                         dotColor = operatorColor(option.displayName),
-                        onClick = {
-                            val updated = if (checked) {
-                                preferences.preferredOperators - option.key
-                            } else {
-                                preferences.preferredOperators + option.key
-                            }
-                            onChange(preferences.copy(preferredOperators = updated))
-                        },
+                        onClick = { onOperatorToggle(option.key) },
                     )
                 }
             }
         }
     }
 }
-
-/**
- * Long enough that a fast typist filters once instead of per letter, short
- * enough that a finished word feels immediate.
- */
-private const val SEARCH_DEBOUNCE_MS = 250L

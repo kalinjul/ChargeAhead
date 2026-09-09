@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.car.app.CarContext
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.ChargeStopsFeatureFactory
+import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.currentTimeMillis
 import de.autoapp.shared.data.FusedLocationSource
 import de.autoapp.shared.db.DatabaseDriverFactory
@@ -42,15 +43,37 @@ object ChargeStopsFeatureProvider {
             ).also { store = it }
         }
 
-    /** For the phone UI: no vehicle access, just location and manual input. */
-    fun create(context: Context): ChargeStopsFeature =
-        ChargeStopsFeatureFactory.create(
-            locationSource = FusedLocationSource(context),
-            openChargeMapKey = BuildConfig.OPEN_CHARGE_MAP_API_KEY,
-            settingsStore = settingsStore(context),
-            databaseDriverFactory = DatabaseDriverFactory(context),
-            timeProvider = timeProvider,
-        )
+    @Volatile
+    private var phone: ChargeStopsFeature? = null
+
+    /**
+     * For the phone UI: no vehicle access, just location and manual input.
+     *
+     * One instance for the whole app, like [settingsStore] — the phone's
+     * ViewModels all read from it, and a second instance would run a second
+     * location stream and a second corridor query for the same drive.
+     *
+     * Consequently it is never closed: its lifetime is the process. That is
+     * the scoping this app can express today; once Koin arrives
+     * (plans/technical-debts.md) this becomes an ordinary application-scoped
+     * singleton instead of a hand-written one.
+     */
+    fun phoneFeature(context: Context): ChargeStopsFeature =
+        phone ?: synchronized(this) {
+            phone ?: ChargeStopsFeatureFactory.create(
+                locationSource = FusedLocationSource(context.applicationContext),
+                openChargeMapKey = BuildConfig.OPEN_CHARGE_MAP_API_KEY,
+                settingsStore = settingsStore(context),
+                databaseDriverFactory = DatabaseDriverFactory(context.applicationContext),
+                timeProvider = timeProvider,
+            ).also { phone = it }
+        }
+
+    /** The planning flows of [phoneFeature]. The factory always supplies them. */
+    fun planning(context: Context): PlanningFeature =
+        requireNotNull(phoneFeature(context).planning) {
+            "ChargeStopsFeatureFactory did not assemble a PlanningFeature"
+        }
 
     /** For Android Auto: additionally the vehicle's state of charge, if it provides one. */
     fun createForCar(carContext: CarContext): ChargeStopsFeature =

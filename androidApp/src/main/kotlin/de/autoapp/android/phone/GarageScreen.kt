@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -31,6 +32,8 @@ import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.core.RangeCalculator
 import de.autoapp.shared.domain.VehicleCatalog
 import de.autoapp.shared.domain.VehicleProfile
+import de.autoapp.shared.ui.GarageUiState
+import de.autoapp.shared.ui.GarageViewModel
 import kotlin.math.roundToInt
 
 /**
@@ -40,11 +43,27 @@ import kotlin.math.roundToInt
  * every driver is different.
  */
 @Composable
+fun GarageRoute(
+    onOpenAdvanced: () -> Unit,
+    onOpenAdd: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: GarageViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    GarageScreen(
+        uiState = uiState,
+        onSelect = viewModel::onVehicleSelected,
+        onRemove = viewModel::onVehicleRemoved,
+        onSocChange = viewModel::onSocChanged,
+        onOpenAdvanced = onOpenAdvanced,
+        onOpenAdd = onOpenAdd,
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun GarageScreen(
-    vehicles: List<VehicleProfile>,
-    selected: VehicleProfile?,
-    socPercent: Double?,
-    socFromCar: Boolean,
+    uiState: GarageUiState,
     onSelect: (VehicleProfile) -> Unit,
     onRemove: (String) -> Unit,
     onSocChange: (Double) -> Unit,
@@ -52,6 +71,8 @@ fun GarageScreen(
     onOpenAdd: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val vehicles = uiState.vehicles
+    val selected = uiState.selected
     var deleteMode by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -93,7 +114,16 @@ fun GarageScreen(
         if (selected == null) {
             item { Fineprint(stringResource(R.string.garage_no_car_yet)) }
         } else {
-            item { SelectedVehiclePanel(selected, socPercent, socFromCar, onSelect, onSocChange, onOpenAdvanced) }
+            item {
+                SelectedVehiclePanel(
+                    vehicle = selected,
+                    socPercent = uiState.socPercent,
+                    socFromCar = uiState.socFromCar,
+                    onSelect = onSelect,
+                    onSocChange = onSocChange,
+                    onOpenAdvanced = onOpenAdvanced,
+                )
+            }
         }
     }
 }

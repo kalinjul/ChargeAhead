@@ -13,9 +13,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -27,8 +25,8 @@ import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.domain.ConnectorType
-import de.autoapp.shared.domain.SoCDiagnostics
-import de.autoapp.shared.domain.VehicleProfile
+import de.autoapp.shared.ui.VehicleSettingsUiState
+import de.autoapp.shared.ui.VehicleSettingsViewModel
 
 /**
  * Free-form entry of battery capacity and consumption — deliberately no
@@ -39,43 +37,34 @@ import de.autoapp.shared.domain.VehicleProfile
  * would be the worst way for the reachability calculation to go wrong.
  */
 @Composable
+fun VehicleSettingsRoute(
+    modifier: Modifier = Modifier,
+    viewModel: VehicleSettingsViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    VehicleSettingsScreen(
+        uiState = uiState,
+        onNameChange = viewModel::onNameChanged,
+        onBatteryChange = viewModel::onBatteryChanged,
+        onConsumptionChange = viewModel::onConsumptionChanged,
+        onConnectorToggle = viewModel::onConnectorToggled,
+        onSocChange = viewModel::onSocChanged,
+        onClear = viewModel::onVehicleCleared,
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun VehicleSettingsScreen(
-    vehicle: VehicleProfile?,
-    socPercent: Double?,
-    socFromCar: Boolean,
-    onVehicleChange: (VehicleProfile?) -> Unit,
-    onSocChange: (Double?) -> Unit,
-    diagnostics: SoCDiagnostics? = null,
+    uiState: VehicleSettingsUiState,
+    onNameChange: (String) -> Unit,
+    onBatteryChange: (String) -> Unit,
+    onConsumptionChange: (String) -> Unit,
+    onConnectorToggle: (ConnectorType, Boolean) -> Unit,
+    onSocChange: (String) -> Unit,
+    onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var name by remember(vehicle) { mutableStateOf(vehicle?.displayName.orEmpty()) }
-    var battery by remember(vehicle) { mutableStateOf(vehicle?.usableBatteryKwh?.asInput().orEmpty()) }
-    var consumption by remember(vehicle) {
-        mutableStateOf(vehicle?.consumptionKwhPer100Km?.asInput().orEmpty())
-    }
-    var connectors by remember(vehicle) {
-        mutableStateOf(vehicle?.acceptedConnectors ?: emptySet())
-    }
-    var soc by remember(socPercent) { mutableStateOf(socPercent?.asInput().orEmpty()) }
-
-    // Build a profile from the fields — or null as long as something is missing.
-    fun publishVehicle(
-        newName: String = name,
-        newBattery: String = battery,
-        newConsumption: String = consumption,
-        newConnectors: Set<ConnectorType> = connectors,
-    ) {
-        val batteryKwh = newBattery.toPositiveDoubleOrNull()
-        val consumptionKwh = newConsumption.toPositiveDoubleOrNull()
-        onVehicleChange(
-            if (batteryKwh == null || consumptionKwh == null) {
-                null
-            } else {
-                VehicleProfile(newName.trim(), batteryKwh, consumptionKwh, newConnectors)
-            },
-        )
-    }
-
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp),
     ) {
@@ -85,26 +74,26 @@ fun VehicleSettingsScreen(
         )
 
         OutlinedTextField(
-            value = name,
-            onValueChange = { name = it; publishVehicle(newName = it) },
+            value = uiState.name,
+            onValueChange = onNameChange,
             label = { Text(stringResource(R.string.phone_field_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
 
         NumberField(
-            value = battery,
-            onValueChange = { battery = it; publishVehicle(newBattery = it) },
+            value = uiState.battery,
+            onValueChange = onBatteryChange,
             label = stringResource(R.string.phone_field_battery),
-            isError = battery.isNotBlank() && battery.toPositiveDoubleOrNull() == null,
+            isError = uiState.batteryInvalid,
             errorText = stringResource(R.string.phone_error_positive_number),
         )
 
         NumberField(
-            value = consumption,
-            onValueChange = { consumption = it; publishVehicle(newConsumption = it) },
+            value = uiState.consumption,
+            onValueChange = onConsumptionChange,
             label = stringResource(R.string.phone_field_consumption),
-            isError = consumption.isNotBlank() && consumption.toPositiveDoubleOrNull() == null,
+            isError = uiState.consumptionInvalid,
             errorText = stringResource(R.string.phone_error_positive_number),
         )
 
@@ -123,44 +112,35 @@ fun VehicleSettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Checkbox(
-                    checked = type in connectors,
-                    onCheckedChange = { checked ->
-                        connectors = if (checked) connectors + type else connectors - type
-                        publishVehicle(newConnectors = connectors)
-                    },
+                    checked = type in uiState.connectors,
+                    onCheckedChange = { checked -> onConnectorToggle(type, checked) },
                 )
                 Text(ChargeStopFormatter.connectorLabel(type))
             }
         }
 
         NumberField(
-            value = soc,
-            onValueChange = { input ->
-                soc = input
-                onSocChange(input.toPercentOrNull())
-            },
+            value = uiState.socInput,
+            onValueChange = onSocChange,
             label = stringResource(R.string.phone_field_soc),
-            isError = soc.isNotBlank() && soc.toPercentOrNull() == null,
+            isError = uiState.socInvalid,
             errorText = stringResource(R.string.phone_error_percent),
-            enabled = !socFromCar,
+            enabled = !uiState.socFromCar,
             modifier = Modifier.padding(top = 16.dp),
         )
-        if (socFromCar) {
+        if (uiState.socFromCar) {
             Fineprint(
                 text = stringResource(R.string.phone_soc_source_car),
             )
         }
 
         CarHardwareStatus(
-            diagnostics = diagnostics,
+            diagnostics = uiState.diagnostics,
             modifier = Modifier.padding(top = 24.dp),
         )
 
         OutlinedButton(
-            onClick = {
-                name = ""; battery = ""; consumption = ""; connectors = emptySet()
-                onVehicleChange(null)
-            },
+            onClick = onClear,
             modifier = Modifier.padding(top = 24.dp),
         ) {
             Text(stringResource(R.string.phone_action_delete_vehicle))
@@ -198,17 +178,4 @@ private fun NumberField(
             )
         }
     }
-}
-
-/** Accept the German decimal comma — otherwise entering "17,8" would fail. */
-private fun String.toPositiveDoubleOrNull(): Double? =
-    replace(',', '.').trim().toDoubleOrNull()?.takeIf { it > 0.0 }
-
-private fun String.toPercentOrNull(): Double? =
-    replace(',', '.').trim().toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
-
-/** Display whole numbers without ".0" — 77 instead of 77.0. */
-private fun Double.asInput(): String {
-    val rounded = kotlin.math.round(this)
-    return if (kotlin.math.abs(this - rounded) < 0.001) rounded.toLong().toString() else toString()
 }
