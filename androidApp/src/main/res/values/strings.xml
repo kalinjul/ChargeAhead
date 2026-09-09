@@ -219,6 +219,11 @@
     <string name="trip_start">Start</string>
     <string name="trip_destination">Ziel</string>
     <string name="trip_maps_sent">An Google Maps übergeben</string>
+    <string name="trip_replan">Neu planen</string>
+    <string name="trip_soc_title">Ladestand jetzt</string>
+    <string name="trip_soc_edit">Ladestand am Start ändern</string>
+    <string name="trip_soc_confirm">Neu planen</string>
+    <string name="trip_soc_cancel">Abbrechen</string>
 
     <!-- Phone: charge now -->
     <string name="cn_title">Jetzt laden</string>

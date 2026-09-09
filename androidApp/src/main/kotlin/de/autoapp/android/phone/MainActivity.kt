@@ -267,12 +267,21 @@ private fun PhoneApp() {
                                 isEstimate = trip.isEstimate,
                                 hasLocationPermission = hasPermission,
                                 selection = trip.selection,
+                                socInput = trip.socInput,
                                 onToggleSelecting = tripViewModel::onSectionSelectingToggled,
                                 onPickPoint = tripViewModel::onSectionPointPicked,
                                 onSectionSent = tripViewModel::onSectionSent,
                                 onOpenStop = { stop -> backStack.add(StopDetail(trip.plan.stops.indexOf(stop))) },
                                 onSendToMaps = ::sendToMaps,
                                 onToggleSave = { tripViewModel.toggleSaved(trip.plan.summaryLine(context)) },
+                                onReplan = {
+                                    planSheetViewModel.onSheetOpened(trip.plan.destination)
+                                    sheet = Sheet.PLAN
+                                },
+                                onEditStartSoc = tripViewModel::onStartSocEditRequested,
+                                onSocInputChange = tripViewModel::onStartSocInputChanged,
+                                onSocConfirm = tripViewModel::onStartSocConfirmed,
+                                onSocDismiss = tripViewModel::onStartSocEditDismissed,
                                 modifier = Modifier.fillMaxSize().padding(padding),
                             )
                         } ?: run { while (backStack.size > 1) backStack.removeAt(backStack.lastIndex) }

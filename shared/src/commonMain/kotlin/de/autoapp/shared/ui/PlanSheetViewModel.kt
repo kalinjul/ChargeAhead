@@ -113,9 +113,16 @@ class PlanSheetViewModel(
     /**
      * The sheet was opened. Resets the entry — a destination typed two drives
      * ago must not sit in the field with the plan button already enabled.
+     *
+     * [destination] pre-fills it instead, which is what re-planning an open
+     * trip needs: same target, different charge level or different filters.
+     * It arrives as a pick rather than as typed text, so no search fires for
+     * a destination that is already decided.
      */
-    fun onSheetOpened() {
-        input.value = InputState()
+    fun onSheetOpened(destination: Destination? = null) {
+        input.value = destination
+            ?.let { InputState(query = it.name, chosen = it) }
+            ?: InputState()
     }
 
     fun onQueryChanged(query: String) {

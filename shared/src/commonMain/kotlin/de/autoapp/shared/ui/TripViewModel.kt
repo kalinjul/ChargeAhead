@@ -16,7 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 /** The planned trip, from "nothing planned yet" to the finished plan. */
 sealed interface TripUiState {
@@ -34,6 +36,8 @@ sealed interface TripUiState {
         val startPosition: LatLon?,
         val startSocPercent: Double?,
         val selection: SectionSelection = SectionSelection(),
+        /** The quick charge-level editor's input; `null` while it is closed. */
+        val socInput: String? = null,
     ) : TripUiState
 }
 
@@ -50,6 +54,16 @@ data class SectionSelection(
 
     fun toggled(): SectionSelection =
         if (selecting) SectionSelection() else SectionSelection(selecting = true)
+
+    /**
+     * Every point that goes to Maps, not just the two the driver tapped —
+     * the stops between them travel as waypoints and must look selected.
+     */
+    fun includes(index: Int): Boolean = when {
+        a == null -> false
+        b == null -> index == a
+        else -> index in minOf(a, b)..maxOf(a, b)
+    }
 
     /** First tap fills [a], the second [b]; a third starts a fresh pair. */
     fun picked(index: Int): SectionSelection = when {
@@ -100,20 +114,22 @@ class TripViewModel(
     private val currentPlan = MutableStateFlow<TripPlan?>(null)
     private val isPlanning = MutableStateFlow(false)
     private val selection = MutableStateFlow(SectionSelection())
+    private val socEditor = MutableStateFlow<String?>(null)
     private val events = MutableStateFlow<TripEvent?>(null)
 
     val event: StateFlow<TripEvent?> = events.asStateFlow()
 
-    // combine tops out at five typed flows — the plan-local trio is
+    // combine tops out at five typed flows — the plan-local ones are
     // pre-combined so every input keeps its type.
     private data class PlanInputs(
         val plan: TripPlan?,
         val planning: Boolean,
         val selection: SectionSelection,
+        val socInput: String?,
     )
 
     val uiState: StateFlow<TripUiState> = combine(
-        combine(currentPlan, isPlanning, selection, ::PlanInputs),
+        combine(currentPlan, isPlanning, selection, socEditor, ::PlanInputs),
         settings.savedRoutes,
         settings.manualSocPercent,
         feature.state,
@@ -129,6 +145,7 @@ class TripViewModel(
                 startPosition = state.position,
                 startSocPercent = socPercent,
                 selection = inputs.selection,
+                socInput = inputs.socInput,
             )
         }
     }.stateIn(viewModelScope, WhileUiSubscribed, TripUiState.NoPlan)
@@ -144,8 +161,9 @@ class TripViewModel(
     fun plan(destination: Destination, socPercent: Double? = null) {
         val from = feature.currentState.position ?: return
         // Same semantics the screen's remember(plan) had: a new plan starts
-        // with a clean selection.
+        // with a clean selection and no half-typed charge level.
         selection.value = SectionSelection()
+        socEditor.value = null
         isPlanning.value = true
         viewModelScope.launch {
             socPercent?.let { settings.setManualSocPercent(it) }
@@ -194,6 +212,37 @@ class TripViewModel(
                 events.value = TripEvent.RouteSaved
             }
         }
+    }
+
+    /**
+     * Opens the quick charge-level entry on the start row, seeded with the
+     * level this plan was made from.
+     */
+    fun onStartSocEditRequested() {
+        viewModelScope.launch {
+            socEditor.value = settings.manualSocPercent.first()?.roundToInt()?.toString().orEmpty()
+        }
+    }
+
+    fun onStartSocInputChanged(input: String) {
+        // Only while the editor is open: a stray keystroke must not reopen it.
+        socEditor.update { open -> open?.let { input.filter(Char::isDigit).take(3) } }
+    }
+
+    fun onStartSocEditDismissed() {
+        socEditor.value = null
+    }
+
+    /**
+     * Re-plans the same destination from the charge level just entered. The
+     * plan's stops depend on it, so correcting the level means planning
+     * again — there is nothing to patch in place.
+     */
+    fun onStartSocConfirmed() {
+        val socPercent = socEditor.value?.toIntOrNull()?.takeIf { it in 1..100 } ?: return
+        val destination = currentPlan.value?.destination ?: return
+        socEditor.value = null
+        plan(destination, socPercent.toDouble())
     }
 
     fun onSectionSelectingToggled() {
