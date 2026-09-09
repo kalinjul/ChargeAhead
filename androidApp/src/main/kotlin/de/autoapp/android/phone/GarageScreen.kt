@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -23,6 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppCard
+import de.autoapp.android.phone.components.AppSlider
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.KeyValueGrid
 import de.autoapp.android.phone.components.SectionLabel
@@ -165,7 +165,7 @@ private fun SelectedVehiclePanel(
                     stringResource(R.string.garage_consumption, consumption.toDouble().oneDecimal()),
                     style = MaterialTheme.typography.titleSmall.tabular,
                 )
-                Slider(
+                AppSlider(
                     value = consumption,
                     onValueChange = { consumption = it },
                     onValueChangeFinished = {
@@ -190,7 +190,7 @@ private fun SelectedVehiclePanel(
                     },
                     style = MaterialTheme.typography.titleSmall.tabular,
                 )
-                Slider(
+                AppSlider(
                     value = soc,
                     onValueChange = { soc = it },
                     onValueChangeFinished = { onSocChange(soc.toDouble()) },

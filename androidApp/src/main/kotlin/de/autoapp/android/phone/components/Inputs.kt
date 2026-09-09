@@ -1,26 +1,32 @@
 package de.autoapp.android.phone.components
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
 import de.autoapp.android.phone.theme.ChargeAheadColors
@@ -89,4 +95,41 @@ fun AppChip(text: String, modifier: Modifier = Modifier, icon: Painter? = null) 
             Text(text, style = MaterialTheme.typography.labelMedium.tabular)
         }
     }
+}
+
+/**
+ * The one slider of this app. Material 3's expressive default thumb is a
+ * 44dp-tall bar — taller than the row it sits in, and it reads as a handle
+ * for something much bigger than a consumption value. This one keeps the
+ * default track and shortens the thumb to the height of a text line.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null,
+) {
+    // The thumb slot draws its own press/hover ripple, so it needs the same
+    // interaction source the slider itself gestures on.
+    val interactionSource = remember { MutableInteractionSource() }
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        onValueChangeFinished = onValueChangeFinished,
+        interactionSource = interactionSource,
+        thumb = {
+            SliderDefaults.Thumb(
+                interactionSource = interactionSource,
+                enabled = enabled,
+                thumbSize = DpSize(width = 4.dp, height = 22.dp),
+            )
+        },
+        valueRange = valueRange,
+    )
 }

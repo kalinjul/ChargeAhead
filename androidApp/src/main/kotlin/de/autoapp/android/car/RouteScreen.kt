@@ -133,7 +133,7 @@ class RouteScreen(
         .setTitle(carContext.getString(R.string.car_route_send_all))
         // IMAGE_TYPE_ICON: only icons declared tintable get recolored by the
         // host — untinted ones stay black on a dark theme.
-        .setImage(icon(R.drawable.ic_send), Row.IMAGE_TYPE_ICON)
+        .setImage(icon(R.drawable.ic_destination), Row.IMAGE_TYPE_ICON)
         .setOnClickListener { sendRouteToMaps(plan) }
         .build()
 

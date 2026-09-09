@@ -71,7 +71,9 @@ fun StationCard(
             priceEuroPerKwh?.let { PriceText(it) }
             onSend?.let {
                 GoButton(
-                    icon = painterResource(R.drawable.ic_send),
+                    // The destination flag, not an arrow: every hand-off to
+                    // Maps in this app carries the same icon.
+                    icon = painterResource(R.drawable.ic_destination),
                     contentDescription = sendContentDescription,
                     onClick = it,
                 )
