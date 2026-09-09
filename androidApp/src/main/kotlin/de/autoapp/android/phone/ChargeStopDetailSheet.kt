@@ -45,27 +45,20 @@ fun ChargeStopDetailSheet(stop: ChargeStop, onDismiss: () -> Unit) {
 
     AppSheet(onDismissRequest = onDismiss) {
         Column {
-            // The network first: that is what the driver decides by — the
-            // place name ("Rewe Markt") says where it stands, not what it
-            // costs or whether the card works there.
-            stop.site.operator?.let { operator ->
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
-                ) {
-                    NetworkDot(operatorColor(operator))
-                    Text(
-                        operator.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            // The network as the headline: that is what the driver decides
+            // by. The site name is not shown at all — it is either the town
+            // again ("Kiel"), which the address line already carries, or an
+            // operator's internal id ("DE*CNT*EP00214*001").
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                NetworkDot(operatorColor(stop.site.operator))
+                Text(
+                    stop.site.operator ?: stop.site.name,
+                    style = MaterialTheme.typography.titleLarge,
+                )
             }
-            Text(
-                stop.site.name,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 5.dp),
-            )
             ChargeStopFormatter.addressLine(stop)?.let {
                 Text(
                     it,

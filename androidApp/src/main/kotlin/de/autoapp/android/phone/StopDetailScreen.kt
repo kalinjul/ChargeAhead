@@ -53,19 +53,18 @@ fun StopDetailScreen(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // The mockup's det-head.
+        // The mockup's det-head, with the network as the headline: the site
+        // name is either the town again ("Kiel"), which the address line
+        // below already carries, or an operator's internal id
+        // ("DE*CNT*EP00214*001"), so it isn't shown at all.
         Column {
-            stop.site.operator?.let { operator ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    NetworkDot(operatorColor(operator))
-                    Text(
-                        operator.uppercase(),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                NetworkDot(operatorColor(stop.site.operator))
+                Text(
+                    stop.site.operator ?: stop.site.name,
+                    style = MaterialTheme.typography.titleLarge,
+                )
             }
-            Text(stop.site.name, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 5.dp))
             stop.site.address?.let { address ->
                 val place = listOfNotNull(address.postalCode, address.town).joinToString(" ")
                 val line = listOfNotNull(address.street, place.takeIf { it.isNotBlank() }).joinToString(", ")
