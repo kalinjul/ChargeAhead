@@ -43,7 +43,7 @@ import kotlin.math.roundToInt
 @Composable
 internal fun DrawerContent(
     uiState: DrawerUiState,
-    onOpen: (Page) -> Unit,
+    onOpen: (PhoneDestination) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
     onLabelStyle: (MapLabelStyle) -> Unit,
 ) {
@@ -81,14 +81,14 @@ internal fun DrawerContent(
                 icon = painterResource(R.drawable.ic_car),
                 label = stringResource(R.string.drawer_car),
                 sublabel = uiState.vehicleName ?: stringResource(R.string.drawer_car_none),
-                onClick = { onOpen(Page.GARAGE) },
+                onClick = { onOpen(Garage) },
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
             PrefRow(
                 icon = painterResource(R.drawable.ic_cardpay),
                 label = stringResource(R.string.drawer_subscriptions),
                 sublabel = stringResource(R.string.drawer_subs_count, uiState.activeTariffCount),
-                onClick = { onOpen(Page.SUBSCRIPTIONS) },
+                onClick = { onOpen(Subscriptions) },
             )
         }
 
@@ -98,7 +98,7 @@ internal fun DrawerContent(
                 icon = painterResource(R.drawable.ic_filter),
                 label = stringResource(R.string.drawer_networks),
                 sublabel = networksSummary(uiState.preferredNetworkCount),
-                onClick = { onOpen(Page.NETWORKS) },
+                onClick = { onOpen(Networks) },
             )
         }
 
@@ -146,7 +146,7 @@ internal fun DrawerContent(
             PrefRow(
                 icon = painterResource(R.drawable.ic_send),
                 label = stringResource(R.string.drawer_cardata),
-                onClick = { onOpen(Page.CAR_DATA) },
+                onClick = { onOpen(CarData) },
             )
         }
 

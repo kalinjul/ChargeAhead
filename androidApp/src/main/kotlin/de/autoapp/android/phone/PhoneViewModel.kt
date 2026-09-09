@@ -8,10 +8,11 @@ import org.koin.androidx.compose.koinViewModel
  * The shared ViewModel for this screen, resolved from `sharedUiModule` and
  * scoped to the activity.
  *
- * Activity scope, not screen scope, because navigation is still the enum
- * page switch in [PhoneApp]: there is no per-destination store to scope to
- * yet. Navigation3 (plans/technical-debts.md) brings one, and only this
- * function changes.
+ * Activity scope, not per-entry scope, although Navigation3 is in place:
+ * the ViewModelStore decorator lives in lifecycle-viewmodel-navigation3,
+ * which rides lifecycle 2.11 — and that needs the compileSdk 37 the SDK
+ * Manager doesn't offer yet (ARCHITECTURE.md §9). When Platform 37 lands,
+ * per-entry scope is one artifact plus one NavDisplay decorator line.
  */
 @Composable
 internal inline fun <reified VM : ViewModel> phoneViewModel(): VM = koinViewModel()
