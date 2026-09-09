@@ -27,7 +27,7 @@ object NetworkCatalog {
 
     val all: List<Network> = listOf(
         Network("shell-recharge", "Shell Recharge",
-            setOf(47L, 156L, 157L, 3392L, 3508L, 3709L),
+            setOf(47L, 156L, 157L, 3392L, 3508L, 3709L, 3964L),
             setOf("shell", "recharge")),
         Network("enel-x", "Enel X",
             setOf(80L),
@@ -917,9 +917,6 @@ object NetworkCatalog {
         Network("ecocharge77", "EcoCharge77",
             setOf(3413L),
             setOf("ecocharge77")),
-        Network("shell-recharge-ar", "Shell Recharge (AR)",
-            setOf(3964L),
-            setOf("shellrechargear")),
         Network("plug-charging", "Plug Charging",
             setOf(3667L),
             setOf("plugcharging")),

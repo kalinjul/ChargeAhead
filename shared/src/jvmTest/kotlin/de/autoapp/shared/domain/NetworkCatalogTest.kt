@@ -19,7 +19,7 @@ class NetworkCatalogTest {
 
     @Test fun shell_groups_its_country_ids() {
         val shell = NetworkCatalog.byKey("shell-recharge")!!
-        assertEquals(setOf(47L, 156L, 157L, 3392L, 3508L, 3709L), shell.operatorIds)
+        assertEquals(setOf(47L, 156L, 157L, 3392L, 3508L, 3709L, 3964L), shell.operatorIds)
     }
 
     @Test fun tesla_groups_both_ids() {
@@ -37,8 +37,8 @@ class NetworkCatalogTest {
         assertEquals(setOf(46L, 3251L, 3359L, 3403L, 3422L, 3814L), eon.operatorIds)
     }
 
-    @Test fun all_has_328_networks() {
-        assertEquals(328, NetworkCatalog.all.size)
+    @Test fun all_has_327_networks() {
+        assertEquals(327, NetworkCatalog.all.size)
     }
 
     @Test fun resolve_by_operator_id_wins() {
