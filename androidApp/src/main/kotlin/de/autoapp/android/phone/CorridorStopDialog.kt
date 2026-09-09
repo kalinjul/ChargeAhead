@@ -31,7 +31,11 @@ fun ChargeStopDetailDialog(stop: ChargeStop, onDismiss: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stop.site.name) },
+        // The network first: that is what the driver decides by — the place
+        // name ("Rewe Markt") says where it stands, not what it costs or
+        // whether the card works there. Without a known operator the place
+        // name is all there is, and it takes the title back.
+        title = { Text(stop.site.operator ?: stop.site.name) },
         text = {
             Column {
                 Text(ChargeStopFormatter.primaryLine(stop))
@@ -41,8 +45,8 @@ fun ChargeStopDetailDialog(stop: ChargeStop, onDismiss: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
-                stop.site.operator?.let {
-                    Text(text = it, modifier = Modifier.padding(top = 8.dp))
+                if (stop.site.operator != null) {
+                    Text(text = stop.site.name, modifier = Modifier.padding(top = 8.dp))
                 }
                 ChargeStopFormatter.addressLine(stop)?.let {
                     Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
