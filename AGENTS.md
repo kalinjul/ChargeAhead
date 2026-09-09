@@ -38,7 +38,12 @@ Dependency direction: `androidApp`/`iosApp` → `shared`. Never the reverse.
   truly needed — not a blind comment on every function. A comment explains
   *why*, not *what*: a hidden constraint, a subtle invariant, a workaround, a
   reason that would surprise a reader. No comment that just retells the line
-  below it.
+  below it. Classes and objects in particular don't get a doc comment by
+  default — a self-explanatory type stays uncommented, even if that means no
+  comment at all. Don't explain the domain ("a tariff is billed differently
+  depending on who charges it") or restate what a property's name and type
+  already say; do note the one field or branch that's a genuine special case
+  (e.g. `Tariff.homeOperatorKey` is `null` only for pure roaming tariffs).
 - **User-visible text: German**, and exclusively from resources
   (`strings.xml`, `Localizable.strings`) — never as a literal in code. This
   is a deliberate product decision for the German market; it does not extend
