@@ -7,14 +7,12 @@ import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.Action
 import androidx.car.app.model.CarColor
-import androidx.car.app.model.CarIcon
 import androidx.car.app.model.Header
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
-import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.lifecycleScope
 import de.autoapp.android.ChargeStopsFeatureProvider
 import de.autoapp.android.R
@@ -121,12 +119,7 @@ class CarHomeScreen(
     private fun favoriteRow(route: SavedRoute): Row {
         val row = Row.Builder()
             .setTitle(route.name)
-            .setImage(
-                CarIcon.Builder(IconCompat.createWithResource(carContext, R.drawable.ic_heart_filled))
-                    .setTint(CarColor.RED)
-                    .build(),
-                Row.IMAGE_TYPE_ICON,
-            )
+            .setImage(icon(R.drawable.ic_heart_filled, CarColor.RED), Row.IMAGE_TYPE_ICON)
             .setBrowsable(true)
             .setOnClickListener {
                 screenManager.push(RouteScreen(carContext, feature, route.destination, route.name))
@@ -134,9 +127,6 @@ class CarHomeScreen(
         route.summary?.let { row.addText(it) }
         return row.build()
     }
-
-    private fun icon(resId: Int): CarIcon =
-        CarIcon.Builder(IconCompat.createWithResource(carContext, resId)).build()
 
     private fun hasLocationPermission(): Boolean =
         carContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
