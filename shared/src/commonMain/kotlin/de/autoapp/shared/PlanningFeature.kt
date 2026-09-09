@@ -98,24 +98,23 @@ class PlanningFeature(
     /**
      * The chargers the map should show for its current viewport.
      *
-     * Filtered by the physical filters (networks, minimum power) — the map
-     * shows what exists and qualifies, not what's cheap; price and distance
-     * are ranking concerns and stay in [chargeNow]. Capped strongest-first:
-     * when a dense city exceeds the cap, the HPC sites are the ones worth
-     * keeping visible.
+     * Fetch stays on the visible viewport (no bigger downloads). Render reads
+     * a padded area from cache — two screens past each edge — so markers don't
+     * pop in/out while panning. Filtered by the physical filters (networks,
+     * minimum power) and capped strongest-first.
      */
     suspend fun chargersIn(viewport: BoundingBox): List<MapCharger> {
         val filters = settings.chargeFilters.first()
         val networks = settings.networks.first()
         val tariffIds = settings.activeTariffIds.first()
 
-        val sites = try {
-            repository.sitesIn(ViewportArea(viewport), networks.selectedNetworks())
-        } catch (failure: Exception) {
-            emptyList()
-        }
+        // Fetch on the strict viewport only — no bigger downloads.
+        runCatching { repository.sitesIn(ViewportArea(viewport), networks.selectedNetworks()) }
 
-        return sites.mapNotNull { site ->
+        // Render from a padded area so markers stay visible while panning.
+        val stored = repository.storedSitesIn(viewport.paddedByViewports(MAP_RENDER_PADDING_VIEWPORTS))
+
+        return stored.mapNotNull { site ->
             if (!networks.allowsSite(site)) return@mapNotNull null
             val power = site.connectors
                 .filter { it.type == ConnectorType.CCS2 || it.type == ConnectorType.TESLA_NACS }
@@ -128,6 +127,17 @@ class PlanningFeature(
             .take(MAX_MAP_CHARGERS)
     }
 
+    private fun BoundingBox.paddedByViewports(factor: Double): BoundingBox {
+        val padLat = (north - south) * factor
+        val padLon = (east - west) * factor
+        return BoundingBox(
+            south = (south - padLat).coerceAtLeast(-90.0),
+            west = west - padLon,
+            north = (north + padLat).coerceAtMost(90.0),
+            east = east + padLon,
+        )
+    }
+
     companion object {
         /** Assumed start charge when the driver never entered one. */
         const val DEFAULT_ASSUMED_SOC_PERCENT = 80.0
@@ -136,6 +146,9 @@ class PlanningFeature(
         const val MIN_FETCH_RADIUS_KM = 15.0
 
         /** More markers than this and the map is unreadable anyway. */
-        const val MAX_MAP_CHARGERS = 200
+        const val MAX_MAP_CHARGERS = 300
+
+        // render two screens past each edge, from cache, so markers don't vanish when you scroll back
+        const val MAP_RENDER_PADDING_VIEWPORTS = 2.0
     }
 }

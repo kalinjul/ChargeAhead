@@ -14,11 +14,13 @@ import de.autoapp.shared.domain.RouteEngine
 import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SiteRepository
+import de.autoapp.shared.domain.ViewportArea
 import de.autoapp.shared.settings.InMemoryKeyValueStorage
 import de.autoapp.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class PlanningFeatureViewportTest {
@@ -39,6 +41,7 @@ class PlanningFeatureViewportTest {
         runBlocking { settings.configure() }
         val repository = object : SiteRepository {
             override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
+            override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = sites
         }
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null
@@ -106,12 +109,70 @@ class PlanningFeatureViewportTest {
 
     @Test
     fun `the cap keeps the strongest sites`() = runBlocking<Unit> {
-        val many = (1..300).map { site("s$it", "EnBW", 150.0 + it) }
+        val many = (1..350).map { site("s$it", "EnBW", 150.0 + it) }
         val feature = featureWith(many) { setChargeFilters(ChargeFilters(minPowerKw = 50.0)) }
 
         val chargers = feature.chargersIn(viewport)
         assertEquals(PlanningFeature.MAX_MAP_CHARGERS, chargers.size)
         assertTrue(chargers.first().maxPowerKw >= chargers.last().maxPowerKw)
-        assertEquals(450.0, chargers.first().maxPowerKw)
+        assertEquals(500.0, chargers.first().maxPowerKw)
+    }
+
+    @Test
+    fun `site outside the viewport but inside the 2-screen pad is included`() = runBlocking<Unit> {
+        // viewport: south=51.0, north=51.4 — height 0.4°, padLat = 0.8°
+        // padded north = 52.2; site at 51.5 is outside viewport but inside pad
+        val outsideSite = ChargeSite(
+            id = "demo:outside",
+            name = "outside",
+            operator = "EnBW",
+            position = LatLon(51.5, 6.7),
+            connectors = listOf(Connector(ConnectorType.CCS2, 150.0, 2)),
+        )
+        val feature = featureWith(listOf(outsideSite)) {
+            setChargeFilters(ChargeFilters(minPowerKw = 50.0))
+        }
+
+        val chargers = feature.chargersIn(viewport)
+        assertNotNull(chargers.find { it.site.id == "demo:outside" }, "Site in the pad must appear on the map")
+    }
+
+    @Test
+    fun `fetch uses the strict viewport, storedSitesIn gets the padded box`() = runBlocking<Unit> {
+        val sitesInStore = listOf(site("cached", "EnBW", 150.0))
+        val fetchedAreas = mutableListOf<de.autoapp.shared.domain.SearchArea>()
+        val storedBoxes = mutableListOf<BoundingBox>()
+
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val repository = object : SiteRepository {
+            override suspend fun sitesIn(area: de.autoapp.shared.domain.SearchArea, networks: List<Network>): List<ChargeSite> {
+                fetchedAreas += area
+                return emptyList()
+            }
+            override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> {
+                storedBoxes += box
+                return sitesInStore
+            }
+        }
+        val engine = object : RouteEngine {
+            override suspend fun route(from: LatLon, to: LatLon): Route? = null
+        }
+        val tariffs = DemoTariffSource()
+        val feature = PlanningFeature(TripPlanner(engine, repository, tariffs), repository, tariffs, settings)
+
+        feature.chargersIn(viewport)
+
+        // fetch is the exact viewport
+        assertTrue(fetchedAreas.isNotEmpty(), "sitesIn must have been called")
+        val fetchBox = (fetchedAreas.first() as de.autoapp.shared.domain.ViewportArea).boundingBox
+        assertEquals(viewport, fetchBox, "fetch must use the strict viewport")
+
+        // stored read is bigger
+        assertTrue(storedBoxes.isNotEmpty(), "storedSitesIn must have been called")
+        val padded = storedBoxes.first()
+        assertTrue(padded.south < viewport.south, "padded box must extend south")
+        assertTrue(padded.north > viewport.north, "padded box must extend north")
+        assertTrue(padded.west < viewport.west, "padded box must extend west")
+        assertTrue(padded.east > viewport.east, "padded box must extend east")
     }
 }

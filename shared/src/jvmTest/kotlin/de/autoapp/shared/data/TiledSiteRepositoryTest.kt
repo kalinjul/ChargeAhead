@@ -13,6 +13,7 @@ import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.PolylineArea
 import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.TimeProvider
+import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.destination
 import de.autoapp.shared.domain.NetworkCatalog
 import kotlinx.coroutines.runBlocking
@@ -230,6 +231,23 @@ class TiledSiteRepositoryTest {
         assertEquals(1, decoded.size)
         assertEquals(ConnectorType.UNKNOWN, decoded.single().type)
         assertEquals(150.0, decoded.single().maxPowerKw)
+    }
+
+    @Test
+    fun storedSitesIn_returnsFromCacheWithoutQuerying() = runBlocking {
+        // Populate the DB via a first repository, then prove a new one on the
+        // same DB reads back via storedSitesIn without touching the source.
+        val db = database()
+        val populatingSource = ControllableSource(listOf(site("a", 0.0, 10.0)))
+        TiledSiteRepository(populatingSource, db, ControllableClock()).sitesIn(area())
+
+        val readingSource = ControllableSource(emptyList())
+        val reader = TiledSiteRepository(readingSource, db, ControllableClock())
+        val box = BoundingBox(south = 48.0, west = 10.0, north = 50.0, east = 13.0)
+        val result = reader.storedSitesIn(box)
+
+        assertEquals(listOf("a"), result.map { it.id })
+        assertEquals(0, readingSource.queries, "storedSitesIn must not query the source")
     }
 
     @Test

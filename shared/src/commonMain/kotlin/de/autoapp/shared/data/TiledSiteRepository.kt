@@ -11,6 +11,7 @@ import de.autoapp.shared.domain.ChargeSiteSource
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.NetworkCatalog
@@ -137,15 +138,11 @@ class TiledSiteRepository(
         )
     }
 
-    private suspend fun readStored(area: SearchArea): List<ChargeSite> {
-        val box = area.boundingBox
-        return dao.sitesInBox(
-            south = box.south,
-            north = box.north,
-            west = box.west,
-            east = box.east,
-        ).map(ChargeSiteEntity::toDomain)
-    }
+    override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> =
+        dao.sitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)
+            .map(ChargeSiteEntity::toDomain)
+
+    private suspend fun readStored(area: SearchArea): List<ChargeSite> = storedSitesIn(area.boundingBox)
 
     companion object {
         /** OpenChargeMap changes slowly — three days, see ARCHITECTURE.md 6. */

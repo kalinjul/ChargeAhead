@@ -65,6 +65,12 @@ interface SiteRepository {
     suspend fun sitesIn(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite>
 
     /**
+     * Returns whatever is already cached in [box] — no fetch, no coverage
+     * check. An empty result is valid; use [sitesIn] when you need fresh data.
+     */
+    suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = emptyList()
+
+    /**
      * Discards the stock so the next access actually queries. A no-op by
      * default — a source with no stock has nothing to discard.
      */

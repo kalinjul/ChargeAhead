@@ -1,6 +1,7 @@
 package de.autoapp.shared.data
 
 import de.autoapp.shared.core.SiteMerger
+import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
@@ -47,6 +48,11 @@ class MergingSiteRepository(
         }
 
         SiteMerger.merge(successful.flatten(), maxDistanceMeters)
+    }
+
+    override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = coroutineScope {
+        val results = repositories.map { repo -> async { runCatching { repo.storedSitesIn(box) } } }.awaitAll()
+        SiteMerger.merge(results.mapNotNull { it.getOrNull() }.flatten(), maxDistanceMeters)
     }
 
     override suspend fun invalidate() {
