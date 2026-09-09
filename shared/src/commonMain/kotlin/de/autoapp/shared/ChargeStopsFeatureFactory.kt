@@ -13,6 +13,7 @@ import de.autoapp.shared.data.OpenChargeMapSource
 import de.autoapp.shared.data.OsrmRouteEngine
 import de.autoapp.shared.data.TiledSiteRepository
 import de.autoapp.shared.data.createHttpClient
+import de.autoapp.shared.data.pruneCache
 import de.autoapp.shared.db.DatabaseFactory
 import de.autoapp.shared.db.createChargeSiteDatabase
 import de.autoapp.shared.domain.ChargeSiteSource
@@ -21,6 +22,10 @@ import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.SoCSource
 import de.autoapp.shared.domain.TimeProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * Assembles the feature from its parts.
@@ -60,6 +65,13 @@ object ChargeStopsFeatureFactory {
         // routing and geocoding don't need one.
         val httpClient = createHttpClient()
         val database = createChargeSiteDatabase(databaseFactory)
+
+        CoroutineScope(Dispatchers.Default).launch {
+            runCatching {
+                val keys = settingsStore.networks.first().preferredOperators
+                pruneCache(database, keys, timeProvider.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
+            }
+        }
 
         // Each source gets its own store and thus its own tile coverage: the
         // official register covers only Germany, OpenChargeMap the whole
