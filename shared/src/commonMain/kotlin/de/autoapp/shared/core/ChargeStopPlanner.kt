@@ -48,7 +48,7 @@ object ChargeStopPlanner {
             // A network the driver doesn't want or can't use isn't a charge
             // stop either. Unlike reachability, this hides rather than marks
             // it: it's the driver's own choice.
-            .filter { networks.allows(it.operator) }
+            .filter { networks.allowsSite(it) }
             .map { site ->
                 val distanceKm = area.origin.distanceKmTo(site.position) * ROUTE_DETOUR_FACTOR
                 ChargeStop(

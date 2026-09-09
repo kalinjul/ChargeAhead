@@ -247,7 +247,7 @@ class TripPlanner(
         if (window.isEmpty()) return null
 
         val preferred = window.filter {
-            it.maxPowerKw >= filters.minPowerKw && networks.allows(it.operator)
+            it.maxPowerKw >= filters.minPowerKw && networks.allowsSite(it.site)
         }
         val pool = preferred.ifEmpty { window }
 

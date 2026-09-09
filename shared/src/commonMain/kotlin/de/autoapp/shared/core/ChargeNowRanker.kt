@@ -71,7 +71,7 @@ object ChargeNowRanker {
 
         val ladder = listOf(
             RelaxedFilter.MIN_POWER to { c: ChargeNowCandidate -> c.maxPowerKw >= filters.minPowerKw },
-            RelaxedFilter.NETWORKS to { c: ChargeNowCandidate -> networks.allows(c.site.operator) },
+            RelaxedFilter.NETWORKS to { c: ChargeNowCandidate -> networks.allowsSite(c.site) },
             RelaxedFilter.MAX_PRICE to { c: ChargeNowCandidate ->
                 (c.quote.best?.euroPerKwh ?: 0.0) <= filters.maxPriceEuroPerKwh
             },

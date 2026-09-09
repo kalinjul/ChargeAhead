@@ -115,7 +115,7 @@ class PlanningFeature(
         }
 
         return sites.mapNotNull { site ->
-            if (!networks.allows(site.operator)) return@mapNotNull null
+            if (!networks.allowsSite(site)) return@mapNotNull null
             val power = site.connectors
                 .filter { it.type == ConnectorType.CCS2 || it.type == ConnectorType.TESLA_NACS }
                 .maxOfOrNull { it.maxPowerKw }
