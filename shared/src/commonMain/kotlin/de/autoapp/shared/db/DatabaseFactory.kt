@@ -18,6 +18,7 @@ fun createChargeSiteDatabase(factory: DatabaseFactory): ChargeSiteDatabase =
     factory.builder()
         .setDriver(BundledSQLiteDriver())
         .setQueryCoroutineContext(Dispatchers.IO)
+        .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
 
 /**

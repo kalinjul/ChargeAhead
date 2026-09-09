@@ -15,7 +15,7 @@ class OperatorCatalogTest {
 
     private suspend fun ChargeSiteDatabase.insert(id: String, operator: String?) {
         chargeSites().upsertSites(
-            listOf(ChargeSiteEntity(id, "test", "Ladepark $id", operator, 48.9, 11.4, "CCS2:150.0:4", null, null, null)),
+            listOf(ChargeSiteEntity(id, "test", "Ladepark $id", operator, null, 48.9, 11.4, "CCS2:150.0:4", null, null, null, 0L)),
         )
     }
 

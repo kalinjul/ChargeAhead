@@ -81,6 +81,7 @@ class TiledSiteRepository(
         val range = Tiles.rangeOf(area.boundingBox)
         val fresh = dao.freshTileCount(
             sourceId = source.id,
+            networkKey = "*",
             minTileLat = range.minTileLat.toLong(),
             maxTileLat = range.maxTileLat.toLong(),
             minTileLon = range.minTileLon.toLong(),
@@ -106,17 +107,20 @@ class TiledSiteRepository(
                     sourceId = source.id,
                     name = site.name,
                     operator = site.operator,
+                    operatorId = site.operatorId,
                     lat = site.position.lat,
                     lon = site.position.lon,
                     connectors = site.connectors.encode(),
                     street = site.address?.street,
                     postalCode = site.address?.postalCode,
                     town = site.address?.town,
+                    fetchedAtMillis = now,
                 )
             },
             tiles = Tiles.covering(fetchArea.boundingBox).map { tile ->
                 TileCoverageEntity(
                     sourceId = source.id,
+                    networkKey = "*", // bridge: per-network stamping arrives in the next task
                     tileLat = tile.lat.toLong(),
                     tileLon = tile.lon.toLong(),
                     fetchedAtMillis = now,
@@ -174,6 +178,7 @@ private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     id = id,
     name = name,
     operator = operator,
+    operatorId = operatorId,
     position = LatLon(lat, lon),
     connectors = connectors.decodeConnectors(),
     address = Address(street, postalCode, town).takeIf { !it.isEmpty },

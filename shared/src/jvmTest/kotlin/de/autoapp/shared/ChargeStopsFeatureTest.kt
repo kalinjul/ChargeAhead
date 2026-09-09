@@ -424,8 +424,8 @@ class ChargeStopsFeatureTest {
         val database = createChargeSiteDatabase(DatabaseFactory())
         database.chargeSites().upsertSites(
             listOf(
-                ChargeSiteEntity("a", "test", "Ladepark a", "IONITY GmbH", 48.9, 11.4, "CCS2:150.0:4", null, null, null),
-                ChargeSiteEntity("b", "test", "Ladepark b", "Ionity", 48.8, 11.3, "CCS2:150.0:4", null, null, null),
+                ChargeSiteEntity("a", "test", "Ladepark a", "IONITY GmbH", null, 48.9, 11.4, "CCS2:150.0:4", null, null, null, 0L),
+                ChargeSiteEntity("b", "test", "Ladepark b", "Ionity", null, 48.8, 11.3, "CCS2:150.0:4", null, null, null, 0L),
             ),
         )
 
