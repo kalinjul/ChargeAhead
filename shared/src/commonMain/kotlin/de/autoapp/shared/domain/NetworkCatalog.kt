@@ -28,7 +28,7 @@ object NetworkCatalog {
     val all: List<Network> = listOf(
         Network("shell-recharge", "Shell Recharge",
             setOf(47L, 156L, 157L, 3392L, 3508L, 3709L, 3964L),
-            setOf("shell", "recharge")),
+            setOf("shell")),
         Network("enel-x", "Enel X",
             setOf(80L),
             setOf("enel", "enelx")),
@@ -133,7 +133,7 @@ object NetworkCatalog {
             setOf("mer", "vattenfall", "incharge")),
         Network("fortum-recharge", "Recharge (Fortum)",
             setOf(198L, 202L),
-            setOf("recharge", "fortum", "charge and drive")),
+            setOf("fortum", "charge and drive")),
         Network("grønn-kontakt", "Grønn Kontakt",
             setOf(3247L),
             setOf("grønn", "gronn", "gronnkontakt")),
@@ -1022,6 +1022,19 @@ object NetworkCatalog {
         site.operatorId?.let { id -> byOperatorId[id]?.let { return it.key } }
         val name = site.operator ?: return null
         val folded = OperatorKey.folded(name)
-        return all.firstOrNull { n -> n.nameKeywords.any { folded.contains(it) } }?.key
+        return all.firstOrNull { n -> n.nameKeywords.any { containsWord(folded, it) } }?.key
+    }
+
+    private fun containsWord(haystack: String, keyword: String): Boolean {
+        var from = 0
+        while (true) {
+            val idx = haystack.indexOf(keyword, from)
+            if (idx < 0) return false
+            val before = idx == 0 || !haystack[idx - 1].isLetterOrDigit()
+            val end = idx + keyword.length
+            val after = end >= haystack.length || !haystack[end].isLetterOrDigit()
+            if (before && after) return true
+            from = idx + 1
+        }
     }
 }

@@ -2,6 +2,7 @@ package de.autoapp.shared.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -76,5 +77,32 @@ class NetworkCatalogTest {
     @Test fun selection_maps_keys_to_networks_and_ignores_unknown() {
         val sel = NetworkCatalog.selection(setOf("enbw", "not-a-network"))
         assertEquals(listOf("enbw"), sel.map { it.key })
+    }
+
+    @Test fun keywords_are_unique() {
+        val seen = mutableMapOf<String, String>()
+        for (n in NetworkCatalog.all) {
+            for (kw in n.nameKeywords) {
+                assertNull(seen.put(kw, n.key), "keyword '$kw' shared by ${n.key} and ${seen[kw]}")
+            }
+        }
+    }
+
+    @Test fun resolve_matches_keyword_as_whole_word() {
+        // "MER GmbH" → folded "mer gmbh"; keyword "mer" is a whole word at the start
+        val site = ChargeSite(
+            id = "x", name = "n", operator = "MER GmbH",
+            position = LatLon(0.0, 0.0), connectors = emptyList(), operatorId = null,
+        )
+        assertEquals("mer", NetworkCatalog.resolve(site))
+    }
+
+    @Test fun resolve_ignores_substring_inside_a_word() {
+        // "Neon Ladestationen" — "eon" (E.ON keyword) appears only inside "neon", not as a whole word
+        val site = ChargeSite(
+            id = "x", name = "n", operator = "Neon Ladestationen",
+            position = LatLon(0.0, 0.0), connectors = emptyList(), operatorId = null,
+        )
+        assertNull(NetworkCatalog.resolve(site))
     }
 }
