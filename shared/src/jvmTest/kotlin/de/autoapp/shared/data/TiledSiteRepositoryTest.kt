@@ -14,7 +14,9 @@ import de.autoapp.shared.domain.PolylineArea
 import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.TimeProvider
 import de.autoapp.shared.domain.destination
+import de.autoapp.shared.domain.NetworkCatalog
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -242,6 +244,58 @@ class TiledSiteRepositoryTest {
         val fetched = requireNotNull(source.lastArea)
         assertTrue(fetched is SectorArea && fetched.halfAngleDeg >= 180.0, "Not a full circle")
         assertEquals(65.0, fetched.radiusKm)
+    }
+
+    private class RecordingSource(override val id: String = "ocm") : ChargeSiteSource {
+        val calls = mutableListOf<List<Network>>()
+        var toReturn: List<ChargeSite> = emptyList()
+        override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            calls += networks; return toReturn
+        }
+    }
+
+    @Test
+    fun adding_a_network_fetches_only_the_missing_one() = runTest {
+        val src = RecordingSource()
+        val repo = TiledSiteRepository(src, database(), ControllableClock(1000L))
+        val enbw = NetworkCatalog.byKey("enbw")!!
+        val ionity = NetworkCatalog.byKey("ionity")!!
+        val a = SectorArea.circle(LatLon(48.1, 11.5), 1.0)
+
+        repo.sitesIn(a, listOf(enbw))
+        repo.sitesIn(a, listOf(enbw, ionity))
+
+        assertEquals(2, src.calls.size)
+        assertEquals(listOf("enbw"), src.calls[0].map { it.key })
+        assertEquals(listOf("ionity"), src.calls[1].map { it.key })
+    }
+
+    @Test
+    fun removing_a_network_fetches_nothing() = runTest {
+        val src = RecordingSource()
+        val repo = TiledSiteRepository(src, database(), ControllableClock(1000L))
+        val enbw = NetworkCatalog.byKey("enbw")!!
+        val ionity = NetworkCatalog.byKey("ionity")!!
+        val a = SectorArea.circle(LatLon(48.1, 11.5), 1.0)
+
+        repo.sitesIn(a, listOf(enbw, ionity))
+        val before = src.calls.size
+        repo.sitesIn(a, listOf(enbw))
+
+        assertEquals(before, src.calls.size)
+    }
+
+    @Test
+    fun unfiltered_uses_sentinel_and_behaves_as_before() = runTest {
+        val src = RecordingSource()
+        val repo = TiledSiteRepository(src, database(), ControllableClock(1000L))
+        val a = SectorArea.circle(LatLon(48.1, 11.5), 1.0)
+
+        repo.sitesIn(a)
+        repo.sitesIn(a)
+
+        assertEquals(1, src.calls.size)
+        assertEquals(emptyList(), src.calls[0])
     }
 
     @Test

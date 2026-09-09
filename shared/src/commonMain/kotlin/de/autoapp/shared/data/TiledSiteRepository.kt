@@ -13,6 +13,7 @@ import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.Network
+import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.TimeProvider
 import kotlinx.coroutines.sync.Mutex
@@ -50,11 +51,12 @@ class TiledSiteRepository(
     private val mutex = Mutex()
 
     override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = mutex.withLock {
-        if (!isCovered(area)) {
-            // Deliberately no rethrow: what's already in the database is
-            // worth more than an error. Only when that's empty too does the
-            // error matter.
-            val fetchFailure = runCatching { fetchAndStore(area, networks) }.exceptionOrNull()
+        val keys = if (networks.isEmpty()) listOf(NetworkCatalog.UNFILTERED) else networks.map { it.key }
+        val missing = keys.filterNot { isCovered(area, it) }
+        if (missing.isNotEmpty()) {
+            val toFetch = if (networks.isEmpty()) emptyList()
+                          else networks.filter { it.key in missing }
+            val fetchFailure = runCatching { fetchAndStore(area, toFetch, missing) }.exceptionOrNull()
             if (fetchFailure != null) {
                 logWarning("Source '${source.id}' did not respond", fetchFailure)
                 val stored = readStored(area)
@@ -71,18 +73,18 @@ class TiledSiteRepository(
     }
 
     /**
-     * Are all tiles in the area fresh?
+     * Are all tiles in the area fresh for the given network key?
      *
      * Counted rather than checked one by one: querying 1500 tiles
      * individually would mean 1500 requests to SQLite. The count is enough,
      * because the primary key rules out duplicates — if the count matches the
      * number of tiles the area has, every one of them is present.
      */
-    private suspend fun isCovered(area: SearchArea): Boolean {
+    private suspend fun isCovered(area: SearchArea, networkKey: String): Boolean {
         val range = Tiles.rangeOf(area.boundingBox)
         val fresh = dao.freshTileCount(
             sourceId = source.id,
-            networkKey = "*",
+            networkKey = networkKey,
             minTileLat = range.minTileLat.toLong(),
             maxTileLat = range.maxTileLat.toLong(),
             minTileLon = range.minTileLon.toLong(),
@@ -93,13 +95,16 @@ class TiledSiteRepository(
         return fresh >= range.count.toLong()
     }
 
-    private suspend fun fetchAndStore(area: SearchArea, networks: List<Network>) {
+    // networks = the Network objects to query the source with (missing ones only).
+    // stampKeys = the network keys to stamp on every covered tile (same as missing keys).
+    private suspend fun fetchAndStore(area: SearchArea, networks: List<Network>, stampKeys: List<String>) {
         // The shape decides what "a bit bigger" looks like — a sector grows
         // into a full circle, a route buffer doesn't grow at all. What gets
         // recorded is exactly the area that was actually fetched.
         val fetchArea = area.prefetchArea(prefetchMarginKm)
         val sites = source.query(fetchArea, networks)
         val now = time.nowMillis()
+        val tiles = Tiles.covering(fetchArea.boundingBox)
 
         dao.recordFetch(
             sites = sites.map { site ->
@@ -118,14 +123,16 @@ class TiledSiteRepository(
                     fetchedAtMillis = now,
                 )
             },
-            tiles = Tiles.covering(fetchArea.boundingBox).map { tile ->
-                TileCoverageEntity(
-                    sourceId = source.id,
-                    networkKey = "*", // bridge: per-network stamping arrives in the next task
-                    tileLat = tile.lat.toLong(),
-                    tileLon = tile.lon.toLong(),
-                    fetchedAtMillis = now,
-                )
+            tiles = stampKeys.flatMap { key ->
+                tiles.map { tile ->
+                    TileCoverageEntity(
+                        sourceId = source.id,
+                        networkKey = key,
+                        tileLat = tile.lat.toLong(),
+                        tileLon = tile.lon.toLong(),
+                        fetchedAtMillis = now,
+                    )
+                }
             },
         )
     }
