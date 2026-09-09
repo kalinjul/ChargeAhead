@@ -144,7 +144,7 @@ disappears exactly where the app fulfills its purpose.
 | Layer | Android | iOS | Shared? |
 |---|---|---|---|
 | Domain model, range, corridor | Kotlin | Kotlin | **yes** |
-| Data sources, HTTP, cache | Ktor + SQLDelight | Ktor + SQLDelight | **yes** |
+| Data sources, HTTP, cache | Ktor + Room (KMP) | Ktor + Room (KMP) | **yes** |
 | Settings, vehicle profile | Kotlin | Kotlin | **yes** |
 | Location | FusedLocationProvider | CLLocationManager | no (port) |
 | Car UI | Car App Library | CarPlay Framework | no |
@@ -170,8 +170,8 @@ autoapp/
 │   │   ├── data/                  Source adapters, cache, merge
 │   │   ├── settings/              Vehicle profile, network preferences
 │   │   └── ui/                    ViewModels + UiState per screen (KMP)
-│   ├── androidMain/               FusedLocation, CarHardware SoC, SQLDelight driver
-│   └── iosMain/                   CLLocationManager, SQLDelight driver
+│   ├── androidMain/               FusedLocation, CarHardware SoC, Room builder
+│   └── iosMain/                   CLLocationManager, Room builder
 ├── androidApp/
 │   ├── car/                       CarAppService, screens, templates
 │   └── phone/                     Compose: onboarding, vehicle, networks, SoC
@@ -454,7 +454,7 @@ with `OCM_LIVE=1` (see AGENTS.md).
 **Why OCM first:** the only source usable immediately via a bounding-box
 query and with international coverage. The BNetzA bulk download is
 unusable in raw form for a mobile app (51 MB CSV) — it gets preprocessed
-server-side or once at first launch into the local SQLDelight DB, not
+server-side or once at first launch into the local Room DB, not
 loaded on every query.
 
 **API keys** don't belong in the repository. Stored via `local.properties`
@@ -465,13 +465,13 @@ extractable.
 
 ### Cache
 
-SQLDelight, tile-based (0.1° grid ≈ 11 km). One timestamp per tile and
+Room (KMP), tile-based (0.1° grid ≈ 11 km). One timestamp per tile and
 source, TTL source-dependent (OCM 3 days, BNetzA 30 days). The app **always**
 reads from the cache and refreshes it in the background — dead zones on the
 highway are the normal case, not the exception, and a list that goes empty
 in a tunnel is useless.
 
-**As of M3:** implemented as `TiledSiteRepository` over SQLDelight. Two
+**As of M3:** implemented as `TiledSiteRepository` over the local database (SQLDelight then, Room since the technical-debt round). Two
 tables, because there are two questions: *what* do we know
 (`chargeSite`) and *for what* do we know that we know it completely
 (`tileCoverage`). Without the second, there'd be no way to tell whether an
@@ -492,7 +492,7 @@ empty list actually unsupported and the UI must be able to say so.
 Verified on-device: after a cold start in airplane mode, the list stays
 unchanged (500 sites, 1617 tiles in the database). That satisfies "network
 query only for new area", but not offline capability: the local store
-doesn't survive the process. The tile-based SQLDelight cache replaces it in
+doesn't survive the process. The tile-based database cache replaces it in
 M3 behind the same interface (`SiteRepository`).
 
 ---
@@ -598,7 +598,7 @@ justified.
 | kotlinx-coroutines | 1.11.0 | |
 | kotlinx-serialization | 1.11.0 | |
 | kotlinx-datetime | 0.8.0 | |
-| SQLDelight | 2.3.2 | from M3 |
+| Room | 2.8.4 | from M3 (SQLDelight until the technical-debt round); KSP 2.3.11, sqlite-bundled 2.6.1 |
 | SKIE | 0.10.14 | from the first Mac build |
 
 ### Three constraints worth knowing

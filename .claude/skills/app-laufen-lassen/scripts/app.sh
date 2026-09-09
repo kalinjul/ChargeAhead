@@ -162,7 +162,7 @@ cmd_state() {
         || echo "(none yet)"
     echo "--- Local store ---"
     local tmp; tmp=$(mktemp)
-    if adb -s "$dev" shell run-as "$PKG" cat "/data/data/$PKG/databases/charge_sites.db" > "$tmp" 2>/dev/null \
+    if adb -s "$dev" shell run-as "$PKG" cat "/data/data/$PKG/databases/charge_sites.room.db" > "$tmp" 2>/dev/null \
        && [[ -s "$tmp" ]]; then
         python3 - "$tmp" <<'PY'
 import sqlite3, sys

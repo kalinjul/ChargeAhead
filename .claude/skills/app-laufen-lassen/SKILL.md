@@ -81,7 +81,7 @@ delete it:
 
 ```bash
 adb -s <serial> shell run-as org.julakali.chargeahead \
-  rm -f /data/data/org.julakali.chargeahead/databases/charge_sites.db
+  rm -f /data/data/org.julakali.chargeahead/databases/charge_sites.room.db
 ```
 
 That's how to check whether a change to the sources actually takes effect —

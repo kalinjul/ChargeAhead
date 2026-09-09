@@ -262,7 +262,7 @@ interface LocationSource   { val updates: Flow<Fix> }
 // result cap must be able to query radially, or exactly the nearest
 // charging stations go missing. See OpenChargeMapSource.query.
 interface ChargeSiteSource { val id: String; suspend fun query(area: SearchArea): List<ChargeSite> }
-// Implemented as TiledSiteRepository (SQLDelight). Always reads from the
+// Implemented as TiledSiteRepository (Room). Always reads from the
 // database; if refilling fails, the existing stock is still returned. Only
 // if that is also empty is the error thrown.
 interface SiteRepository   { suspend fun sitesIn(area: SearchArea): List<ChargeSite>; suspend fun invalidate() }
