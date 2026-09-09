@@ -314,4 +314,13 @@ class ChargeStopFormatterTest {
     fun chargeNowSecondaryLine_withoutPrice_showsPowerAndCount() {
         assertEquals("150 kW · 6 Ladepunkte", ChargeStopFormatter.chargeNowSecondaryLine(candidate()))
     }
+
+    // The labels iOS composes its own rows from — same digits and comma as the car rows.
+    @Test
+    fun labels_forPlatformComposedLines_useGermanFormats() {
+        assertEquals("150 kW", ChargeStopFormatter.powerKwLabel(150.4))
+        assertEquals("0,54 €/kWh", ChargeStopFormatter.pricePerKwhLabel(0.54))
+        assertEquals("0,05 €/kWh", ChargeStopFormatter.pricePerKwhLabel(0.049))
+        assertEquals("25 min", ChargeStopFormatter.minutesLabel(24.6))
+    }
 }

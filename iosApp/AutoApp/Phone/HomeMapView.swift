@@ -250,12 +250,12 @@ struct ChargeNowView: View {
                                 Text("\(index + 1) · \(candidate.site.name)")
                                     .font(.headline)
                                 HStack {
-                                    Text(String(format: "%.1f km · %.0f kW", candidate.distanceKm, candidate.maxPowerKw))
+                                    Text("\(ChargeStopFormatter.shared.distanceLabel(distanceKm: candidate.distanceKm)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: candidate.maxPowerKw))")
                                         .font(.footnote)
                                         .foregroundStyle(.secondary)
                                     Spacer()
                                     if let best = candidate.quote.best {
-                                        Text(String(format: "%.2f €/kWh", best.euroPerKwh))
+                                        Text(ChargeStopFormatter.shared.pricePerKwhLabel(euroPerKwh: best.euroPerKwh))
                                             .font(.subheadline)
                                             .foregroundStyle(.green)
                                     }

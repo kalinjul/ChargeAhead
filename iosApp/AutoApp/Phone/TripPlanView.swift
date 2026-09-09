@@ -43,16 +43,12 @@ struct TripPlanView: View {
                             Text("\(index + 1) · \(stop.site.name)")
                                 .font(.headline)
                             HStack {
-                                Text(String(
-                                    format: "%.0f min · %.0f kW",
-                                    stop.chargeMinutes,
-                                    stop.maxPowerKw
-                                ))
+                                Text("\(ChargeStopFormatter.shared.minutesLabel(minutes: stop.chargeMinutes)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: stop.maxPowerKw))")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                                 Spacer()
                                 if let best = stop.quote.best {
-                                    Text(String(format: "%.2f €/kWh", best.euroPerKwh))
+                                    Text(ChargeStopFormatter.shared.pricePerKwhLabel(euroPerKwh: best.euroPerKwh))
                                         .font(.subheadline)
                                         .foregroundStyle(.green)
                                 }
@@ -107,7 +103,7 @@ struct StopDetailView: View {
                     HStack {
                         Text(price.label)
                         Spacer()
-                        Text(String(format: "%.2f €/kWh", price.euroPerKwh))
+                        Text(ChargeStopFormatter.shared.pricePerKwhLabel(euroPerKwh: price.euroPerKwh))
                             .foregroundStyle(price == stop.quote.best ? .green : .primary)
                     }
                 }

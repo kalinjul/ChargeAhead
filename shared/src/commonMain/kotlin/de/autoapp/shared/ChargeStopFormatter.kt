@@ -131,6 +131,18 @@ object ChargeStopFormatter {
     /** A bare distance for message texts, same rules as the row lines. */
     fun distanceLabel(distanceKm: Double): String = formatDistanceKm(distanceKm)
 
+    // Labels for lines a platform composes itself (the iOS phone rows) — so
+    // both phones show the digits and the comma the car rows already use.
+
+    /** e.g. "150 kW". */
+    fun powerKwLabel(powerKw: Double): String = "${formatPowerKw(powerKw)} kW"
+
+    /** e.g. "0,54 €/kWh". */
+    fun pricePerKwhLabel(euroPerKwh: Double): String = "${formatEuro(euroPerKwh)}/kWh"
+
+    /** e.g. "25 min". */
+    fun minutesLabel(minutes: Double): String = "${formatWholeNumber(minutes)} min"
+
     // --- Car rows: charge now ---
 
     /** e.g. "350 m · EnBW" — meters below one kilometer, the operator when known. */
