@@ -11,8 +11,8 @@ import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
-import de.autoapp.android.ChargeStopsFeatureProvider
 import de.autoapp.android.R
+import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.SoCDiagnostics
 import kotlinx.coroutines.launch
 
@@ -27,9 +27,10 @@ import kotlinx.coroutines.launch
  * The steps run from high to low so the most likely tap (a high charge
  * level right after charging) is on top.
  */
-class SoCScreen(carContext: CarContext) : Screen(carContext) {
-
-    private val settings = ChargeStopsFeatureProvider.settingsStore(carContext)
+class SoCScreen(
+    carContext: CarContext,
+    private val settings: SettingsStore,
+) : Screen(carContext) {
 
     // The current value belongs visibly on screen: without it the driver
     // might re-enter the same value or have to guess what was last set.

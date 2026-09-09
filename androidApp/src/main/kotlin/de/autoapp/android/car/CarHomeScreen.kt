@@ -14,10 +14,10 @@ import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
-import de.autoapp.android.ChargeStopsFeatureProvider
 import de.autoapp.android.R
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.domain.SavedRoute
+import de.autoapp.shared.domain.SettingsStore
 import kotlinx.coroutines.launch
 
 /**
@@ -29,9 +29,8 @@ import kotlinx.coroutines.launch
 class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
+    private val settings: SettingsStore,
 ) : Screen(carContext) {
-
-    private val settings = ChargeStopsFeatureProvider.settingsStore(carContext)
 
     // onGetTemplate() is synchronous and therefore only reads the last
     // remembered state; changes are picked up via invalidate().
@@ -86,7 +85,7 @@ class CarHomeScreen(
         .addEndHeaderAction(
             Action.Builder()
                 .setIcon(icon(R.drawable.ic_battery))
-                .setOnClickListener { screenManager.push(SoCScreen(carContext)) }
+                .setOnClickListener { screenManager.push(SoCScreen(carContext, settings)) }
                 .build(),
         )
         .build()
@@ -106,7 +105,7 @@ class CarHomeScreen(
         .setTitle(carContext.getString(R.string.car_home_enter_destination))
         .setImage(icon(R.drawable.ic_search), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature)) }
+        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature, settings)) }
         .build()
 
     private fun chargeNowRow(): Row = Row.Builder()

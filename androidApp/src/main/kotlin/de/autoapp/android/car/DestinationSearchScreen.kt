@@ -8,10 +8,10 @@ import androidx.car.app.model.Row
 import androidx.car.app.model.SearchTemplate
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
-import de.autoapp.android.ChargeStopsFeatureProvider
 import de.autoapp.android.R
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.domain.Destination
+import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.Place
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -24,9 +24,8 @@ import kotlinx.coroutines.launch
 class DestinationSearchScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
+    private val settings: SettingsStore,
 ) : Screen(carContext) {
-
-    private val settings = ChargeStopsFeatureProvider.settingsStore(carContext)
 
     // onGetTemplate() is synchronous and therefore only reads the last
     // remembered state; changes are picked up via invalidate().
