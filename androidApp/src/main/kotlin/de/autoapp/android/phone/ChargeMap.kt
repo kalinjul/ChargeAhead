@@ -51,6 +51,7 @@ import de.autoapp.android.BuildConfig
 import de.autoapp.android.R
 import de.autoapp.shared.domain.ChargeSpeed
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.OperatorShortName
 
 /**
  * The real map (decision 2026-09-07: Google Maps Compose — the key was
@@ -138,7 +139,9 @@ fun HomeGoogleMap(
             modifier = Modifier.fillMaxSize(),
         ) {
             chargers.forEach { charger ->
-                val label = charger.quote.best?.let { "${it.euroPerKwh.twoDecimals()} €" }
+                val price = charger.quote.best?.let { "${it.euroPerKwh.twoDecimals()} €" }
+                val operator = OperatorShortName.of(charger.site.operator)
+                val label = listOfNotNull(operator, price).joinToString(" · ").ifEmpty { null }
                 val speed = ChargeSpeed.of(charger.maxPowerKw)
                 key(charger.site.id) {
                     MarkerComposable(
@@ -216,6 +219,10 @@ fun HomeGoogleMap(
  * 2026-09-07), while speed is the one property the driver compares between
  * two pins at map scale. The bolt count repeats that ordering without color,
  * for anyone who cannot tell the red from the green one.
+ *
+ * The label carries what is known and short enough to fit — the network, and
+ * for now the price. Sites whose operator isn't one of the well-known
+ * networks show their bolts alone; see [OperatorShortName].
  */
 @Composable
 private fun ChargerPill(speed: ChargeSpeed, label: String?) {
