@@ -69,6 +69,10 @@ kotlin {
             // public surface — androidApp resolves them with viewModel<T>()
             // and needs ViewModel and its factory types on its own classpath.
             api(libs.androidx.lifecycle.viewmodel)
+            // api, not implementation: sharedUiModule(): Module is public
+            // surface — the app passes it to startKoin and needs the type.
+            api(libs.koin.core)
+            implementation(libs.koin.core.viewmodel)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
             implementation(libs.ktor.client.core)
