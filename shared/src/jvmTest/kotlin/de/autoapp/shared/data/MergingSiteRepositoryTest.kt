@@ -5,6 +5,7 @@ import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Network
+import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.SiteRepository
@@ -33,6 +34,19 @@ class MergingSiteRepositoryTest {
 
         override suspend fun invalidate() {
             invalidations++
+        }
+    }
+
+    private class RecordingSiteRepository(private val sites: List<ChargeSite> = emptyList()) : SiteRepository {
+        var recordedNetworks: List<Network>? = null
+            private set
+
+        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            recordedNetworks = networks
+            return sites
+        }
+
+        override suspend fun invalidate() {
         }
     }
 
@@ -121,5 +135,20 @@ class MergingSiteRepositoryTest {
             thrown = true
         }
         assertTrue(thrown)
+    }
+
+    @Test
+    fun theMergerHandsTheSameNetworksToEverySource() = runBlocking {
+        val source1 = RecordingSiteRepository()
+        val source2 = RecordingSiteRepository()
+
+        // Get test data: enbw network from catalog
+        val enbw = NetworkCatalog.byKey("enbw")!!
+        val networks = listOf(enbw)
+
+        MergingSiteRepository(listOf(source1, source2)).sitesIn(area, networks)
+
+        assertEquals(networks, source1.recordedNetworks)
+        assertEquals(networks, source2.recordedNetworks)
     }
 }
