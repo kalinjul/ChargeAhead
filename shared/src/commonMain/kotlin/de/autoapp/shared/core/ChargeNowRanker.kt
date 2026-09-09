@@ -107,6 +107,4 @@ object ChargeNowRanker {
     // Far above any real tariff: unpriced sites sink below every priced one
     // but still order by distance among themselves.
     private const val NO_PRICE_EURO_PER_KWH = 10.0
-
-    private const val MIN_DC_POWER_KW = 50.0
 }

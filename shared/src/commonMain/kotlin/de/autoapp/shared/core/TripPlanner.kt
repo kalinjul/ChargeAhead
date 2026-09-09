@@ -329,8 +329,6 @@ class TripPlanner(
         /** A destination this close to the range edge doesn't need a final stop. */
         const val ARRIVAL_HEADROOM_KM = 0.0
 
-        const val MIN_DC_POWER_KW = 50.0
-
         const val AVERAGE_CURVE_FACTOR = 0.65
 
         const val MAX_STOPS = 8
