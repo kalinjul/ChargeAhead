@@ -73,30 +73,25 @@ class PersistentSettingsStore(
     }
 
     private fun writeGarage(vehicles: List<VehicleProfile>) {
-        storage.putString(
+        storage.putJson(
             KEY_GARAGE,
-            vehicles.takeIf { it.isNotEmpty() }?.let { list ->
-                json.encodeToString(
-                    list.map {
-                        StoredVehicle(
-                            name = it.displayName,
-                            batteryKwh = it.usableBatteryKwh,
-                            consumption = it.consumptionKwhPer100Km,
-                            connectors = it.acceptedConnectors.map(ConnectorType::name),
-                            dcPeakKw = it.dcPeakPowerKw,
-                        )
-                    },
+            vehicles.takeIf { it.isNotEmpty() }?.map {
+                StoredVehicle(
+                    name = it.displayName,
+                    batteryKwh = it.usableBatteryKwh,
+                    consumption = it.consumptionKwhPer100Km,
+                    connectors = it.acceptedConnectors.map(ConnectorType::name),
+                    dcPeakKw = it.dcPeakPowerKw,
                 )
             },
         )
         mutableVehicles.value = vehicles
     }
 
-    private fun readGarage(): List<VehicleProfile> {
-        val raw = storage.getStringOrNull(KEY_GARAGE) ?: return emptyList()
-        val stored = runCatching { json.decodeFromString<List<StoredVehicle>>(raw) }.getOrElse { return emptyList() }
-        return stored.mapNotNull { it.toProfileOrNull() }
-    }
+    private fun readGarage(): List<VehicleProfile> =
+        storage.getJson<List<StoredVehicle>>(KEY_GARAGE)
+            .orEmpty()
+            .mapNotNull { it.toProfileOrNull() }
 
     private val mutableDestination = MutableStateFlow(readDestinations().firstOrNull { it.current }?.toDomain())
     override val destination: StateFlow<Destination?> = mutableDestination.asStateFlow()
@@ -115,13 +110,10 @@ class PersistentSettingsStore(
                 .take(MAX_RECENT_DESTINATIONS)
         }
 
-        storage.putString(
+        storage.putJson(
             KEY_DESTINATIONS,
-            updated.takeIf { it.isNotEmpty() }?.let { list ->
-                json.encodeToString(
-                    list.map { StoredDestination(it.name, it.position.lat, it.position.lon, it == destination) },
-                )
-            },
+            updated.takeIf { it.isNotEmpty() }
+                ?.map { StoredDestination(it.name, it.position.lat, it.position.lon, it == destination) },
         )
         mutableRecent.value = updated
         mutableDestination.value = destination
@@ -132,9 +124,9 @@ class PersistentSettingsStore(
 
     override suspend fun setNetworks(preferences: NetworkPreferences) {
         storage.putString(KEY_ONLY_PREFERRED, preferences.onlyPreferred.toString())
-        storage.putString(
+        storage.putJson(
             KEY_PREFERRED_NETWORKS,
-            preferences.preferredOperators.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it.toList()) },
+            preferences.preferredOperators.takeIf { it.isNotEmpty() }?.toList(),
         )
         mutableNetworks.value = preferences
     }
@@ -142,10 +134,7 @@ class PersistentSettingsStore(
     private fun readNetworks(): NetworkPreferences {
         val onlyPreferred = storage.getStringOrNull(KEY_ONLY_PREFERRED)?.toBooleanStrictOrNull()
             ?: NetworkPreferences().onlyPreferred
-        val preferred = storage.getStringOrNull(KEY_PREFERRED_NETWORKS)
-            ?.let { raw -> runCatching { json.decodeFromString<List<String>>(raw) }.getOrNull() }
-            ?.toSet()
-            .orEmpty()
+        val preferred = storage.getJson<List<String>>(KEY_PREFERRED_NETWORKS)?.toSet().orEmpty()
         return NetworkPreferences(onlyPreferred, preferred)
     }
 
@@ -153,16 +142,15 @@ class PersistentSettingsStore(
     override val chargeFilters: StateFlow<ChargeFilters> = mutableFilters.asStateFlow()
 
     override suspend fun setChargeFilters(filters: ChargeFilters) {
-        storage.putString(
+        storage.putJson(
             KEY_CHARGE_FILTERS,
-            json.encodeToString(StoredFilters(filters.minPowerKw, filters.maxPriceEuroPerKwh, filters.maxDistanceKm)),
+            StoredFilters(filters.minPowerKw, filters.maxPriceEuroPerKwh, filters.maxDistanceKm),
         )
         mutableFilters.value = filters
     }
 
     private fun readFilters(): ChargeFilters {
-        val raw = storage.getStringOrNull(KEY_CHARGE_FILTERS) ?: return ChargeFilters()
-        val stored = runCatching { json.decodeFromString<StoredFilters>(raw) }.getOrNull() ?: return ChargeFilters()
+        val stored = storage.getJson<StoredFilters>(KEY_CHARGE_FILTERS) ?: return ChargeFilters()
         return ChargeFilters(stored.minPowerKw, stored.maxPrice, stored.maxDistanceKm)
     }
 
@@ -170,18 +158,12 @@ class PersistentSettingsStore(
     override val activeTariffIds: StateFlow<Set<String>> = mutableTariffs.asStateFlow()
 
     override suspend fun setActiveTariffIds(ids: Set<String>) {
-        storage.putString(
-            KEY_ACTIVE_TARIFFS,
-            ids.takeIf { it.isNotEmpty() }?.let { json.encodeToString(it.toList()) },
-        )
+        storage.putJson(KEY_ACTIVE_TARIFFS, ids.takeIf { it.isNotEmpty() }?.toList())
         mutableTariffs.value = ids
     }
 
     private fun readTariffIds(): Set<String> =
-        storage.getStringOrNull(KEY_ACTIVE_TARIFFS)
-            ?.let { raw -> runCatching { json.decodeFromString<List<String>>(raw) }.getOrNull() }
-            ?.toSet()
-            .orEmpty()
+        storage.getJson<List<String>>(KEY_ACTIVE_TARIFFS)?.toSet().orEmpty()
 
     private val mutableSavedRoutes = MutableStateFlow(readSavedRoutes())
     override val savedRoutes: StateFlow<List<SavedRoute>> = mutableSavedRoutes.asStateFlow()
@@ -199,51 +181,41 @@ class PersistentSettingsStore(
     }
 
     private fun writeSavedRoutes(routes: List<SavedRoute>) {
-        storage.putString(
+        storage.putJson(
             KEY_SAVED_ROUTES,
-            routes.takeIf { it.isNotEmpty() }?.let { list ->
-                json.encodeToString(
-                    list.map {
-                        StoredSavedRoute(
-                            id = it.id,
-                            name = it.name,
-                            destName = it.destination.name,
-                            lat = it.destination.position.lat,
-                            lon = it.destination.position.lon,
-                            summary = it.summary,
-                        )
-                    },
+            routes.takeIf { it.isNotEmpty() }?.map {
+                StoredSavedRoute(
+                    id = it.id,
+                    name = it.name,
+                    destName = it.destination.name,
+                    lat = it.destination.position.lat,
+                    lon = it.destination.position.lon,
+                    summary = it.summary,
                 )
             },
         )
         mutableSavedRoutes.value = routes
     }
 
-    private fun readSavedRoutes(): List<SavedRoute> {
-        val raw = storage.getStringOrNull(KEY_SAVED_ROUTES) ?: return emptyList()
-        val stored = runCatching { json.decodeFromString<List<StoredSavedRoute>>(raw) }.getOrElse { return emptyList() }
-        return stored.map {
-            SavedRoute(it.id, it.name, Destination(it.destName, LatLon(it.lat, it.lon)), it.summary)
-        }
-    }
+    private fun readSavedRoutes(): List<SavedRoute> =
+        storage.getJson<List<StoredSavedRoute>>(KEY_SAVED_ROUTES)
+            .orEmpty()
+            .map { SavedRoute(it.id, it.name, Destination(it.destName, LatLon(it.lat, it.lon)), it.summary) }
 
     private val mutableCarData = MutableStateFlow(readCarData())
     override val carDebugData: StateFlow<List<CarDataPoint>> = mutableCarData.asStateFlow()
 
     override suspend fun recordCarDataPoint(point: CarDataPoint) {
         val updated = mutableCarData.value.filterNot { it.kind == point.kind } + point
-        storage.putString(
+        storage.putJson(
             KEY_CAR_DEBUG,
-            json.encodeToString(
-                updated.map { StoredCarData(it.kind.name, it.status.name, it.value, it.observedAtMillis) },
-            ),
+            updated.map { StoredCarData(it.kind.name, it.status.name, it.value, it.observedAtMillis) },
         )
         mutableCarData.value = updated
     }
 
     private fun readCarData(): List<CarDataPoint> {
-        val raw = storage.getStringOrNull(KEY_CAR_DEBUG) ?: return emptyList()
-        val stored = runCatching { json.decodeFromString<List<StoredCarData>>(raw) }.getOrElse { return emptyList() }
+        val stored = storage.getJson<List<StoredCarData>>(KEY_CAR_DEBUG).orEmpty()
         return stored.mapNotNull {
             // Entries from a newer app version are skipped, not guessed at.
             val kind = CarDataKind.entries.firstOrNull { k -> k.name == it.kind } ?: return@mapNotNull null
@@ -269,22 +241,19 @@ class PersistentSettingsStore(
     override val socDiagnostics: StateFlow<SoCDiagnostics?> = mutableDiagnostics.asStateFlow()
 
     override suspend fun recordSoCDiagnostics(diagnostics: SoCDiagnostics) {
-        storage.putString(
+        storage.putJson(
             KEY_SOC_DIAGNOSTICS,
-            json.encodeToString(
-                StoredDiagnostics(
-                    checkedAtMillis = diagnostics.checkedAtMillis,
-                    outcome = diagnostics.outcome.name,
-                    detail = diagnostics.detail,
-                ),
+            StoredDiagnostics(
+                checkedAtMillis = diagnostics.checkedAtMillis,
+                outcome = diagnostics.outcome.name,
+                detail = diagnostics.detail,
             ),
         )
         mutableDiagnostics.value = diagnostics
     }
 
     private fun readDiagnostics(): SoCDiagnostics? {
-        val raw = storage.getStringOrNull(KEY_SOC_DIAGNOSTICS) ?: return null
-        val stored = runCatching { json.decodeFromString<StoredDiagnostics>(raw) }.getOrNull() ?: return null
+        val stored = storage.getJson<StoredDiagnostics>(KEY_SOC_DIAGNOSTICS) ?: return null
         // An unrecognized outcome means it was written by a newer version.
         // Better to show nothing than something wrong.
         val outcome = SoCDiagnostics.Outcome.entries.firstOrNull { it.name == stored.outcome } ?: return null
@@ -327,11 +296,8 @@ class PersistentSettingsStore(
      * Destinations as JSON rather than hand-rolled: a place name may contain
      * any character, including whatever would have been chosen as a delimiter.
      */
-    private fun readDestinations(): List<StoredDestination> {
-        val raw = storage.getStringOrNull(KEY_DESTINATIONS) ?: return emptyList()
-        // A corrupted history only costs the history, not the app.
-        return runCatching { json.decodeFromString<List<StoredDestination>>(raw) }.getOrElse { emptyList() }
-    }
+    private fun readDestinations(): List<StoredDestination> =
+        storage.getJson<List<StoredDestination>>(KEY_DESTINATIONS).orEmpty()
 
     private fun readManualSoc(): Double? =
         storage.getStringOrNull(KEY_MANUAL_SOC)?.toDoubleOrNull()?.coerceIn(0.0, 100.0)
@@ -403,8 +369,6 @@ class PersistentSettingsStore(
     }
 
     private companion object {
-        val json = Json { ignoreUnknownKeys = true }
-
         const val MAX_RECENT_DESTINATIONS = 8
 
         const val KEY_DESTINATIONS = "route.destinations"
@@ -425,3 +389,13 @@ class PersistentSettingsStore(
         const val KEY_CAR_DEBUG = "car.debugData"
     }
 }
+
+private val json = Json { ignoreUnknownKeys = true }
+
+private inline fun <reified T> KeyValueStorage.putJson(key: String, value: T?) {
+    putString(key, value?.let { json.encodeToString(it) })
+}
+
+/** null on a missing key or a corrupt payload — the caller supplies the default. */
+private inline fun <reified T> KeyValueStorage.getJson(key: String): T? =
+    getStringOrNull(key)?.let { raw -> runCatching { json.decodeFromString<T>(raw) }.getOrNull() }
