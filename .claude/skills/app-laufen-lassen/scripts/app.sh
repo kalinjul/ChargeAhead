@@ -154,6 +154,15 @@ cmd_log() {
         | grep "W autoapp " || echo "(no app warnings)"
 }
 
+# Copies one file out of the app's private data directory. An empty result
+# counts as failure: 'run-as cat' on a missing file writes to stderr, which is
+# swallowed here, and the exit status alone would not tell the two apart.
+pull_app_file() {
+    local dev=$1 relative=$2 target=$3
+    adb -s "$dev" shell run-as "$PKG" cat "/data/data/$PKG/$relative" > "$target" 2>/dev/null \
+        && [[ -s "$target" ]]
+}
+
 cmd_state() {
     local dev; dev=$(pick_device)
     echo "--- Settings ---"
@@ -161,21 +170,34 @@ cmd_state() {
         2>/dev/null | grep -oE '<string name="[^"]*">[^<]*' | sed 's/<string name="//;s/">/ = /' \
         || echo "(none yet)"
     echo "--- Local store ---"
-    local tmp; tmp=$(mktemp)
-    if adb -s "$dev" shell run-as "$PKG" cat "/data/data/$PKG/databases/charge_sites.room.db" > "$tmp" 2>/dev/null \
-       && [[ -s "$tmp" ]]; then
-        python3 - "$tmp" <<'PY'
+    # Room runs in WAL mode: while the app is running, the .db file is a stub
+    # of a few kilobytes and every row sits in the -wal beside it. Pulling the
+    # .db alone therefore yields a database without a single table. The files
+    # have to land in one directory under their original names, so sqlite
+    # finds the log and replays it on open.
+    local dir; dir=$(mktemp -d)
+    local db="$dir/charge_sites.room.db"
+    if pull_app_file "$dev" "databases/charge_sites.room.db" "$db"; then
+        pull_app_file "$dev" "databases/charge_sites.room.db-wal" "$db-wal" || rm -f "$db-wal"
+        pull_app_file "$dev" "databases/charge_sites.room.db-shm" "$db-shm" || rm -f "$db-shm"
+        python3 - "$db" <<'PY'
 import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
-for row in c.execute("select sourceId, count(*) from chargeSite group by sourceId"):
-    print(f"  {row[0]}: {row[1]} sites")
-for row in c.execute("select sourceId, count(*) from tileCoverage group by sourceId"):
-    print(f"  {row[0]}: {row[1]} tiles")
+
+try:
+    c = sqlite3.connect(sys.argv[1])
+    for row in c.execute("select sourceId, count(*) from chargeSite group by sourceId"):
+        print(f"  {row[0]}: {row[1]} sites")
+    for row in c.execute("select sourceId, count(*) from tileCoverage group by sourceId"):
+        print(f"  {row[0]}: {row[1]} tiles")
+except sqlite3.Error as error:
+    # A copy taken mid-write can be unreadable. That is worth one line, not a
+    # traceback that buries the settings printed above it.
+    print(f"  (database unreadable: {error})")
 PY
     else
         echo "  (no database yet)"
     fi
-    rm -f "$tmp"
+    rm -rf "$dir"
 }
 
 case "${1:-}" in
