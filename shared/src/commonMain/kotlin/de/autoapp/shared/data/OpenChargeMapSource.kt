@@ -104,6 +104,7 @@ class OpenChargeMapSource(
             id = "$SOURCE_ID:$id",
             name = name,
             operator = operatorTitleOf(poi),
+            operatorId = poi.operatorId,
             position = LatLon(latitude, longitude),
             connectors = poi.connections.orEmpty().mapNotNull(::toConnector),
             address = Address(

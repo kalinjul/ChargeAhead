@@ -306,4 +306,13 @@ class OpenChargeMapSourceTest {
     fun emptyResponse_resultsInEmptyList() = runBlocking {
         assertTrue(sourceRespondingWith("[]").query(area).isEmpty())
     }
+
+    @Test
+    fun carries_operator_id() = runBlocking {
+        val json = """[{"ID":1,"OperatorID":86,"OperatorInfo":{"Title":"EnBW"},
+            "AddressInfo":{"Latitude":48.1,"Longitude":11.5},"Connections":[]}]"""
+        val source = sourceRespondingWith(json)
+        val sites = source.query(area)
+        assertEquals(86L, sites.single().operatorId)
+    }
 }

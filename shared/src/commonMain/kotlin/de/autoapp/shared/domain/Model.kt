@@ -46,6 +46,7 @@ data class ChargeSite(
     val id: String,
     val name: String,
     val operator: String?,
+    val operatorId: Long? = null,
     val position: LatLon,
     val connectors: List<Connector>,
     val address: Address? = null,
