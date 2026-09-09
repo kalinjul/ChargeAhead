@@ -11,13 +11,17 @@ import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Reachability
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.distanceKmTo
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
 
 /**
  * The map screen: where the driver is, which chargers are in view, and
@@ -44,6 +48,7 @@ data class HomeUiState(
  * and projects its state. Everything the map adds on top (the markers for
  * the current viewport, the tapped charger) is owned here.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val feature: ChargeStopsFeature,
     private val planning: PlanningFeature,
@@ -52,11 +57,8 @@ class HomeViewModel(
 
     private val map = MutableStateFlow(MapState())
 
-    // Panning fires viewport changes far faster than the query answers.
-    // Without cancelling the previous one, a slow early response can land
-    // after a fast later one and put markers from a different part of the
-    // country on the map.
-    private var chargersJob: Job? = null
+    /** The section of the world the map shows; `null` = zoomed out past the marker threshold. */
+    private val viewport = MutableStateFlow<BoundingBox?>(null)
 
     val uiState: StateFlow<HomeUiState> = combine(
         feature.state,
@@ -75,6 +77,26 @@ class HomeViewModel(
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
 
+    init {
+        // The marker query reads the filters, so the query has to re-run when
+        // they change — not only when the driver happens to pan. The minimum
+        // power is picked out of the filters on purpose: price and distance
+        // are ranking concerns that the map does not apply, and the drawer's
+        // sliders would otherwise fire a query per pixel dragged.
+        combine(
+            viewport,
+            settings.chargeFilters.map { it.minPowerKw }.distinctUntilChanged(),
+            settings.networks,
+        ) { viewport, _, _ -> viewport }
+            // Panning fires viewport changes far faster than the query
+            // answers. Without cancelling the previous one, a slow early
+            // response can land after a fast later one and put markers from a
+            // different part of the country on the map.
+            .mapLatest { viewport -> viewport?.let { planning.chargersIn(it) }.orEmpty() }
+            .onEach { chargers -> map.update { it.copy(chargers = chargers) } }
+            .launchIn(viewModelScope)
+    }
+
     /** Location permission granted: the pipeline may run. Calling it twice is harmless. */
     fun onLocationPermissionGranted() {
         feature.start()
@@ -82,18 +104,10 @@ class HomeViewModel(
 
     /** `null` means: zoomed out past the point where markers are useful. */
     fun onViewportChanged(viewport: BoundingBox?) {
-        chargersJob?.cancel()
-        if (viewport == null) {
-            map.update { it.copy(chargers = emptyList(), belowMinZoom = true) }
-            return
-        }
-        // Cleared before the query, not after: otherwise the zoom hint stays
+        // Set before the query runs, not after: otherwise the zoom hint stays
         // up for the whole request although the map is long since close enough.
-        map.update { it.copy(belowMinZoom = false) }
-        chargersJob = viewModelScope.launch {
-            val chargers = planning.chargersIn(viewport)
-            map.update { it.copy(chargers = chargers) }
-        }
+        map.update { it.copy(belowMinZoom = viewport == null) }
+        this.viewport.value = viewport
     }
 
     /**
