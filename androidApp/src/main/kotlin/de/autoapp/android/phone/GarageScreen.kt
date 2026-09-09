@@ -208,8 +208,3 @@ private fun SelectedVehiclePanel(
 
 private fun presetConsumptionFor(displayName: String): Double? =
     VehicleCatalog.all.firstOrNull { it.name == displayName }?.consumptionKwhPer100Km
-
-internal fun Double.oneDecimal(): String {
-    val rounded = (this * 10).roundToInt() / 10.0
-    return if (rounded == rounded.toLong().toDouble()) rounded.toLong().toString() else rounded.toString()
-}
