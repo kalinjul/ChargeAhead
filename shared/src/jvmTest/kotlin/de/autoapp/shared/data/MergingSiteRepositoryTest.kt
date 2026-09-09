@@ -4,6 +4,7 @@ import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.SiteRepository
@@ -25,7 +26,7 @@ class MergingSiteRepositoryTest {
         var invalidations = 0
             private set
 
-        override suspend fun sitesIn(area: SearchArea): List<ChargeSite> {
+        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             queries++
             return sites
         }
@@ -36,7 +37,7 @@ class MergingSiteRepositoryTest {
     }
 
     private class BrokenSiteRepository(private val reason: String = "No signal") : SiteRepository {
-        override suspend fun sitesIn(area: SearchArea): List<ChargeSite> =
+        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> =
             throw IllegalStateException(reason)
     }
 

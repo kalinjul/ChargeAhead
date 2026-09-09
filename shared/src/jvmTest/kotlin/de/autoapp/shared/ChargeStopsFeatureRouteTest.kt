@@ -10,6 +10,7 @@ import de.autoapp.shared.domain.Place
 import de.autoapp.shared.domain.PolylineArea
 import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.SiteRepository
@@ -49,7 +50,7 @@ class ChargeStopsFeatureRouteTest {
         var lastArea: SearchArea? = null
             private set
 
-        override suspend fun sitesIn(area: SearchArea): List<ChargeSite> {
+        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             lastArea = area
             return emptyList()
         }

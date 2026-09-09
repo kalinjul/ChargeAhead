@@ -6,6 +6,7 @@ import de.autoapp.shared.db.createChargeSiteDatabase
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ChargeSiteSource
 import de.autoapp.shared.domain.Connector
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.SearchArea
@@ -37,7 +38,7 @@ class TiledSiteRepositoryTest {
         var lastArea: SearchArea? = null
             private set
 
-        override suspend fun query(area: SearchArea): List<ChargeSite> {
+        override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             queries++
             lastArea = area
             if (broken) throw IllegalStateException("Dead zone")

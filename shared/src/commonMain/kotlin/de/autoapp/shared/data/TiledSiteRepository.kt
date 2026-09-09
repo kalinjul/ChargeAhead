@@ -12,6 +12,7 @@ import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.SearchArea
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.TimeProvider
 import kotlinx.coroutines.sync.Mutex
@@ -48,12 +49,12 @@ class TiledSiteRepository(
     // Two concurrent fetches of the same area would be pure waste.
     private val mutex = Mutex()
 
-    override suspend fun sitesIn(area: SearchArea): List<ChargeSite> = mutex.withLock {
+    override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = mutex.withLock {
         if (!isCovered(area)) {
             // Deliberately no rethrow: what's already in the database is
             // worth more than an error. Only when that's empty too does the
             // error matter.
-            val fetchFailure = runCatching { fetchAndStore(area) }.exceptionOrNull()
+            val fetchFailure = runCatching { fetchAndStore(area, networks) }.exceptionOrNull()
             if (fetchFailure != null) {
                 logWarning("Source '${source.id}' did not respond", fetchFailure)
                 val stored = readStored(area)
@@ -92,12 +93,12 @@ class TiledSiteRepository(
         return fresh >= range.count.toLong()
     }
 
-    private suspend fun fetchAndStore(area: SearchArea) {
+    private suspend fun fetchAndStore(area: SearchArea, networks: List<Network>) {
         // The shape decides what "a bit bigger" looks like — a sector grows
         // into a full circle, a route buffer doesn't grow at all. What gets
         // recorded is exactly the area that was actually fetched.
         val fetchArea = area.prefetchArea(prefetchMarginKm)
-        val sites = source.query(fetchArea)
+        val sites = source.query(fetchArea, networks)
         val now = time.nowMillis()
 
         dao.recordFetch(

@@ -11,6 +11,7 @@ import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.settings.InMemoryKeyValueStorage
@@ -37,7 +38,7 @@ class PlanningFeatureViewportTest {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
         runBlocking { settings.configure() }
         val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea): List<ChargeSite> = sites
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
         }
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null

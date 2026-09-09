@@ -3,6 +3,7 @@ package de.autoapp.shared.ui
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LocationSource
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.SiteRepository
@@ -135,7 +136,7 @@ class PhoneViewModelTest {
             override val updates: Flow<Fix> = emptyFlow()
         },
         repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea): List<ChargeSite> = emptyList()
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = emptyList()
         },
         dispatcher = Dispatchers.Unconfined,
     )

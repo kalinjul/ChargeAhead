@@ -7,6 +7,7 @@ import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.PolylineArea
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -51,7 +52,7 @@ class BnetzaSource(
 
     override val id: String = SOURCE_ID
 
-    override suspend fun query(area: SearchArea): List<ChargeSite> {
+    override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
         val sites = mutableListOf<ChargeSite>()
         var offset = 0
 
