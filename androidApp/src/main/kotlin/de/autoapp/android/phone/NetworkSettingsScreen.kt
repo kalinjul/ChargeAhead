@@ -1,5 +1,6 @@
 package de.autoapp.android.phone
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -68,23 +69,25 @@ fun NetworkSettingsScreen(
             modifier = Modifier.padding(top = 16.dp),
         )
 
-        if (uiState.networks.isEmpty()) {
-            Fineprint(
-                text = stringResource(R.string.phone_networks_no_match, uiState.search.trim()),
-                modifier = Modifier.padding(top = 16.dp),
-            )
-        } else {
-            // Laid out lazily: the catalog can run to hundreds of entries.
-            AppCard(modifier = Modifier.padding(top = 8.dp)) {
-                LazyColumn {
-                    itemsIndexed(uiState.networks) { index, network ->
-                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                        TickRow(
-                            label = network.name,
-                            checked = network.key in uiState.pending,
-                            dotColor = operatorColor(network.name),
-                            onClick = { onNetworkToggled(network.key) },
-                        )
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            if (uiState.networks.isEmpty()) {
+                Fineprint(
+                    text = stringResource(R.string.phone_networks_no_match, uiState.search.trim()),
+                    modifier = Modifier.padding(top = 16.dp),
+                )
+            } else {
+                // Laid out lazily: the catalog can run to hundreds of entries.
+                AppCard(modifier = Modifier.padding(top = 8.dp)) {
+                    LazyColumn {
+                        itemsIndexed(uiState.networks) { index, network ->
+                            if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                            TickRow(
+                                label = network.name,
+                                checked = network.key in uiState.pending,
+                                dotColor = operatorColor(network.name),
+                                onClick = { onNetworkToggled(network.key) },
+                            )
+                        }
                     }
                 }
             }
@@ -95,7 +98,7 @@ fun NetworkSettingsScreen(
             enabled = uiState.canConfirm,
             modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         ) {
-            Text("Confirm filters")
+            Text(stringResource(R.string.phone_networks_confirm))
         }
     }
 }

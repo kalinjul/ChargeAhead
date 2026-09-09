@@ -104,7 +104,7 @@
     <string name="phone_title_stops">Ladestopps</string>
     <string name="phone_action_networks">Ladenetze</string>
     <string name="phone_networks_title">Ladenetze</string>
-    <string name="phone_networks_intro">Ohne Auswahl werden alle Ladenetze gezeigt. Die Liste stammt aus den Ladesäulen der aktuellen Umgebung, nicht aus einer festen Aufzählung — was hier fehlt, gibt es hier gerade nicht.</string>
+    <string name="phone_networks_intro">Ohne Auswahl werden alle Ladesäulen gezeigt. Tippe die Netze an, bei denen du lädst — dann werden nur deren Säulen geladen.</string>
     <string name="phone_networks_only">Nur ausgewählte auf Karte anzeigen</string>
     <string name="phone_networks_empty">Noch keine Ladesäulen geladen — Standort freigeben und einen Moment warten.</string>
     <string name="phone_networks_loading">Ladenetze werden geladen …</string>
@@ -114,7 +114,8 @@
     <string name="phone_networks_all">Alle</string>
     <string name="phone_networks_none">Keine</string>
     <string name="phone_networks_bulk_hint">„Alle“ und „Keine“ gelten für die angezeigten Netze.</string>
-    <string name="phone_networks_no_match">Kein Ladenetz passt zu „%1$s“.</string>
+    <string name="phone_networks_no_match">Kein Ladenetz passt zu „%1$s”.</string>
+    <string name="phone_networks_confirm">Filter übernehmen</string>
     <string name="phone_networks_filtered">Der Ladenetz-Filter ist aktiv. Was fehlt, gehört zu einem nicht gewählten Netz.</string>
 
     <!-- Charge level from the vehicle -->
