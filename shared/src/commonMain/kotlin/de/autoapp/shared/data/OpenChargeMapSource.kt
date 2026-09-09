@@ -85,7 +85,7 @@ class OpenChargeMapSource(
             parameter("distanceunit", "KM")
             parameter("maxresults", maxResults)
             if (networks.isNotEmpty()) {
-                val ids = networks.flatMap { it.operatorIds }.toSortedSet().joinToString(",")
+                val ids = networks.flatMap { it.operatorIds }.distinct().sorted().joinToString(",")
                 parameter("operatorid", ids)
             }
         }.body()
