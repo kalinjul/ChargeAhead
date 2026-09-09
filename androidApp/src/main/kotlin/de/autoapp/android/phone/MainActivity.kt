@@ -182,7 +182,6 @@ private fun PhoneApp() {
                     // animation — the drawer then just hangs there, open.
                     onOpen = { target -> scope.launch { drawerState.close(); openFromRoot(target) } },
                     onFilters = drawerViewModel::onFiltersChanged,
-                    onLabelStyle = drawerViewModel::onLabelStyleChanged,
                 )
             }
         },

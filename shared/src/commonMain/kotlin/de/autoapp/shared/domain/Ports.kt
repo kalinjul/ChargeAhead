@@ -111,9 +111,6 @@ interface SettingsStore {
     /** Routes kept under a chosen name. Order is the driver's save order, newest first. */
     val savedRoutes: Flow<List<SavedRoute>>
 
-    /** What the map's charger markers display. */
-    val mapLabelStyle: Flow<MapLabelStyle>
-
     /**
      * The outcome of the last attempt to read the charge level from the
      * vehicle — written by the car session, read by the phone UI.
@@ -149,8 +146,6 @@ interface SettingsStore {
     suspend fun saveRoute(route: SavedRoute)
     suspend fun renameSavedRoute(id: String, name: String)
     suspend fun removeSavedRoute(id: String)
-
-    suspend fun setMapLabelStyle(style: MapLabelStyle)
 
     /** Sets the destination and adds it to the history. `null` clears the destination. */
     suspend fun setDestination(destination: Destination?)

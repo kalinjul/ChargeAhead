@@ -3,7 +3,6 @@ package de.autoapp.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.autoapp.shared.domain.ChargeFilters
-import de.autoapp.shared.domain.MapLabelStyle
 import de.autoapp.shared.domain.SettingsStore
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -17,7 +16,6 @@ data class DrawerUiState(
     /** How many networks are picked; `0` means: no network filter. */
     val preferredNetworkCount: Int = 0,
     val filters: ChargeFilters = ChargeFilters(),
-    val labelStyle: MapLabelStyle = MapLabelStyle.PRICE,
 ) {
     /** Something is narrowing the results — the map and the trip screen badge this. */
     val filtersCustomized: Boolean get() = !filters.isDefault || preferredNetworkCount > 0
@@ -37,22 +35,16 @@ class DrawerViewModel(
         settings.activeTariffIds,
         settings.networks,
         settings.chargeFilters,
-        settings.mapLabelStyle,
-    ) { vehicle, tariffs, networks, filters, labelStyle ->
+    ) { vehicle, tariffs, networks, filters ->
         DrawerUiState(
             vehicleName = vehicle?.displayName,
             activeTariffCount = tariffs.size,
             preferredNetworkCount = if (networks.isActive) networks.preferredOperators.size else 0,
             filters = filters,
-            labelStyle = labelStyle,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, DrawerUiState())
 
     fun onFiltersChanged(filters: ChargeFilters) {
         viewModelScope.launch { settings.setChargeFilters(filters) }
-    }
-
-    fun onLabelStyleChanged(style: MapLabelStyle) {
-        viewModelScope.launch { settings.setMapLabelStyle(style) }
     }
 }
