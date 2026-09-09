@@ -139,9 +139,7 @@ fun HomeGoogleMap(
             modifier = Modifier.fillMaxSize(),
         ) {
             chargers.forEach { charger ->
-                val price = charger.quote.best?.let { "${it.euroPerKwh.twoDecimals()} €" }
-                val operator = OperatorShortName.of(charger.site.operator)
-                val label = listOfNotNull(operator, price).joinToString(" · ").ifEmpty { null }
+                val label = OperatorShortName.of(charger.site.operator)
                 val speed = ChargeSpeed.of(charger.maxPowerKw)
                 key(charger.site.id) {
                     MarkerComposable(
@@ -220,9 +218,13 @@ fun HomeGoogleMap(
  * two pins at map scale. The bolt count repeats that ordering without color,
  * for anyone who cannot tell the red from the green one.
  *
- * The label carries what is known and short enough to fit — the network, and
- * for now the price. Sites whose operator isn't one of the well-known
- * networks show their bolts alone; see [OperatorShortName].
+ * The label names the network, nothing else. The price used to sit here and
+ * doesn't any more: every price this app knows is an estimate against the
+ * driver's tariffs, and a number that precise on a pin reads as a fact. It
+ * belongs where the caveat fits with it — one tap away, in the detail view.
+ *
+ * Sites whose operator isn't one of the well-known networks show their bolts
+ * alone; see [OperatorShortName].
  */
 @Composable
 private fun ChargerPill(speed: ChargeSpeed, label: String?) {
