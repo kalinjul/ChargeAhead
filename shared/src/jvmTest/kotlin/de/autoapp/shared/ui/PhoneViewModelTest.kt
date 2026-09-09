@@ -1,7 +1,9 @@
 package de.autoapp.shared.ui
 
 import de.autoapp.shared.ChargeStopsFeature
+import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.Fix
+import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.LocationSource
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.ChargeSite
@@ -125,6 +127,48 @@ class PhoneViewModelTest {
         assertEquals(listOf(preset.name), state.vehicles.map { it.displayName })
         // Already owned, so the add screen stops offering it.
         assertTrue(addCar.uiState.await { preset !in it.matches }.matches.none { it.name == preset.name })
+    }
+
+    /**
+     * The regression behind the "mark all stations" fix: the screen used to
+     * compare against `a` and `b` alone, so the stops travelling as waypoints
+     * between them looked unselected while going to Maps all the same.
+     */
+    @Test
+    fun `a picked section covers every point between its ends`() {
+        val section = SectionSelection(selecting = true).picked(3).picked(1)
+
+        assertTrue(section.includes(1) && section.includes(2) && section.includes(3))
+        assertTrue(!section.includes(0) && !section.includes(4))
+    }
+
+    @Test
+    fun `a half-picked section covers only the point tapped so far`() {
+        val section = SectionSelection(selecting = true).picked(2)
+
+        assertTrue(section.includes(2))
+        assertTrue(!section.includes(1) && !section.includes(3))
+        assertTrue(!SectionSelection(selecting = true).includes(0), "nothing is selected before the first tap")
+    }
+
+    /**
+     * Re-planning opens the sheet on the destination it already has. It has
+     * to arrive as a pick, not as typed text: only then is the plan button
+     * live and no search fires for a destination that is already decided.
+     */
+    @Test
+    fun `the plan sheet opens pre-filled with a destination`() = runBlocking<Unit> {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = PlanSheetViewModel(stubFeature(), settings)
+        val destination = Destination("Hamburg", LatLon(53.55, 9.99))
+
+        viewModel.onSheetOpened(destination)
+        val prefilled = viewModel.uiState.await { it.chosen != null }
+        assertEquals("Hamburg", prefilled.query)
+        assertEquals(destination, prefilled.chosen)
+
+        viewModel.onSheetOpened()
+        assertEquals("", viewModel.uiState.await { it.chosen == null }.query)
     }
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
