@@ -9,6 +9,8 @@
 - If you pick a charging station and then "Show in Maps", Maps plans a route instead of jumping to the location
 - The "Select section" function should always send "My location" as the first point, otherwise Google Maps cannot navigate
 - The "Select section" function should mark all stations that will be sent, not just the first and the last
+- When a plan is shown or loaded from favorites, there shall be a Button to re-plan, which goes back to the "Plan route" Bottom sheet but has the destination pre-filled.
+- When a plan is shown or loaded from favorites, there should be a quick option to input the current SOC at start
 
 # Map
 - The map view should give charging stations an icon depending on charging speed. A bolt, red = slow (max 22 kW), yellow = min 50 kW, green = min 100 kW, two green bolts 150 kW and so on.
@@ -37,6 +39,7 @@
 - The sliders have a very large vertical thumb; it can be smaller
 - The buttons for "Send to Maps" should be consistent. In planning it is a flag, elsewhere an arrow. It should always be a flag.
 - Clicking a charging station on the map should show the station's details in a bottom sheet
+- A planned route should show the projected SOC at each stop after the time of arrival
 
 # Misc
 - A license screen is required, reachable from the drawer. Use some gradle license plugin to generate license information from dependencies.
