@@ -26,10 +26,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -48,6 +44,7 @@ import de.autoapp.android.phone.components.StationCard
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.core.MapsHandoff
+import de.autoapp.shared.ui.SectionSelection
 import de.autoapp.shared.core.PlannedStop
 import de.autoapp.shared.core.TripPlan
 import de.autoapp.shared.domain.LatLon
@@ -71,15 +68,21 @@ fun TripPlanScreen(
     isSaved: Boolean,
     isEstimate: Boolean,
     hasLocationPermission: Boolean,
+    // Selectable points along the trip: 0 = start, 1..n = stops, n+1 =
+    // destination. The selection lives in TripViewModel; this screen only
+    // renders it and reports taps.
+    selection: SectionSelection,
+    onToggleSelecting: () -> Unit,
+    onPickPoint: (Int) -> Unit,
+    onSectionSent: () -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: (String) -> Unit,
     onToggleSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
-    var selecting by remember(plan) { mutableStateOf(false) }
-    var selectionA by remember(plan) { mutableStateOf<Int?>(null) }
-    var selectionB by remember(plan) { mutableStateOf<Int?>(null) }
+    val selecting = selection.selecting
+    val selectionA = selection.a
+    val selectionB = selection.b
 
     val pointCount = plan.stops.size + 2
     fun pointName(index: Int): String = when (index) {
@@ -92,14 +95,6 @@ fun TripPlanScreen(
         0 -> startPosition ?: plan.route.points.firstOrNull()
         pointCount - 1 -> plan.destination.position
         else -> plan.stops[index - 1].site.position
-    }
-
-    fun pick(index: Int) {
-        when {
-            selectionA == null -> selectionA = index
-            selectionB == null && index != selectionA -> selectionB = index
-            else -> { selectionA = index; selectionB = null }
-        }
     }
 
     val startName = stringResource(R.string.trip_start)
@@ -174,7 +169,7 @@ fun TripPlanScreen(
                         stringResource(R.string.trip_dep_now, it.roundToInt())
                     } ?: stringResource(R.string.trip_dep_now_unknown),
                     selected = selecting && (selectionA == 0 || selectionB == 0),
-                    onClick = { if (selecting) pick(0) },
+                    onClick = { if (selecting) onPickPoint(0) },
                 )
             }
             items(plan.stops.size) { index ->
@@ -192,7 +187,7 @@ fun TripPlanScreen(
                     ),
                     priceEuroPerKwh = stop.quote.best?.euroPerKwh,
                     selected = selecting && (selectionA == index + 1 || selectionB == index + 1),
-                    onClick = { if (selecting) pick(index + 1) else onOpenStop(stop) },
+                    onClick = { if (selecting) onPickPoint(index + 1) else onOpenStop(stop) },
                     // Section-select mode repurposes the card tap; hide the send
                     // button so the two tap targets can't be confused.
                     onSend = if (selecting) null else ({ onSendToMaps(MapsHandoff.navigateUrl(stop.site.position)) }),
@@ -210,7 +205,7 @@ fun TripPlanScreen(
                         plan.arrivalSocPercent.roundToInt(),
                     ),
                     selected = selecting && (selectionA == pointCount - 1 || selectionB == pointCount - 1),
-                    onClick = { if (selecting) pick(pointCount - 1) },
+                    onClick = { if (selecting) onPickPoint(pointCount - 1) },
                 )
             }
             item {
@@ -235,7 +230,7 @@ fun TripPlanScreen(
                                 waypoints = ((fromIndex + 1) until toIndex).mapNotNull { pointPosition(it) },
                             )
                             onSendToMaps(url)
-                            selecting = false; selectionA = null; selectionB = null
+                            onSectionSent()
                         },
                         shape = MaterialTheme.shapes.small,
                         modifier = Modifier.weight(1f),
@@ -259,9 +254,7 @@ fun TripPlanScreen(
                         Text(label, maxLines = 1, modifier = Modifier.padding(start = 6.dp))
                     }
                     OutlinedButton(
-                        onClick = {
-                            selecting = !selecting; selectionA = null; selectionB = null
-                        },
+                        onClick = onToggleSelecting,
                         shape = MaterialTheme.shapes.small,
                         border = BorderStroke(
                             1.dp,

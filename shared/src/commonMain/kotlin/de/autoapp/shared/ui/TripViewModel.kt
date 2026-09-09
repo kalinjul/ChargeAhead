@@ -33,7 +33,31 @@ sealed interface TripUiState {
         val isEstimate: Boolean,
         val startPosition: LatLon?,
         val startSocPercent: Double?,
+        val selection: SectionSelection = SectionSelection(),
     ) : TripUiState
+}
+
+/**
+ * Two picked points along start → stops → destination, for sending only a
+ * section of the trip to Maps. Survives rotation because it lives here, not
+ * in a `remember` (the viewmodels skill, rule 7).
+ */
+data class SectionSelection(
+    val selecting: Boolean = false,
+    val a: Int? = null,
+    val b: Int? = null,
+) {
+
+    fun toggled(): SectionSelection =
+        if (selecting) SectionSelection() else SectionSelection(selecting = true)
+
+    /** First tap fills [a], the second [b]; a third starts a fresh pair. */
+    fun picked(index: Int): SectionSelection = when {
+        a == null -> copy(a = index)
+        b == null && index != a -> copy(b = index)
+        b == null -> this
+        else -> copy(a = index, b = null)
+    }
 }
 
 /**
@@ -75,19 +99,28 @@ class TripViewModel(
 
     private val currentPlan = MutableStateFlow<TripPlan?>(null)
     private val isPlanning = MutableStateFlow(false)
+    private val selection = MutableStateFlow(SectionSelection())
     private val events = MutableStateFlow<TripEvent?>(null)
 
     val event: StateFlow<TripEvent?> = events.asStateFlow()
 
+    // combine tops out at five typed flows — the plan-local trio is
+    // pre-combined so every input keeps its type.
+    private data class PlanInputs(
+        val plan: TripPlan?,
+        val planning: Boolean,
+        val selection: SectionSelection,
+    )
+
     val uiState: StateFlow<TripUiState> = combine(
-        currentPlan,
-        isPlanning,
+        combine(currentPlan, isPlanning, selection, ::PlanInputs),
         settings.savedRoutes,
         settings.manualSocPercent,
         feature.state,
-    ) { plan, planInProgress, saved, socPercent, state ->
+    ) { inputs, saved, socPercent, state ->
+        val plan = inputs.plan
         when {
-            planInProgress -> TripUiState.Planning
+            inputs.planning -> TripUiState.Planning
             plan == null -> TripUiState.NoPlan
             else -> TripUiState.Planned(
                 plan = plan,
@@ -95,6 +128,7 @@ class TripViewModel(
                 isEstimate = plan.stops.any { it.quote.isEstimate },
                 startPosition = state.position,
                 startSocPercent = socPercent,
+                selection = inputs.selection,
             )
         }
     }.stateIn(viewModelScope, WhileUiSubscribed, TripUiState.NoPlan)
@@ -109,6 +143,9 @@ class TripViewModel(
      */
     fun plan(destination: Destination, socPercent: Double? = null) {
         val from = feature.currentState.position ?: return
+        // Same semantics the screen's remember(plan) had: a new plan starts
+        // with a clean selection.
+        selection.value = SectionSelection()
         isPlanning.value = true
         viewModelScope.launch {
             socPercent?.let { settings.setManualSocPercent(it) }
@@ -157,6 +194,19 @@ class TripViewModel(
                 events.value = TripEvent.RouteSaved
             }
         }
+    }
+
+    fun onSectionSelectingToggled() {
+        selection.value = selection.value.toggled()
+    }
+
+    fun onSectionPointPicked(index: Int) {
+        selection.value = selection.value.picked(index)
+    }
+
+    /** After a section went to Maps the mode ends, exactly as before. */
+    fun onSectionSent() {
+        selection.value = SectionSelection()
     }
 
     fun onEventHandled() {
