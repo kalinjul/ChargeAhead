@@ -1,7 +1,8 @@
 package de.autoapp.shared.data
 
 import de.autoapp.shared.db.ChargeSiteDatabase
-import de.autoapp.shared.db.DatabaseDriverFactory
+import de.autoapp.shared.db.ChargeSiteEntity
+import de.autoapp.shared.db.DatabaseFactory
 import de.autoapp.shared.db.createChargeSiteDatabase
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -10,10 +11,12 @@ import kotlin.test.assertTrue
 
 class OperatorCatalogTest {
 
-    private fun database(): ChargeSiteDatabase = createChargeSiteDatabase(DatabaseDriverFactory())
+    private fun database(): ChargeSiteDatabase = createChargeSiteDatabase(DatabaseFactory())
 
-    private fun ChargeSiteDatabase.insert(id: String, operator: String?) {
-        chargeSitesQueries.upsertSite(id, "test", "Ladepark $id", operator, 48.9, 11.4, "CCS2:150.0:4", null, null, null)
+    private suspend fun ChargeSiteDatabase.insert(id: String, operator: String?) {
+        chargeSites().upsertSites(
+            listOf(ChargeSiteEntity(id, "test", "Ladepark $id", operator, 48.9, 11.4, "CCS2:150.0:4", null, null, null)),
+        )
     }
 
     @Test

@@ -1,18 +1,27 @@
 package de.autoapp.shared.db
 
-import app.cash.sqldelight.db.SqlDriver
+import androidx.room.RoomDatabase
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 
 /**
- * Like Ktor, SQLDelight has no cross-platform driver — each target brings
- * its own. Android needs a `Context` for that, so the factory takes a
- * platform-specific dependency.
+ * Room builds per platform: Android needs a `Context` for the database
+ * path, iOS and JVM don't. The bundled driver keeps the SQLite version
+ * identical on every platform.
  */
-expect class DatabaseDriverFactory {
-    fun create(): SqlDriver
+expect class DatabaseFactory {
+    fun builder(): RoomDatabase.Builder<ChargeSiteDatabase>
 }
 
-fun createChargeSiteDatabase(factory: DatabaseDriverFactory): ChargeSiteDatabase =
-    ChargeSiteDatabase(factory.create())
+fun createChargeSiteDatabase(factory: DatabaseFactory): ChargeSiteDatabase =
+    factory.builder()
+        .setDriver(BundledSQLiteDriver())
+        .setQueryCoroutineContext(Dispatchers.IO)
+        .build()
 
-/** Database file name. The same on every platform. */
-const val CHARGE_SITE_DATABASE_NAME = "charge_sites.db"
+/**
+ * Database file name. The same on every platform; `.room.` in it because
+ * Room cannot adopt the SQLDelight file this store replaces.
+ */
+const val CHARGE_SITE_DATABASE_NAME = "charge_sites.room.db"

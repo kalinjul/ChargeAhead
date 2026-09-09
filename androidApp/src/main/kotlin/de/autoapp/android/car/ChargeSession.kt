@@ -8,7 +8,7 @@ import androidx.lifecycle.LifecycleOwner
 import de.autoapp.android.BuildConfig
 import de.autoapp.shared.ChargeStopsFeatureFactory
 import de.autoapp.shared.data.FusedLocationSource
-import de.autoapp.shared.db.DatabaseDriverFactory
+import de.autoapp.shared.db.DatabaseFactory
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.TimeProvider
 import org.koin.core.component.KoinComponent
@@ -32,7 +32,7 @@ class ChargeSession : Session(), KoinComponent {
             locationSource = FusedLocationSource(carContext),
             openChargeMapKey = BuildConfig.OPEN_CHARGE_MAP_API_KEY,
             settingsStore = settings,
-            databaseDriverFactory = DatabaseDriverFactory(carContext),
+            databaseFactory = DatabaseFactory(carContext),
             hardwareSoCSource = CarHardwareSoCSource(
                 carContext = carContext,
                 time = time,

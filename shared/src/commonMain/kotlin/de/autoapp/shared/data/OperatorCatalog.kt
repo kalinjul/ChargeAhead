@@ -10,12 +10,12 @@ import de.autoapp.shared.domain.OperatorOptions
  */
 class OperatorCatalog(database: ChargeSiteDatabase) {
 
-    private val queries = database.chargeSitesQueries
+    private val dao = database.chargeSites()
 
     suspend fun options(): List<OperatorOption> =
         OperatorOptions.fromCounts(
-            queries.operatorCounts().executeAsList().map { row ->
-                row.operator_ to row.sites.toInt()
-            },
+            // The query filters IS NOT NULL, but Room can't see that through
+            // the projection — hence the mapNotNull instead of a map.
+            dao.operatorCounts().mapNotNull { row -> row.operator?.let { it to row.sites.toInt() } },
         )
 }

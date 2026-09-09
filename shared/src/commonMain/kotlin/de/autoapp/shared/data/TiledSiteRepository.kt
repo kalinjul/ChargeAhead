@@ -2,6 +2,8 @@ package de.autoapp.shared.data
 
 import de.autoapp.shared.core.Tiles
 import de.autoapp.shared.db.ChargeSiteDatabase
+import de.autoapp.shared.db.ChargeSiteEntity
+import de.autoapp.shared.db.TileCoverageEntity
 import de.autoapp.shared.logWarning
 import de.autoapp.shared.domain.Address
 import de.autoapp.shared.domain.ChargeSite
@@ -14,7 +16,6 @@ import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.TimeProvider
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import de.autoapp.shared.db.ChargeSite as StoredSite
 
 /**
  * The on-disk store (M3) — replacing the in-memory circle from M1.
@@ -36,13 +37,13 @@ import de.autoapp.shared.db.ChargeSite as StoredSite
  */
 class TiledSiteRepository(
     private val source: ChargeSiteSource,
-    private val database: ChargeSiteDatabase,
+    database: ChargeSiteDatabase,
     private val time: TimeProvider,
     private val ttlMillis: Long = DEFAULT_TTL_MILLIS,
     private val prefetchMarginKm: Double = DEFAULT_PREFETCH_MARGIN_KM,
 ) : SiteRepository {
 
-    private val queries = database.chargeSitesQueries
+    private val dao = database.chargeSites()
 
     // Two concurrent fetches of the same area would be pure waste.
     private val mutex = Mutex()
@@ -65,7 +66,7 @@ class TiledSiteRepository(
 
     /** Discards coverage, not the sites themselves: the store stays readable. */
     override suspend fun invalidate(): Unit = mutex.withLock {
-        queries.clearCoverage(source.id)
+        dao.clearCoverage(source.id)
     }
 
     /**
@@ -76,16 +77,16 @@ class TiledSiteRepository(
      * because the primary key rules out duplicates — if the count matches the
      * number of tiles the area has, every one of them is present.
      */
-    private fun isCovered(area: SearchArea): Boolean {
+    private suspend fun isCovered(area: SearchArea): Boolean {
         val range = Tiles.rangeOf(area.boundingBox)
-        val fresh = queries.freshTileCount(
+        val fresh = dao.freshTileCount(
             sourceId = source.id,
             minTileLat = range.minTileLat.toLong(),
             maxTileLat = range.maxTileLat.toLong(),
             minTileLon = range.minTileLon.toLong(),
             maxTileLon = range.maxTileLon.toLong(),
             notOlderThanMillis = time.nowMillis() - ttlMillis,
-        ).executeAsOne()
+        )
 
         return fresh >= range.count.toLong()
     }
@@ -98,15 +99,13 @@ class TiledSiteRepository(
         val sites = source.query(fetchArea)
         val now = time.nowMillis()
 
-        database.transaction {
-            sites.forEach { site ->
-                queries.upsertSite(
+        dao.recordFetch(
+            sites = sites.map { site ->
+                ChargeSiteEntity(
                     id = site.id,
                     sourceId = source.id,
                     name = site.name,
-                    // operator_ with an underscore: SQLDelight is avoiding the
-                    // Kotlin keyword, same as the Objective-C header does.
-                    operator_ = site.operator,
+                    operator = site.operator,
                     lat = site.position.lat,
                     lon = site.position.lon,
                     connectors = site.connectors.encode(),
@@ -114,26 +113,26 @@ class TiledSiteRepository(
                     postalCode = site.address?.postalCode,
                     town = site.address?.town,
                 )
-            }
-            Tiles.covering(fetchArea.boundingBox).forEach { tile ->
-                queries.markTileFetched(
+            },
+            tiles = Tiles.covering(fetchArea.boundingBox).map { tile ->
+                TileCoverageEntity(
                     sourceId = source.id,
                     tileLat = tile.lat.toLong(),
                     tileLon = tile.lon.toLong(),
                     fetchedAtMillis = now,
                 )
-            }
-        }
+            },
+        )
     }
 
-    private fun readStored(area: SearchArea): List<ChargeSite> {
+    private suspend fun readStored(area: SearchArea): List<ChargeSite> {
         val box = area.boundingBox
-        return queries.sitesInBox(
+        return dao.sitesInBox(
             south = box.south,
             north = box.north,
             west = box.west,
             east = box.east,
-        ).executeAsList().map(StoredSite::toDomain)
+        ).map(ChargeSiteEntity::toDomain)
     }
 
     companion object {
@@ -171,10 +170,10 @@ internal fun String.decodeConnectors(): List<Connector> =
         }
     }
 
-private fun StoredSite.toDomain(): ChargeSite = ChargeSite(
+private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     id = id,
     name = name,
-    operator = operator_,
+    operator = operator,
     position = LatLon(lat, lon),
     connectors = connectors.decodeConnectors(),
     address = Address(street, postalCode, town).takeIf { !it.isEmpty },

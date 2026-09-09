@@ -1,7 +1,7 @@
 package de.autoapp.shared.data
 
 import de.autoapp.shared.db.ChargeSiteDatabase
-import de.autoapp.shared.db.DatabaseDriverFactory
+import de.autoapp.shared.db.DatabaseFactory
 import de.autoapp.shared.db.createChargeSiteDatabase
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ChargeSiteSource
@@ -45,7 +45,7 @@ class TiledSiteRepositoryTest {
         }
     }
 
-    private fun database(): ChargeSiteDatabase = createChargeSiteDatabase(DatabaseDriverFactory())
+    private fun database(): ChargeSiteDatabase = createChargeSiteDatabase(DatabaseFactory())
 
     private fun site(id: String, bearingDeg: Double, distanceKm: Double) = ChargeSite(
         id = id,

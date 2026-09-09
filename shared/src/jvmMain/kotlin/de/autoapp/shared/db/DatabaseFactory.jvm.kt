@@ -1,13 +1,13 @@
 package de.autoapp.shared.db
 
-import app.cash.sqldelight.db.SqlDriver
-import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import androidx.room.Room
+import androidx.room.RoomDatabase
 
 /**
- * For tests and local desktop development only. In-memory by default — the
- * JVM target is never shipped and shouldn't leave files behind.
+ * For tests and local desktop development only. In-memory — the JVM target
+ * is never shipped and shouldn't leave files behind.
  */
-actual class DatabaseDriverFactory(private val url: String = JdbcSqliteDriver.IN_MEMORY) {
-    actual fun create(): SqlDriver =
-        JdbcSqliteDriver(url).also { ChargeSiteDatabase.Schema.create(it) }
+actual class DatabaseFactory {
+    actual fun builder(): RoomDatabase.Builder<ChargeSiteDatabase> =
+        Room.inMemoryDatabaseBuilder<ChargeSiteDatabase>()
 }

@@ -1,7 +1,7 @@
 package de.autoapp.shared
 
 import de.autoapp.shared.data.CoreLocationSource
-import de.autoapp.shared.db.DatabaseDriverFactory
+import de.autoapp.shared.db.DatabaseFactory
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.settings.PersistentSettingsStore
 import de.autoapp.shared.settings.UserDefaultsStorage
@@ -37,7 +37,7 @@ fun createChargeStopsFeature(
         locationSource = CoreLocationSource(),
         openChargeMapKey = openChargeMapKey,
         settingsStore = settingsStore,
-        databaseDriverFactory = DatabaseDriverFactory(),
+        databaseFactory = DatabaseFactory(),
         // No vehicle-data API on iOS (ARCHITECTURE.md 1.2).
         hardwareSoCSource = null,
     )

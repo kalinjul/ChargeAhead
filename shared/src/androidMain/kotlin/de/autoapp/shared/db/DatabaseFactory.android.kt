@@ -1,13 +1,18 @@
 package de.autoapp.shared.db
 
 import android.content.Context
-import app.cash.sqldelight.db.SqlDriver
-import app.cash.sqldelight.driver.android.AndroidSqliteDriver
+import androidx.room.Room
+import androidx.room.RoomDatabase
 
-actual class DatabaseDriverFactory(private val context: Context) {
-    actual fun create(): SqlDriver = AndroidSqliteDriver(
-        schema = ChargeSiteDatabase.Schema,
-        context = context.applicationContext,
-        name = CHARGE_SITE_DATABASE_NAME,
-    )
+actual class DatabaseFactory(private val context: Context) {
+    actual fun builder(): RoomDatabase.Builder<ChargeSiteDatabase> {
+        val app = context.applicationContext
+        // The SQLDelight-era file — Room can't adopt it, so don't leave a
+        // multi-MB corpse in every updated install.
+        app.getDatabasePath("charge_sites.db").delete()
+        return Room.databaseBuilder<ChargeSiteDatabase>(
+            context = app,
+            name = app.getDatabasePath(CHARGE_SITE_DATABASE_NAME).absolutePath,
+        )
+    }
 }

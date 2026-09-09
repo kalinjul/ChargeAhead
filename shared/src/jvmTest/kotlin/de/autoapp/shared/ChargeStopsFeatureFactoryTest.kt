@@ -3,7 +3,7 @@ package de.autoapp.shared
 import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LocationSource
 import kotlinx.coroutines.flow.Flow
-import de.autoapp.shared.db.DatabaseDriverFactory
+import de.autoapp.shared.db.DatabaseFactory
 import de.autoapp.shared.settings.InMemoryKeyValueStorage
 import de.autoapp.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.flow.emptyFlow
@@ -22,7 +22,7 @@ class ChargeStopsFeatureFactoryTest {
             locationSource = fakeLocationSource,
             openChargeMapKey = key,
             settingsStore = PersistentSettingsStore(InMemoryKeyValueStorage()),
-            databaseDriverFactory = DatabaseDriverFactory(),
+            databaseFactory = DatabaseFactory(),
         ).currentState.isDemo
 
     @Test

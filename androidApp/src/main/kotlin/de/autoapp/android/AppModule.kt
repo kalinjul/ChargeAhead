@@ -4,7 +4,7 @@ import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.ChargeStopsFeatureFactory
 import de.autoapp.shared.currentTimeMillis
 import de.autoapp.shared.data.FusedLocationSource
-import de.autoapp.shared.db.DatabaseDriverFactory
+import de.autoapp.shared.db.DatabaseFactory
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.TimeProvider
 import de.autoapp.shared.settings.PersistentSettingsStore
@@ -30,7 +30,7 @@ val appModule = module {
             locationSource = FusedLocationSource(androidContext()),
             openChargeMapKey = BuildConfig.OPEN_CHARGE_MAP_API_KEY,
             settingsStore = get(),
-            databaseDriverFactory = DatabaseDriverFactory(androidContext()),
+            databaseFactory = DatabaseFactory(androidContext()),
             timeProvider = get(),
         )
     }

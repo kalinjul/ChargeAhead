@@ -13,7 +13,7 @@ import de.autoapp.shared.data.OpenChargeMapSource
 import de.autoapp.shared.data.OsrmRouteEngine
 import de.autoapp.shared.data.TiledSiteRepository
 import de.autoapp.shared.data.createHttpClient
-import de.autoapp.shared.db.DatabaseDriverFactory
+import de.autoapp.shared.db.DatabaseFactory
 import de.autoapp.shared.db.createChargeSiteDatabase
 import de.autoapp.shared.domain.ChargeSiteSource
 import de.autoapp.shared.domain.LocationSource
@@ -46,7 +46,7 @@ object ChargeStopsFeatureFactory {
         locationSource: LocationSource,
         openChargeMapKey: String?,
         settingsStore: SettingsStore,
-        databaseDriverFactory: DatabaseDriverFactory,
+        databaseFactory: DatabaseFactory,
         hardwareSoCSource: SoCSource? = null,
         timeProvider: TimeProvider = TimeProvider { currentTimeMillis() },
     ): ChargeStopsFeature {
@@ -59,7 +59,7 @@ object ChargeStopsFeatureFactory {
         // connection pool. It is created even without an OCM key, because
         // routing and geocoding don't need one.
         val httpClient = createHttpClient()
-        val database = createChargeSiteDatabase(databaseDriverFactory)
+        val database = createChargeSiteDatabase(databaseFactory)
 
         // Each source gets its own store and thus its own tile coverage: the
         // official register covers only Germany, OpenChargeMap the whole

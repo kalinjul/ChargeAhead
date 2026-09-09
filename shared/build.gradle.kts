@@ -4,19 +4,8 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.android.kmp.library)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.sqldelight)
-}
-
-sqldelight {
-    databases {
-        create("ChargeSiteDatabase") {
-            packageName.set("de.autoapp.shared.db")
-            // verifyMigrations stays off: that check would need a schema
-            // snapshot of every prior version as a .db in the source set.
-            // With only one migration so far, the cost outweighs the benefit —
-            // it's checked in the test instead (ChargeSiteMigrationTest).
-        }
-    }
+    // Room's annotation processing (entities/DAO live in commonMain).
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -55,7 +44,6 @@ kotlin {
     sourceSets.matching { it.name == "iosMain" }.configureEach {
         dependencies {
             implementation(libs.ktor.client.darwin)
-            implementation(libs.sqldelight.driver.native)
         }
     }
 
@@ -78,7 +66,8 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.content.negotiation)
             implementation(libs.ktor.serialization.kotlinx.json)
-            implementation(libs.sqldelight.runtime)
+            implementation(libs.androidx.room.runtime)
+            implementation(libs.androidx.sqlite.bundled)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -88,7 +77,6 @@ kotlin {
             implementation(libs.kotlinx.coroutines.android)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.play.services.location)
-            implementation(libs.sqldelight.driver.android)
         }
         jvmTest.dependencies {
             // For the ViewModel tests only — see the version catalog.
@@ -97,7 +85,16 @@ kotlin {
         jvmMain.dependencies {
             // Only for tests and development on the machine; never shipped.
             implementation(libs.ktor.client.okhttp)
-            implementation(libs.sqldelight.driver.jvm)
         }
     }
+}
+
+// One compiler registration per compiled target — Room's KSP has no
+// common-code shortcut for that.
+dependencies {
+    add("kspAndroid", libs.androidx.room.compiler)
+    add("kspJvm", libs.androidx.room.compiler)
+    add("kspIosSimulatorArm64", libs.androidx.room.compiler)
+    add("kspIosArm64", libs.androidx.room.compiler)
+    add("kspIosX64", libs.androidx.room.compiler)
 }
