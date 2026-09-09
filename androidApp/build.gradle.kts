@@ -59,6 +59,8 @@ val releaseKeystore: File? = releaseKeystorePath.takeIf { it.isNotEmpty() }?.let
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
+    // NavKeys are @Serializable — rememberNavBackStack saves them across process death.
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -136,6 +138,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material3)
