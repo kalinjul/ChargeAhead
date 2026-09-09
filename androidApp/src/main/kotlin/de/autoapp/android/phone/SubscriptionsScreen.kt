@@ -10,9 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -21,7 +19,8 @@ import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SearchField
 import de.autoapp.android.phone.components.TickRow
-import de.autoapp.shared.domain.TariffCatalog
+import de.autoapp.shared.ui.SubscriptionsUiState
+import de.autoapp.shared.ui.SubscriptionsViewModel
 
 /**
  * Which tariffs the driver holds. The active set feeds every price
@@ -29,21 +28,35 @@ import de.autoapp.shared.domain.TariffCatalog
  * exactly these plus ad-hoc.
  */
 @Composable
+fun SubscriptionsRoute(
+    modifier: Modifier = Modifier,
+    viewModel: SubscriptionsViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    SubscriptionsScreen(
+        uiState = uiState,
+        onSearchChange = viewModel::onQueryChanged,
+        onToggle = viewModel::onTariffToggled,
+        modifier = modifier,
+    )
+}
+
+@Composable
 fun SubscriptionsScreen(
-    activeIds: Set<String>,
-    onChange: (Set<String>) -> Unit,
+    uiState: SubscriptionsUiState,
+    onSearchChange: (String) -> Unit,
+    onToggle: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var search by remember { mutableStateOf("") }
-    val hits = TariffCatalog.all.filter { it.displayName.contains(search.trim(), ignoreCase = true) }
+    val hits = uiState.matches
 
     Column(
         modifier = modifier.fillMaxSize().padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         SearchField(
-            value = search,
-            onValueChange = { search = it },
+            value = uiState.query,
+            onValueChange = onSearchChange,
             placeholder = stringResource(R.string.subs_search),
             modifier = Modifier.padding(top = 14.dp),
         )
@@ -58,16 +71,14 @@ fun SubscriptionsScreen(
                 AppCard {
                     hits.forEachIndexed { index, tariff ->
                         if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                        val checked = tariff.id in activeIds
+                        val checked = tariff.id in uiState.activeIds
                         TickRow(
                             label = tariff.displayName,
                             sublabel = tariff.monthlyFeeEuro
                                 ?.let { stringResource(R.string.subs_fee, it.twoDecimals()) }
                                 ?: stringResource(R.string.subs_no_fee),
                             checked = checked,
-                            onClick = {
-                                onChange(if (checked) activeIds - tariff.id else activeIds + tariff.id)
-                            },
+                            onClick = { onToggle(tariff.id) },
                         )
                     }
                 }

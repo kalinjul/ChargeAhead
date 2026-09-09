@@ -120,8 +120,11 @@ which reads like a bug in the code. The script leaves a `local.properties`
 that carries entries of its own untouched.
 
 Tests that need to run coroutines live in `shared/src/jvmTest` and use
-`runBlocking`. That avoids the `kotlinx-coroutines-test` dependency;
-`runBlocking` doesn't exist in `commonTest`.
+`runBlocking` — it doesn't exist in `commonTest`. `kotlinx-coroutines-test`
+is on the `jvmTest` classpath for one reason only: `viewModelScope` runs on
+the main dispatcher and a plain test JVM has none, so ViewModel tests call
+`Dispatchers.setMain(Dispatchers.Unconfined)`. Everything else stays on
+`runBlocking`.
 
 Versions live exclusively in `gradle/libs.versions.toml`. **Never write a
 version number directly into a `build.gradle.kts`.** Anyone who needs a new
@@ -142,6 +145,7 @@ contributor gets the same set.
 
 - `app-laufen-lassen` — build, install, and drive the phone app on a device
 - `dhu` — the Android Auto Desktop Head Unit for the car surface
+- `viewmodels` — the state-holder pattern every phone screen follows
 
 **Chris Banes' Kotlin/Compose skills** come from an external marketplace,
 registered in `.claude/settings.json`. Because the source is a third-party
@@ -379,6 +383,33 @@ If it's missing, `DemoSiteSource` stands in for the real source and
 `ChargeStopsState.isDemo` is set. **Both UIs must make that visible** —
 passing off invented charging stations as real would, in an app for the car,
 be not just sloppy but dangerous.
+
+## Rules for the phone UI
+
+Every screen's state lives in a **ViewModel in
+`shared/src/commonMain/kotlin/de/autoapp/shared/ui/`**, publishing one
+`uiState: StateFlow<XUiState>`; the Compose screen is stateless and takes
+that state plus lambdas. The pattern is the MVI-like one from "Now in
+Android"; the rules, the template and the test setup are in the
+`viewmodels` skill, and the reasoning is in ARCHITECTURE.md section 8.
+
+The short version, for the cases where the skill isn't loaded:
+
+- New screen, sheet or dialog with state → new ViewModel in `shared/ui`,
+  registered in `androidApp/.../phone/PhoneViewModels.kt`.
+- `remember { mutableStateOf(...) }` in a composable is for state that dies
+  with the gesture. Anything that should survive a rotation is ViewModel
+  state.
+- No user-visible text in a `UiState` — `shared` has no resources. States
+  and reasons are types; the wording comes from `strings.xml`.
+- ViewModels take `SettingsStore`, `ChargeStopsFeature`, `PlanningFeature`
+  — never a `Context`, never a `CoroutineScope`.
+- Because they live in `shared`, `:shared:compileKotlinIosSimulatorArm64`
+  is mandatory after touching them. It is what keeps the "reusable on iOS"
+  claim honest.
+
+This section is about `androidApp/phone` only. The car UI has its own
+lifecycle from the Car App Library and uses `ChargeStopsFeature` directly.
 
 ## Rules for the car UI
 

@@ -36,20 +36,19 @@ import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.MapLabelStyle
+import de.autoapp.shared.ui.DrawerUiState
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DrawerContent(
-    vehicleName: String?,
-    activeTariffCount: Int,
-    networksSummary: String,
-    filters: ChargeFilters,
-    labelStyle: MapLabelStyle,
+    uiState: DrawerUiState,
     onOpen: (Page) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
     onLabelStyle: (MapLabelStyle) -> Unit,
 ) {
+    val filters = uiState.filters
+
     Column(
         modifier = Modifier
             .statusBarsPadding()
@@ -81,14 +80,14 @@ internal fun DrawerContent(
             PrefRow(
                 icon = painterResource(R.drawable.ic_car),
                 label = stringResource(R.string.drawer_car),
-                sublabel = vehicleName ?: stringResource(R.string.drawer_car_none),
+                sublabel = uiState.vehicleName ?: stringResource(R.string.drawer_car_none),
                 onClick = { onOpen(Page.GARAGE) },
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
             PrefRow(
                 icon = painterResource(R.drawable.ic_cardpay),
                 label = stringResource(R.string.drawer_subscriptions),
-                sublabel = stringResource(R.string.drawer_subs_count, activeTariffCount),
+                sublabel = stringResource(R.string.drawer_subs_count, uiState.activeTariffCount),
                 onClick = { onOpen(Page.SUBSCRIPTIONS) },
             )
         }
@@ -98,7 +97,7 @@ internal fun DrawerContent(
             PrefRow(
                 icon = painterResource(R.drawable.ic_filter),
                 label = stringResource(R.string.drawer_networks),
-                sublabel = networksSummary,
+                sublabel = networksSummary(uiState.preferredNetworkCount),
                 onClick = { onOpen(Page.NETWORKS) },
             )
         }
@@ -127,12 +126,12 @@ internal fun DrawerContent(
             SectionLabel(stringResource(R.string.drawer_map_label))
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 SegmentedButton(
-                    selected = labelStyle == MapLabelStyle.PRICE,
+                    selected = uiState.labelStyle == MapLabelStyle.PRICE,
                     onClick = { onLabelStyle(MapLabelStyle.PRICE) },
                     shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                 ) { Text(stringResource(R.string.drawer_label_price)) }
                 SegmentedButton(
-                    selected = labelStyle == MapLabelStyle.FREE_CHARGERS,
+                    selected = uiState.labelStyle == MapLabelStyle.FREE_CHARGERS,
                     onClick = {},
                     enabled = false,
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
@@ -154,6 +153,18 @@ internal fun DrawerContent(
         Fineprint(stringResource(R.string.drawer_availability_note))
     }
 }
+
+/**
+ * "Alle Netze" or the number of picked ones — the same line in the drawer and
+ * in the network screen's top bar, so it lives in one place.
+ */
+@Composable
+internal fun networksSummary(preferredCount: Int): String =
+    if (preferredCount > 0) {
+        stringResource(R.string.drawer_networks_selected, preferredCount)
+    } else {
+        stringResource(R.string.drawer_networks_all)
+    }
 
 /** The mockup's `.seg`: soft track, white active segment with blue text. */
 @Composable

@@ -65,6 +65,10 @@ kotlin {
             // public signature, so androidApp and iosApp need the types on
             // their own compile classpath.
             api(libs.kotlinx.coroutines.core)
+            // api, not implementation: the shared ViewModels are part of the
+            // public surface — androidApp resolves them with viewModel<T>()
+            // and needs ViewModel and its factory types on its own classpath.
+            api(libs.androidx.lifecycle.viewmodel)
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.kotlinx.datetime)
             implementation(libs.ktor.client.core)
@@ -81,6 +85,10 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
             implementation(libs.play.services.location)
             implementation(libs.sqldelight.driver.android)
+        }
+        jvmTest.dependencies {
+            // For the ViewModel tests only — see the version catalog.
+            implementation(libs.kotlinx.coroutines.test)
         }
         jvmMain.dependencies {
             // Only for tests and development on the machine; never shipped.

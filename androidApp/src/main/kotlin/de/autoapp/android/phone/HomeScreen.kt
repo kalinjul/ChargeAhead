@@ -19,6 +19,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,17 +31,62 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autoapp.android.R
+import de.autoapp.shared.MapCharger
+import de.autoapp.shared.domain.BoundingBox
+import de.autoapp.shared.ui.HomeUiState
+import de.autoapp.shared.ui.HomeViewModel
+
+/**
+ * The map screen with its state holder attached. Everything below this
+ * function is stateless and takes what it draws as parameters — that is what
+ * keeps [HomeScreen] previewable and testable without a location provider.
+ */
+@Composable
+fun HomeRoute(
+    hasPermission: Boolean,
+    planningInProgress: Boolean,
+    onRequestPermission: () -> Unit,
+    onMenu: () -> Unit,
+    onPlan: () -> Unit,
+    onChargeNow: () -> Unit,
+    onRoutes: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: HomeViewModel = phoneViewModel(),
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // The pipeline may only run once the permission is there; starting it
+    // twice is a no-op, so re-running this on every grant is harmless.
+    LaunchedEffect(hasPermission) {
+        if (hasPermission) viewModel.onLocationPermissionGranted()
+    }
+
+    HomeScreen(
+        uiState = uiState,
+        hasPermission = hasPermission,
+        planningInProgress = planningInProgress,
+        onViewportChanged = viewModel::onViewportChanged,
+        onChargerTapped = viewModel::onChargerSelected,
+        onRequestPermission = onRequestPermission,
+        onMenu = onMenu,
+        onPlan = onPlan,
+        onChargeNow = onChargeNow,
+        onRoutes = onRoutes,
+        modifier = modifier,
+    )
+
+    uiState.selectedStop?.let { stop ->
+        ChargeStopDetailDialog(stop = stop, onDismiss = viewModel::onSelectedStopDismissed)
+    }
+}
 
 @Composable
 fun HomeScreen(
-    state: de.autoapp.shared.ChargeStopsState,
+    uiState: HomeUiState,
     hasPermission: Boolean,
     planningInProgress: Boolean,
-    chargers: List<de.autoapp.shared.MapCharger>,
-    belowZoom: Boolean,
-    filtersCustomized: Boolean,
-    onViewportChanged: (de.autoapp.shared.domain.BoundingBox?) -> Unit,
-    onChargerTapped: (de.autoapp.shared.MapCharger) -> Unit,
+    onViewportChanged: (BoundingBox?) -> Unit,
+    onChargerTapped: (MapCharger) -> Unit,
     onRequestPermission: () -> Unit,
     onMenu: () -> Unit,
     onPlan: () -> Unit,
@@ -49,8 +97,8 @@ fun HomeScreen(
     Box(modifier = modifier) {
         if (hasGoogleMapsKey) {
             HomeGoogleMap(
-                position = state.position,
-                chargers = chargers,
+                position = uiState.position,
+                chargers = uiState.chargers,
                 hasLocationPermission = hasPermission,
                 onViewportChanged = onViewportChanged,
                 onChargerTapped = onChargerTapped,
@@ -58,9 +106,9 @@ fun HomeScreen(
             )
         } else {
             MapCanvas(
-                center = state.position,
-                pins = state.stops.map { MapPin(it.site.position, operatorColor(it.site.operator)) },
-                ownPosition = state.position,
+                center = uiState.position,
+                pins = uiState.stops.map { MapPin(it.site.position, operatorColor(it.site.operator)) },
+                ownPosition = uiState.position,
                 radiusKm = 25.0,
                 modifier = Modifier.fillMaxSize(),
             )
@@ -83,7 +131,7 @@ fun HomeScreen(
                     )
                 }
             }
-            if (filtersCustomized) {
+            if (uiState.filtersCustomized) {
                 Box(
                     Modifier
                         .align(Alignment.TopEnd)
@@ -105,7 +153,7 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (hasGoogleMapsKey && belowZoom) {
+            if (hasGoogleMapsKey && uiState.belowMinZoom) {
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.surface,
@@ -118,7 +166,7 @@ fun HomeScreen(
                     )
                 }
             }
-            if (state.isDemo) {
+            if (uiState.isDemo) {
                 // Invented charging sites must be labeled — see AGENTS.md.
                 Text(
                     stringResource(R.string.phone_demo_notice),

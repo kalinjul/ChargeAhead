@@ -168,7 +168,8 @@ autoapp/
 │   │   ├── domain/                Model + ports (plain Kotlin types, no frameworks)
 │   │   ├── core/                  Geo math, range, corridor, dedup
 │   │   ├── data/                  Source adapters, cache, merge
-│   │   └── settings/              Vehicle profile, network preferences
+│   │   ├── settings/              Vehicle profile, network preferences
+│   │   └── ui/                    ViewModels + UiState per screen (KMP)
 │   ├── androidMain/               FusedLocation, CarHardware SoC, SQLDelight driver
 │   └── iosMain/                   CLLocationManager, SQLDelight driver
 ├── androidApp/
@@ -523,7 +524,57 @@ and reachability must be on the first line.
 
 ---
 
-## 8. Versions (verified in the build, as of M0)
+## 8. Phone UI: where state lives
+
+The phone screens hold no state of their own. Each one has a **ViewModel in
+`shared/commonMain/ui`** that owns its state and publishes exactly one
+`StateFlow<XUiState>`; the Compose screen takes that state and a handful of
+lambdas and draws it. The pattern is Google's "Now in Android"
+(`InterestsViewModel`), and the working rules for it live in the
+`viewmodels` skill (`.claude/skills/viewmodels/`).
+
+**Why in `shared` and not in `androidApp`.**
+`androidx.lifecycle:lifecycle-viewmodel` is a multiplatform artifact —
+`:shared:compileKotlinIosSimulatorArm64` compiles these ViewModels for
+Kotlin/Native. When the SwiftUI side grows past settings, it binds to the
+same state holders instead of reimplementing the flows a second time. That
+is the whole reason the state layer sits in the shared module, and it is
+also why the iOS compile is a mandatory check for any change here: it is
+the only thing that catches a ViewModel that quietly acquired an Android
+dependency.
+
+```
+ChargeStopsFeature ─┐                        app-scoped, one per process
+PlanningFeature   ──┼──► XViewModel ──► uiState: StateFlow<XUiState>
+SettingsStore     ──┘         ▲                        │
+                              │ on…() events           ▼
+                        XRoute (androidApp) ──► XScreen (stateless Compose)
+```
+
+**Scoping.** `SettingsStore` and the phone's `ChargeStopsFeature` are
+application-scoped singletons in `ChargeStopsFeatureProvider` — the ViewModels
+share them, because two instances would mean two location streams and two
+stores that never see each other's writes. The ViewModels themselves are
+scoped to the activity's `ViewModelStore` and wired by hand in
+`PhoneViewModels.kt`. Both are stand-ins for real DI scopes; Koin
+(plans/technical-debts.md) replaces the hand-wiring, and Navigation3
+replaces the activity scope with a per-destination one.
+
+**What stays in the UI.** Which page is showing, which sheet is open, the
+Android permission handshake, and state that only lives for a gesture (a
+slider mid-drag). Everything that should survive a rotation is in a
+ViewModel — including form text, which is state, not display: "17," is a
+legitimate step towards "17,8" and the old screens lost it because they
+derived their fields from the stored profile.
+
+**The car UI does not use ViewModels.** The Car App Library brings its own
+`Screen` lifecycle and its own state model; `ChargeStopsFeature` is the
+shared source of state there, exactly as in section 7. Nothing about the
+phone's state layer applies to `androidApp/car`.
+
+---
+
+## 9. Versions (verified in the build, as of M0)
 
 This table doesn't describe what's currently available, but what actually
 builds. Three deviations from "latest version of each" are forced and
@@ -606,7 +657,7 @@ machine without an Android device and without an emulator:
 
 ---
 
-## 9. What comes next
+## 10. What comes next
 
 Milestones, planned UI, and open points have their own file:
 **[ROADMAP.md](ROADMAP.md)**. This one describes how the thing is built,
