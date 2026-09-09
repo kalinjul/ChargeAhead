@@ -1,7 +1,7 @@
-# Per-country charging network filter with source-side filtering
+# Charging network filter with source-side filtering
 
 **Date:** 2026-09-09
-**Status:** Design, pending review
+**Status:** Design, approved (interview 2026-09-09)
 
 ## Problem
 
@@ -24,10 +24,11 @@ Today the Networks screen can't support that:
 - The OCM operator reference list is **997 rows of `(ID, name)` with no
   geography** — every operator's address is null. So the operator list alone
   can never tell a German network from an American one.
-- Every charging site (POI) carries a stable `OperatorID` **and** its own
-  country/continent. POI operator names match the reference list's names
-  exactly (2427/2427 in the sample, zero mismatches). So the IDs are a clean,
-  exact join key — no fuzzy matching needed for OCM.
+- Every charging site (POI) carries a stable `OperatorID`. POI operator names
+  match the reference list's names exactly (2427/2427 in the sample, zero
+  mismatches). So the IDs are a clean, exact join key — no fuzzy matching
+  needed for OCM. (OCM already *sends* `OperatorID` on the POI; the app's DTO
+  just doesn't deserialize it yet.)
 - The genuinely fragmented brands are the pan-European ones: Shell Recharge
   (~12 country IDs), E.ON (~7), Tesla (2–3). EnBW is a single ID (86).
 - OCM's POI query accepts an `operatorid=` filter and returns **exactly** those
@@ -39,30 +40,41 @@ Today the Networks screen can't support that:
 
 ## Design
 
-### The operator table (bundled, on-device)
+### The operator catalog (bundled, hardcoded)
 
-A curated table shipped with the app so it's present on first launch, offline,
-with no fetch required. One row per *selectable network*:
+A curated, hardcoded `OperatorCatalog` in Kotlin source — the same shape as the
+existing `VehicleCatalog`: a shipped, maintained list, present on first launch,
+offline, no fetch required. Updating it needs an app release, which is fine —
+charging networks don't churn weekly and the grouping is curated by hand anyway.
 
+The catalog is **not per-country**. Because the 997 operators have no
+geography, a country picker can't be populated from them; the earlier
+per-country design is dropped. The catalog is a flat curated list of the
+common, selectable networks, with the fragmented brands' IDs merged into one
+row each.
+
+One row per *selectable network*:
+
+- `key` — a stable slug (`"enbw"`, `"shell-recharge"`, `"ionity"`). This is the
+  identity threaded through preferences and the cache; it never changes on a
+  display rename.
 - `name` — canonical display name ("EnBW", "Shell Recharge", "Ionity").
 - `operatorIds` — the set of OCM operator IDs that are this network
-  (`shell -> [156,157,47,3392,59,…]`). The big brands group many; every
-  long-tail operator is its own singleton row, so all 997 are representable and
-  nothing is silently unfilterable.
-- `nameKeywords` — keywords for matching no-ID chargers ("enbw", "ionity").
-- `countries` — ISO country codes where this network is common, for the
-  per-country picker. Pan-European networks are tagged in all their countries.
+  (`shell-recharge -> [156, 157, 47, 3392, 59, …]`). The fragmented brands
+  group many; EnBW is a singleton `[86]`.
+- `nameKeywords` — keywords for matching no-ID chargers, i.e. Bnetza
+  (`["enbw"]`, `["ionity"]`).
 
-Authored from the OCM reference list (the 997) plus a curated grouping of the
-multi-ID brands and per-country ranking from real charger density. Each
-grouped brand gets a test asserting its ID set. A background refresh of the raw
-operator list can add new singletons over time; the *grouping* stays curated.
+Authored from the OCM reference list plus a curated grouping of the multi-ID
+brands, ranked by real charger density (so the picker leads with the networks a
+driver is likely to hold). Each grouped brand gets a test asserting its ID set
+(E.ON, Shell, Tesla, EnBW, Ionity). Long-tail operators are simply not in the
+catalog — the picker is a curated common set, not an exhaustive 997.
 
 ### The picker (Networks screen)
 
-- Shows the networks whose `countries` include the user's current country.
-- Country is taken from the **device region setting** (no location permission,
-  available instantly on first launch) and is manually overridable.
+- Shows the whole catalog — a flat curated list. No country dimension, no
+  device-region detection.
 - Selection is **staged**: ticking a network builds a pending set in the
   ViewModel and does **not** touch settings or the map yet.
 - A **"Confirm filters"** button commits the pending set. It is enabled only
@@ -84,28 +96,35 @@ The committed network set drives what we request:
   selected networks' `nameKeywords` — so Bnetza filters **at the source too**,
   not by downloading all of Germany. `UPPER()` for case-insensitivity;
   keywords are our own list but still quote-escaped. Free-text names mean
-  `LIKE '%enbw%'` catches every "EnBW … GmbH" variant, which is the intent.
+  `LIKE '%ENBW%'` catches every "EnBW … GmbH" variant, which is the intent.
 - **No selection** — behave as today: fetch everything, filter nothing.
 - On **Confirm**, refetch the **currently rendered map area** with the new
   set; the map visibly reloads.
 
 ### Matching / display rule
 
-A charger is shown iff it matches a selected network by **ID** (OCM) or by
-**name keyword** (Bnetza). With both sources filtered at the source, a charger
-matching neither never arrives — consistent with the rule. The trade-off:
-because non-matches aren't downloaded, we can't directly count how many we're
-hiding. If we want that number (to judge whether keyword lists are too narrow),
-it takes an **occasional unfiltered probe** to compare counts — not a
-per-request log.
+A charger is shown iff it matches a selected network by **ID** (OCM,
+`operatorId ∈ network.operatorIds`) or by **name keyword** (Bnetza,
+`UPPER(operator)` contains a selected network's keyword). With both sources
+filtered at the source, a charger matching neither never arrives — consistent
+with the rule. The on-device `allows()` check keeps this rule for the merge and
+for any already-cached rows.
+
+The trade-off: because non-matches aren't downloaded, we can't directly count
+how many we're hiding. If we ever want that number (to judge whether keyword
+lists are too narrow), it takes an **occasional unfiltered probe** to compare
+counts — not built now.
 
 ### Caching
 
 The on-device tile cache currently assumes "I fetched *everything* in this
 area." Source-side filtering breaks that, so coverage is tracked **per
-network**: the "fetched here" stamp becomes `(source, networkKey, tile)`
-instead of `(source, tile)`. An area is covered for the current selection when
-every selected network is stamped and fresh on every tile in view.
+network**: the "fetched here" stamp becomes `(sourceId, networkKey, tile)`
+instead of `(sourceId, tile)`. `networkKey` is the catalog `key`. The
+unfiltered case (no selection) stamps under a sentinel key `"*"` so today's
+behaviour keeps working without colliding with per-network stamps. An area is
+covered for the current selection when every selected network is stamped and
+fresh on every tile in view.
 
 This makes filter changes incremental instead of a wipe:
 
@@ -121,9 +140,9 @@ This makes filter changes incremental instead of a wipe:
 
 Costs, both small: the coverage table grows to ~tiles × selected-networks rows
 (still kB, and only for networks actually picked); and a Bnetza station whose
-free-text name matches two selected networks' keywords needs a rule (assign to
-all matches). The existing 3-day tile TTL applies per `(network, tile)`. No
-whole-cache wipe on filter change.
+free-text name matches two selected networks' keywords is stamped under **all**
+matched networks. The existing 3-day tile TTL applies per `(networkKey, tile)`.
+No whole-cache wipe on filter change.
 
 ### Cache eviction (size)
 
@@ -151,13 +170,17 @@ Deliberately **not** built yet: a hard size/row cap with LRU eviction. Because
 filtering means we store only the driver's own networks, growth is slow (low
 tens of MB even for heavy use); add a cap only if real measurements demand it.
 
+The TTL stays at **3 days** (`DEFAULT_TTL_MILLIS`), unchanged. It now does
+double duty — servable-freshness and prune-retention — which is acceptable at
+this value.
+
 ## Components touched
 
-- **Operator table**: new bundled data (authored) + a Room table to hold it,
-  plus a small repository/catalog to read it by country. Follows the
-  `VehicleCatalog` precedent (a maintained, shipped list).
-- **`OcmPoi` / mapping**: keep `OperatorID` (already received, currently
-  dropped).
+- **`OperatorCatalog`**: new bundled, hardcoded Kotlin list (authored from OCM
+  data), read statically. Follows the `VehicleCatalog` precedent. No Room
+  table, no seeding, no country field.
+- **`OcmPoi` / mapping**: **add** `OperatorID` to the DTO (currently not
+  deserialized) and carry it onto `ChargeSite`.
 - **`OpenChargeMapSource.query`**: accept an optional operator-ID set and pass
   `operatorid=`.
 - **`BnetzaSource`**: extend the `where` clause with a `UPPER(Betreiber) LIKE`
@@ -167,26 +190,33 @@ tens of MB even for heavy use); add a cap only if real measurements demand it.
   selected networks; adding a network fetches only the missing ones, removing
   fetches nothing.
 - **`MergingSiteRepository`**: thread the selected set to each source.
-- **`NetworkPreferences`**: `preferredOperators` becomes canonical network keys
-  from the table, not name-normalized keys. `allows()` / resolution maps a site
-  to a network via ID (OCM) or keyword (Bnetza).
-- **`NetworksViewModel`**: reads the bundled catalog (by country), holds the
-  pending selection, exposes the Confirm action and its enabled state.
-- **Startup prune**: a maintenance step (run where the pipeline starts) that
-  deletes stale or unselected-network charger rows and coverage stamps.
-- **Room migration** to the next version: the new operator table, `networkKey`
-  on tile coverage, and `operatorId` + `fetchedAtMillis` on `chargeSite`.
+- **`NetworkPreferences`**: `preferredOperators` becomes canonical catalog
+  `key`s, not name-normalized keys. `allows()` / resolution maps a site to a
+  network via ID (OCM) or keyword (Bnetza).
+- **`NetworksViewModel`**: reads the bundled catalog (whole list), holds the
+  pending selection, exposes the Confirm action and its enabled state. No
+  longer derives the pick-list from surrounding sites.
+- **Startup prune**: a maintenance step hung at the pipeline entry
+  (`ChargeStopsFeatureFactory.create`, after the DB is created) that deletes
+  stale or unselected-network charger rows and coverage stamps.
+- **Room migration** v1 → v2, **destructive**: the cache tables are pure
+  regenerable cache and only just moved to Room, so bump the version with
+  `fallbackToDestructiveMigration` (drop + recreate) rather than hand-written
+  `ALTER TABLE`. New shape: `networkKey` on tile coverage; `operatorId` +
+  `fetchedAtMillis` on `chargeSite`. The cache refills on next map view.
 
-`OperatorKey`'s algorithmic normalization stays for the keyword/no-ID path but
-is no longer the source of the pick-list.
+`OperatorKey`'s algorithmic normalization is superseded on the keyword path by
+the catalog's `nameKeywords`; keep it only where still referenced, otherwise
+retire it.
 
 ## Testing
 
-- Unit: table lookups by country; ID grouping per brand (E.ON, Shell, Tesla,
-  EnBW, Ionity); keyword matching incl. accent/case folding; the "matches
-  neither → hidden" rule; "no selection → everything".
-- Repository: cache key varies with the network set; changing the set
-  invalidates coverage and refetches; stale-on-error behaviour preserved.
+- Unit: catalog ID grouping per brand (E.ON, Shell, Tesla, EnBW, Ionity);
+  keyword matching incl. accent/case folding; the "matches neither → hidden"
+  rule; "no selection → everything".
+- Repository: coverage key varies with the network set; adding a network
+  fetches only the missing ones and stamps them; removing fetches nothing;
+  stale-on-error behaviour preserved.
 - Source: OCM query emits `operatorid=` for the selected set; Bnetza keeps only
   keyword matches.
 - ViewModel: staging does not touch settings; Confirm commits and enables only
@@ -196,15 +226,17 @@ is no longer the source of the pick-list.
 
 ## Deliberately out of scope
 
+- A per-country picker / device-region detection (the 997 have no geography, so
+  it can't be populated; dropped).
 - Fetching/caching the full 997 for *names* (POIs already carry canonical
-  names; the bundled table covers the picker).
-- "Remember networks as you drive" / continent accumulation (solved the wrong
-  problem — day-one selection needs a bundled list, not accrued data).
+  names; the curated catalog covers the picker).
+- "Remember networks as you drive" / continent accumulation.
 - Active prefetch of a continent's chargers.
+- A hard size cap with LRU eviction.
 
 ## Honest caveat
 
-This is not "every network in your country, complete, on first launch" — that
-dataset doesn't exist in usable form. It's "a curated, bundled list of the
-common networks for your country, pickable immediately, that filters both
-sources correctly and downloads only what you'll see."
+This is not "every network, complete, on first launch" — that dataset doesn't
+exist in usable form. It's "a curated, bundled list of the common networks,
+pickable immediately, that filters both sources correctly and downloads only
+what you'll see."
