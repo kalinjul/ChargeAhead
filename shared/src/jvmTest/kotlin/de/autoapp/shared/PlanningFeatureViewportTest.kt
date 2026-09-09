@@ -73,6 +73,38 @@ class PlanningFeatureViewportTest {
     }
 
     @Test
+    fun `viewport fetch passes the network selection to the repository`() = runBlocking<Unit> {
+        val capturedNetworks = mutableListOf<List<Network>>()
+        val settings = de.autoapp.shared.settings.PersistentSettingsStore(de.autoapp.shared.settings.InMemoryKeyValueStorage())
+        runBlocking {
+            settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
+        }
+        val repository = object : SiteRepository {
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+                capturedNetworks += networks
+                return emptyList()
+            }
+        }
+        val engine = object : RouteEngine {
+            override suspend fun route(from: LatLon, to: LatLon): Route? = null
+        }
+        val tariffs = DemoTariffSource()
+        val feature = PlanningFeature(de.autoapp.shared.core.TripPlanner(engine, repository, tariffs), repository, tariffs, settings)
+
+        feature.chargersIn(viewport)
+
+        assertTrue(capturedNetworks.isNotEmpty(), "repository must have been queried")
+        assertTrue(
+            capturedNetworks.all { it.isNotEmpty() },
+            "the viewport fetch must forward the active network selection",
+        )
+        assertTrue(
+            capturedNetworks.all { networks -> networks.any { it.key == "fastned" } },
+            "Fastned must appear in the forwarded selection",
+        )
+    }
+
+    @Test
     fun `the cap keeps the strongest sites`() = runBlocking<Unit> {
         val many = (1..300).map { site("s$it", "EnBW", 150.0 + it) }
         val feature = featureWith(many) { setChargeFilters(ChargeFilters(minPowerKw = 50.0)) }

@@ -149,6 +149,31 @@ class TripPlannerTest {
     }
 
     @Test
+    fun `an active network filter is forwarded to the repository, not applied on-device`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val capturedNetworks = mutableListOf<List<Network>>()
+        val repository = object : SiteRepository {
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+                capturedNetworks += networks
+                return sitesAlong(route)
+            }
+        }
+        val activeFilter = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
+        TripPlanner(engineReturning(route), repository, DemoTariffSource())
+            .plan(start, destination, id4, startSocPercent = 90.0, networks = activeFilter)
+
+        assertTrue(capturedNetworks.isNotEmpty(), "repository must have been queried")
+        assertTrue(
+            capturedNetworks.all { it.isNotEmpty() },
+            "every segment query must carry the resolved network selection",
+        )
+        assertTrue(
+            capturedNetworks.all { networks -> networks.any { it.key == "ionity" } },
+            "the Ionity network must be in every query",
+        )
+    }
+
+    @Test
     fun `estimated cost accompanies the plan`() = runBlocking<Unit> {
         val route = straightRoute()
         val result = planner(route, sitesAlong(route))

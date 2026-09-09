@@ -98,7 +98,7 @@ class TripPlanner(
             null
         } ?: return TripPlanResult.NoRoute
 
-        val candidates = candidatesAlong(route, vehicle)
+        val candidates = candidatesAlong(route, vehicle, networks)
 
         val cumulativeKm = cumulativeDistances(route.points)
         val totalKm = route.distanceKm
@@ -178,7 +178,7 @@ class TripPlanner(
      * 600 km circle — of which the 3 km route buffer keeps almost nothing.
      * Chunks keep every query at the radius the sources were built for.
      */
-    private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile): List<Candidate> {
+    private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
         val cumulative = cumulativeDistances(route.points)
         val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }
         val seen = LinkedHashMap<String, Candidate>()
@@ -193,7 +193,7 @@ class TripPlanner(
             }
             val area = PolylineArea(route.points.subList(startIndex, endIndex + 1), bufferKm = STOP_BUFFER_KM)
             val sites = try {
-                repository.sitesIn(area)
+                repository.sitesIn(area, networks.selectedNetworks())
             } catch (failure: Exception) {
                 emptyList()
             }

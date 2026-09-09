@@ -23,6 +23,9 @@ data class NetworkPreferences(
         // null → not in catalog → hidden when filter is active.
         return NetworkCatalog.resolve(site) in preferredOperators
     }
+
+    fun selectedNetworks(): List<Network> =
+        if (isActive) NetworkCatalog.selection(preferredOperators) else emptyList()
 }
 
 /** A selectable charging network, as it appears in settings. */

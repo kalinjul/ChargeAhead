@@ -71,12 +71,13 @@ class PlanningFeature(
     /** The best chargers around [position], honoring — and if need be relaxing — the filters. */
     suspend fun chargeNow(position: LatLon): ChargeNowResult {
         val filters = settings.chargeFilters.first()
+        val networks = settings.networks.first()
         // Fetch wider than the distance filter allows: the relax ladder's
         // last step widens the distance, and it can only widen into data
         // that was actually fetched.
         val radius = maxOf(filters.maxDistanceKm * RELAX_FETCH_FACTOR, MIN_FETCH_RADIUS_KM)
         val sites = try {
-            repository.sitesIn(SectorArea.circle(position, radius))
+            repository.sitesIn(SectorArea.circle(position, radius), networks.selectedNetworks())
         } catch (failure: Exception) {
             emptyList()
         }
@@ -84,7 +85,7 @@ class PlanningFeature(
             sites = sites,
             position = position,
             filters = filters,
-            networks = settings.networks.first(),
+            networks = networks,
             tariffs = tariffs,
             activeTariffIds = settings.activeTariffIds.first(),
         )
@@ -109,7 +110,7 @@ class PlanningFeature(
         val tariffIds = settings.activeTariffIds.first()
 
         val sites = try {
-            repository.sitesIn(ViewportArea(viewport))
+            repository.sitesIn(ViewportArea(viewport), networks.selectedNetworks())
         } catch (failure: Exception) {
             emptyList()
         }
