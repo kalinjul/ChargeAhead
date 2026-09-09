@@ -37,8 +37,8 @@ class NetworkCatalogTest {
         assertEquals(setOf(46L, 3251L, 3359L, 3403L, 3422L, 3814L), eon.operatorIds)
     }
 
-    @Test fun all_has_37_networks() {
-        assertEquals(37, NetworkCatalog.all.size)
+    @Test fun all_has_328_networks() {
+        assertEquals(328, NetworkCatalog.all.size)
     }
 
     @Test fun resolve_by_operator_id_wins() {
