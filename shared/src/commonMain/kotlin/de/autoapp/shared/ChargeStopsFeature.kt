@@ -12,6 +12,7 @@ import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.EnergyState
 import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LocationSource
+import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.data.OperatorCatalog
 import de.autoapp.shared.domain.OperatorOption
@@ -358,7 +359,8 @@ class ChargeStopsFeature(
         )
 
         try {
-            val sites = repository.sitesIn(area)
+            val selection = if (networks.isActive) NetworkCatalog.selection(networks.preferredOperators) else emptyList()
+            val sites = repository.sitesIn(area, selection)
             publish(
                 ChargeStopsState(
                     stops = ChargeStopPlanner.plan(

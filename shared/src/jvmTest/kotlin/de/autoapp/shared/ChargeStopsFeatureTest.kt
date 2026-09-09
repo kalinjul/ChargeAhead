@@ -5,6 +5,8 @@ import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.LocationSource
 import de.autoapp.shared.domain.Network
+import de.autoapp.shared.domain.NetworkCatalog
+import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Reachability
@@ -418,6 +420,52 @@ class ChargeStopsFeatureTest {
 
             feature.close()
         }
+    }
+
+    // --- network filter threading ---
+
+    private class RecordingSiteRepository : SiteRepository {
+        val capturedNetworks = mutableListOf<List<Network>>()
+        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            capturedNetworks += networks
+            return emptyList()
+        }
+    }
+
+    @Test
+    fun `active network filter passes resolved selection to sitesIn`() = runBlocking {
+        val location = ControllableLocationSource()
+        val settingsStore = settingsStore()
+        val ionityKey = "ionity"
+        settingsStore.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf(ionityKey)))
+
+        val repository = RecordingSiteRepository()
+        val feature = feature(location, repository, settingsStore = settingsStore)
+        feature.start()
+        location.fixes.emit(fix())
+
+        val called = repository.capturedNetworks.last()
+        assertTrue(called.isNotEmpty(), "expected non-empty selection when filter is active")
+        assertEquals(listOf(NetworkCatalog.byKey(ionityKey)), called)
+
+        feature.close()
+    }
+
+    @Test
+    fun `inactive network filter passes empty list to sitesIn`() = runBlocking {
+        val location = ControllableLocationSource()
+        val settingsStore = settingsStore()
+        // onlyPreferred = false → isActive = false
+        settingsStore.setNetworks(NetworkPreferences(onlyPreferred = false, preferredOperators = setOf("ionity")))
+
+        val repository = RecordingSiteRepository()
+        val feature = feature(location, repository, settingsStore = settingsStore)
+        feature.start()
+        location.fixes.emit(fix())
+
+        assertTrue(repository.capturedNetworks.last().isEmpty(), "expected empty list when filter is inactive")
+
+        feature.close()
     }
 
     @Test
