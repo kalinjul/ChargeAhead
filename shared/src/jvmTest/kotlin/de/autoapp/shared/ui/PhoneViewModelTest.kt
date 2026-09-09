@@ -1,11 +1,23 @@
 package de.autoapp.shared.ui
 
 import de.autoapp.shared.ChargeStopsFeature
-import de.autoapp.shared.domain.Fix
-import de.autoapp.shared.domain.LocationSource
+import de.autoapp.shared.PlanningFeature
+import de.autoapp.shared.core.TripPlanner
+import de.autoapp.shared.data.DemoTariffSource
+import de.autoapp.shared.domain.BoundingBox
+import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.Network
-import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.ChargeSite
+import de.autoapp.shared.domain.Connector
+import de.autoapp.shared.domain.ConnectorType
+import de.autoapp.shared.domain.Destination
+import de.autoapp.shared.domain.Fix
+import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.LocationSource
+import de.autoapp.shared.domain.NetworkPreferences
+import de.autoapp.shared.domain.Route
+import de.autoapp.shared.domain.RouteEngine
+import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.settings.InMemoryKeyValueStorage
 import de.autoapp.shared.settings.PersistentSettingsStore
@@ -128,6 +140,111 @@ class PhoneViewModelTest {
         assertTrue(addCar.uiState.await { preset !in it.matches }.matches.none { it.name == preset.name })
     }
 
+    /**
+     * The regression behind the "mark all stations" fix: the screen used to
+     * compare against `a` and `b` alone, so the stops travelling as waypoints
+     * between them looked unselected while going to Maps all the same.
+     */
+    @Test
+    fun `a picked section covers every point between its ends`() {
+        val section = SectionSelection(selecting = true).picked(3).picked(1)
+
+        assertTrue(section.includes(1) && section.includes(2) && section.includes(3))
+        assertTrue(!section.includes(0) && !section.includes(4))
+    }
+
+    @Test
+    fun `a half-picked section covers only the point tapped so far`() {
+        val section = SectionSelection(selecting = true).picked(2)
+
+        assertTrue(section.includes(2))
+        assertTrue(!section.includes(1) && !section.includes(3))
+        assertTrue(!SectionSelection(selecting = true).includes(0), "nothing is selected before the first tap")
+    }
+
+    /**
+     * Re-planning opens the sheet on the destination it already has. It has
+     * to arrive as a pick, not as typed text: only then is the plan button
+     * live and no search fires for a destination that is already decided.
+     */
+    @Test
+    fun `the plan sheet opens pre-filled with a destination`() = runBlocking<Unit> {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = PlanSheetViewModel(stubFeature(), settings)
+        val destination = Destination("Hamburg", LatLon(53.55, 9.99))
+
+        viewModel.onSheetOpened(destination)
+        val prefilled = viewModel.uiState.await { it.chosen != null }
+        assertEquals("Hamburg", prefilled.query)
+        assertEquals(destination, prefilled.chosen)
+
+        viewModel.onSheetOpened()
+        assertEquals("", viewModel.uiState.await { it.chosen == null }.query)
+    }
+
+    /**
+     * The bug behind issue #17: the marker query reads the filters, but only
+     * ever ran on a viewport change — so a raised minimum power kept showing
+     * the weaker sites until the driver panned the map by hand.
+     */
+    @Test
+    fun `changing the minimum power reloads the map markers`() = runBlocking<Unit> {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = HomeViewModel(stubFeature(), planningOver(mapSites, settings), settings)
+
+        viewModel.onViewportChanged(VIEWPORT)
+        // Default minimum is 150 kW, so the 50 kW site starts out hidden.
+        assertEquals(listOf("demo:hpc"), viewModel.uiState.await { it.chargers.isNotEmpty() }.chargers.map { it.site.id })
+
+        settings.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
+        assertEquals(
+            listOf("demo:hpc", "demo:slow"),
+            viewModel.uiState.await { it.chargers.size == 2 }.chargers.map { it.site.id },
+        )
+    }
+
+    /** Same reasoning for the other filter the map applies. */
+    @Test
+    fun `picking networks reloads the map markers`() = runBlocking<Unit> {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = HomeViewModel(stubFeature(), planningOver(mapSites, settings), settings)
+
+        viewModel.onViewportChanged(VIEWPORT)
+        viewModel.uiState.await { it.chargers.isNotEmpty() }
+
+        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
+        assertTrue(viewModel.uiState.await { it.chargers.isEmpty() }.chargers.isEmpty())
+    }
+
+    private val mapSites = listOf(
+        mapSite("hpc", "Ionity", 300.0),
+        mapSite("slow", "EnBW", 50.0),
+    )
+
+    private fun mapSite(id: String, operator: String, powerKw: Double) = ChargeSite(
+        id = "demo:$id",
+        name = id,
+        operator = operator,
+        position = LatLon(51.2, 6.7),
+        connectors = listOf(Connector(ConnectorType.CCS2, powerKw, 2)),
+    )
+
+    /**
+     * On the *same* store the ViewModel gets — the point of these two tests is
+     * that a write there reaches the query.
+     */
+    private fun planningOver(sites: List<ChargeSite>, settings: PersistentSettingsStore): PlanningFeature {
+        val repository = object : SiteRepository {
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
+            override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = sites
+        }
+        val engine = object : RouteEngine {
+            override suspend fun route(from: LatLon, to: LatLon): Route? = null
+        }
+        val tariffs = DemoTariffSource()
+        return PlanningFeature(TripPlanner(engine, repository, tariffs), repository, tariffs, settings)
+    }
+
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
         withTimeout(TIMEOUT_MILLIS) { first(matching) }
 
@@ -143,5 +260,7 @@ class PhoneViewModelTest {
 
     private companion object {
         const val TIMEOUT_MILLIS = 5_000L
+
+        val VIEWPORT = BoundingBox(south = 51.0, west = 6.5, north = 51.4, east = 7.0)
     }
 }

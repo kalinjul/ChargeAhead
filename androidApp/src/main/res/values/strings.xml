@@ -61,7 +61,6 @@
 
     <!-- Settings -->
     <string name="phone_action_settings">Fahrzeug</string>
-    <string name="phone_action_close">Fertig</string>
     <string name="phone_settings_title">Fahrzeug und Ladestand</string>
     <string name="phone_settings_intro">Beide Werte stehen im Datenblatt. Wichtig ist die <b>nutzbare</b> Kapazität, nicht die Bruttokapazität — sie ist meist einige Kilowattstunden kleiner.</string>
     <string name="phone_field_name">Bezeichnung (frei wählbar)</string>
@@ -149,10 +148,6 @@
     <string name="map_my_location">Auf meinen Standort zentrieren</string>
     <string name="map_compass">Karte nach Norden ausrichten</string>
     <string name="map_zoom_hint">Zum Anzeigen der Ladesäulen reinzoomen</string>
-    <string name="drawer_map_label">Karten-Beschriftung</string>
-    <string name="drawer_label_price">Preis</string>
-    <string name="drawer_label_free">Freie Säulen</string>
-    <string name="drawer_label_free_note">„Freie Säulen" folgt, sobald eine Quelle Live-Belegung liefert.</string>
 
     <!-- Phone: car data debug view -->
     <string name="drawer_debug">Debug</string>
@@ -204,7 +199,7 @@
     <!-- Phone: trip plan -->
     <string name="trip_summary_distance">%1$d km</string>
     <string name="trip_stop_power">%1$d kW</string>
-    <string name="trip_stop_eta_charge">Ankunft %1$s · %2$d min laden</string>
+    <string name="trip_stop_eta_charge">Ankunft %1$s · %2$d %% · %3$d min laden</string>
     <string name="trip_send_maps">An Maps senden</string>
     <string name="trip_select_section">Abschnitt wählen</string>
     <string name="trip_select_cancel">Abbrechen</string>
@@ -224,6 +219,11 @@
     <string name="trip_start">Start</string>
     <string name="trip_destination">Ziel</string>
     <string name="trip_maps_sent">An Google Maps übergeben</string>
+    <string name="trip_replan">Neu planen</string>
+    <string name="trip_soc_title">Ladestand jetzt</string>
+    <string name="trip_soc_edit">Ladestand am Start ändern</string>
+    <string name="trip_soc_confirm">Neu planen</string>
+    <string name="trip_soc_cancel">Abbrechen</string>
 
     <!-- Phone: charge now -->
     <string name="cn_title">Jetzt laden</string>

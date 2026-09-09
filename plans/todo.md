@@ -5,16 +5,18 @@
 - ~~When no search term is entered, the selected networks should be shown at the top of the result list.~~ — done
 
 # Planning
-- When searching for destinations, the result list should appear in an overlay (AutoComplete text field).
-- If you pick a charging station and then "Show in Maps", Maps plans a route instead of jumping to the location
-- The "Select section" function should always send "My location" as the first point, otherwise Google Maps cannot navigate
-- The "Select section" function should mark all stations that will be sent, not just the first and the last
+- When searching for destinations, the result list should appear in an overlay (AutoComplete text field). — reverted: the popup covered the keyboard
+- ~~If you pick a charging station and then "Show in Maps", Maps plans a route instead of jumping to the location~~ — obsolete
+- ~~The "Select section" function should always send "My location" as the first point, otherwise Google Maps cannot navigate~~ — done
+- ~~The "Select section" function should mark all stations that will be sent, not just the first and the last~~ — done
+- ~~When a plan is shown or loaded from favorites, there shall be a Button to re-plan, which goes back to the "Plan route" Bottom sheet but has the destination pre-filled.~~ — done
+- ~~When a plan is shown or loaded from favorites, there should be a quick option to input the current SOC at start~~ — done
 
 # Map
-- The map view should give charging stations an icon depending on charging speed. A bolt, red = slow (max 22 kW), yellow = min 50 kW, green = min 100 kW, two green bolts 150 kW and so on.
-- In addition, the operator should be shown in short form. For now only for the best-known operators: EWE Go, EnBW, Tesla, Aral, Shell, e.on, Ionity.
-- When clicking a charging station, the title shows the place name. The title should show the operator instead.
-- The price should no longer be displayed directly on the map.
+- ~~The map view should give charging stations an icon depending on charging speed. A bolt, red = slow (max 22 kW), yellow = min 50 kW, green = min 100 kW, two green bolts 150 kW and so on.~~ — done
+- ~~In addition, the operator should be shown in short form. For now only for the best-known operators: EWE Go, EnBW, Tesla, Aral, Shell, e.on, Ionity.~~ — done
+- ~~When clicking a charging station, the title shows the place name. The title should show the operator instead.~~ — done
+- ~~The price should no longer be displayed directly on the map.~~ — done
 
 # Favorites
 - The favorite icon on the main screen should be filled
@@ -31,12 +33,13 @@
 - Car data should be filled in from a data source like gaia-charge/evdb (respect attribution). Can be done statically through some update script. Move to backend later.
 
 # Drawer
-- The minimum power should also offer 11 kW as an option
+- ~~The minimum power should also offer 11 kW as an option~~ — done
 
 # UI
-- The sliders have a very large vertical thumb; it can be smaller
-- The buttons for "Send to Maps" should be consistent. In planning it is a flag, elsewhere an arrow. It should always be a flag.
-- Clicking a charging station on the map should show the station's details in a bottom sheet
+- ~~The sliders have a very large vertical thumb; it can be smaller~~ — done
+- ~~The buttons for "Send to Maps" should be consistent. In planning it is a flag, elsewhere an arrow. It should always be a flag.~~ — done
+- ~~Clicking a charging station on the map should show the station's details in a bottom sheet~~ — done
+- ~~A planned route should show the projected SOC at each stop after the time of arrival~~ — done
 
 # Misc
 - A license screen is required, reachable from the drawer. Use some gradle license plugin to generate license information from dependencies.

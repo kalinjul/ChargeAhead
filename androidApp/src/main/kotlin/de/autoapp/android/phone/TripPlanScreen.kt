@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,25 +18,35 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
@@ -72,12 +83,19 @@ fun TripPlanScreen(
     // destination. The selection lives in TripViewModel; this screen only
     // renders it and reports taps.
     selection: SectionSelection,
+    // The quick charge-level entry on the start row: `null` while closed.
+    socInput: String?,
     onToggleSelecting: () -> Unit,
     onPickPoint: (Int) -> Unit,
     onSectionSent: () -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: (String) -> Unit,
     onToggleSave: () -> Unit,
+    onReplan: () -> Unit,
+    onEditStartSoc: () -> Unit,
+    onSocInputChange: (String) -> Unit,
+    onSocConfirm: () -> Unit,
+    onSocDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
@@ -105,6 +123,15 @@ fun TripPlanScreen(
         MapPin(plan.destination.position, androidx.compose.ui.graphics.Color(0xFFD93025), emphasized = true),
     )
 
+    socInput?.let { input ->
+        StartSocDialog(
+            value = input,
+            onValueChange = onSocInputChange,
+            onConfirm = onSocConfirm,
+            onDismiss = onSocDismiss,
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         if (hasGoogleMapsKey) {
             TripGoogleMap(
@@ -124,7 +151,7 @@ fun TripPlanScreen(
             )
         }
 
-        TripSummary(plan)
+        TripSummary(plan, onReplan = onReplan)
 
         if (selecting) {
             val bothPicked = selectionA != null && selectionB != null
@@ -168,8 +195,12 @@ fun TripPlanScreen(
                     rightLabel = startSocPercent?.let {
                         stringResource(R.string.trip_dep_now, it.roundToInt())
                     } ?: stringResource(R.string.trip_dep_now_unknown),
-                    selected = selecting && (selectionA == 0 || selectionB == 0),
-                    onClick = { if (selecting) onPickPoint(0) },
+                    selected = selecting && selection.includes(0),
+                    // Outside selection mode the start row is the shortest way
+                    // to correct the charge level this plan was made from.
+                    onClick = { if (selecting) onPickPoint(0) else onEditStartSoc() },
+                    trailingIcon = if (selecting) null else painterResource(R.drawable.ic_pen),
+                    trailingDescription = stringResource(R.string.trip_soc_edit),
                 )
             }
             items(plan.stops.size) { index ->
@@ -180,13 +211,17 @@ fun TripPlanScreen(
                     title = stop.site.operator ?: stop.site.name,
                     metaLine = stringResource(R.string.trip_stop_power, stop.maxPowerKw.roundToInt()),
                     address = ChargeStopFormatter.addressLine(stop.site),
+                    // etaMinutesFromStart counts to departure, so the charge
+                    // time comes off it for the arrival — and the SOC next to
+                    // it is the one on arrival, before charging.
                     extraLine = stringResource(
                         R.string.trip_stop_eta_charge,
                         etaText(stop.etaMinutesFromStart - stop.chargeMinutes),
+                        stop.arrivalSocPercent.roundToInt(),
                         stop.chargeMinutes.roundToInt(),
                     ),
                     priceEuroPerKwh = stop.quote.best?.euroPerKwh,
-                    selected = selecting && (selectionA == index + 1 || selectionB == index + 1),
+                    selected = selecting && selection.includes(index + 1),
                     onClick = { if (selecting) onPickPoint(index + 1) else onOpenStop(stop) },
                     // Section-select mode repurposes the card tap; hide the send
                     // button so the two tap targets can't be confused.
@@ -204,7 +239,7 @@ fun TripPlanScreen(
                         etaText(plan.totalMinutes),
                         plan.arrivalSocPercent.roundToInt(),
                     ),
-                    selected = selecting && (selectionA == pointCount - 1 || selectionB == pointCount - 1),
+                    selected = selecting && selection.includes(pointCount - 1),
                     onClick = { if (selecting) onPickPoint(pointCount - 1) },
                 )
             }
@@ -224,10 +259,16 @@ fun TripPlanScreen(
                             val useSelection = selecting && selectionA != null && selectionB != null
                             val fromIndex = if (useSelection) lo else 0
                             val toIndex = if (useSelection) hi else pointCount - 1
+                            // The origin stays "my location" even for a section
+                            // that starts further along: Google Maps only
+                            // navigates from where the driver actually is, and
+                            // a fixed origin turns the hand-off into a route
+                            // preview it refuses to start. The section's own
+                            // first point becomes the first waypoint instead.
                             val url = MapsHandoff.directionsUrl(
-                                origin = if (fromIndex == 0) null else pointPosition(fromIndex),
+                                origin = null,
                                 destination = pointPosition(toIndex) ?: plan.destination.position,
-                                waypoints = ((fromIndex + 1) until toIndex).mapNotNull { pointPosition(it) },
+                                waypoints = (maxOf(fromIndex, 1) until toIndex).mapNotNull { pointPosition(it) },
                             )
                             onSendToMaps(url)
                             onSectionSent()
@@ -293,7 +334,7 @@ fun TripPlanScreen(
 }
 
 @Composable
-private fun TripSummary(plan: TripPlan) {
+private fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
     Column {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Row(
@@ -330,9 +371,73 @@ private fun TripSummary(plan: TripPlan) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Spacer(Modifier.weight(1f))
+            // Same destination, fresh start: the plan sheet reopens with it
+            // already picked, so only the charge level and the filters are
+            // left to change.
+            Surface(
+                onClick = onReplan,
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_route),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Text(stringResource(R.string.trip_replan), style = MaterialTheme.typography.labelMedium)
+                }
+            }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
+}
+
+/**
+ * The quick charge-level entry behind the start row. Confirming it re-plans:
+ * every stop after it depends on the level, so there is nothing to patch in
+ * place.
+ */
+@Composable
+private fun StartSocDialog(
+    value: String,
+    onValueChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val percent = value.toIntOrNull()?.takeIf { it in 1..100 }
+    // "Quick" only holds if the keyboard is already up: the driver opened
+    // this to type a number, not to tap a field first.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.trip_soc_title)) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                isError = percent == null,
+                suffix = { Text("%") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.focusRequester(focusRequester),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = percent != null) {
+                Text(stringResource(R.string.trip_soc_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.trip_soc_cancel)) }
+        },
+    )
 }
 
 @Composable
@@ -343,6 +448,8 @@ private fun TerminusRow(
     rightLabel: String,
     selected: Boolean,
     onClick: () -> Unit,
+    trailingIcon: Painter? = null,
+    trailingDescription: String? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -372,6 +479,14 @@ private fun TerminusRow(
             style = MaterialTheme.typography.bodySmall.tabular,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        trailingIcon?.let {
+            Icon(
+                it,
+                contentDescription = trailingDescription,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(14.dp),
+            )
+        }
     }
 }
 

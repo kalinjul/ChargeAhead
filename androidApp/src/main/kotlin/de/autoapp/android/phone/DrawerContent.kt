@@ -14,10 +14,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,12 +26,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.AppSlider
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.PrefRow
 import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.domain.ChargeFilters
-import de.autoapp.shared.domain.MapLabelStyle
 import de.autoapp.shared.ui.DrawerUiState
 import kotlin.math.roundToInt
 
@@ -45,7 +41,6 @@ internal fun DrawerContent(
     uiState: DrawerUiState,
     onOpen: (PhoneDestination) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
-    onLabelStyle: (MapLabelStyle) -> Unit,
 ) {
     val filters = uiState.filters
 
@@ -109,35 +104,17 @@ internal fun DrawerContent(
 
         Column {
             SectionLabel(stringResource(R.string.drawer_max_price, filters.maxPriceEuroPerKwh.twoDecimals()))
-            Slider(
+            AppSlider(
                 value = filters.maxPriceEuroPerKwh.toFloat(),
                 onValueChange = { onFilters(filters.copy(maxPriceEuroPerKwh = (it * 100).roundToInt() / 100.0)) },
                 valueRange = 0.4f..1.0f,
             )
             SectionLabel(stringResource(R.string.drawer_max_distance, filters.maxDistanceKm.oneDecimal()))
-            Slider(
+            AppSlider(
                 value = filters.maxDistanceKm.toFloat(),
                 onValueChange = { onFilters(filters.copy(maxDistanceKm = (it * 2).roundToInt() / 2.0)) },
                 valueRange = 1f..10f,
             )
-        }
-
-        Column {
-            SectionLabel(stringResource(R.string.drawer_map_label))
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                SegmentedButton(
-                    selected = uiState.labelStyle == MapLabelStyle.PRICE,
-                    onClick = { onLabelStyle(MapLabelStyle.PRICE) },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                ) { Text(stringResource(R.string.drawer_label_price)) }
-                SegmentedButton(
-                    selected = uiState.labelStyle == MapLabelStyle.FREE_CHARGERS,
-                    onClick = {},
-                    enabled = false,
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                ) { Text(stringResource(R.string.drawer_label_free)) }
-            }
-            Fineprint(stringResource(R.string.drawer_label_free_note), modifier = Modifier.padding(top = 6.dp))
         }
 
         Column {
@@ -169,7 +146,7 @@ internal fun networksSummary(preferredCount: Int): String =
 /** The mockup's `.seg`: soft track, white active segment with blue text. */
 @Composable
 private fun PowerSegments(filters: ChargeFilters, onFilters: (ChargeFilters) -> Unit) {
-    val steps = listOf(50.0, 150.0, 300.0)
+    val steps = listOf(11.0, 50.0, 150.0, 300.0)
     Row(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         modifier = Modifier

@@ -17,11 +17,16 @@ import de.autoapp.shared.domain.TariffSource
 import de.autoapp.shared.domain.ViewportArea
 import kotlinx.coroutines.flow.first
 
-/** A charger as the map shows it: the site, its strongest DC power, and what it costs. */
+/**
+ * A charger as the map shows it: the site and its strongest DC power.
+ *
+ * No price. The map stopped showing one, and quoting every site in the
+ * viewport against the driver's tariffs cost up to [PlanningFeature.MAX_MAP_CHARGERS]
+ * lookups per camera move for a number nobody read.
+ */
 data class MapCharger(
     val site: ChargeSite,
     val maxPowerKw: Double,
-    val quote: PriceQuote,
 )
 
 /**
@@ -106,7 +111,6 @@ class PlanningFeature(
     suspend fun chargersIn(viewport: BoundingBox): List<MapCharger> {
         val filters = settings.chargeFilters.first()
         val networks = settings.networks.first()
-        val tariffIds = settings.activeTariffIds.first()
 
         // Fetch on the strict viewport only — no bigger downloads.
         runCatching { repository.sitesIn(ViewportArea(viewport), networks.selectedNetworks()) }
@@ -121,7 +125,7 @@ class PlanningFeature(
                 .maxOfOrNull { it.maxPowerKw }
                 ?: return@mapNotNull null
             if (power < filters.minPowerKw) return@mapNotNull null
-            MapCharger(site, power, tariffs.quote(site, tariffIds))
+            MapCharger(site, power)
         }
             .sortedByDescending { it.maxPowerKw }
             .take(MAX_MAP_CHARGERS)
