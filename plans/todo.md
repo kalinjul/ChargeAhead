@@ -33,7 +33,7 @@
 - Car data should be filled in from a data source like gaia-charge/evdb (respect attribution). Can be done statically through some update script. Move to backend later.
 
 # Drawer
-- The minimum power should also offer 11 kW as an option
+- ~~The minimum power should also offer 11 kW as an option~~ — done
 
 # UI
 - The sliders have a very large vertical thumb; it can be smaller

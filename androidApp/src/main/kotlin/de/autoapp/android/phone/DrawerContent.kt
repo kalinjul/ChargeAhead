@@ -146,7 +146,7 @@ internal fun networksSummary(preferredCount: Int): String =
 /** The mockup's `.seg`: soft track, white active segment with blue text. */
 @Composable
 private fun PowerSegments(filters: ChargeFilters, onFilters: (ChargeFilters) -> Unit) {
-    val steps = listOf(50.0, 150.0, 300.0)
+    val steps = listOf(11.0, 50.0, 150.0, 300.0)
     Row(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         modifier = Modifier
