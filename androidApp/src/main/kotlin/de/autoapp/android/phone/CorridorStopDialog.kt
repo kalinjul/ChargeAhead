@@ -65,7 +65,7 @@ fun ChargeStopDetailDialog(stop: ChargeStop, onDismiss: () -> Unit) {
 
                 ChargeStopFormatter.sourceLine(stop)?.let { source ->
                     Text(
-                        text = stringResource(R.string.phone_detail_source) + ": " + source,
+                        text = stringResource(R.string.phone_detail_source, source),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 12.dp),
                     )

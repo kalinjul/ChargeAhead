@@ -328,7 +328,10 @@ private fun TripSummary(plan: TripPlan) {
                 Text(
                     buildString {
                         append(stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)))
-                        plan.estimatedCostEuro?.let { append(" · ≈ ${it.twoDecimals()} €") }
+                        plan.estimatedCostEuro?.let {
+                            append(" · ")
+                            append(stringResource(R.string.trip_summary_cost, it.twoDecimals()))
+                        }
                     },
                     style = MaterialTheme.typography.bodySmall.tabular,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

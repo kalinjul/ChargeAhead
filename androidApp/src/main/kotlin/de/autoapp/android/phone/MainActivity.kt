@@ -281,7 +281,7 @@ private fun PhoneApp() {
                         hasLocationPermission = hasPermission,
                         onOpenStop = { stop -> detailStop = stop; page = Page.STOP_DETAIL },
                         onSendToMaps = ::sendToMaps,
-                        onToggleSave = { tripViewModel.toggleSaved(trip.plan.summaryLine()) },
+                        onToggleSave = { tripViewModel.toggleSaved(trip.plan.summaryLine(context)) },
                         modifier = Modifier.fillMaxSize().padding(padding),
                     )
                 } ?: run { page = Page.HOME }
@@ -358,9 +358,10 @@ private fun PhoneApp() {
     }
 }
 
-/** Shown under a saved route's name. User-visible text, hence German. */
-private fun TripPlan.summaryLine(): String =
-    "${route.distanceKm.roundToInt()} km · ${stops.size} Stopps"
+/** Shown under a saved route's name — built from the same resources the trip header uses. */
+private fun TripPlan.summaryLine(context: Context): String =
+    context.getString(R.string.trip_summary_distance, route.distanceKm.roundToInt()) + " · " +
+        context.resources.getQuantityString(R.plurals.trip_summary_stops, stops.size, stops.size)
 
 /**
  * Shows [message] in a scope that outlives the effect that triggered it —
