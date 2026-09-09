@@ -25,8 +25,9 @@ androidApp/.../phone/<Screen>.kt
     <Screen>Route    fetches the ViewModel, collects, delegates
     <Screen>Screen   stateless: takes uiState + callbacks, holds nothing
 
-androidApp/.../phone/PhoneViewModels.kt
-    the only place that knows where a ViewModel's dependencies come from
+shared/src/commonMain/kotlin/de/autoapp/shared/ui/SharedUiModule.kt
+    the Koin module that declares every ViewModel (viewModelOf); the
+    dependencies come from appModule in androidApp
 ```
 
 A `commonMain` file that imports anything from `android.*` or
@@ -133,15 +134,15 @@ fun ExampleScreen(
 ) { /* draws uiState, calls the lambdas — no remember of app state */ }
 ```
 
-Then register it once:
+Then declare it once:
 
 ```kotlin
-// PhoneViewModels.kt, in build()
-initializer { ExampleViewModel(settings) }
+// SharedUiModule.kt, in sharedUiModule()
+viewModelOf(::ExampleViewModel)
 ```
 
-`phoneViewModel()` resolves it. Forgetting the `initializer` fails at
-runtime, not at compile time — add it in the same commit.
+`phoneViewModel()` resolves it through Koin. Forgetting the declaration
+fails at runtime, not at compile time — add it in the same commit.
 
 ## Sealed UiState, or a data class?
 

@@ -309,7 +309,7 @@ fallback the list would sit empty at the end of every drive.
 **One `SettingsStore` instance per process.** The phone UI writes into it,
 the feature reads the same flows; two instances over the same storage would
 keep changes from each other. In Android Auto, the phone and car UI run in
-the same process — see `ChargeStopsFeatureProvider.settingsStore`.
+the same process — the Koin `appModule` (androidApp) holds the singleton.
 
 ### State and assembly
 
@@ -396,7 +396,7 @@ Android"; the rules, the template and the test setup are in the
 The short version, for the cases where the skill isn't loaded:
 
 - New screen, sheet or dialog with state → new ViewModel in `shared/ui`,
-  registered in `androidApp/.../phone/PhoneViewModels.kt`.
+  declared in `shared/ui/SharedUiModule.kt` (Koin, `viewModelOf`).
 - `remember { mutableStateOf(...) }` in a composable is for state that dies
   with the gesture. Anything that should survive a rotation is ViewModel
   state.

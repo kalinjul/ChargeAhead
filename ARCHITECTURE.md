@@ -552,13 +552,14 @@ SettingsStore     ──┘         ▲                        │
 ```
 
 **Scoping.** `SettingsStore` and the phone's `ChargeStopsFeature` are
-application-scoped singletons in `ChargeStopsFeatureProvider` — the ViewModels
-share them, because two instances would mean two location streams and two
-stores that never see each other's writes. The ViewModels themselves are
-scoped to the activity's `ViewModelStore` and wired by hand in
-`PhoneViewModels.kt`. Both are stand-ins for real DI scopes; Koin
-(plans/technical-debts.md) replaces the hand-wiring, and Navigation3
-replaces the activity scope with a per-destination one.
+application-scoped Koin singletons in `appModule` (androidApp) — the
+ViewModels share them, because two instances would mean two location streams
+and two stores that never see each other's writes. The ViewModels are
+declared in `sharedUiModule` (`shared/ui/SharedUiModule.kt`, so iOS can
+start the same graph later) and resolved activity-scoped via
+`phoneViewModel()`. Navigation3 (plans/technical-debts.md) later replaces
+the activity scope with a per-destination one — only `phoneViewModel()`
+changes for that.
 
 **What stays in the UI.** Which page is showing, which sheet is open, the
 Android permission handshake, and state that only lives for a gesture (a

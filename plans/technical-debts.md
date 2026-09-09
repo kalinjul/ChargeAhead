@@ -9,10 +9,13 @@
       per-destination scopes — `phoneViewModel()` is the only place that
       then changes.
 - [ ] Use Room for database access
-- [ ] Use Koin for dependency injection (NO ANNOTATIONS!)
-      `PhoneViewModels.kt` and `ChargeStopsFeatureProvider` are the
-      hand-wired stand-ins; a Koin module replaces both without touching a
-      single ViewModel.
+- [x] Use Koin for dependency injection (NO ANNOTATIONS!) — done, plain
+      DSL: `appModule` (androidApp) holds the app-scoped singletons,
+      `sharedUiModule` (`shared/ui`) declares every ViewModel via
+      `viewModelOf`, `startKoin` runs in `ChargeAheadApp`. The hand-wired
+      `PhoneViewModels.kt` and `ChargeStopsFeatureProvider` are gone; no
+      ViewModel was touched. `ChargeStopsFeatureFactory` stays — it is
+      shared assembly, not wiring.
 - [x] Use MVI-like pattern as in "Now in android", see
       https://github.com/android/nowinandroid/blob/main/feature/interests/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/interests/impl/InterestsViewModel.kt
       — done together with the ViewModels above.
