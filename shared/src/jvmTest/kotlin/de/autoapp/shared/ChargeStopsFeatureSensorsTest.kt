@@ -7,6 +7,7 @@ import de.autoapp.shared.domain.EnergyState
 import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.LocationSource
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.SoCSource
@@ -36,7 +37,7 @@ class ChargeStopsFeatureSensorsTest {
         var queries = 0
             private set
 
-        override suspend fun sitesIn(area: SearchArea): List<ChargeSite> {
+        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             queries++
             return emptyList()
         }

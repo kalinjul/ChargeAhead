@@ -11,7 +11,10 @@ import de.autoapp.shared.domain.ChargeSiteSource
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.SearchArea
+import de.autoapp.shared.domain.Network
+import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.TimeProvider
 import kotlinx.coroutines.sync.Mutex
@@ -48,12 +51,13 @@ class TiledSiteRepository(
     // Two concurrent fetches of the same area would be pure waste.
     private val mutex = Mutex()
 
-    override suspend fun sitesIn(area: SearchArea): List<ChargeSite> = mutex.withLock {
-        if (!isCovered(area)) {
-            // Deliberately no rethrow: what's already in the database is
-            // worth more than an error. Only when that's empty too does the
-            // error matter.
-            val fetchFailure = runCatching { fetchAndStore(area) }.exceptionOrNull()
+    override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = mutex.withLock {
+        val keys = if (networks.isEmpty()) listOf(NetworkCatalog.UNFILTERED) else networks.map { it.key }
+        val missing = keys.filterNot { isCovered(area, it) }
+        if (missing.isNotEmpty()) {
+            val toFetch = if (networks.isEmpty()) emptyList()
+                          else networks.filter { it.key in missing }
+            val fetchFailure = runCatching { fetchAndStore(area, toFetch, missing) }.exceptionOrNull()
             if (fetchFailure != null) {
                 logWarning("Source '${source.id}' did not respond", fetchFailure)
                 val stored = readStored(area)
@@ -70,17 +74,18 @@ class TiledSiteRepository(
     }
 
     /**
-     * Are all tiles in the area fresh?
+     * Are all tiles in the area fresh for the given network key?
      *
      * Counted rather than checked one by one: querying 1500 tiles
      * individually would mean 1500 requests to SQLite. The count is enough,
      * because the primary key rules out duplicates — if the count matches the
      * number of tiles the area has, every one of them is present.
      */
-    private suspend fun isCovered(area: SearchArea): Boolean {
+    private suspend fun isCovered(area: SearchArea, networkKey: String): Boolean {
         val range = Tiles.rangeOf(area.boundingBox)
         val fresh = dao.freshTileCount(
             sourceId = source.id,
+            networkKey = networkKey,
             minTileLat = range.minTileLat.toLong(),
             maxTileLat = range.maxTileLat.toLong(),
             minTileLon = range.minTileLon.toLong(),
@@ -91,13 +96,16 @@ class TiledSiteRepository(
         return fresh >= range.count.toLong()
     }
 
-    private suspend fun fetchAndStore(area: SearchArea) {
+    // networks = the Network objects to query the source with (missing ones only).
+    // stampKeys = the network keys to stamp on every covered tile (same as missing keys).
+    private suspend fun fetchAndStore(area: SearchArea, networks: List<Network>, stampKeys: List<String>) {
         // The shape decides what "a bit bigger" looks like — a sector grows
         // into a full circle, a route buffer doesn't grow at all. What gets
         // recorded is exactly the area that was actually fetched.
         val fetchArea = area.prefetchArea(prefetchMarginKm)
-        val sites = source.query(fetchArea)
+        val sites = source.query(fetchArea, networks)
         val now = time.nowMillis()
+        val tiles = Tiles.covering(fetchArea.boundingBox)
 
         dao.recordFetch(
             sites = sites.map { site ->
@@ -106,34 +114,35 @@ class TiledSiteRepository(
                     sourceId = source.id,
                     name = site.name,
                     operator = site.operator,
+                    operatorId = site.operatorId,
                     lat = site.position.lat,
                     lon = site.position.lon,
                     connectors = site.connectors.encode(),
                     street = site.address?.street,
                     postalCode = site.address?.postalCode,
                     town = site.address?.town,
-                )
-            },
-            tiles = Tiles.covering(fetchArea.boundingBox).map { tile ->
-                TileCoverageEntity(
-                    sourceId = source.id,
-                    tileLat = tile.lat.toLong(),
-                    tileLon = tile.lon.toLong(),
                     fetchedAtMillis = now,
                 )
+            },
+            tiles = stampKeys.flatMap { key ->
+                tiles.map { tile ->
+                    TileCoverageEntity(
+                        sourceId = source.id,
+                        networkKey = key,
+                        tileLat = tile.lat.toLong(),
+                        tileLon = tile.lon.toLong(),
+                        fetchedAtMillis = now,
+                    )
+                }
             },
         )
     }
 
-    private suspend fun readStored(area: SearchArea): List<ChargeSite> {
-        val box = area.boundingBox
-        return dao.sitesInBox(
-            south = box.south,
-            north = box.north,
-            west = box.west,
-            east = box.east,
-        ).map(ChargeSiteEntity::toDomain)
-    }
+    override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> =
+        dao.sitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)
+            .map(ChargeSiteEntity::toDomain)
+
+    private suspend fun readStored(area: SearchArea): List<ChargeSite> = storedSitesIn(area.boundingBox)
 
     companion object {
         /** OpenChargeMap changes slowly — three days, see ARCHITECTURE.md 6. */
@@ -174,6 +183,7 @@ private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     id = id,
     name = name,
     operator = operator,
+    operatorId = operatorId,
     position = LatLon(lat, lon),
     connectors = connectors.decodeConnectors(),
     address = Address(street, postalCode, town).takeIf { !it.isEmpty },

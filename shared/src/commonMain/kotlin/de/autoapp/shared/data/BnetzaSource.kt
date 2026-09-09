@@ -7,6 +7,7 @@ import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.PolylineArea
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -51,12 +52,12 @@ class BnetzaSource(
 
     override val id: String = SOURCE_ID
 
-    override suspend fun query(area: SearchArea): List<ChargeSite> {
+    override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
         val sites = mutableListOf<ChargeSite>()
         var offset = 0
 
         repeat(maxPages) {
-            val response = fetchPage(area, offset)
+            val response = fetchPage(area, offset, networks)
             response.error?.let { error ->
                 throw IllegalStateException("Charging station registry: ${error.message} (${error.code})")
             }
@@ -68,7 +69,15 @@ class BnetzaSource(
         return sites
     }
 
-    private suspend fun fetchPage(area: SearchArea, offset: Int): ArcGisResponse {
+    private fun whereClause(networks: List<Network>): String {
+        val base = "Status='In Betrieb'"
+        if (networks.isEmpty()) return base
+        val likes = networks.flatMap { it.nameKeywords }
+            .map { "UPPER(Betreiber) LIKE '%${it.uppercase().replace("'", "''")}%'" }
+        return "$base AND (${likes.joinToString(" OR ")})"
+    }
+
+    private suspend fun fetchPage(area: SearchArea, offset: Int, networks: List<Network>): ArcGisResponse {
         return httpClient.get(baseUrl) {
             header(HttpHeaders.UserAgent, OpenChargeMapSource.USER_AGENT)
             parameter("f", "json")
@@ -77,7 +86,9 @@ class BnetzaSource(
             parameter("spatialRel", "esriSpatialRelIntersects")
             // A charging facility under maintenance is not a viable charging stop.
             // The service only knows these two values — verified nationwide.
-            parameter("where", "Status='In Betrieb'")
+            // Networks non-empty: LIKE prefilter so Germany doesn't ship in its entirety;
+            // on-device resolve() applies word-boundary correctness downstream.
+            parameter("where", whereClause(networks))
             parameter("outFields", REQUESTED_FIELDS)
             // Coordinates already come back as fields; the geometry would just
             // be the same information a second time.

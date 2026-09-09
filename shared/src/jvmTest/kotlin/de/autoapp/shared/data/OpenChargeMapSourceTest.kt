@@ -1,6 +1,8 @@
 package de.autoapp.shared.data
 
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.Network
+import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.ConnectorType
 import io.ktor.client.engine.mock.MockEngine
@@ -305,5 +307,31 @@ class OpenChargeMapSourceTest {
     @Test
     fun emptyResponse_resultsInEmptyList() = runBlocking {
         assertTrue(sourceRespondingWith("[]").query(area).isEmpty())
+    }
+
+    @Test
+    fun carries_operator_id() = runBlocking {
+        val json = """[{"ID":1,"OperatorID":86,"OperatorInfo":{"Title":"EnBW"},
+            "AddressInfo":{"Latitude":48.1,"Longitude":11.5},"Connections":[]}]"""
+        val source = sourceRespondingWith(json)
+        val sites = source.query(area)
+        assertEquals(86L, sites.single().operatorId)
+    }
+
+    @Test
+    fun sends_operatorid_for_selected_networks() = runBlocking {
+        var seen: String? = null
+        val source = sourceRespondingWith("[]") { req -> seen = req.url.parameters["operatorid"] }
+        val enbw = NetworkCatalog.byKey("enbw")!!
+        source.query(area, networks = listOf(enbw))
+        assertEquals("86", seen)
+    }
+
+    @Test
+    fun omits_operatorid_when_unfiltered() = runBlocking {
+        var seen: String? = "unset"
+        val source = sourceRespondingWith("[]") { req -> seen = req.url.parameters["operatorid"] }
+        source.query(area)
+        assertNull(seen)
     }
 }

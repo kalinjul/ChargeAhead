@@ -1,7 +1,9 @@
 package de.autoapp.shared.data
 
 import de.autoapp.shared.core.SiteMerger
+import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeSite
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.logWarning
@@ -32,9 +34,9 @@ class MergingSiteRepository(
         require(repositories.isNotEmpty()) { "Without a source there's nothing to merge" }
     }
 
-    override suspend fun sitesIn(area: SearchArea): List<ChargeSite> = coroutineScope {
+    override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = coroutineScope {
         val results = repositories
-            .map { repository -> async { runCatching { repository.sitesIn(area) } } }
+            .map { repository -> async { runCatching { repository.sitesIn(area, networks) } } }
             .awaitAll()
 
         results.forEach { result ->
@@ -46,6 +48,11 @@ class MergingSiteRepository(
         }
 
         SiteMerger.merge(successful.flatten(), maxDistanceMeters)
+    }
+
+    override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = coroutineScope {
+        val results = repositories.map { repo -> async { runCatching { repo.storedSitesIn(box) } } }.awaitAll()
+        SiteMerger.merge(results.mapNotNull { it.getOrNull() }.flatten(), maxDistanceMeters)
     }
 
     override suspend fun invalidate() {

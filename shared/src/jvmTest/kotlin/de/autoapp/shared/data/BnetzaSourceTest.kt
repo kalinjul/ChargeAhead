@@ -2,6 +2,7 @@ package de.autoapp.shared.data
 
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.SectorArea
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
@@ -204,6 +205,30 @@ class BnetzaSourceTest {
         )
 
         assertNull(source.query(area).single().operator)
+    }
+
+    @Test
+    fun builds_where_with_keyword_likes() = runBlocking {
+        var where: String? = null
+        val source = sourceRespondingWith("""{"features":[],"exceededTransferLimit":false}""") {
+            where = it.url.parameters["where"]
+        }
+        val sel = NetworkCatalog.selection(setOf("enbw", "ionity"))
+        source.query(SectorArea.circle(LatLon(48.1, 11.5), 5.0), networks = sel)
+        assertEquals(
+            "Status='In Betrieb' AND (UPPER(Betreiber) LIKE '%ENBW%' OR UPPER(Betreiber) LIKE '%IONITY%')",
+            where,
+        )
+    }
+
+    @Test
+    fun base_clause_when_unfiltered() = runBlocking {
+        var where: String? = null
+        val source = sourceRespondingWith("""{"features":[],"exceededTransferLimit":false}""") {
+            where = it.url.parameters["where"]
+        }
+        source.query(SectorArea.circle(LatLon(48.1, 11.5), 5.0))
+        assertEquals("Status='In Betrieb'", where)
     }
 
     @Test

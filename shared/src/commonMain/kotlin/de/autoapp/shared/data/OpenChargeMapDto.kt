@@ -17,6 +17,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class OcmPoi(
     @SerialName("ID") val id: Long? = null,
+    @SerialName("OperatorID") val operatorId: Long? = null,
     @SerialName("UUID") val uuid: String? = null,
     @SerialName("AddressInfo") val addressInfo: OcmAddressInfo? = null,
     @SerialName("OperatorInfo") val operatorInfo: OcmOperatorInfo? = null,

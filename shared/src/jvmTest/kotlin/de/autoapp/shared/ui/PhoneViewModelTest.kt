@@ -6,6 +6,7 @@ import de.autoapp.shared.core.TripPlanner
 import de.autoapp.shared.data.DemoTariffSource
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeFilters
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
@@ -234,7 +235,8 @@ class PhoneViewModelTest {
      */
     private fun planningOver(sites: List<ChargeSite>, settings: PersistentSettingsStore): PlanningFeature {
         val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea): List<ChargeSite> = sites
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
+            override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = sites
         }
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null
@@ -251,7 +253,7 @@ class PhoneViewModelTest {
             override val updates: Flow<Fix> = emptyFlow()
         },
         repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea): List<ChargeSite> = emptyList()
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = emptyList()
         },
         dispatcher = Dispatchers.Unconfined,
     )

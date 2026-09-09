@@ -26,6 +26,7 @@ data class ChargeSiteEntity(
     val sourceId: String,
     val name: String,
     val operator: String?,
+    val operatorId: Long? = null,
     val lat: Double,
     val lon: Double,
     // Connectors as a "type:kW:count" list. A dedicated table would be
@@ -39,11 +40,13 @@ data class ChargeSiteEntity(
     val street: String?,
     val postalCode: String?,
     val town: String?,
+    val fetchedAtMillis: Long,
 )
 
-@Entity(tableName = "tileCoverage", primaryKeys = ["sourceId", "tileLat", "tileLon"])
+@Entity(tableName = "tileCoverage", primaryKeys = ["sourceId", "networkKey", "tileLat", "tileLon"])
 data class TileCoverageEntity(
     val sourceId: String,
+    val networkKey: String,
     // Tile indices on a 0.1° grid: floor(degree * 10).
     val tileLat: Long,
     val tileLon: Long,
@@ -75,12 +78,14 @@ interface ChargeSiteDao {
     // against the number of requested tiles: if one is missing, it refetches.
     @Query(
         "SELECT count(*) FROM tileCoverage WHERE sourceId = :sourceId " +
+            "AND networkKey = :networkKey " +
             "AND tileLat BETWEEN :minTileLat AND :maxTileLat " +
             "AND tileLon BETWEEN :minTileLon AND :maxTileLon " +
             "AND fetchedAtMillis > :notOlderThanMillis",
     )
     suspend fun freshTileCount(
         sourceId: String,
+        networkKey: String,
         minTileLat: Long,
         maxTileLat: Long,
         minTileLon: Long,
@@ -92,6 +97,15 @@ interface ChargeSiteDao {
     @Query("DELETE FROM tileCoverage WHERE sourceId = :sourceId")
     suspend fun clearCoverage(sourceId: String)
 
+    @Query("DELETE FROM tileCoverage WHERE fetchedAtMillis <= :olderThanMillis")
+    suspend fun pruneStaleCoverage(olderThanMillis: Long)
+
+    @Query("DELETE FROM tileCoverage WHERE networkKey NOT IN (:keys)")
+    suspend fun pruneCoverageNotIn(keys: List<String>)
+
+    @Query("DELETE FROM chargeSite WHERE fetchedAtMillis <= :olderThanMillis")
+    suspend fun pruneStaleSites(olderThanMillis: Long)
+
     @Query("DELETE FROM chargeSite")
     suspend fun clearAll()
 
@@ -102,10 +116,11 @@ interface ChargeSiteDao {
 }
 
 // exportSchema = false for the same reason verifyMigrations was off under
-// SQLDelight: a schema snapshot per version costs more than it buys. A
-// future schema change gets a hand-written Migration plus a test, exactly
-// like the 1.sqm it replaces had.
-@Database(entities = [ChargeSiteEntity::class, TileCoverageEntity::class], version = 1, exportSchema = false)
+// SQLDelight: a schema snapshot per version costs more than it buys. The
+// tables are a regenerable cache, so a schema bump just drops and refetches
+// — see fallbackToDestructiveMigration in DatabaseFactory. No hand-written
+// Migration objects.
+@Database(entities = [ChargeSiteEntity::class, TileCoverageEntity::class], version = 2, exportSchema = false)
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)
 abstract class ChargeSiteDatabase : RoomDatabase() {
     abstract fun chargeSites(): ChargeSiteDao

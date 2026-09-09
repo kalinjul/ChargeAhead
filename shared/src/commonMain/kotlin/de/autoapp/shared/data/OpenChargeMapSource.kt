@@ -7,6 +7,7 @@ import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.PolylineArea
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -55,18 +56,18 @@ class OpenChargeMapSource(
      * distance. The same query then returned 1.9 km as the nearest hit.
      * So the cap truncates the farthest results instead of the nearest.
      */
-    override suspend fun query(area: SearchArea): List<ChargeSite> = when (area) {
+    override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> = when (area) {
         // OCM has no concept of a polyline. So the corridor is broken into a
         // chain of circles and queried section by section — the bounding
         // rectangle of a route would be uselessly large.
         is PolylineArea -> area.radialCover()
-            .flatMap { queryCircle(it) }
+            .flatMap { queryCircle(it, networks) }
             .distinctBy { it.id }
 
-        else -> queryCircle(area)
+        else -> queryCircle(area, networks)
     }
 
-    private suspend fun queryCircle(area: SearchArea): List<ChargeSite> {
+    private suspend fun queryCircle(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite> {
         val response: List<OcmPoi> = httpClient.get(baseUrl) {
             header(HttpHeaders.UserAgent, USER_AGENT)
             // Deliberately duplicated: OCM accepts the key both as a header
@@ -83,6 +84,10 @@ class OpenChargeMapSource(
             parameter("distance", area.radiusKm)
             parameter("distanceunit", "KM")
             parameter("maxresults", maxResults)
+            if (networks.isNotEmpty()) {
+                val ids = networks.flatMap { it.operatorIds }.distinct().sorted().joinToString(",")
+                parameter("operatorid", ids)
+            }
         }.body()
 
         return response.mapNotNull(::toChargeSite)
@@ -104,6 +109,7 @@ class OpenChargeMapSource(
             id = "$SOURCE_ID:$id",
             name = name,
             operator = operatorTitleOf(poi),
+            operatorId = poi.operatorId,
             position = LatLon(latitude, longitude),
             connectors = poi.connections.orEmpty().mapNotNull(::toConnector),
             address = Address(

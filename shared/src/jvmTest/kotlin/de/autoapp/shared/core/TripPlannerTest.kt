@@ -10,6 +10,7 @@ import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.VehicleProfile
@@ -66,7 +67,7 @@ class TripPlannerTest {
     }
 
     private fun repositoryWith(sites: List<ChargeSite>): SiteRepository = object : SiteRepository {
-        override suspend fun sitesIn(area: SearchArea): List<ChargeSite> = sites
+        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
     }
 
     private fun planner(route: Route?, sites: List<ChargeSite>) =
@@ -131,7 +132,7 @@ class TripPlannerTest {
         val route = straightRoute()
         val queriedRadii = mutableListOf<Double>()
         val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea): List<ChargeSite> {
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
                 queriedRadii += area.radiusKm
                 return sitesAlong(route)
             }
@@ -144,6 +145,31 @@ class TripPlannerTest {
         assertTrue(
             queriedRadii.all { it < 150.0 },
             "every query must stay at corridor scale, got: $queriedRadii",
+        )
+    }
+
+    @Test
+    fun `an active network filter is forwarded to the repository, not applied on-device`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val capturedNetworks = mutableListOf<List<Network>>()
+        val repository = object : SiteRepository {
+            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+                capturedNetworks += networks
+                return sitesAlong(route)
+            }
+        }
+        val activeFilter = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
+        TripPlanner(engineReturning(route), repository, DemoTariffSource())
+            .plan(start, destination, id4, startSocPercent = 90.0, networks = activeFilter)
+
+        assertTrue(capturedNetworks.isNotEmpty(), "repository must have been queried")
+        assertTrue(
+            capturedNetworks.all { it.isNotEmpty() },
+            "every segment query must carry the resolved network selection",
+        )
+        assertTrue(
+            capturedNetworks.all { networks -> networks.any { it.key == "ionity" } },
+            "the Ionity network must be in every query",
         )
     }
 

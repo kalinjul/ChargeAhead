@@ -358,7 +358,7 @@ class ChargeStopsFeature(
         )
 
         try {
-            val sites = repository.sitesIn(area)
+            val sites = repository.sitesIn(area, networks.selectedNetworks())
             publish(
                 ChargeStopsState(
                     stops = ChargeStopPlanner.plan(

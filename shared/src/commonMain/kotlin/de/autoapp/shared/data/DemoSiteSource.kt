@@ -3,6 +3,7 @@ package de.autoapp.shared.data
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ChargeSiteSource
 import de.autoapp.shared.domain.Connector
+import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.destination
@@ -25,7 +26,7 @@ class DemoSiteSource : ChargeSiteSource {
 
     override val id: String = "demo"
 
-    override suspend fun query(area: SearchArea): List<ChargeSite> {
+    override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
         val center = area.origin
         return TEMPLATES.map { template ->
             ChargeSite(

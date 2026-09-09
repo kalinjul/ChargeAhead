@@ -29,7 +29,7 @@ interface ChargeSiteSource {
      * Throws on network or server errors; whether the old list stays visible
      * because of that is decided by the calling layer, not the source.
      */
-    suspend fun query(area: SearchArea): List<ChargeSite>
+    suspend fun query(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite>
 }
 
 /** Builds the search area from a fix: corridor in M1, real route from M5 onward. */
@@ -62,7 +62,13 @@ fun interface TimeProvider {
  * held in memory, from M3 onward tile by tile in SQLDelight.
  */
 interface SiteRepository {
-    suspend fun sitesIn(area: SearchArea): List<ChargeSite>
+    suspend fun sitesIn(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite>
+
+    /**
+     * Returns whatever is already cached in [box] — no fetch, no coverage
+     * check. An empty result is valid; use [sitesIn] when you need fresh data.
+     */
+    suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = emptyList()
 
     /**
      * Discards the stock so the next access actually queries. A no-op by
