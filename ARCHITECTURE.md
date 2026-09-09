@@ -557,9 +557,10 @@ ViewModels share them, because two instances would mean two location streams
 and two stores that never see each other's writes. The ViewModels are
 declared in `sharedUiModule` (`shared/ui/SharedUiModule.kt`, so iOS can
 start the same graph later) and resolved activity-scoped via
-`phoneViewModel()`. Navigation3 (plans/technical-debts.md) later replaces
-the activity scope with a per-destination one — only `phoneViewModel()`
-changes for that.
+`phoneViewModel()`. Navigation is a Navigation3 back stack
+(`androidApp/.../phone/Destinations.kt`); per-entry ViewModel scope stays
+open until Platform 37 lifts the lifecycle cap (section 9) — then it is one
+artifact plus one NavDisplay decorator line in `phoneViewModel()`.
 
 **What stays in the UI.** Which page is showing, which sheet is open, the
 Android permission handshake, and state that only lives for a gesture (a

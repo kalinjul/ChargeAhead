@@ -57,8 +57,9 @@ is fine — that one is multiplatform.
    Everything that survives a rotation belongs in the ViewModel; state that
    only lives for a gesture (a slider being dragged, an expanded row) may
    stay in `remember`.
-8. **Navigation stays in the UI.** ViewModels do not know pages. Until
-   Navigation3 lands, which page is showing is `MainActivity`'s business.
+8. **Navigation stays in the UI.** ViewModels do not know destinations.
+   Which entry is showing is `MainActivity`'s Navigation3 back stack
+   (`Destinations.kt`).
 9. **Writes run on `viewModelScope`**, whose dispatcher is the main one on
    both platforms. Don't move store writes to `Dispatchers.Default` — two
    edits would then race and the older one could win. Heavy computation
