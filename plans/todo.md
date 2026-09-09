@@ -13,7 +13,7 @@
 - When a plan is shown or loaded from favorites, there should be a quick option to input the current SOC at start
 
 # Map
-- The map view should give charging stations an icon depending on charging speed. A bolt, red = slow (max 22 kW), yellow = min 50 kW, green = min 100 kW, two green bolts 150 kW and so on.
+- ~~The map view should give charging stations an icon depending on charging speed. A bolt, red = slow (max 22 kW), yellow = min 50 kW, green = min 100 kW, two green bolts 150 kW and so on.~~ — done
 - In addition, the operator should be shown in short form. For now only for the best-known operators: EWE Go, EnBW, Tesla, Aral, Shell, e.on, Ionity.
 - When clicking a charging station, the title shows the place name. The title should show the operator instead.
 - The price should no longer be displayed directly on the map.

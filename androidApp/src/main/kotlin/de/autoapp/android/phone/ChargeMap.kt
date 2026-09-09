@@ -16,6 +16,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -34,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
@@ -47,6 +49,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
 import de.autoapp.android.BuildConfig
 import de.autoapp.android.R
+import de.autoapp.shared.domain.ChargeSpeed
 import de.autoapp.shared.domain.LatLon
 
 /**
@@ -135,18 +138,17 @@ fun HomeGoogleMap(
             modifier = Modifier.fillMaxSize(),
         ) {
             chargers.forEach { charger ->
-                val label = charger.quote.best
-                    ?.let { "${it.euroPerKwh.twoDecimals()} €" }
-                    ?: "⚡"
+                val label = charger.quote.best?.let { "${it.euroPerKwh.twoDecimals()} €" }
+                val speed = ChargeSpeed.of(charger.maxPowerKw)
                 key(charger.site.id) {
                     MarkerComposable(
-                        keys = arrayOf(charger.site.id, label),
+                        keys = arrayOf<Any>(charger.site.id, speed, label.orEmpty()),
                         state = rememberMarkerState(position = charger.site.position.toLatLng()),
                         title = charger.site.name,
                         anchor = Offset(0.5f, 0.5f),
                         onClick = { onChargerTapped(charger); true },
                     ) {
-                        PricePill(label)
+                        ChargerPill(speed = speed, label = label)
                     }
                 }
             }
@@ -206,26 +208,49 @@ fun HomeGoogleMap(
 }
 
 /**
- * Small white price pill, like the hotel/POI price chips in Google Maps.
- * Neutral by design: color-coding reachability on a map read as arbitrary
- * noise (design interview 2026-09-07) — the marker states the one fact the
- * driver compares at map scale, and everything else is one tap away.
+ * Small white chip, like the hotel/POI price chips in Google Maps: one bolt
+ * per power class, colored by [ChargeSpeed].
+ *
+ * The color carries charging speed, not reachability — color-coding
+ * reachability on a map read as arbitrary noise (design interview
+ * 2026-09-07), while speed is the one property the driver compares between
+ * two pins at map scale. The bolt count repeats that ordering without color,
+ * for anyone who cannot tell the red from the green one.
  */
 @Composable
-private fun PricePill(text: String) {
-    Box(
-        contentAlignment = Alignment.Center,
+private fun ChargerPill(speed: ChargeSpeed, label: String?) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy((-3).dp),
         modifier = Modifier
             .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(50))
             .border(1.dp, Color(0xFFDADCE0), androidx.compose.foundation.shape.RoundedCornerShape(50))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 6.dp, vertical = 3.dp),
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium,
-            color = Color(0xFF202124),
-        )
+        repeat(speed.bolts) {
+            Icon(
+                painter = painterResource(R.drawable.ic_bolt),
+                contentDescription = null,
+                tint = speed.markerColor(),
+                modifier = Modifier.size(14.dp),
+            )
+        }
+        if (label != null) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFF202124),
+                modifier = Modifier.padding(start = 5.dp, end = 2.dp),
+            )
+        }
     }
+}
+
+/** Red below 50 kW, amber up to 100, green above — the traffic light everyone reads without a legend. */
+private fun ChargeSpeed.markerColor(): Color = when (this) {
+    ChargeSpeed.SLOW -> Color(0xFFD93025)
+    ChargeSpeed.MEDIUM -> Color(0xFFF9AB00)
+    ChargeSpeed.FAST, ChargeSpeed.ULTRA, ChargeSpeed.HYPER -> Color(0xFF188038)
 }
 
 /** Circular disc with a white ring — the planned-stop badges on the trip map. */
