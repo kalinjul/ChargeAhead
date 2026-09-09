@@ -1,6 +1,7 @@
 package de.autoapp.shared.data
 
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.distanceKmTo
 import de.autoapp.shared.domain.ConnectorType
@@ -98,6 +99,17 @@ class OpenChargeMapLiveContractTest {
         // remains must have one, or the car UI would show "0 kW".
         assertTrue(connectors.all { it.maxPowerKw > 0.0 })
         assertTrue(connectors.isNotEmpty())
+    }
+
+    @Test
+    fun operatorid_filters_server_side() {
+        if (skip()) return
+
+        val enbw = NetworkCatalog.byKey("enbw")!!
+        val sites = runBlocking { source().query(SectorArea.circle(LatLon(48.137, 11.575), 25.0), networks = listOf(enbw)) }
+
+        assertTrue(sites.isNotEmpty(), "EnBW around Munich should return sites")
+        assertTrue(sites.all { it.operatorId == 86L }, "every returned site must be EnBW (operatorId 86)")
     }
 
     private fun skip(): Boolean {
