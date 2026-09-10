@@ -160,7 +160,11 @@ class PlanningFeature(
         const val MIN_FETCH_RADIUS_KM = 15.0
 
         /** More markers than this and the map is unreadable anyway. */
-        const val MAX_MAP_CHARGERS = 300
+        // Each marker rasterizes a composable pill on the main thread, so the
+        // count is a frame-budget cap, not just visual clutter: a filter toggle
+        // swaps the whole set at once, and 300 at once froze the UI. 60 of the
+        // strongest is plenty for an overview and stays smooth.
+        const val MAX_MAP_CHARGERS = 60
 
         // render two screens past each edge, from cache, so markers don't vanish when you scroll back
         const val MAP_RENDER_PADDING_VIEWPORTS = 2.0
