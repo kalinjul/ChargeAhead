@@ -102,6 +102,32 @@ class NetworksViewModelTest {
         assertEquals(NetworkCatalog.all.size, state.networks.size)
     }
 
+    @Test
+    fun `without a search term the committed networks come first`() = runBlocking<Unit> {
+        val settings = settings()
+        // A network far down the catalog, so plain catalog order would not
+        // put it on top by accident.
+        val key = NetworkCatalog.all.last().key
+        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf(key)))
+        val vm = NetworksViewModel(settings)
+
+        val state = vm.uiState.await { it.committed == setOf(key) }
+        assertEquals(key, state.networks.first().key)
+        assertEquals(NetworkCatalog.all.size, state.networks.size, "nothing dropped")
+    }
+
+    @Test
+    fun `staging a network does not reorder the list under the finger`() = runBlocking<Unit> {
+        val settings = settings()
+        val vm = NetworksViewModel(settings)
+        val key = NetworkCatalog.all.last().key
+
+        vm.onNetworkToggled(key)
+
+        val state = vm.uiState.await { key in it.pending }
+        assertEquals(NetworkCatalog.all.map { it.key }, state.networks.map { it.key })
+    }
+
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
         withTimeout(5_000L) { first(matching) }
 }

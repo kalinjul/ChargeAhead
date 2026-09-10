@@ -16,7 +16,10 @@ import kotlinx.coroutines.launch
 
 /** Choosing charging networks. */
 data class NetworksUiState(
-    /** The catalog rows to show; filtered by [search] when non-empty, full list otherwise. */
+    /**
+     * The catalog rows to show; filtered by [search] when non-empty, full
+     * list — the driver's own networks first — otherwise.
+     */
     val networks: List<Network> = emptyList(),
     /** Staged selection (catalog keys) — not yet written to settings. */
     val pending: Set<String> = emptySet(),
@@ -45,7 +48,14 @@ class NetworksViewModel(
             val needle = OperatorKey.folded(search.trim())
             NetworkCatalog.all.filter { OperatorKey.folded(it.name).contains(needle) }
         } else {
-            NetworkCatalog.all
+            // Without a search term the driver's own networks come first:
+            // they are the ones you return to in order to change something,
+            // and they'd otherwise sit scattered through the whole catalog.
+            // The order follows the committed selection, not the staged one,
+            // so ticking a row doesn't pull it out from under the finger
+            // that just ticked it.
+            val (preferred, rest) = NetworkCatalog.all.partition { it.key in committed }
+            preferred + rest
         }
         NetworksUiState(
             networks = filtered,
