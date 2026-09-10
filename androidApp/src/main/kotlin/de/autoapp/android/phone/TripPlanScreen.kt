@@ -103,11 +103,6 @@ fun TripPlanScreen(
     val selectionB = selection.b
 
     val pointCount = plan.stops.size + 2
-    fun pointName(index: Int): String = when (index) {
-        0 -> ""
-        pointCount - 1 -> plan.destination.name
-        else -> plan.stops[index - 1].site.name
-    }
 
     fun pointPosition(index: Int): LatLon? = when (index) {
         0 -> startPosition ?: plan.route.points.firstOrNull()
@@ -281,18 +276,11 @@ fun TripPlanScreen(
                             contentDescription = null,
                             modifier = Modifier.size(15.dp),
                         )
-                        val label = if (selecting && selectionA != null && selectionB != null) {
-                            val lo = minOf(selectionA!!, selectionB!!)
-                            val hi = maxOf(selectionA!!, selectionB!!)
-                            stringResource(
-                                R.string.trip_send_selected,
-                                pointName(lo).ifEmpty { startName },
-                                pointName(hi),
-                            )
-                        } else {
-                            stringResource(R.string.trip_send_maps)
-                        }
-                        Text(label, maxLines = 1, modifier = Modifier.padding(start = 6.dp))
+                        Text(
+                            stringResource(R.string.trip_send_maps),
+                            maxLines = 1,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
                     }
                     OutlinedButton(
                         onClick = onToggleSelecting,
