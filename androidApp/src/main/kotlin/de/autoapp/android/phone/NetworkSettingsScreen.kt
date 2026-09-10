@@ -19,6 +19,7 @@ import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SearchField
+import de.autoapp.android.phone.components.SwitchRow
 import de.autoapp.android.phone.components.TickRow
 import de.autoapp.shared.ui.NetworksUiState
 import de.autoapp.shared.ui.NetworksViewModel
@@ -73,10 +74,10 @@ fun NetworkSettingsScreen(
         )
 
         AppCard(modifier = Modifier.padding(top = 16.dp)) {
-            TickRow(
+            SwitchRow(
                 label = stringResource(R.string.phone_networks_only),
                 checked = uiState.onlyPreferred,
-                onClick = { onOnlyPreferredChange(!uiState.onlyPreferred) },
+                onCheckedChange = onOnlyPreferredChange,
             )
         }
 
