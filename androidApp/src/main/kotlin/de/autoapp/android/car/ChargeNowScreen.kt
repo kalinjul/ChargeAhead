@@ -107,7 +107,6 @@ class ChargeNowScreen(
                 when (relaxed) {
                     RelaxedFilter.MIN_POWER -> R.string.car_relax_power
                     RelaxedFilter.NETWORKS -> R.string.car_relax_networks
-                    RelaxedFilter.MAX_PRICE -> R.string.car_relax_price
                     RelaxedFilter.MAX_DISTANCE -> R.string.car_relax_distance
                 },
             )

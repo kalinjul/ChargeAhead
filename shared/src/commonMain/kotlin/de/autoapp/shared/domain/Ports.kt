@@ -111,9 +111,6 @@ interface SettingsStore {
     /** Hard limits for the phone flows (planning, "charge now"). */
     val chargeFilters: Flow<ChargeFilters>
 
-    /** The tariffs the driver actually holds, by [Tariff.id]. */
-    val activeTariffIds: Flow<Set<String>>
-
     /** Routes kept under a chosen name. Order is the driver's save order, newest first. */
     val savedRoutes: Flow<List<SavedRoute>>
 
@@ -147,7 +144,6 @@ interface SettingsStore {
     suspend fun setManualSocPercent(socPercent: Double?)
 
     suspend fun setChargeFilters(filters: ChargeFilters)
-    suspend fun setActiveTariffIds(ids: Set<String>)
 
     suspend fun saveRoute(route: SavedRoute)
     suspend fun renameSavedRoute(id: String, name: String)

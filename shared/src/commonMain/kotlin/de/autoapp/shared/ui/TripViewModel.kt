@@ -31,8 +31,6 @@ sealed interface TripUiState {
         val plan: TripPlan,
         /** The route is in the driver's favourites. */
         val isSaved: Boolean,
-        /** At least one price is an estimate — the screen has to say so. */
-        val isEstimate: Boolean,
         val startPosition: LatLon?,
         val startSocPercent: Double?,
         val selection: SectionSelection = SectionSelection(),
@@ -141,7 +139,6 @@ class TripViewModel(
             else -> TripUiState.Planned(
                 plan = plan,
                 isSaved = saved.any { it.destination.position == plan.destination.position },
-                isEstimate = plan.stops.any { it.quote.isEstimate },
                 startPosition = state.position,
                 startSocPercent = socPercent,
                 selection = inputs.selection,

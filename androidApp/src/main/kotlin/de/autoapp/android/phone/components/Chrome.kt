@@ -11,16 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import de.autoapp.android.phone.twoDecimals
 import de.autoapp.android.phone.theme.ChargeAheadColors
-import de.autoapp.android.phone.theme.tabular
 
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
@@ -53,21 +48,3 @@ fun RankBadge(number: Int, color: Color, modifier: Modifier = Modifier, textColo
     }
 }
 
-@Composable
-fun PriceText(euroPerKwh: Double, modifier: Modifier = Modifier) {
-    Text(
-        buildAnnotatedString {
-            append("${euroPerKwh.twoDecimals()} €")
-            withStyle(
-                SpanStyle(
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-            ) { append("/kWh") }
-        },
-        color = MaterialTheme.colorScheme.tertiary,
-        style = MaterialTheme.typography.titleSmall.tabular.copy(fontWeight = FontWeight.ExtraBold),
-        modifier = modifier,
-    )
-}

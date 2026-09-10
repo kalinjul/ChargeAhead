@@ -145,26 +145,15 @@ class PersistentSettingsStore(
     override suspend fun setChargeFilters(filters: ChargeFilters) {
         storage.putJson(
             KEY_CHARGE_FILTERS,
-            StoredFilters(filters.minPowerKw, filters.maxPriceEuroPerKwh, filters.maxDistanceKm),
+            StoredFilters(filters.minPowerKw, filters.maxDistanceKm),
         )
         mutableFilters.value = filters
     }
 
     private fun readFilters(): ChargeFilters {
         val stored = storage.getJson<StoredFilters>(KEY_CHARGE_FILTERS) ?: return ChargeFilters()
-        return ChargeFilters(stored.minPowerKw, stored.maxPrice, stored.maxDistanceKm)
+        return ChargeFilters(stored.minPowerKw, stored.maxDistanceKm)
     }
-
-    private val mutableTariffs = MutableStateFlow(readTariffIds())
-    override val activeTariffIds: StateFlow<Set<String>> = mutableTariffs.asStateFlow()
-
-    override suspend fun setActiveTariffIds(ids: Set<String>) {
-        storage.putJson(KEY_ACTIVE_TARIFFS, ids.takeIf { it.isNotEmpty() }?.toList())
-        mutableTariffs.value = ids
-    }
-
-    private fun readTariffIds(): Set<String> =
-        storage.getJson<List<String>>(KEY_ACTIVE_TARIFFS)?.toSet().orEmpty()
 
     private val mutableSavedRoutes = MutableStateFlow(readSavedRoutes())
     override val savedRoutes: StateFlow<List<SavedRoute>> = mutableSavedRoutes.asStateFlow()
@@ -316,7 +305,6 @@ class PersistentSettingsStore(
     @Serializable
     private data class StoredFilters(
         val minPowerKw: Double,
-        val maxPrice: Double,
         val maxDistanceKm: Double,
     )
 
@@ -371,7 +359,6 @@ class PersistentSettingsStore(
         const val KEY_GARAGE = "vehicle.garage"
         const val KEY_MANUAL_SOC = "energy.manualSocPercent"
         const val KEY_CHARGE_FILTERS = "filters.charge"
-        const val KEY_ACTIVE_TARIFFS = "tariffs.active"
         const val KEY_SAVED_ROUTES = "routes.saved"
         const val KEY_CAR_DEBUG = "car.debugData"
     }

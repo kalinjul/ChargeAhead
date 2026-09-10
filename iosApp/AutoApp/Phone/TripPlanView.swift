@@ -20,15 +20,10 @@ struct TripPlanView: View {
                         minutesText(plan.chargeMinutes)
                     ))
                     .font(.subheadline)
-                    HStack {
-                        if let cost = plan.estimatedCostEuro {
-                            Text(String(format: NSLocalizedString("trip_summary_cost_fmt", comment: ""), cost.doubleValue))
-                        }
-                        Text(String(
-                            format: NSLocalizedString("trip_summary_arrival_fmt", comment: ""),
-                            Int(plan.arrivalSocPercent.rounded())
-                        ))
-                    }
+                    Text(String(
+                        format: NSLocalizedString("trip_summary_arrival_fmt", comment: ""),
+                        Int(plan.arrivalSocPercent.rounded())
+                    ))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 }
@@ -42,17 +37,9 @@ struct TripPlanView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(index + 1) · \(stop.site.name)")
                                 .font(.headline)
-                            HStack {
-                                Text("\(ChargeStopFormatter.shared.minutesLabel(minutes: stop.chargeMinutes)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: stop.maxPowerKw))")
+                            Text("\(ChargeStopFormatter.shared.minutesLabel(minutes: stop.chargeMinutes)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: stop.maxPowerKw))")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
-                                Spacer()
-                                if let best = stop.quote.best {
-                                    Text(ChargeStopFormatter.shared.pricePerKwhLabel(euroPerKwh: best.euroPerKwh))
-                                        .font(.subheadline)
-                                        .foregroundStyle(.green)
-                                }
-                            }
                         }
                     }
                 }
@@ -69,9 +56,6 @@ struct TripPlanView: View {
                 } label: {
                     Label(NSLocalizedString("trip_send_maps", comment: ""), systemImage: "map.fill")
                 }
-                Text(NSLocalizedString("trip_estimate_note", comment: ""))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
         }
         .navigationTitle(plan.destination.name)
@@ -79,7 +63,7 @@ struct TripPlanView: View {
     }
 }
 
-/// One planned stop: what the plan expects here and what it costs by tariff.
+/// One planned stop: what the plan expects here.
 struct StopDetailView: View {
     let stop: PlannedStop
 
@@ -96,22 +80,6 @@ struct StopDetailView: View {
                     Int(stop.arrivalSocPercent.rounded()),
                     Int(stop.departureSocPercent.rounded())
                 ))
-            }
-
-            Section(NSLocalizedString("detail_prices", comment: "")) {
-                ForEach(Array(stop.quote.prices.enumerated()), id: \.offset) { _, price in
-                    HStack {
-                        Text(price.label)
-                        Spacer()
-                        Text(ChargeStopFormatter.shared.pricePerKwhLabel(euroPerKwh: price.euroPerKwh))
-                            .foregroundStyle(price == stop.quote.best ? .green : .primary)
-                    }
-                }
-                if stop.quote.isEstimate {
-                    Text(NSLocalizedString("trip_estimate_note", comment: ""))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                }
             }
 
             Section {

@@ -249,17 +249,9 @@ struct ChargeNowView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(index + 1) · \(candidate.site.name)")
                                     .font(.headline)
-                                HStack {
-                                    Text("\(ChargeStopFormatter.shared.distanceLabel(distanceKm: candidate.distanceKm)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: candidate.maxPowerKw))")
-                                        .font(.footnote)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    if let best = candidate.quote.best {
-                                        Text(ChargeStopFormatter.shared.pricePerKwhLabel(euroPerKwh: best.euroPerKwh))
-                                            .font(.subheadline)
-                                            .foregroundStyle(.green)
-                                    }
-                                }
+                                Text("\(ChargeStopFormatter.shared.distanceLabel(distanceKm: candidate.distanceKm)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: candidate.maxPowerKw))")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }

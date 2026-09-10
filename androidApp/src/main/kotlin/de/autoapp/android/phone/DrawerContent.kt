@@ -78,13 +78,6 @@ internal fun DrawerContent(
                 sublabel = uiState.vehicleName ?: stringResource(R.string.drawer_car_none),
                 onClick = { onOpen(Garage) },
             )
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-            PrefRow(
-                icon = painterResource(R.drawable.ic_cardpay),
-                label = stringResource(R.string.drawer_subscriptions),
-                sublabel = stringResource(R.string.drawer_subs_count, uiState.activeTariffCount),
-                onClick = { onOpen(Subscriptions) },
-            )
         }
 
         Column {
@@ -103,12 +96,6 @@ internal fun DrawerContent(
         }
 
         Column {
-            SectionLabel(stringResource(R.string.drawer_max_price, filters.maxPriceEuroPerKwh.twoDecimals()))
-            AppSlider(
-                value = filters.maxPriceEuroPerKwh.toFloat(),
-                onValueChange = { onFilters(filters.copy(maxPriceEuroPerKwh = (it * 100).roundToInt() / 100.0)) },
-                valueRange = 0.4f..1.0f,
-            )
             SectionLabel(stringResource(R.string.drawer_max_distance, filters.maxDistanceKm.oneDecimal()))
             AppSlider(
                 value = filters.maxDistanceKm.toFloat(),

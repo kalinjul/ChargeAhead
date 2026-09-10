@@ -129,7 +129,6 @@ private fun ChargeNowCard(
         title = candidate.site.operator ?: candidate.site.name,
         metaLine = stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
         address = ChargeStopFormatter.addressLine(candidate.site),
-        priceEuroPerKwh = candidate.quote.best?.euroPerKwh,
         onSend = { onNavigate(candidate) },
         sendContentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
     )
@@ -138,6 +137,5 @@ private fun ChargeNowCard(
 private fun RelaxedFilter.labelRes(): Int = when (this) {
     RelaxedFilter.MIN_POWER -> R.string.cn_relax_min_power
     RelaxedFilter.NETWORKS -> R.string.cn_relax_networks
-    RelaxedFilter.MAX_PRICE -> R.string.cn_relax_max_price
     RelaxedFilter.MAX_DISTANCE -> R.string.cn_relax_max_distance
 }

@@ -8,10 +8,7 @@ import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
-import de.autoapp.shared.domain.PriceKind
-import de.autoapp.shared.domain.PriceQuote
 import de.autoapp.shared.domain.Reachability
-import de.autoapp.shared.domain.TariffPrice
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -227,7 +224,6 @@ class ChargeStopFormatterTest {
         chargeMinutes = 25.4,
         etaMinutesFromStart = 120.0,
         maxPowerKw = 150.0,
-        quote = PriceQuote(emptyList(), isEstimate = true),
     )
 
     @Test
@@ -275,15 +271,10 @@ class ChargeStopFormatterTest {
     private fun candidate(
         distanceKm: Double = 2.5,
         site: ChargeSite = this.site,
-        priceEuroPerKwh: Double? = null,
     ) = ChargeNowCandidate(
         site = site,
         distanceKm = distanceKm,
         maxPowerKw = 150.0,
-        quote = PriceQuote(
-            prices = priceEuroPerKwh?.let { listOf(TariffPrice("Test", it, PriceKind.AD_HOC)) }.orEmpty(),
-            isEstimate = true,
-        ),
     )
 
     @Test
@@ -303,15 +294,7 @@ class ChargeStopFormatterTest {
     }
 
     @Test
-    fun chargeNowSecondaryLine_showsPowerCountAndEstimatedPrice() {
-        assertEquals(
-            "150 kW · 6 Ladepunkte · ca. 0,54 €/kWh",
-            ChargeStopFormatter.chargeNowSecondaryLine(candidate(priceEuroPerKwh = 0.54)),
-        )
-    }
-
-    @Test
-    fun chargeNowSecondaryLine_withoutPrice_showsPowerAndCount() {
+    fun chargeNowSecondaryLine_showsPowerAndCount() {
         assertEquals("150 kW · 6 Ladepunkte", ChargeStopFormatter.chargeNowSecondaryLine(candidate()))
     }
 
@@ -319,8 +302,6 @@ class ChargeStopFormatterTest {
     @Test
     fun labels_forPlatformComposedLines_useGermanFormats() {
         assertEquals("150 kW", ChargeStopFormatter.powerKwLabel(150.4))
-        assertEquals("0,54 €/kWh", ChargeStopFormatter.pricePerKwhLabel(0.54))
-        assertEquals("0,05 €/kWh", ChargeStopFormatter.pricePerKwhLabel(0.049))
         assertEquals("25 min", ChargeStopFormatter.minutesLabel(24.6))
     }
 }

@@ -3,7 +3,6 @@ package de.autoapp.shared.ui
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.core.TripPlanner
-import de.autoapp.shared.data.DemoTariffSource
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.Network
@@ -64,21 +63,6 @@ class PhoneViewModelTest {
     @AfterTest
     fun tearDownMainDispatcher() {
         Dispatchers.resetMain()
-    }
-
-    @Test
-    fun `subscriptions filter the catalog and survive a toggle`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
-        val viewModel = SubscriptionsViewModel(settings)
-
-        viewModel.onQueryChanged("ionity")
-        val filtered = viewModel.uiState.await { it.query == "ionity" }
-        assertTrue(filtered.matches.isNotEmpty(), "expected at least one Ionity tariff")
-        assertTrue(filtered.matches.all { it.displayName.contains("Ionity", ignoreCase = true) })
-
-        val id = filtered.matches.first().id
-        viewModel.onTariffToggled(id)
-        assertEquals(setOf(id), viewModel.uiState.await { it.activeIds.isNotEmpty() }.activeIds)
     }
 
     /**
@@ -241,8 +225,7 @@ class PhoneViewModelTest {
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null
         }
-        val tariffs = DemoTariffSource()
-        return PlanningFeature(TripPlanner(engine, repository, tariffs), repository, tariffs, settings)
+        return PlanningFeature(TripPlanner(engine, repository), repository, settings)
     }
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
