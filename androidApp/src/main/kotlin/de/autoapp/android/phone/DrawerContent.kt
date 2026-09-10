@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -48,6 +49,7 @@ internal fun DrawerContent(
     uiState: DrawerUiState,
     onOpen: (PhoneDestination) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
+    applyingFilters: Boolean = false,
 ) {
     val filters = uiState.filters
 
@@ -112,6 +114,20 @@ internal fun DrawerContent(
                 onToggle = { onFilters(filters.copy(slowMode = it)) },
                 modifier = Modifier.padding(top = 8.dp),
             )
+            if (applyingFilters) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 10.dp, start = 4.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Text(
+                        stringResource(R.string.map_applying_filters),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
 
         Column {

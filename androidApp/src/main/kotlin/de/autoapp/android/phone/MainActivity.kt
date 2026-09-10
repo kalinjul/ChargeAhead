@@ -65,6 +65,7 @@ import de.autoapp.shared.core.MapsHandoff
 import de.autoapp.shared.core.TripPlan
 import de.autoapp.shared.ui.ChargeNowViewModel
 import de.autoapp.shared.ui.DrawerViewModel
+import de.autoapp.shared.ui.HomeViewModel
 import de.autoapp.shared.ui.PlanSheetViewModel
 import de.autoapp.shared.ui.TripEvent
 import de.autoapp.shared.ui.TripUiState
@@ -114,6 +115,9 @@ private fun PhoneApp() {
     // these three are here because the app bar, the drawer and the sheets
     // read them, not one screen.
     val drawerViewModel: DrawerViewModel = phoneViewModel()
+    // Same activity-scoped instance the map uses; the drawer reads its
+    // applyingFilters to show a spinner while a filter toggle refetches.
+    val homeViewModel: HomeViewModel = phoneViewModel()
     val tripViewModel: TripViewModel = phoneViewModel()
     val planSheetViewModel: PlanSheetViewModel = phoneViewModel()
     val chargeNowViewModel: ChargeNowViewModel = phoneViewModel()
@@ -185,8 +189,10 @@ private fun PhoneApp() {
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+                val homeUi by homeViewModel.uiState.collectAsStateWithLifecycle()
                 DrawerContent(
                     uiState = drawerUi,
+                    applyingFilters = homeUi.applyingFilters,
                     // Close first, then navigate: the page swap disposes the
                     // map and its jank freezes a concurrently running drawer
                     // animation — the drawer then just hangs there, open.
