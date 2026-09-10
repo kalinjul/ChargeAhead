@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autoapp.android.R
@@ -177,14 +178,26 @@ fun HomeScreen(
         }
 
         if (!hasPermission) {
-            Column(
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 6.dp,
                 modifier = Modifier.align(Alignment.Center).padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(stringResource(R.string.phone_permission_message))
-                Button(onClick = onRequestPermission) {
-                    Text(stringResource(R.string.phone_permission_action))
+                Column(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        stringResource(R.string.phone_permission_message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = TextAlign.Center,
+                    )
+                    Button(onClick = onRequestPermission) {
+                        Text(stringResource(R.string.phone_permission_action))
+                    }
                 }
             }
         }
