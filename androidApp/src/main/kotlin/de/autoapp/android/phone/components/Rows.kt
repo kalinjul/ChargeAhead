@@ -88,15 +88,22 @@ fun SwitchRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    sublabel: String? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(11.dp),
         modifier = modifier.fillMaxWidth()
             .toggleable(value = checked, onValueChange = onCheckedChange, role = Role.Switch)
-            .padding(horizontal = 14.dp, vertical = 6.dp),
+            // A second line needs room to breathe; one line sits tight on purpose.
+            .padding(horizontal = 14.dp, vertical = if (sublabel == null) 6.dp else 11.dp),
     ) {
-        Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.titleSmall)
+            sublabel?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         // null: the row above carries the click and the semantics, so the
         // switch must not announce itself as a second target.
         Switch(checked = checked, onCheckedChange = null)

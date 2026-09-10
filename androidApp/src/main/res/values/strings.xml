@@ -104,7 +104,9 @@
     <string name="phone_action_networks">Ladenetze</string>
     <string name="phone_networks_title">Ladenetze</string>
     <string name="phone_networks_intro">Ohne Auswahl werden alle Ladesäulen gezeigt. Tippe die Netze an, bei denen du lädst — dann werden nur deren Säulen geladen.</string>
-    <string name="phone_networks_only">Nur ausgewählte anzeigen</string>
+    <string name="phone_networks_browse">Stöbermodus</string>
+    <string name="phone_networks_browse_hint">Im Stöbermodus werden alle Ladenetze auf der Karte angezeigt und für die Routenplanung verwendet</string>
+    <string name="phone_networks_mine">Meine Ladenetze</string>
     <string name="phone_networks_search">Ladenetz suchen</string>
     <string name="phone_search_clear">Suche löschen</string>
     <string name="phone_networks_no_match">Kein Ladenetz passt zu „%1$s”.</string>
