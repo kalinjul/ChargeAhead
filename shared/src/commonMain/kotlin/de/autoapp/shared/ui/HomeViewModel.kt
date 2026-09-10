@@ -11,12 +11,14 @@ import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Reachability
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.distanceKmTo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -97,6 +99,9 @@ class HomeViewModel(
             // response can land after a fast later one and put markers from a
             // different part of the country on the map.
             .mapLatest { viewport -> viewport?.let { planning.chargersIn(it) }.orEmpty() }
+            // The query hits Room, filters and sorts — off the main thread, so
+            // toggling a filter (AC mode especially) doesn't freeze the UI.
+            .flowOn(Dispatchers.Default)
             .onEach { chargers -> map.update { it.copy(chargers = chargers, applyingFilters = false) } }
             .launchIn(viewModelScope)
 
