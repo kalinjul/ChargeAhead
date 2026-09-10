@@ -212,8 +212,8 @@ fun HomeGoogleMap(
 }
 
 /**
- * Small white chip, like the hotel/POI price chips in Google Maps: one bolt
- * per power class, colored by [ChargeSpeed].
+ * Small white chip, like the hotel/POI chips in Google Maps: one bolt per
+ * power class, colored by [ChargeSpeed].
  *
  * The color carries charging speed, not reachability — color-coding
  * reachability on a map read as arbitrary noise (design interview
@@ -221,10 +221,7 @@ fun HomeGoogleMap(
  * two pins at map scale. The bolt count repeats that ordering without color,
  * for anyone who cannot tell the red from the green one.
  *
- * The label names the network, nothing else. The price used to sit here and
- * doesn't any more: every price this app knows is an estimate against the
- * driver's tariffs, and a number that precise on a pin reads as a fact. It
- * belongs where the caveat fits with it — one tap away, in the detail view.
+ * The label names the network, nothing else.
  *
  * Sites whose operator isn't one of the well-known networks show their bolts
  * alone; see [OperatorShortName].

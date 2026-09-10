@@ -29,7 +29,6 @@
     <string name="car_now_relaxed">Ohne Filter: %1$s</string>
     <string name="car_relax_power">Leistung</string>
     <string name="car_relax_networks">Netzwerke</string>
-    <string name="car_relax_price">Preis</string>
     <string name="car_relax_distance">Entfernung</string>
 
     <string name="car_no_navigation_app">Keine Navigations-App gefunden</string>
@@ -160,15 +159,12 @@
     <!-- Phone: drawer -->
     <string name="drawer_preferences">Einstellungen</string>
     <string name="drawer_car">Auto</string>
-    <string name="drawer_subscriptions">Abos</string>
     <string name="drawer_filters">Filter</string>
     <string name="drawer_networks">Netzwerke</string>
     <string name="drawer_min_power">Mindestleistung</string>
-    <string name="drawer_max_price">Maximalpreis: %1$s €/kWh</string>
     <string name="drawer_max_distance">Max. Entfernung (Jetzt laden): %1$s km</string>
     <string name="drawer_availability_note">Ein Nur-frei-Filter folgt, sobald eine Quelle Live-Belegung liefert.</string>
     <string name="drawer_car_none">Kein Fahrzeug angelegt</string>
-    <string name="drawer_subs_count">%1$d aktiv</string>
 
     <!-- Phone: plan sheet -->
     <string name="plan_title">Route planen</string>
@@ -200,12 +196,10 @@
     <string name="trip_arr">an %1$s · %2$d %%</string>
     <string name="trip_send_stop">%1$s an Maps senden</string>
     <string name="trip_summary_charging">%1$s laden</string>
-    <string name="trip_summary_cost">≈ %1$s €</string>
     <string name="trip_section_hint_second">Jetzt den Endpunkt antippen</string>
     <string name="trip_save">Route speichern</string>
     <string name="trip_saved">Route gespeichert — unter ♥ zu finden</string>
     <string name="trip_unsaved">Aus den Favoriten entfernt</string>
-    <string name="trip_estimate_note">Preise sind Schätzwerte — eine echte Tarif-API folgt.</string>
     <string name="trip_start">Start</string>
     <string name="trip_destination">Ziel</string>
     <string name="trip_maps_sent">An Google Maps übergeben</string>
@@ -217,11 +211,10 @@
 
     <!-- Phone: charge now -->
     <string name="cn_title">Jetzt laden</string>
-    <string name="cn_subtitle">Beste Ladesäulen in der Nähe – günstig und nah zuerst</string>
+    <string name="cn_subtitle">Beste Ladesäulen in der Nähe – nächste zuerst</string>
     <string name="cn_relaxed">Filter zu streng — gelockert: %1$s</string>
     <string name="cn_relax_min_power">Mindestleistung</string>
     <string name="cn_relax_networks">Netzwerke</string>
-    <string name="cn_relax_max_price">Maximalpreis</string>
     <string name="cn_relax_max_distance">Entfernung</string>
     <string name="cn_empty">Keine Schnelllader in der Nähe gefunden.</string>
     <string name="cn_loading">Ladesäulen werden gesucht …</string>
@@ -271,14 +264,6 @@
     <string name="garage_connector">Anschluss</string>
     <string name="garage_connector_ccs">CCS</string>
 
-    <!-- Phone: subscriptions -->
-    <string name="subs_title">Abos</string>
-    <string name="subs_search">Tarif suchen</string>
-    <string name="subs_fee">%1$s €/Monat</string>
-    <string name="subs_no_fee">ohne Grundgebühr</string>
-    <string name="subs_note">Aktive Tarife werden an jeder Säule automatisch mit dem Ad-hoc-Preis verglichen.</string>
-    <string name="subs_none_found">Kein Tarif gefunden.</string>
-
     <!-- Phone: trip top bar -->
     <plurals name="trip_topbar_sub">
         <item quantity="one">ab jetzt · %1$d Stopp</item>
@@ -297,9 +282,6 @@
 
     <!-- Phone: stop detail -->
     <string name="detail_title">Ladestopp</string>
-    <string name="detail_price_adhoc">Ad-hoc</string>
-    <string name="detail_price_roaming">Roaming</string>
-    <string name="detail_price_subscription">Abo</string>
     <string name="detail_kv_connectors">Anschlüsse</string>
     <string name="detail_kv_charge">Geplanter Halt</string>
     <string name="detail_kv_charge_value">%1$d min · %2$d → %3$d %%</string>
@@ -308,6 +290,5 @@
     <string name="detail_kv_energy">Energie</string>
     <string name="detail_kv_energy_value">≈ %1$d kWh</string>
     <string name="detail_connector_value">%1$d× CCS · %2$d kW</string>
-    <string name="detail_cheapest">Günstigster</string>
     <string name="detail_navigate_maps">In Google Maps navigieren</string>
 </resources>

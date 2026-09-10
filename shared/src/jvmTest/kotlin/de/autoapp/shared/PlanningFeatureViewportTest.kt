@@ -1,7 +1,6 @@
 package de.autoapp.shared
 
 import de.autoapp.shared.core.TripPlanner
-import de.autoapp.shared.data.DemoTariffSource
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.ChargeSite
@@ -46,8 +45,7 @@ class PlanningFeatureViewportTest {
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null
         }
-        val tariffs = DemoTariffSource()
-        return PlanningFeature(TripPlanner(engine, repository, tariffs), repository, tariffs, settings)
+        return PlanningFeature(TripPlanner(engine, repository), repository, settings)
     }
 
     @Test
@@ -91,8 +89,7 @@ class PlanningFeatureViewportTest {
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null
         }
-        val tariffs = DemoTariffSource()
-        val feature = PlanningFeature(de.autoapp.shared.core.TripPlanner(engine, repository, tariffs), repository, tariffs, settings)
+        val feature = PlanningFeature(de.autoapp.shared.core.TripPlanner(engine, repository), repository, settings)
 
         feature.chargersIn(viewport)
 
@@ -157,8 +154,7 @@ class PlanningFeatureViewportTest {
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null
         }
-        val tariffs = DemoTariffSource()
-        val feature = PlanningFeature(TripPlanner(engine, repository, tariffs), repository, tariffs, settings)
+        val feature = PlanningFeature(TripPlanner(engine, repository), repository, settings)
 
         feature.chargersIn(viewport)
 

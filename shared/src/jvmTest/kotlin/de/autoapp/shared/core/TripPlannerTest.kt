@@ -1,6 +1,5 @@
 package de.autoapp.shared.core
 
-import de.autoapp.shared.data.DemoTariffSource
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.Connector
@@ -71,7 +70,7 @@ class TripPlannerTest {
     }
 
     private fun planner(route: Route?, sites: List<ChargeSite>) =
-        TripPlanner(engineReturning(route), repositoryWith(sites), DemoTariffSource())
+        TripPlanner(engineReturning(route), repositoryWith(sites))
 
     @Test
     fun `plans a long trip with stops that reach the destination`() = runBlocking<Unit> {
@@ -137,7 +136,7 @@ class TripPlannerTest {
                 return sitesAlong(route)
             }
         }
-        val result = TripPlanner(engineReturning(route), repository, DemoTariffSource())
+        val result = TripPlanner(engineReturning(route), repository)
             .plan(start, destination, id4, startSocPercent = 90.0)
 
         assertIs<TripPlanResult.Planned>(result)
@@ -159,7 +158,7 @@ class TripPlannerTest {
             }
         }
         val activeFilter = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
-        TripPlanner(engineReturning(route), repository, DemoTariffSource())
+        TripPlanner(engineReturning(route), repository)
             .plan(start, destination, id4, startSocPercent = 90.0, networks = activeFilter)
 
         assertTrue(capturedNetworks.isNotEmpty(), "repository must have been queried")
@@ -171,21 +170,5 @@ class TripPlannerTest {
             capturedNetworks.all { networks -> networks.any { it.key == "ionity" } },
             "the Ionity network must be in every query",
         )
-    }
-
-    @Test
-    fun `estimated cost accompanies the plan`() = runBlocking<Unit> {
-        val route = straightRoute()
-        val result = planner(route, sitesAlong(route))
-            .plan(start, destination, id4, startSocPercent = 90.0, activeTariffIds = setOf("ionity-passport"))
-
-        val plan = assertIs<TripPlanResult.Planned>(result).plan
-        val cost = plan.estimatedCostEuro
-        assertTrue(cost != null && cost > 0.0)
-        // All synthetic sites are Ionity and the Passport is active, so every
-        // stop must be priced at the subscription rate, not ad-hoc.
-        plan.stops.forEach { stop ->
-            assertEquals(0.49, stop.quote.best?.euroPerKwh)
-        }
     }
 }

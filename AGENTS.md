@@ -40,10 +40,10 @@ Dependency direction: `androidApp`/`iosApp` → `shared`. Never the reverse.
   reason that would surprise a reader. No comment that just retells the line
   below it. Classes and objects in particular don't get a doc comment by
   default — a self-explanatory type stays uncommented, even if that means no
-  comment at all. Don't explain the domain ("a tariff is billed differently
-  depending on who charges it") or restate what a property's name and type
-  already say; do note the one field or branch that's a genuine special case
-  (e.g. `Tariff.homeOperatorKey` is `null` only for pure roaming tariffs).
+  comment at all. Don't explain the domain ("OCM omits the unit count for
+  about half the sites") or restate what a property's name and type already
+  say; do note the one field or branch that's a genuine special case (e.g.
+  `Fix.bearingDeg` is `null` while stationary, and is never guessed).
 - **User-visible text: German**, and exclusively from resources
   (`strings.xml`, `Localizable.strings`) — never as a literal in code. This
   is a deliberate product decision for the German market; it does not extend
@@ -283,14 +283,12 @@ interface SettingsStore {
     val vehicle: Flow<VehicleProfile?>
     val vehicles: Flow<List<VehicleProfile>>      // the garage; setVehicle selects AND adds
     val manualSocPercent: Flow<Double?>
-    val chargeFilters: Flow<ChargeFilters>        // phone flows: min power, max price, max distance
-    val activeTariffIds: Flow<Set<String>>        // the driver's tariffs, see TariffCatalog
+    val chargeFilters: Flow<ChargeFilters>        // phone flows: min power, max distance
     val savedRoutes: Flow<List<SavedRoute>>
     suspend fun setVehicle(profile: VehicleProfile?)
     suspend fun removeVehicle(displayName: String)
     suspend fun setManualSocPercent(socPercent: Double?)
     suspend fun setChargeFilters(filters: ChargeFilters)
-    suspend fun setActiveTariffIds(ids: Set<String>)
     suspend fun saveRoute(route: SavedRoute); suspend fun renameSavedRoute(id: String, name: String)
     suspend fun removeSavedRoute(id: String)
 }
@@ -299,8 +297,7 @@ interface SettingsStore {
 // Swift goes through PlanningBridge (iosMain) — same reasoning as the watcher.
 class PlanningFeature {
     suspend fun planTrip(from, destination, socOverridePercent = null): TripPlanResult
-    suspend fun chargeNow(position): ChargeNowResult   // best 3, relax ladder: power → networks → price → distance
-    suspend fun quote(site): PriceQuote                // always isEstimate until a real price API exists
+    suspend fun chargeNow(position): ChargeNowResult   // best 3, nearest first; relax ladder: power → networks → distance
 }
 ```
 

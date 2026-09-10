@@ -34,12 +34,10 @@ mockup in `docs/mockup/index.html` (design doc:
 drawing — the map-SDK decision below remains open, everything else works:
 map-first home, plan-a-route bottom sheet with charging stops from the shared
 `TripPlanner`, "Jetzt laden" (best chargers nearby with an auto-relax filter
-ladder), garage with vehicle presets and consumption slider, tariff
-subscriptions with per-site price comparison (demo price table — a real
-price API is open point 10), saved routes, and Google-Maps hand-off for the
-whole route, a section, or a single stop. iOS has the core screens (home,
-plan, charge now, trip, stop detail); garage and subscription views are
-still Android-only.
+ladder), garage with vehicle presets and consumption slider, saved routes,
+and Google-Maps hand-off for the whole route, a section, or a single stop.
+iOS has the core screens (home, plan, charge now, trip, stop detail); the
+garage view is still Android-only.
 
 **The start screen becomes a map view.** Today the phone shows the same
 plain list as the car (`ChargeStopsPhoneScreen` in
@@ -68,13 +66,18 @@ Still open:
 - **What the map shows.** Charging stops as markers is obvious. Whether
   the corridor sector, the OSRM route line, and the reachability colors
   belong on it is not.
-- **Price data.** The tariff comparison runs on a built-in demo table
-  (`DemoTariffSource`), every quote labeled an estimate. Chargeprice vs.
-  Eco-Movement is the same kind of decision as OCM was — keyed API,
-  contract test, replaceable source behind the `TariffSource` port.
+- **Price data.** The app shows no prices at all. It used to compare
+  tariffs per site against a built-in demo table, every quote labeled an
+  estimate — removed on 2026-09-10, because an estimate that precise reads
+  as a fact, and in an app for the car that is the same class of mistake as
+  passing off demo charging stations as real. Prices come back when a real
+  source does: Chargeprice vs. Eco-Movement is the same kind of decision as
+  OCM was — keyed API, contract test, replaceable source behind a port.
+  The subscriptions screen and the `TariffSource` port go with it; they
+  existed only to feed the comparison.
 - **Charge-now availability.** "Only free right now" is deliberately not a
   filter yet: no connected source has live occupancy. The relax ladder's
-  order (power → networks → price → distance) should later become
+  order (power → networks → distance) should later become
   user-configurable.
 
 ---

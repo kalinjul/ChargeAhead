@@ -6,7 +6,6 @@ import de.autoapp.shared.data.CombinedSoCSource
 import de.autoapp.shared.data.MergingSiteRepository
 import de.autoapp.shared.data.DemoSiteSource
 import de.autoapp.shared.data.OperatorCatalog
-import de.autoapp.shared.data.DemoTariffSource
 import de.autoapp.shared.data.ManualSoCSource
 import de.autoapp.shared.data.NominatimGeocoder
 import de.autoapp.shared.data.OpenChargeMapSource
@@ -97,9 +96,6 @@ object ChargeStopsFeatureFactory {
         )
 
         val routeEngine = OsrmRouteEngine(httpClient)
-        // Prices are always the demo table until a real price API is chosen
-        // (ROADMAP) — unlike charge sites, there is no keyed source to prefer.
-        val tariffSource = DemoTariffSource()
 
         return ChargeStopsFeature(
             locationSource = locationSource,
@@ -115,9 +111,8 @@ object ChargeStopsFeatureFactory {
             isDemo = key == null,
             onClose = { httpClient.close() },
             planning = PlanningFeature(
-                tripPlanner = TripPlanner(routeEngine, repository, tariffSource),
+                tripPlanner = TripPlanner(routeEngine, repository),
                 repository = repository,
-                tariffs = tariffSource,
                 settings = settingsStore,
             ),
         )
