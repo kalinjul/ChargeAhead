@@ -89,7 +89,7 @@ class HomeViewModel(
         // sliders would otherwise fire a query per pixel dragged.
         combine(
             viewport,
-            settings.chargeFilters.map { it.minPowerKw }.distinctUntilChanged(),
+            settings.chargeFilters.map { it.minPowerKw to it.slowMode }.distinctUntilChanged(),
             settings.networks,
         ) { viewport, _, _ -> viewport }
             // Panning fires viewport changes far faster than the query
@@ -105,7 +105,7 @@ class HomeViewModel(
         // appearing to hang. Panning is not a filter change, so it stays out.
         combine(
             settings.networks,
-            settings.chargeFilters.map { it.minPowerKw }.distinctUntilChanged(),
+            settings.chargeFilters.map { it.minPowerKw to it.slowMode }.distinctUntilChanged(),
         ) { _, _ -> }
             .drop(1) // the first combination is the initial load, not a change
             .onEach { map.update { it.copy(applyingFilters = true) } }

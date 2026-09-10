@@ -30,6 +30,7 @@ import de.autoapp.android.phone.components.AppSlider
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.PrefRow
 import de.autoapp.android.phone.components.SectionLabel
+import de.autoapp.android.phone.components.SwitchRow
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.ui.DrawerUiState
@@ -100,6 +101,12 @@ internal fun DrawerContent(
         Column {
             SectionLabel(stringResource(R.string.drawer_min_power))
             PowerSegments(filters, onFilters)
+            SwitchRow(
+                label = stringResource(R.string.drawer_slow_mode),
+                sublabel = stringResource(R.string.drawer_slow_mode_hint),
+                checked = filters.slowMode,
+                onCheckedChange = { onFilters(filters.copy(slowMode = it)) },
+            )
         }
 
         Column {
@@ -146,7 +153,7 @@ internal fun networksSummary(preferredCount: Int): String =
 /** The mockup's `.seg`: soft track, white active segment with blue text. */
 @Composable
 private fun PowerSegments(filters: ChargeFilters, onFilters: (ChargeFilters) -> Unit) {
-    val steps = listOf(11.0, 50.0, 150.0, 300.0)
+    val steps = listOf(50.0, 150.0, 300.0)
     Row(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         modifier = Modifier
