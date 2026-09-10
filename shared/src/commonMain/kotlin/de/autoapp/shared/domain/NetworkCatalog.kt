@@ -107,9 +107,9 @@ object NetworkCatalog {
         Network("lidl", "Lidl",
             setOf(38L),
             setOf("lidl")),
-        Network("ewe", "EWE",
+        Network("ewe-go", "EWE Go",
             setOf(127L),
-            setOf("ewe")),
+            setOf("ewe", "ewego")),
         Network("chargepoint", "ChargePoint",
             setOf(5L),
             setOf("chargepoint")),
@@ -1014,6 +1014,17 @@ object NetworkCatalog {
         all.flatMap { n -> n.operatorIds.map { it to n } }.toMap()
 
     fun byKey(key: String): Network? = byKeyMap[key]
+
+    /**
+     * Keys this catalog used to give a network, mapped to the current one.
+     * A stored selection is read through [currentKey]: a key that no longer
+     * names anything is silently dropped from the picker, so renaming one
+     * without this would take the network out of every install that had it
+     * ticked.
+     */
+    private val renamedKeys: Map<String, String> = mapOf("ewe" to "ewe-go")
+
+    fun currentKey(storedKey: String): String = renamedKeys[storedKey] ?: storedKey
 
     fun selection(keys: Set<String>): List<Network> = all.filter { it.key in keys }
 

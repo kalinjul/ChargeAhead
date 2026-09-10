@@ -3,6 +3,8 @@
 - ~~Search is very slow because it runs after every keystroke. It needs a debounce.~~ — done
 - ~~Displaying the networks is slow because there are so many entries. This probably needs a loading indicator, and the filtering must not run on the UI thread.~~ — done
 - ~~When no search term is entered, the selected networks should be shown at the top of the result list.~~ — done
+- ~~Drop the "Filter übernehmen" button; the filter takes effect when navigating back.~~ — done
+- ~~A "Nur ausgewählte anzeigen" toggle that switches the filter on, on by default.~~ — done
 
 # Planning
 - When searching for destinations, the result list should appear in an overlay (AutoComplete text field). — reverted: the popup covered the keyboard
