@@ -51,21 +51,21 @@ class NetworksViewModel(
         search,
     ) { stored, staged, search ->
         val edited = staged ?: stored
-        val filtered = if (search.isNotBlank()) {
+        val matches = if (search.isNotBlank()) {
             val needle = OperatorKey.folded(search.trim())
             NetworkCatalog.all.filter { OperatorKey.folded(it.name).contains(needle) }
         } else {
-            // Without a search term the driver's own networks come first:
-            // they are the ones you return to in order to change something,
-            // and they'd otherwise sit scattered through the whole catalog.
-            // The order follows the stored selection, not the edited one, so
-            // ticking a row doesn't pull it out from under the finger that
-            // just ticked it — it settles on the way out.
-            val (preferred, rest) = NetworkCatalog.all.partition { it.key in stored.preferredOperators }
-            preferred + rest
+            NetworkCatalog.all
         }
+        // Selected networks float to the top so the driver's picks stay in
+        // view; the rest is plain alphabetical. Selection follows the staged
+        // edit, so a tick lifts its network straight away.
+        val ordered = matches.sortedWith(
+            compareByDescending<Network> { it.key in edited.preferredOperators }
+                .thenBy { OperatorKey.folded(it.name) },
+        )
         NetworksUiState(
-            networks = filtered,
+            networks = ordered,
             selected = edited.preferredOperators,
             onlyPreferred = edited.onlyPreferred,
             search = search,
