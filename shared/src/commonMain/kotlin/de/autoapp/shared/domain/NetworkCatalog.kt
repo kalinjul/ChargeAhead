@@ -326,7 +326,7 @@ object NetworkCatalog {
         Network("naturenergie-de", "Naturenergie",
             setOf(224L),
             setOf("naturenergiede")),
-        Network("amb-area-metropolitana-de-barcelona", "AMB (Àrea metropolitana de Barcelona)",
+        Network("amb-area-metropolitana-de-barcelona", "AMB",
             setOf(3305L),
             setOf("ambareametropolitanadebarcelona")),
         Network("alize-liberte", "Alizé Liberté",
