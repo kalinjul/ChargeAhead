@@ -19,6 +19,7 @@ import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SearchField
+import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.android.phone.components.SwitchRow
 import de.autoapp.android.phone.components.TickRow
 import de.autoapp.shared.ui.NetworksUiState
@@ -68,18 +69,23 @@ fun NetworkSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(horizontal = 18.dp)) {
-        Fineprint(
-            text = stringResource(R.string.phone_networks_intro),
-            modifier = Modifier.padding(top = 16.dp),
-        )
-
         AppCard(modifier = Modifier.padding(top = 16.dp)) {
+            // The switch reads the other way round from the setting it writes:
+            // browsing is the state without a filter, so it is on exactly when
+            // onlyPreferred is off.
             SwitchRow(
-                label = stringResource(R.string.phone_networks_only),
-                checked = uiState.onlyPreferred,
-                onCheckedChange = onOnlyPreferredChange,
+                label = stringResource(R.string.phone_networks_browse),
+                sublabel = stringResource(R.string.phone_networks_browse_hint),
+                checked = !uiState.onlyPreferred,
+                onCheckedChange = { browsing -> onOnlyPreferredChange(!browsing) },
             )
         }
+
+        SectionLabel(
+            text = stringResource(R.string.phone_networks_mine),
+            modifier = Modifier.padding(top = 20.dp),
+        )
+        Fineprint(text = stringResource(R.string.phone_networks_intro))
 
         SearchField(
             value = uiState.search,
