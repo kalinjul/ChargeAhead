@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
@@ -38,6 +39,8 @@ data class HomeUiState(
     /** The charger the driver tapped, as a detail dialog; `null` = no dialog. */
     val selectedStop: ChargeStop? = null,
     val filtersCustomized: Boolean = false,
+    /** A filter/network change is re-querying the map — the overlay says so. */
+    val applyingFilters: Boolean = false,
 )
 
 /**
@@ -74,6 +77,7 @@ class HomeViewModel(
             belowMinZoom = mapState.belowMinZoom,
             selectedStop = mapState.selectedStop,
             filtersCustomized = !filters.isDefault || networks.isActive,
+            applyingFilters = mapState.applyingFilters,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
 
@@ -93,7 +97,18 @@ class HomeViewModel(
             // response can land after a fast later one and put markers from a
             // different part of the country on the map.
             .mapLatest { viewport -> viewport?.let { planning.chargersIn(it) }.orEmpty() }
-            .onEach { chargers -> map.update { it.copy(chargers = chargers) } }
+            .onEach { chargers -> map.update { it.copy(chargers = chargers, applyingFilters = false) } }
+            .launchIn(viewModelScope)
+
+        // A filter or network change re-queries the map, which can take a
+        // while; flag it so the map shows "applying filters" instead of just
+        // appearing to hang. Panning is not a filter change, so it stays out.
+        combine(
+            settings.networks,
+            settings.chargeFilters.map { it.minPowerKw }.distinctUntilChanged(),
+        ) { _, _ -> }
+            .drop(1) // the first combination is the initial load, not a change
+            .onEach { map.update { it.copy(applyingFilters = true) } }
             .launchIn(viewModelScope)
     }
 
@@ -137,5 +152,6 @@ class HomeViewModel(
         val chargers: List<MapCharger> = emptyList(),
         val belowMinZoom: Boolean = false,
         val selectedStop: ChargeStop? = null,
+        val applyingFilters: Boolean = false,
     )
 }

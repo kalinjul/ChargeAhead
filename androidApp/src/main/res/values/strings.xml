@@ -137,6 +137,7 @@
     <string name="map_my_location">Auf meinen Standort zentrieren</string>
     <string name="map_compass">Karte nach Norden ausrichten</string>
     <string name="map_zoom_hint">Zum Anzeigen der Ladesäulen reinzoomen</string>
+    <string name="map_applying_filters">Filter werden angewendet …</string>
 
     <!-- Phone: car data debug view -->
     <string name="drawer_debug">Debug</string>
