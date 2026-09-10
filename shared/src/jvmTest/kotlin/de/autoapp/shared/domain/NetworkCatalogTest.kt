@@ -38,8 +38,14 @@ class NetworkCatalogTest {
         assertEquals(setOf(46L, 3251L, 3359L, 3403L, 3422L, 3814L), eon.operatorIds)
     }
 
-    @Test fun all_has_327_networks() {
-        assertEquals(327, NetworkCatalog.all.size)
+    @Test fun all_has_326_networks() {
+        assertEquals(326, NetworkCatalog.all.size)
+    }
+
+    @Test fun blink_uk_is_merged_into_blink_charging() {
+        assertNull(NetworkCatalog.byKey("blink-charging-uk"), "the UK singleton is folded in")
+        assertEquals(setOf(9L, 3737L), NetworkCatalog.byKey("blink-charging")!!.operatorIds)
+        assertEquals("blink-charging", NetworkCatalog.currentKey("blink-charging-uk"))
     }
 
     @Test fun resolve_by_operator_id_wins() {
