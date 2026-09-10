@@ -15,6 +15,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
@@ -200,6 +204,12 @@ private fun PhoneApp() {
             NavDisplay(
                 backStack = backStack,
                 onBack = { pop() },
+                // NavDisplay's default push/pop is a 700 ms fade (nav3's
+                // DEFAULT_TRANSITION_DURATION_MILLISECOND) — sluggish on a back
+                // press. Same fade, made quick; the predictive-back gesture
+                // keeps its own spring.
+                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                popTransitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
                 entryProvider = entryProvider {
                     entry<Home> {
                         HomeRoute(
