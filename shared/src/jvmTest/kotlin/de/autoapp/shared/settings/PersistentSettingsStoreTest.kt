@@ -227,6 +227,18 @@ class PersistentSettingsStoreTest {
     }
 
     @Test
+    fun aSelectionOnARenamedNetworkKey_isCarriedOver() {
+        // An install that ticked EWE Go back when the catalog keyed it "ewe".
+        val storage = InMemoryKeyValueStorage(
+            mapOf("networks.preferred" to """["ewe","enbw"]"""),
+        )
+
+        val store = PersistentSettingsStore(storage)
+
+        assertEquals(setOf("ewe-go", "enbw"), store.networks.value.preferredOperators)
+    }
+
+    @Test
     fun aBrokenHistory_doesNotCrashTheApp() {
         val broken = InMemoryKeyValueStorage(mapOf("route.destinations" to "{kein JSON"))
 

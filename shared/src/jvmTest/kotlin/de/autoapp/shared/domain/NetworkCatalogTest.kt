@@ -104,8 +104,16 @@ class NetworkCatalogTest {
             id = "x", name = "n", operator = "EWEGo",
             position = LatLon(0.0, 0.0), connectors = emptyList(), operatorId = null,
         )
-        assertEquals("ewe", NetworkCatalog.resolve(joined))
-        assertEquals("ewe", NetworkCatalog.resolve(joined.copy(operator = "EWE Go GmbH")))
+        assertEquals("ewe-go", NetworkCatalog.resolve(joined))
+        assertEquals("ewe-go", NetworkCatalog.resolve(joined.copy(operator = "EWE Go GmbH")))
+    }
+
+    @Test fun current_key_carries_a_renamed_network_over() {
+        assertEquals("ewe-go", NetworkCatalog.currentKey("ewe"))
+        assertNotNull(NetworkCatalog.byKey(NetworkCatalog.currentKey("ewe")))
+        // Everything else passes through untouched, known or not.
+        assertEquals("enbw", NetworkCatalog.currentKey("enbw"))
+        assertEquals("audi", NetworkCatalog.currentKey("audi"))
     }
 
     @Test fun resolve_ignores_substring_inside_a_word() {
