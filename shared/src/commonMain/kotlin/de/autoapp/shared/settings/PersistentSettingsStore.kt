@@ -7,6 +7,7 @@ import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCDiagnostics
@@ -133,7 +134,8 @@ class PersistentSettingsStore(
     private fun readNetworks(): NetworkPreferences {
         val onlyPreferred = storage.getStringOrNull(KEY_ONLY_PREFERRED)?.toBooleanStrictOrNull()
             ?: NetworkPreferences().onlyPreferred
-        val preferred = storage.getJson<List<String>>(KEY_PREFERRED_NETWORKS)?.toSet().orEmpty()
+        val preferred = storage.getJson<List<String>>(KEY_PREFERRED_NETWORKS)
+            .orEmpty().map(NetworkCatalog::currentKey).toSet()
         return NetworkPreferences(onlyPreferred, preferred)
     }
 

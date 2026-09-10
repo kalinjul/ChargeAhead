@@ -97,6 +97,25 @@ class NetworkCatalogTest {
         assertEquals("mer", NetworkCatalog.resolve(site))
     }
 
+    @Test fun resolve_matches_ewe_go_written_as_one_word() {
+        // "ewe" is a whole word in "EWE Go GmbH" but not in "EWEGo" — hence
+        // the second keyword. Both spellings occur in the operator names.
+        val joined = ChargeSite(
+            id = "x", name = "n", operator = "EWEGo",
+            position = LatLon(0.0, 0.0), connectors = emptyList(), operatorId = null,
+        )
+        assertEquals("ewe-go", NetworkCatalog.resolve(joined))
+        assertEquals("ewe-go", NetworkCatalog.resolve(joined.copy(operator = "EWE Go GmbH")))
+    }
+
+    @Test fun current_key_carries_a_renamed_network_over() {
+        assertEquals("ewe-go", NetworkCatalog.currentKey("ewe"))
+        assertNotNull(NetworkCatalog.byKey(NetworkCatalog.currentKey("ewe")))
+        // Everything else passes through untouched, known or not.
+        assertEquals("enbw", NetworkCatalog.currentKey("enbw"))
+        assertEquals("audi", NetworkCatalog.currentKey("audi"))
+    }
+
     @Test fun resolve_ignores_substring_inside_a_word() {
         // "Neon Ladestationen" — "eon" (E.ON keyword) appears only inside "neon", not as a whole word
         val site = ChargeSite(

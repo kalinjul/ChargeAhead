@@ -6,11 +6,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
@@ -20,6 +19,7 @@ import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SearchField
+import de.autoapp.android.phone.components.SwitchRow
 import de.autoapp.android.phone.components.TickRow
 import de.autoapp.shared.ui.NetworksUiState
 import de.autoapp.shared.ui.NetworksViewModel
@@ -30,8 +30,11 @@ import de.autoapp.shared.ui.NetworksViewModel
  * The list comes from the shipped catalog, not from chargers in the current
  * surroundings. Search is still useful: the catalog runs to dozens of entries,
  * and "ionity" in the search field isolates every variant without touching the
- * rest. Selections are staged — nothing is written to settings until the user
- * taps Confirm.
+ * rest.
+ *
+ * There is no confirm button: leaving the screen applies the edits. The
+ * ViewModel stages them until then, so a handful of ticks costs one replan
+ * instead of one per tick.
  */
 @Composable
 fun NetworksRoute(
@@ -39,11 +42,19 @@ fun NetworksRoute(
     viewModel: NetworksViewModel = phoneViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Leaving the composition is the commit — that covers the back arrow,
+    // the system back gesture and the drawer alike, which a callback on the
+    // back arrow alone would not.
+    DisposableEffect(viewModel) {
+        onDispose { viewModel.onLeave() }
+    }
+
     NetworkSettingsScreen(
         uiState = uiState,
         onSearchChange = viewModel::onSearchChanged,
         onNetworkToggled = viewModel::onNetworkToggled,
-        onConfirm = viewModel::onConfirm,
+        onOnlyPreferredChange = viewModel::onOnlyPreferredChanged,
         modifier = modifier,
     )
 }
@@ -53,7 +64,7 @@ fun NetworkSettingsScreen(
     uiState: NetworksUiState,
     onSearchChange: (String) -> Unit,
     onNetworkToggled: (String) -> Unit,
-    onConfirm: () -> Unit,
+    onOnlyPreferredChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(horizontal = 18.dp)) {
@@ -61,6 +72,14 @@ fun NetworkSettingsScreen(
             text = stringResource(R.string.phone_networks_intro),
             modifier = Modifier.padding(top = 16.dp),
         )
+
+        AppCard(modifier = Modifier.padding(top = 16.dp)) {
+            SwitchRow(
+                label = stringResource(R.string.phone_networks_only),
+                checked = uiState.onlyPreferred,
+                onCheckedChange = onOnlyPreferredChange,
+            )
+        }
 
         SearchField(
             value = uiState.search,
@@ -77,13 +96,13 @@ fun NetworkSettingsScreen(
                 )
             } else {
                 // Laid out lazily: the catalog can run to hundreds of entries.
-                AppCard(modifier = Modifier.padding(top = 8.dp)) {
+                AppCard(modifier = Modifier.padding(vertical = 8.dp)) {
                     LazyColumn {
                         itemsIndexed(uiState.networks) { index, network ->
                             if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                             TickRow(
                                 label = network.name,
-                                checked = network.key in uiState.pending,
+                                checked = network.key in uiState.selected,
                                 dotColor = operatorColor(network.name),
                                 onClick = { onNetworkToggled(network.key) },
                             )
@@ -91,14 +110,6 @@ fun NetworkSettingsScreen(
                     }
                 }
             }
-        }
-
-        Button(
-            onClick = onConfirm,
-            enabled = uiState.canConfirm,
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-        ) {
-            Text(stringResource(R.string.phone_networks_confirm))
         }
     }
 }

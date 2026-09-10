@@ -104,18 +104,10 @@
     <string name="phone_action_networks">Ladenetze</string>
     <string name="phone_networks_title">Ladenetze</string>
     <string name="phone_networks_intro">Ohne Auswahl werden alle Ladesäulen gezeigt. Tippe die Netze an, bei denen du lädst — dann werden nur deren Säulen geladen.</string>
-    <string name="phone_networks_only">Nur ausgewählte auf Karte anzeigen</string>
-    <string name="phone_networks_empty">Noch keine Ladesäulen geladen — Standort freigeben und einen Moment warten.</string>
-    <string name="phone_networks_loading">Ladenetze werden geladen …</string>
+    <string name="phone_networks_only">Nur ausgewählte anzeigen</string>
     <string name="phone_networks_search">Ladenetz suchen</string>
-    <string name="phone_networks_filtering">Ladenetze werden gefiltert …</string>
     <string name="phone_search_clear">Suche löschen</string>
-    <string name="phone_networks_all">Alle</string>
-    <string name="phone_networks_none">Keine</string>
-    <string name="phone_networks_bulk_hint">„Alle“ und „Keine“ gelten für die angezeigten Netze.</string>
     <string name="phone_networks_no_match">Kein Ladenetz passt zu „%1$s”.</string>
-    <string name="phone_networks_confirm">Filter übernehmen</string>
-    <string name="phone_networks_filtered">Der Ladenetz-Filter ist aktiv. Was fehlt, gehört zu einem nicht gewählten Netz.</string>
 
     <!-- Charge level from the vehicle -->
     <string name="phone_carhardware_title">Ladestand aus dem Fahrzeug</string>
@@ -131,11 +123,6 @@
     <string name="phone_duration_days">%1$d Tagen</string>
 
     <string name="phone_attribution">Routen und Zielsuche: OpenStreetMap-Mitwirkende (ODbL). Ladesäulen: OpenChargeMap und Bundesnetzagentur.</string>
-
-    <plurals name="phone_networks_count">
-        <item quantity="one">%1$d Standort in der Umgebung</item>
-        <item quantity="other">%1$d Standorte in der Umgebung</item>
-    </plurals>
 
     <!-- Phone: map home -->
     <string name="common_back">Zurück</string>
