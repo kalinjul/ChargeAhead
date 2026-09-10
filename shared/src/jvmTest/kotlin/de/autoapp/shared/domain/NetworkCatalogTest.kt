@@ -38,8 +38,8 @@ class NetworkCatalogTest {
         assertEquals(setOf(46L, 3251L, 3359L, 3403L, 3422L, 3814L), eon.operatorIds)
     }
 
-    @Test fun all_has_326_networks() {
-        assertEquals(326, NetworkCatalog.all.size)
+    @Test fun all_has_488_networks() {
+        assertEquals(488, NetworkCatalog.all.size)
     }
 
     @Test fun blink_uk_is_merged_into_blink_charging() {
