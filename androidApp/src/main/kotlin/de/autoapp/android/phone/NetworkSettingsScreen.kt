@@ -1,5 +1,6 @@
 package de.autoapp.android.phone
 
+import androidx.compose.animation.animateBounds
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
@@ -119,23 +121,27 @@ fun NetworkSettingsScreen(
                 AppCard(modifier = Modifier.padding(vertical = 8.dp)) {
                     // Not lazy: the flow wraps pills across rows, so there are no
                     // rows to recycle. A few hundred pills is fine.
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(9.dp),
-                        verticalArrangement = Arrangement.spacedBy(9.dp),
-                        modifier = Modifier
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                    ) {
-                        uiState.networks.forEach { network ->
-                            // Keyed so the colour/scale animation stays with its
-                            // own pill as the list reorders selected-to-top.
-                            key(network.key) {
-                                OperatorPill(
-                                    name = network.name,
-                                    selected = network.key in uiState.selected,
-                                    fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
-                                    onClick = { onNetworkToggled(network.key) },
-                                )
+                    LookaheadScope {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(9.dp),
+                            verticalArrangement = Arrangement.spacedBy(9.dp),
+                            modifier = Modifier
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                        ) {
+                            uiState.networks.forEach { network ->
+                                // Keyed so its colour/scale state — and its
+                                // animateBounds slide — track this pill as the
+                                // list reorders selected-to-top.
+                                key(network.key) {
+                                    OperatorPill(
+                                        name = network.name,
+                                        selected = network.key in uiState.selected,
+                                        fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
+                                        onClick = { onNetworkToggled(network.key) },
+                                        modifier = Modifier.animateBounds(this@LookaheadScope),
+                                    )
+                                }
                             }
                         }
                     }
@@ -156,6 +162,7 @@ private fun OperatorPill(
     selected: Boolean,
     fill: Color,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val scheme = MaterialTheme.colorScheme
     // The toggle is optimistic — it flips on the staged state right away, well
@@ -183,7 +190,7 @@ private fun OperatorPill(
         color = container,
         contentColor = content,
         interactionSource = interaction,
-        modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale },
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale },
     ) {
         Text(
             name,
