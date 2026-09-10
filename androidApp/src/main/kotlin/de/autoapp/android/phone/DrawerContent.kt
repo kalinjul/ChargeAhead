@@ -17,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,8 +30,9 @@ import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppSlider
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.PrefRow
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.material3.Switch
 import de.autoapp.android.phone.components.SectionLabel
-import de.autoapp.android.phone.components.SwitchRow
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.ui.DrawerUiState
@@ -101,11 +103,10 @@ internal fun DrawerContent(
         Column {
             SectionLabel(stringResource(R.string.drawer_min_power))
             PowerSegments(filters, onFilters)
-            SwitchRow(
-                label = stringResource(R.string.drawer_slow_mode),
-                sublabel = stringResource(R.string.drawer_slow_mode_hint),
-                checked = filters.slowMode,
-                onCheckedChange = { onFilters(filters.copy(slowMode = it)) },
+            AcModeToggle(
+                active = filters.slowMode,
+                onToggle = { onFilters(filters.copy(slowMode = it)) },
+                modifier = Modifier.padding(top = 8.dp),
             )
         }
 
@@ -149,6 +150,50 @@ internal fun networksSummary(preferredCount: Int): String =
     } else {
         stringResource(R.string.drawer_networks_all)
     }
+
+/** The one lit-up control in the drawer: a card that tints when AC mode is on. */
+@Composable
+private fun AcModeToggle(active: Boolean, onToggle: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val container by animateColorAsState(
+        if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        label = "acContainer",
+    )
+    val accent by animateColorAsState(
+        if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "acAccent",
+    )
+    Surface(
+        onClick = { onToggle(!active) },
+        shape = MaterialTheme.shapes.medium,
+        color = container,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            // A small "AC" badge that lights up with the mode.
+            Surface(shape = MaterialTheme.shapes.small, color = accent.copy(alpha = if (active) 1f else 0.12f)) {
+                Text(
+                    "AC",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (active) MaterialTheme.colorScheme.onPrimary else accent,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.drawer_slow_mode), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.drawer_slow_mode_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = active, onCheckedChange = null)
+        }
+    }
+}
 
 /** The mockup's `.seg`: soft track, white active segment with blue text. */
 @Composable

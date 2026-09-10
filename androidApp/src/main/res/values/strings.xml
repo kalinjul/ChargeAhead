@@ -164,8 +164,8 @@
     <string name="drawer_filters">Filter</string>
     <string name="drawer_networks">Netzwerke</string>
     <string name="drawer_min_power">Mindestleistung</string>
-    <string name="drawer_slow_mode">Langsam-Lader anzeigen</string>
-    <string name="drawer_slow_mode_hint">Nur Säulen unter 50 kW, aus allen Netzen — der Schnelllade-Filter ist dann aus.</string>
+    <string name="drawer_slow_mode">AC-Modus</string>
+    <string name="drawer_slow_mode_hint">ignoriert alle Filter und zeigt Lader unter 50 kW</string>
     <string name="drawer_max_price">Maximalpreis: %1$s €/kWh</string>
     <string name="drawer_max_distance">Max. Entfernung (Jetzt laden): %1$s km</string>
     <string name="drawer_availability_note">Ein Nur-frei-Filter folgt, sobald eine Quelle Live-Belegung liefert.</string>
