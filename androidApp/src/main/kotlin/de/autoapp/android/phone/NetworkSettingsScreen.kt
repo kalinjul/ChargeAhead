@@ -1,5 +1,12 @@
 package de.autoapp.android.phone
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,9 +22,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -117,12 +127,16 @@ fun NetworkSettingsScreen(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
                         uiState.networks.forEach { network ->
-                            OperatorPill(
-                                name = network.name,
-                                selected = network.key in uiState.selected,
-                                fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
-                                onClick = { onNetworkToggled(network.key) },
-                            )
+                            // Keyed so the colour/scale animation stays with its
+                            // own pill as the list reorders selected-to-top.
+                            key(network.key) {
+                                OperatorPill(
+                                    name = network.name,
+                                    selected = network.key in uiState.selected,
+                                    fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
+                                    onClick = { onNetworkToggled(network.key) },
+                                )
+                            }
                         }
                     }
                 }
@@ -144,11 +158,32 @@ private fun OperatorPill(
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
+    // The toggle is optimistic — it flips on the staged state right away, well
+    // before the debounced fetch. These just make the flip a fade, not a jump.
+    val container by animateColorAsState(
+        targetValue = if (selected) fill else scheme.surfaceVariant,
+        animationSpec = tween(durationMillis = 180),
+        label = "pillContainer",
+    )
+    val content by animateColorAsState(
+        targetValue = if (selected) fill.readableInk() else scheme.onSurface,
+        animationSpec = tween(durationMillis = 180),
+        label = "pillContent",
+    )
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "pillScale",
+    )
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = if (selected) fill else scheme.surfaceVariant,
-        contentColor = if (selected) fill.readableInk() else scheme.onSurface,
+        color = container,
+        contentColor = content,
+        interactionSource = interaction,
+        modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale },
     ) {
         Text(
             name,

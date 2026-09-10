@@ -7,6 +7,8 @@ import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.OperatorKey
 import de.autoapp.shared.domain.SettingsStore
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -44,6 +46,9 @@ class NetworksViewModel(
 
     /** The edited preferences — `null` while this visit has changed nothing. */
     private val staged = MutableStateFlow<NetworkPreferences?>(null)
+
+    /** The pending debounced commit, restarted on every edit. */
+    private var commitJob: Job? = null
 
     val uiState: StateFlow<NetworksUiState> = combine(
         settings.networks,
@@ -86,26 +91,46 @@ class NetworksViewModel(
     fun onOnlyPreferredChanged(enabled: Boolean) = edit { it.copy(onlyPreferred = enabled) }
 
     /**
-     * The screen is being left — this is where the edits take effect.
-     *
-     * Reading [staged] inside the coroutine, not before it: [edit] queues on
-     * the same scope, so the last tick before the back gesture is in by the
-     * time this runs.
+     * The screen is being left — commit at once, cancelling any pending
+     * debounce. This covers the back arrow, the system back gesture and the
+     * drawer alike.
      */
     fun onLeave() {
-        viewModelScope.launch {
-            val edited = staged.value ?: return@launch
-            settings.setNetworks(edited)
-            // Back to "unchanged": the ViewModel is activity-scoped and
-            // outlives the screen, so the next visit must start from what
-            // was just stored, not from this visit's staged copy.
-            staged.value = null
-        }
+        commitJob?.cancel()
+        viewModelScope.launch { commit() }
     }
 
     private fun edit(block: (NetworkPreferences) -> NetworkPreferences) {
         viewModelScope.launch {
             staged.value = block(staged.value ?: settings.networks.first())
+            scheduleCommit()
         }
+    }
+
+    /**
+     * The map query and replan are expensive, so ticking a row only stages —
+     * the fetch waits for a [COMMIT_DEBOUNCE_MS] pause in selecting, or for
+     * the screen to be left. Selection itself stays instant either way.
+     */
+    private fun scheduleCommit() {
+        commitJob?.cancel()
+        commitJob = viewModelScope.launch {
+            delay(COMMIT_DEBOUNCE_MS)
+            commit()
+        }
+    }
+
+    private suspend fun commit() {
+        // Reading [staged] inside the coroutine, not before it: [edit] queues
+        // on the same scope, so the last tick before a commit is in by now.
+        val edited = staged.value ?: return
+        settings.setNetworks(edited)
+        // Back to "unchanged": the ViewModel is activity-scoped and outlives
+        // the screen, so the next visit starts from what was just stored.
+        staged.value = null
+    }
+
+    private companion object {
+        const val COMMIT_DEBOUNCE_MS = 5_000L
     }
 }
