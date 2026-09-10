@@ -193,7 +193,6 @@
     <string name="trip_send_maps">An Maps senden</string>
     <string name="trip_select_section">Abschnitt wählen</string>
     <string name="trip_select_cancel">Abbrechen</string>
-    <string name="trip_send_selected">Senden: %1$s → %2$s</string>
     <string name="trip_section_hint">Start und Ende des Abschnitts antippen</string>
     <string name="trip_dep_now">ab jetzt · %1$d %%</string>
     <string name="trip_dep_now_unknown">ab jetzt</string>
