@@ -1,7 +1,7 @@
 package de.autoapp.shared.ui
 
-import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.NetworkCatalog
+import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.OperatorKey
 import de.autoapp.shared.settings.InMemoryKeyValueStorage
 import de.autoapp.shared.settings.PersistentSettingsStore
@@ -42,23 +42,32 @@ class NetworksViewModelTest {
 
         vm.onNetworkToggled("enbw")
 
-        val state = vm.uiState.await { it.pending.isNotEmpty() }
-        assertEquals(setOf("enbw"), state.pending)
+        val state = vm.uiState.await { it.selected.isNotEmpty() }
+        assertEquals(setOf("enbw"), state.selected)
         assertTrue(settings.saved.isEmpty(), "nothing persisted yet")
-        assertTrue(state.canConfirm)
     }
 
     @Test
-    fun `confirm commits and disables until next change`() = runBlocking<Unit> {
+    fun `leaving the screen commits the staged selection`() = runBlocking<Unit> {
         val settings = settings()
         val vm = NetworksViewModel(settings)
 
         vm.onNetworkToggled("enbw")
-        vm.onConfirm()
+        vm.uiState.await { it.selected == setOf("enbw") }
+        vm.onLeave()
 
-        val state = vm.uiState.await { !it.canConfirm }
         assertEquals(setOf("enbw"), settings.saved.single().preferredOperators)
-        assertFalse(state.canConfirm, "pending == committed now")
+    }
+
+    @Test
+    fun `leaving without an edit writes nothing`() = runBlocking<Unit> {
+        val settings = settings()
+        val vm = NetworksViewModel(settings)
+        vm.uiState.await { it.networks.isNotEmpty() }
+
+        vm.onLeave()
+
+        assertTrue(settings.saved.isEmpty(), "an untouched visit must not overwrite the stored selection")
     }
 
     @Test
@@ -67,11 +76,41 @@ class NetworksViewModelTest {
         val vm = NetworksViewModel(settings)
 
         vm.onNetworkToggled("tesla")
+        vm.uiState.await { "tesla" in it.selected }
         vm.onNetworkToggled("tesla")
 
-        val state = vm.uiState.await { it.search == "" }
-        assertFalse("tesla" in state.pending)
-        assertFalse(state.canConfirm)
+        val state = vm.uiState.await { "tesla" !in it.selected }
+        assertFalse("tesla" in state.selected)
+    }
+
+    @Test
+    fun `only preferred is on by default and survives a commit`() = runBlocking<Unit> {
+        val settings = settings()
+        val vm = NetworksViewModel(settings)
+
+        assertTrue(vm.uiState.await { it.networks.isNotEmpty() }.onlyPreferred)
+
+        vm.onOnlyPreferredChanged(false)
+        val state = vm.uiState.await { !it.onlyPreferred }
+        assertTrue(settings.saved.isEmpty(), "staged, like the ticks")
+        assertFalse(state.onlyPreferred)
+
+        vm.onLeave()
+        assertFalse(settings.saved.single().onlyPreferred)
+    }
+
+    @Test
+    fun `a second visit starts from what was stored`() = runBlocking<Unit> {
+        val settings = settings()
+        val vm = NetworksViewModel(settings)
+
+        vm.onNetworkToggled("enbw")
+        vm.uiState.await { it.selected == setOf("enbw") }
+        vm.onLeave()
+        // The ViewModel is activity-scoped, so the same instance is reused.
+        vm.onLeave()
+
+        assertEquals(1, settings.saved.size, "nothing left staged after the commit")
     }
 
     @Test
@@ -103,7 +142,7 @@ class NetworksViewModelTest {
     }
 
     @Test
-    fun `without a search term the committed networks come first`() = runBlocking<Unit> {
+    fun `without a search term the stored networks come first`() = runBlocking<Unit> {
         val settings = settings()
         // A network far down the catalog, so plain catalog order would not
         // put it on top by accident.
@@ -111,20 +150,20 @@ class NetworksViewModelTest {
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf(key)))
         val vm = NetworksViewModel(settings)
 
-        val state = vm.uiState.await { it.committed == setOf(key) }
+        val state = vm.uiState.await { it.selected == setOf(key) }
         assertEquals(key, state.networks.first().key)
         assertEquals(NetworkCatalog.all.size, state.networks.size, "nothing dropped")
     }
 
     @Test
-    fun `staging a network does not reorder the list under the finger`() = runBlocking<Unit> {
+    fun `ticking a network does not reorder the list under the finger`() = runBlocking<Unit> {
         val settings = settings()
         val vm = NetworksViewModel(settings)
         val key = NetworkCatalog.all.last().key
 
         vm.onNetworkToggled(key)
 
-        val state = vm.uiState.await { key in it.pending }
+        val state = vm.uiState.await { key in it.selected }
         assertEquals(NetworkCatalog.all.map { it.key }, state.networks.map { it.key })
     }
 

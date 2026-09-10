@@ -21,29 +21,36 @@ data class NetworksUiState(
      * list — the driver's own networks first — otherwise.
      */
     val networks: List<Network> = emptyList(),
-    /** Staged selection (catalog keys) — not yet written to settings. */
-    val pending: Set<String> = emptySet(),
-    /** The persisted [NetworkPreferences.preferredOperators]. */
-    val committed: Set<String> = emptySet(),
-    /** True when [pending] differs from [committed] and Confirm would do something. */
-    val canConfirm: Boolean = false,
+    /** The ticked networks (catalog keys), edits included. */
+    val selected: Set<String> = emptySet(),
+    /** [NetworkPreferences.onlyPreferred]: whether the selection filters at all. */
+    val onlyPreferred: Boolean = NetworkPreferences().onlyPreferred,
     val search: String = "",
 )
 
-/** The network picker — catalog-backed, staged confirm. */
+/**
+ * The network picker — catalog-backed, written back when the screen is left.
+ *
+ * Edits are staged rather than persisted per tap: every write re-runs the
+ * planning and the map query, and ticking half a dozen networks in a row
+ * would do that half a dozen times. [onLeave] is the commit; the back
+ * gesture is the confirmation.
+ */
 class NetworksViewModel(
     private val settings: SettingsStore,
 ) : ViewModel() {
 
     private val search = MutableStateFlow("")
-    private val pending = MutableStateFlow<Set<String>>(emptySet())
+
+    /** The edited preferences — `null` while this visit has changed nothing. */
+    private val staged = MutableStateFlow<NetworkPreferences?>(null)
 
     val uiState: StateFlow<NetworksUiState> = combine(
         settings.networks,
-        pending,
+        staged,
         search,
-    ) { prefs, pending, search ->
-        val committed = prefs.preferredOperators
+    ) { stored, staged, search ->
+        val edited = staged ?: stored
         val filtered = if (search.isNotBlank()) {
             val needle = OperatorKey.folded(search.trim())
             NetworkCatalog.all.filter { OperatorKey.folded(it.name).contains(needle) }
@@ -51,39 +58,54 @@ class NetworksViewModel(
             // Without a search term the driver's own networks come first:
             // they are the ones you return to in order to change something,
             // and they'd otherwise sit scattered through the whole catalog.
-            // The order follows the committed selection, not the staged one,
-            // so ticking a row doesn't pull it out from under the finger
-            // that just ticked it.
-            val (preferred, rest) = NetworkCatalog.all.partition { it.key in committed }
+            // The order follows the stored selection, not the edited one, so
+            // ticking a row doesn't pull it out from under the finger that
+            // just ticked it — it settles on the way out.
+            val (preferred, rest) = NetworkCatalog.all.partition { it.key in stored.preferredOperators }
             preferred + rest
         }
         NetworksUiState(
             networks = filtered,
-            pending = pending,
-            committed = committed,
-            canConfirm = pending != committed,
+            selected = edited.preferredOperators,
+            onlyPreferred = edited.onlyPreferred,
             search = search,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, NetworksUiState())
-
-    init {
-        viewModelScope.launch {
-            pending.value = settings.networks.first().preferredOperators
-        }
-    }
 
     fun onSearchChanged(query: String) {
         search.value = query
     }
 
-    fun onNetworkToggled(key: String) {
-        pending.value = if (key in pending.value) pending.value - key else pending.value + key
+    fun onNetworkToggled(key: String) = edit { preferences ->
+        val selected = preferences.preferredOperators
+        preferences.copy(
+            preferredOperators = if (key in selected) selected - key else selected + key,
+        )
     }
 
-    fun onConfirm() {
-        val snapshot = pending.value
+    fun onOnlyPreferredChanged(enabled: Boolean) = edit { it.copy(onlyPreferred = enabled) }
+
+    /**
+     * The screen is being left — this is where the edits take effect.
+     *
+     * Reading [staged] inside the coroutine, not before it: [edit] queues on
+     * the same scope, so the last tick before the back gesture is in by the
+     * time this runs.
+     */
+    fun onLeave() {
         viewModelScope.launch {
-            settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = snapshot))
+            val edited = staged.value ?: return@launch
+            settings.setNetworks(edited)
+            // Back to "unchanged": the ViewModel is activity-scoped and
+            // outlives the screen, so the next visit must start from what
+            // was just stored, not from this visit's staged copy.
+            staged.value = null
+        }
+    }
+
+    private fun edit(block: (NetworkPreferences) -> NetworkPreferences) {
+        viewModelScope.launch {
+            staged.value = block(staged.value ?: settings.networks.first())
         }
     }
 }
