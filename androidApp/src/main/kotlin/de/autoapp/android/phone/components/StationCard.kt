@@ -10,7 +10,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -25,7 +24,6 @@ import de.autoapp.android.phone.theme.tabular
 @Composable
 fun StationCard(
     rank: Int,
-    badgeColor: Color,
     title: String,
     metaLine: String,
     address: String?,
@@ -50,7 +48,7 @@ fun StationCard(
             horizontalArrangement = Arrangement.spacedBy(11.dp),
             modifier = Modifier.padding(horizontal = 13.dp, vertical = 12.dp),
         ) {
-            RankBadge(rank, badgeColor)
+            RankBadge(rank, MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 MetaText(metaLine)

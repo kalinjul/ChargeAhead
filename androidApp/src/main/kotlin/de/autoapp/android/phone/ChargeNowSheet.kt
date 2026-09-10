@@ -123,7 +123,6 @@ private fun ChargeNowCard(
 ) {
     StationCard(
         rank = rank,
-        badgeColor = operatorColor(candidate.site.operator),
         // The network decides where the tap goes — the site name is
         // usually just the town again, the address line covers it.
         title = candidate.site.operator ?: candidate.site.name,

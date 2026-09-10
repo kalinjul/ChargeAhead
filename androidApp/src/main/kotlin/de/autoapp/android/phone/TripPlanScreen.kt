@@ -117,7 +117,7 @@ fun TripPlanScreen(
 
     val startName = stringResource(R.string.trip_start)
     val pins = plan.stops.mapIndexed { index, stop ->
-        MapPin(stop.site.position, operatorColor(stop.site.operator), label = "${index + 1}")
+        MapPin(stop.site.position, MapColors.stop, label = "${index + 1}")
     } + listOfNotNull(
         startPosition?.let { MapPin(it, MapColors.position) },
         MapPin(plan.destination.position, androidx.compose.ui.graphics.Color(0xFFD93025), emphasized = true),
@@ -207,7 +207,6 @@ fun TripPlanScreen(
                 val stop = plan.stops[index]
                 StationCard(
                     rank = index + 1,
-                    badgeColor = operatorColor(stop.site.operator),
                     title = stop.site.operator ?: stop.site.name,
                     metaLine = stringResource(R.string.trip_stop_power, stop.maxPowerKw.roundToInt()),
                     address = ChargeStopFormatter.addressLine(stop.site),

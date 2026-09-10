@@ -29,7 +29,6 @@ import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.KeyValueGrid
-import de.autoapp.android.phone.components.NetworkDot
 import de.autoapp.android.phone.components.PriceText
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.core.MapsHandoff
@@ -58,13 +57,10 @@ fun StopDetailScreen(
         // below already carries, or an operator's internal id
         // ("DE*CNT*EP00214*001"), so it isn't shown at all.
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                NetworkDot(operatorColor(stop.site.operator))
-                Text(
-                    stop.site.operator ?: stop.site.name,
-                    style = MaterialTheme.typography.titleLarge,
-                )
-            }
+            Text(
+                stop.site.operator ?: stop.site.name,
+                style = MaterialTheme.typography.titleLarge,
+            )
             stop.site.address?.let { address ->
                 val place = listOfNotNull(address.postalCode, address.town).joinToString(" ")
                 val line = listOfNotNull(address.street, place.takeIf { it.isNotBlank() }).joinToString(", ")

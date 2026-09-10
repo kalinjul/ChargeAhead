@@ -33,7 +33,7 @@ import de.autoapp.android.phone.theme.tabular
 
 enum class TickStyle { CHECK, ADD, DELETE }
 
-/** The mockup's `.netrow`: label, optional dot and sublabel, trailing tick circle. */
+/** The mockup's `.netrow`: label, optional sublabel, trailing tick circle. */
 @Composable
 fun TickRow(
     label: String,
@@ -41,7 +41,6 @@ fun TickRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     sublabel: String? = null,
-    dotColor: Color? = null,
     tick: TickStyle = TickStyle.CHECK,
     contentDescription: String? = null,
 ) {
@@ -51,7 +50,6 @@ fun TickRow(
         modifier = modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp)
             .then(if (contentDescription != null) Modifier.semantics { this.contentDescription = contentDescription } else Modifier),
     ) {
-        dotColor?.let { NetworkDot(it) }
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleSmall)
             sublabel?.let {

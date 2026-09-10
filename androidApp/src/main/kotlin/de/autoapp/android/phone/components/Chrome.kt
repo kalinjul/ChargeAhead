@@ -15,7 +15,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.autoapp.android.phone.twoDecimals
@@ -35,11 +34,6 @@ fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 @Composable
 fun Fineprint(text: String, modifier: Modifier = Modifier) {
     Text(text, style = MaterialTheme.typography.bodySmall, color = ChargeAheadColors.faint, modifier = modifier)
-}
-
-@Composable
-fun NetworkDot(color: Color, modifier: Modifier = Modifier, size: Dp = 9.dp) {
-    Box(modifier.size(size).background(color, CircleShape))
 }
 
 @Composable

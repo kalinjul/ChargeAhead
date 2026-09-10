@@ -108,7 +108,7 @@ fun HomeScreen(
         } else {
             MapCanvas(
                 center = uiState.position,
-                pins = uiState.stops.map { MapPin(it.site.position, operatorColor(it.site.operator)) },
+                pins = uiState.stops.map { MapPin(it.site.position, MapColors.stop) },
                 ownPosition = uiState.position,
                 radiusKm = 25.0,
                 modifier = Modifier.fillMaxSize(),

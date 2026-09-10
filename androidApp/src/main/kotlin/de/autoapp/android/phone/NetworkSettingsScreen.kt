@@ -109,7 +109,6 @@ fun NetworkSettingsScreen(
                             TickRow(
                                 label = network.name,
                                 checked = network.key in uiState.selected,
-                                dotColor = operatorColor(network.name),
                                 onClick = { onNetworkToggled(network.key) },
                             )
                         }
