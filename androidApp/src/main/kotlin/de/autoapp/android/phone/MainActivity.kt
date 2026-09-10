@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -45,6 +46,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -201,41 +203,60 @@ private fun PhoneApp() {
             snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
             contentWindowInsets = WindowInsets(0),
         ) { padding ->
-            NavDisplay(
-                backStack = backStack,
-                onBack = { pop() },
-                // NavDisplay's default push/pop is a 700 ms fade (nav3's
-                // DEFAULT_TRANSITION_DURATION_MILLISECOND) — sluggish on a back
-                // press. Same fade, made quick; the predictive-back gesture
-                // keeps its own spring.
-                transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
-                popTransitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
-                entryProvider = entryProvider {
-                    entry<Home> {
-                        HomeRoute(
-                            hasPermission = hasPermission,
-                            planningInProgress = tripUi is TripUiState.Planning,
-                            onRequestPermission = {
-                                permissionLauncher.launch(
-                                    arrayOf(
-                                        Manifest.permission.ACCESS_FINE_LOCATION,
-                                        Manifest.permission.ACCESS_COARSE_LOCATION,
-                                    ),
-                                )
-                            },
-                            onMenu = { scope.launch { drawerState.open() } },
-                            onPlan = { sheet = Sheet.PLAN; planSheetViewModel.onSheetOpened() },
-                            onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
-                            onRoutes = { sheet = Sheet.ROUTES },
-                            // No scaffold padding: the map draws under the (now
-                            // dark-iconed) status bar, like every maps app. The
-                            // background under it is what the back gesture
-                            // shrinks before the map has drawn its first frame.
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.background),
+            Box(Modifier.fillMaxSize()) {
+                // The map is built once here and kept — full-screen pages ride
+                // above it. Rebuilding the GoogleMap on every back press is what
+                // stalled the UI thread for ~1.5 s (fix/menu-back-lag).
+                HomeRoute(
+                    hasPermission = hasPermission,
+                    planningInProgress = tripUi is TripUiState.Planning,
+                    onRequestPermission = {
+                        permissionLauncher.launch(
+                            arrayOf(
+                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                Manifest.permission.ACCESS_COARSE_LOCATION,
+                            ),
                         )
-                    }
+                    },
+                    onMenu = { scope.launch { drawerState.open() } },
+                    onPlan = { sheet = Sheet.PLAN; planSheetViewModel.onSheetOpened() },
+                    onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
+                    onRoutes = { sheet = Sheet.ROUTES },
+                    // No scaffold padding: the map draws under the (dark-iconed)
+                    // status bar, like every maps app.
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background),
+                )
+
+                // A page on top covers the map; swallow any touch that slips
+                // past it so the hidden map doesn't pan out from under the page.
+                if (backStack.lastOrNull() != Home) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        awaitPointerEvent().changes.forEach { it.consume() }
+                                    }
+                                }
+                            },
+                    )
+                }
+
+                NavDisplay(
+                    backStack = backStack,
+                    onBack = { pop() },
+                    // NavDisplay's default push/pop is a 700 ms fade (nav3's
+                    // DEFAULT_TRANSITION_DURATION_MILLISECOND) — sluggish on a back
+                    // press. Same fade, made quick; the predictive-back gesture
+                    // keeps its own spring.
+                    transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                    popTransitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+                    entryProvider = entryProvider {
+                        // Home is the persistent layer below; its slot is empty.
+                        entry<Home> { }
 
                     entry<Trip> {
                         val trip = planned
@@ -363,7 +384,8 @@ private fun PhoneApp() {
                     }
                 },
                 modifier = Modifier.fillMaxSize().padding(padding),
-            )
+                )
+            }
         }
     }
 

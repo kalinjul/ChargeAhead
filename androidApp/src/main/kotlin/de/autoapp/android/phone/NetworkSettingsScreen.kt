@@ -1,18 +1,36 @@
 package de.autoapp.android.phone
 
+import androidx.compose.animation.animateBounds
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.LookaheadScope
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
@@ -21,7 +39,6 @@ import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SearchField
 import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.android.phone.components.SwitchRow
-import de.autoapp.android.phone.components.TickRow
 import de.autoapp.shared.ui.NetworksUiState
 import de.autoapp.shared.ui.NetworksViewModel
 
@@ -101,17 +118,31 @@ fun NetworkSettingsScreen(
                     modifier = Modifier.padding(top = 16.dp),
                 )
             } else {
-                // Laid out lazily: the catalog can run to hundreds of entries.
                 AppCard(modifier = Modifier.padding(vertical = 8.dp)) {
-                    LazyColumn {
-                        itemsIndexed(uiState.networks) { index, network ->
-                            if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                            TickRow(
-                                label = network.name,
-                                checked = network.key in uiState.selected,
-                                dotColor = operatorColor(network.name),
-                                onClick = { onNetworkToggled(network.key) },
-                            )
+                    // Not lazy: the flow wraps pills across rows, so there are no
+                    // rows to recycle. A few hundred pills is fine.
+                    LookaheadScope {
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(9.dp),
+                            verticalArrangement = Arrangement.spacedBy(9.dp),
+                            modifier = Modifier
+                                .verticalScroll(rememberScrollState())
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                        ) {
+                            uiState.networks.forEach { network ->
+                                // Keyed so its colour/scale state — and its
+                                // animateBounds slide — track this pill as the
+                                // list reorders selected-to-top.
+                                key(network.key) {
+                                    OperatorPill(
+                                        name = network.name,
+                                        selected = network.key in uiState.selected,
+                                        fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
+                                        onClick = { onNetworkToggled(network.key) },
+                                        modifier = Modifier.animateBounds(this@LookaheadScope),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -119,3 +150,78 @@ fun NetworkSettingsScreen(
         }
     }
 }
+
+/**
+ * A charging network as a pill. Since there are no colour dots any more,
+ * selection carries the colour: a selected pill fills with [fill] — the
+ * operator's own colour where we know it, plain app-blue otherwise.
+ */
+@Composable
+private fun OperatorPill(
+    name: String,
+    selected: Boolean,
+    fill: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+    // The toggle is optimistic — it flips on the staged state right away, well
+    // before the debounced fetch. These just make the flip a fade, not a jump.
+    val container by animateColorAsState(
+        targetValue = if (selected) fill else scheme.surfaceVariant,
+        animationSpec = tween(durationMillis = 180),
+        label = "pillContainer",
+    )
+    val content by animateColorAsState(
+        targetValue = if (selected) fill.readableInk() else scheme.onSurface,
+        animationSpec = tween(durationMillis = 180),
+        label = "pillContent",
+    )
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "pillScale",
+    )
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = container,
+        contentColor = content,
+        interactionSource = interaction,
+        modifier = modifier.graphicsLayer { scaleX = scale; scaleY = scale },
+    ) {
+        Text(
+            name,
+            style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+        )
+    }
+}
+
+/** Dark ink on a light fill, white on a dark one — so a brand pill stays legible. */
+private fun Color.readableInk(): Color =
+    if (luminance() > 0.55f) Color(0xFF202124) else Color.White
+
+/**
+ * Brand colours for the networks we recognise, keyed by catalog key. Everything
+ * not in here falls back to app-blue. Kept in the UI layer: these are Android
+ * [Color]s and only the pills use them.
+ */
+private val brandColors: Map<String, Color> = mapOf(
+    "ionity" to Color(0xFF00C389),
+    "tesla" to Color(0xFFE82127),
+    "enbw" to Color(0xFF1E3A5F),
+    "shell-recharge" to Color(0xFFFBCE07),
+    "allego" to Color(0xFFE3000F),
+    "fastned" to Color(0xFFFFE500),
+    "aral-pulse" to Color(0xFF0060AE),
+    "bp-pulse" to Color(0xFF009E49),
+    "eon-drive" to Color(0xFFE3001B),
+    "totalenergies" to Color(0xFFED1C24),
+    "enel-x" to Color(0xFF26CAD3),
+    "mer" to Color(0xFF00A499),
+    "ewe-go" to Color(0xFF009EE0),
+    "pfalzwerke" to Color(0xFFF39200),
+)

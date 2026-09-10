@@ -156,7 +156,7 @@ class NetworksViewModelTest {
     }
 
     @Test
-    fun `ticking a network does not reorder the list under the finger`() = runBlocking<Unit> {
+    fun `ticking a network floats it to the top`() = runBlocking<Unit> {
         val settings = settings()
         val vm = NetworksViewModel(settings)
         val key = NetworkCatalog.all.last().key
@@ -164,7 +164,18 @@ class NetworksViewModelTest {
         vm.onNetworkToggled(key)
 
         val state = vm.uiState.await { key in it.selected }
-        assertEquals(NetworkCatalog.all.map { it.key }, state.networks.map { it.key })
+        assertEquals(key, state.networks.first().key)
+        assertEquals(NetworkCatalog.all.size, state.networks.size, "nothing dropped")
+    }
+
+    @Test
+    fun `unselected networks are alphabetical`() = runBlocking<Unit> {
+        val settings = settings()
+        val vm = NetworksViewModel(settings)
+
+        val names = vm.uiState.await { it.networks.isNotEmpty() }.networks
+            .map { OperatorKey.folded(it.name) }
+        assertEquals(names.sorted(), names, "nothing selected, so the whole list is alphabetical")
     }
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =

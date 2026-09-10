@@ -167,6 +167,25 @@ fun HomeScreen(
                     )
                 }
             }
+            if (uiState.applyingFilters) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 2.dp,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                        Text(
+                            stringResource(R.string.map_applying_filters),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+            }
             if (uiState.isDemo) {
                 // Invented charging sites must be labeled — see AGENTS.md.
                 Text(
