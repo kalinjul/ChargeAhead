@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -110,8 +111,10 @@ fun HomeGoogleMap(
     }
 
     // Follow the first fix, then leave the camera to the user — a map that
-    // keeps snapping back is unusable for looking around.
-    var followedFirstFix by remember { mutableStateOf(false) }
+    // keeps snapping back is unusable for looking around. Saved across
+    // navigation: coming back from a full-screen page must not re-snap to the
+    // fix and yank the camera away from where the driver left it.
+    var followedFirstFix by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(position != null) {
         val target = position ?: return@LaunchedEffect
         if (!followedFirstFix) {
