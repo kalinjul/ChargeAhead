@@ -39,7 +39,11 @@ class DrawerViewModel(
         DrawerUiState(
             vehicleName = vehicle?.displayName,
             activeTariffCount = tariffs.size,
-            preferredNetworkCount = if (networks.isActive) networks.preferredOperators.size else 0,
+            // Count what the picker can actually tick and the fetch actually
+            // filters by — resolved catalog networks — not the raw stored keys,
+            // which may still hold keys from an older catalog that resolve to
+            // nothing and would inflate the number.
+            preferredNetworkCount = networks.selectedNetworks().size,
             filters = filters,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, DrawerUiState())
