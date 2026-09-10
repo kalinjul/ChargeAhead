@@ -17,7 +17,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -154,16 +158,25 @@ internal fun networksSummary(preferredCount: Int): String =
 /** The one lit-up control in the drawer: a card that tints when AC mode is on. */
 @Composable
 private fun AcModeToggle(active: Boolean, onToggle: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    // Optimistic: the switch flips on tap right away instead of waiting for the
+    // filter to round-trip through the ViewModel and start the map fetch. It
+    // reconciles with [active] if the state is changed from elsewhere.
+    var shown by remember { mutableStateOf(active) }
+    LaunchedEffect(active) { shown = active }
+
     val container by animateColorAsState(
-        if (active) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        if (shown) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
         label = "acContainer",
     )
     val accent by animateColorAsState(
-        if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        if (shown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "acAccent",
     )
     Surface(
-        onClick = { onToggle(!active) },
+        onClick = {
+            shown = !shown
+            onToggle(shown)
+        },
         shape = MaterialTheme.shapes.medium,
         color = container,
         modifier = modifier.fillMaxWidth(),
@@ -174,11 +187,11 @@ private fun AcModeToggle(active: Boolean, onToggle: (Boolean) -> Unit, modifier:
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
             // A small "AC" badge that lights up with the mode.
-            Surface(shape = MaterialTheme.shapes.small, color = accent.copy(alpha = if (active) 1f else 0.12f)) {
+            Surface(shape = MaterialTheme.shapes.small, color = accent.copy(alpha = if (shown) 1f else 0.12f)) {
                 Text(
                     "AC",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (active) MaterialTheme.colorScheme.onPrimary else accent,
+                    color = if (shown) MaterialTheme.colorScheme.onPrimary else accent,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
                 )
             }
@@ -190,7 +203,7 @@ private fun AcModeToggle(active: Boolean, onToggle: (Boolean) -> Unit, modifier:
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(checked = active, onCheckedChange = null)
+            Switch(checked = shown, onCheckedChange = null)
         }
     }
 }
