@@ -5,9 +5,11 @@ import androidx.lifecycle.viewModelScope
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.VehicleCatalog
 import de.autoapp.shared.domain.VehiclePreset
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -29,14 +31,17 @@ class AddCarViewModel(
         query,
         settings.vehicles,
     ) { query, owned ->
-        val ownedNames = owned.mapTo(mutableSetOf()) { it.displayName }
+        val ownedNames = owned.mapTo(HashSet()) { it.displayName }
+        val needle = query.trim()
         AddCarUiState(
             query = query,
             matches = VehicleCatalog.all.filter {
-                it.name !in ownedNames && it.name.contains(query.trim(), ignoreCase = true)
+                it.name !in ownedNames && it.name.contains(needle, ignoreCase = true)
             },
         )
-    }.stateIn(viewModelScope, WhileUiSubscribed, AddCarUiState())
+        // Off the main thread: filtering the ~300-row catalog per keystroke was
+        // synchronous UI-thread work while the driver typed.
+    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, WhileUiSubscribed, AddCarUiState())
 
     fun onQueryChanged(query: String) {
         this.query.value = query

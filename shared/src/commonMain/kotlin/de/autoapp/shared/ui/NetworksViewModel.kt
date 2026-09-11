@@ -7,12 +7,17 @@ import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.OperatorKey
 import de.autoapp.shared.domain.SettingsStore
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -58,19 +63,39 @@ class NetworksViewModel(
     /** The pending debounced commit, restarted on every edit. */
     private var commitJob: Job? = null
 
+    // Each catalog name folded once, up front — the search used to fold all ~200
+    // rows (five string allocations each) on the main thread on every keystroke.
+    private val foldedCatalog: List<Pair<Network, String>> =
+        NetworkCatalog.all.map { it to OperatorKey.folded(it.name) }
+    private val foldedByKey: Map<String, String> =
+        foldedCatalog.associate { (network, folded) -> network.key to folded }
+
+    /**
+     * The catalog rows that survive the search, in catalog order. Filtered off
+     * the main thread and only when the query itself changes — ticking a network
+     * changes [staged], not this, so it no longer re-sweeps the whole catalog.
+     */
+    private val matches: Flow<List<Network>> = search
+        .map { it.trim() }
+        .distinctUntilChanged()
+        .map { query ->
+            if (query.isEmpty()) {
+                NetworkCatalog.all
+            } else {
+                val needle = OperatorKey.folded(query)
+                foldedCatalog.filter { (_, folded) -> folded.contains(needle) }.map { it.first }
+            }
+        }
+        .flowOn(Dispatchers.Default)
+
     val uiState: StateFlow<NetworksUiState> = combine(
+        matches,
         settings.networks,
         staged,
         search,
         displayOrder,
-    ) { stored, staged, search, order ->
+    ) { matches, stored, staged, search, order ->
         val edited = staged ?: stored
-        val matches = if (search.isNotBlank()) {
-            val needle = OperatorKey.folded(search.trim())
-            NetworkCatalog.all.filter { OperatorKey.folded(it.name).contains(needle) }
-        } else {
-            NetworkCatalog.all
-        }
         NetworksUiState(
             // Selection follows the staged edit — a tick colours in at once —
             // but the order follows the frozen snapshot, so the pill stays put.
@@ -154,7 +179,7 @@ class NetworksViewModel(
     private fun List<Network>.committedFirst(committed: NetworkPreferences): List<Network> =
         sortedWith(
             compareByDescending<Network> { it.key in committed.preferredOperators }
-                .thenBy { OperatorKey.folded(it.name) },
+                .thenBy { foldedByKey[it.key] ?: it.name },
         )
 
     private fun NetworkPreferences.orderedKeys(): List<String> =
