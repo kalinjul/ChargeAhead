@@ -9,6 +9,7 @@ import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.TimeProvider
 import de.autoapp.shared.settings.PersistentSettingsStore
 import de.autoapp.shared.settings.SharedPreferencesStorage
+import kotlinx.coroutines.Dispatchers
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -21,7 +22,8 @@ import org.koin.dsl.module
 val appModule = module {
     single<TimeProvider> { TimeProvider { currentTimeMillis() } }
 
-    single<SettingsStore> { PersistentSettingsStore(SharedPreferencesStorage(androidContext())) }
+    // IO, not the store's Default: SharedPreferences commit() is a blocking disk write.
+    single<SettingsStore> { PersistentSettingsStore(SharedPreferencesStorage(androidContext()), Dispatchers.IO) }
 
     // The phone's feature: no vehicle access, just location and manual input.
     // Never closed — its lifetime is the process.
