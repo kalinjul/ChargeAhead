@@ -17,7 +17,11 @@ import de.autoapp.shared.domain.CarDataPoint
 import de.autoapp.shared.domain.CarDataStatus
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.TimeProvider
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
@@ -42,7 +46,11 @@ class CarHardwareDebugRecorder(
     private var speedListener: OnCarDataAvailableListener<Speed>? = null
     private var mileageListener: OnCarDataAvailableListener<Mileage>? = null
 
+    // Writes go here, off the host's main-thread callbacks; cancelled in stop().
+    private var scope: CoroutineScope? = null
+
     fun start() {
+        scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         val info = try {
             carContext.getCarService(CarHardwareManager::class.java).carInfo
         } catch (unavailable: Exception) {
@@ -93,11 +101,14 @@ class CarHardwareDebugRecorder(
     }
 
     fun stop() {
-        val info = carInfo ?: return
-        energyListener?.let(info::removeEnergyLevelListener)
-        speedListener?.let(info::removeSpeedListener)
-        mileageListener?.let(info::removeMileageListener)
+        carInfo?.let { info ->
+            energyListener?.let(info::removeEnergyLevelListener)
+            speedListener?.let(info::removeSpeedListener)
+            mileageListener?.let(info::removeMileageListener)
+        }
         energyListener = null; speedListener = null; mileageListener = null
+        scope?.cancel()
+        scope = null
     }
 
     /**
@@ -166,9 +177,9 @@ class CarHardwareDebugRecorder(
     }
 
     private fun record(kind: CarDataKind, point: CarDataPoint) {
-        // runBlocking in a host callback — same trade-off as in
-        // CarHardwareSoCSource: a few characters into SharedPreferences.
-        runBlocking { settingsStore.recordCarDataPoint(point.copy(kind = kind)) }
+        // Fire-and-forget off the host's main-thread callback; the store
+        // serializes the write, so streamed values (SPEED) can't race.
+        scope?.launch { settingsStore.recordCarDataPoint(point.copy(kind = kind)) }
     }
 
     private fun connectorName(type: Int): String = when (type) {

@@ -14,11 +14,12 @@ import de.autoapp.shared.domain.SoCDiagnostics
 import de.autoapp.shared.domain.SoCSource
 import de.autoapp.shared.domain.SoCSourceKind
 import de.autoapp.shared.domain.TimeProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.conflate
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 
 /**
  * State of charge from the vehicle — the opportunistic upgrade over manual
@@ -103,18 +104,13 @@ class CarHardwareSoCSource(
     }.conflate()
 
     /**
-     * Persists the result for the phone UI.
-     *
-     * `runBlocking` in a callback isn't pretty, but is acceptable here: the
-     * callback comes from the car host's main thread, what's written is a
-     * handful of characters to SharedPreferences, and the alternative would
-     * be a dedicated scope just for this side concern.
+     * Persists the result for the phone UI. Fire-and-forget on the flow's own
+     * scope so the car host's main-thread callback never blocks on the write
+     * (the store serializes it off-Main); cancelled when the flow closes.
      */
-    private fun record(outcome: SoCDiagnostics.Outcome, detail: String? = null) {
+    private fun CoroutineScope.record(outcome: SoCDiagnostics.Outcome, detail: String? = null) {
         val store = settingsStore ?: return
-        runBlocking {
-            store.recordSoCDiagnostics(SoCDiagnostics(time.nowMillis(), outcome, detail))
-        }
+        launch { store.recordSoCDiagnostics(SoCDiagnostics(time.nowMillis(), outcome, detail)) }
     }
 
     /** Status code as a word — "STATUS_UNIMPLEMENTED" says more than "2". */
