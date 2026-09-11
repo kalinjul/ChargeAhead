@@ -82,6 +82,14 @@ class HomeViewModel(
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
 
+    /**
+     * Just the "applying filters" flag. The drawer reads only this, so an
+     * unrelated map-state change (new markers, a position update) doesn't
+     * recompose the whole drawer.
+     */
+    val applyingFilters: StateFlow<Boolean> =
+        uiState.map { it.applyingFilters }.stateIn(viewModelScope, WhileUiSubscribed, false)
+
     init {
         // One pipeline drives both the markers and the "applying filters" flag,
         // so the flag can't race itself: a filter/network change (not a pan)
