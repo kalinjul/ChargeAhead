@@ -193,10 +193,14 @@ private fun PhoneApp() {
                 DrawerContent(
                     uiState = drawerUi,
                     applyingFilters = homeUi.applyingFilters,
-                    // Close first, then navigate: the page swap disposes the
-                    // map and its jank freezes a concurrently running drawer
-                    // animation — the drawer then just hangs there, open.
-                    onOpen = { target -> scope.launch { drawerState.close(); openFromRoot(target) } },
+                    // Navigate first, close the drawer alongside — so the page
+                    // doesn't wait on the ~250ms close animation before it even
+                    // starts. Safe now that the map is a persistent layer and no
+                    // longer disposed on the swap (which used to jank the close).
+                    onOpen = { target ->
+                        openFromRoot(target)
+                        scope.launch { drawerState.close() }
+                    },
                     onFilters = drawerViewModel::onFiltersChanged,
                 )
             }
