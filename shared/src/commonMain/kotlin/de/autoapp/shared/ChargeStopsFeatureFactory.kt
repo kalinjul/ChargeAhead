@@ -2,6 +2,7 @@ package de.autoapp.shared
 
 import de.autoapp.shared.core.TripPlanner
 import de.autoapp.shared.data.BackendChargeSiteSource
+import de.autoapp.shared.data.BackendGeocoder
 import de.autoapp.shared.data.BnetzaSource
 import de.autoapp.shared.data.CombinedSoCSource
 import de.autoapp.shared.data.MergingSiteRepository
@@ -116,7 +117,10 @@ object ChargeStopsFeatureFactory {
                 hardware = hardwareSoCSource,
             ),
             routeEngine = routeEngine,
-            geocoder = NominatimGeocoder(httpClient),
+            geocoder = when (backend) {
+                null -> NominatimGeocoder(httpClient)
+                else -> BackendGeocoder(httpClient, backend.baseUrl, backend.token)
+            },
             isDemo = isDemo,
             onClose = { httpClient.close() },
             planning = PlanningFeature(

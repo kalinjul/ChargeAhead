@@ -389,10 +389,14 @@ be not just sloppy but dangerous.
 ### The ChargeAhead backend
 
 With `chargeAheadBaseUrl` and `chargeAheadToken` in `local.properties`,
-charging sites come from the backend instead of from OpenChargeMap directly,
-and no provider key is needed in the app. Both must be set; one alone is
-ignored (`BackendConfig.of`). Android only so far — iOS still goes to the
-providers directly.
+charging sites and the destination search come from the backend instead of
+from OpenChargeMap and Nominatim directly, and no provider key is needed in
+the app. Both must be set; one alone is ignored (`BackendConfig.of`). Android
+only so far — iOS still goes to the providers directly.
+
+The destination search then runs against Photon rather than Nominatim, which
+is the point: Nominatim is a geocoder and answers a half-typed word with a
+street of that name.
 
 The contract module `org.julakali.chargeahead:api-model` comes from the
 backend's own Maven repository, which needs `chargeahead.maven.user` and
