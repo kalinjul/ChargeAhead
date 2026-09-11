@@ -191,10 +191,14 @@ class TripPlanner(
                     .maxOfOrNull { it.maxPowerKw }
                     ?: continue
                 if (power < MIN_DC_POWER_KW) continue
-                if (area.distanceKmTo(site.position) > STOP_BUFFER_KM) continue
+                // One pass over this chunk's segments yields both the buffer
+                // check and the km-from-start; the site was fetched from this
+                // chunk, so there is no reason to scan the whole route for it.
+                val projection = projectOntoChunk(site.position, route.points, cumulative, startIndex, endIndex)
+                if (projection.distanceKm > STOP_BUFFER_KM) continue
                 seen[site.id] = Candidate(
                     site = site,
-                    kmFromStart = kmAlongRoute(site.position, route.points, cumulative),
+                    kmFromStart = projection.kmFromStart,
                     maxPowerKw = power,
                     operator = site.operator,
                 )
@@ -277,10 +281,25 @@ class TripPlanner(
         return distances
     }
 
-    private fun kmAlongRoute(position: LatLon, points: List<LatLon>, cumulative: List<Double>): Double {
-        var bestKm = 0.0
+    private data class Projection(val kmFromStart: Double, val distanceKm: Double)
+
+    /**
+     * Projects [position] onto one chunk's segments — `[fromIndex, toIndex)` —
+     * not the whole route. Returns the km-from-start and the perpendicular
+     * distance in a single pass, so the buffer check and the position don't each
+     * sweep the polyline. Scanning the full route (thousands of points) for
+     * every candidate was the dominant cost of planning a long trip.
+     */
+    private fun projectOntoChunk(
+        position: LatLon,
+        points: List<LatLon>,
+        cumulative: List<Double>,
+        fromIndex: Int,
+        toIndex: Int,
+    ): Projection {
+        var bestKm = cumulative[fromIndex]
         var bestDistance = Double.MAX_VALUE
-        for (i in 0 until points.size - 1) {
+        for (i in fromIndex until toIndex) {
             val distance = position.distanceKmToSegment(points[i], points[i + 1])
             if (distance < bestDistance) {
                 bestDistance = distance
@@ -288,7 +307,7 @@ class TripPlanner(
                 bestKm = cumulative[i] + (cumulative[i + 1] - cumulative[i]) * fraction
             }
         }
-        return bestKm
+        return Projection(bestKm, bestDistance)
     }
 
     private companion object {
