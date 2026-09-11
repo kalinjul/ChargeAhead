@@ -389,9 +389,9 @@ be not just sloppy but dangerous.
 ### The ChargeAhead backend
 
 With `chargeAheadBaseUrl` and `chargeAheadToken` in `local.properties`,
-charging sites and the destination search come from the backend instead of
-from OpenChargeMap and Nominatim directly, and no provider key is needed in
-the app. Both must be set; one alone is ignored (`BackendConfig.of`). Android
+charging sites, the destination search and route calculation come from the
+backend instead of from OpenChargeMap, Nominatim and OSRM directly, and no
+provider key is needed in the app. Both must be set; one alone is ignored (`BackendConfig.of`). Android
 only so far — iOS still goes to the providers directly.
 
 The destination search then runs against Photon rather than Nominatim, which

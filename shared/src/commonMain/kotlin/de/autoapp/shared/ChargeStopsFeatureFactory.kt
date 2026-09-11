@@ -3,6 +3,7 @@ package de.autoapp.shared
 import de.autoapp.shared.core.TripPlanner
 import de.autoapp.shared.data.BackendChargeSiteSource
 import de.autoapp.shared.data.BackendGeocoder
+import de.autoapp.shared.data.BackendRouteEngine
 import de.autoapp.shared.data.BnetzaSource
 import de.autoapp.shared.data.CombinedSoCSource
 import de.autoapp.shared.data.MergingSiteRepository
@@ -105,7 +106,10 @@ object ChargeStopsFeatureFactory {
             },
         )
 
-        val routeEngine = OsrmRouteEngine(httpClient)
+        val routeEngine = when (backend) {
+            null -> OsrmRouteEngine(httpClient)
+            else -> BackendRouteEngine(httpClient, backend.baseUrl, backend.token)
+        }
 
         return ChargeStopsFeature(
             locationSource = locationSource,
