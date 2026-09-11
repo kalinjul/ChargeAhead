@@ -16,6 +16,13 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven {
+            url = uri("https://api.chargeahead.julakali.org/maven/")
+            credentials {
+                username = providers.gradleProperty("chargeahead.maven.user").orNull
+                password = providers.gradleProperty("chargeahead.maven.password").orNull
+            }
+        }
     }
 }
 

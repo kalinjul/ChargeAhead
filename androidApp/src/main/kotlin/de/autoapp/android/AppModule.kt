@@ -1,6 +1,7 @@
 package de.autoapp.android
 
 import de.autoapp.shared.ChargeStopsFeature
+import de.autoapp.shared.BackendConfig
 import de.autoapp.shared.ChargeStopsFeatureFactory
 import de.autoapp.shared.currentTimeMillis
 import de.autoapp.shared.data.FusedLocationSource
@@ -34,6 +35,7 @@ val appModule = module {
             settingsStore = get(),
             databaseFactory = DatabaseFactory(androidContext()),
             timeProvider = get(),
+            backend = BackendConfig.of(BuildConfig.CHARGEAHEAD_BASE_URL, BuildConfig.CHARGEAHEAD_TOKEN),
         )
     }
 

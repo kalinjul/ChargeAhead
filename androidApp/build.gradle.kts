@@ -38,6 +38,14 @@ val openChargeMapApiKey: String = secret("openChargeMapApiKey", "OPEN_CHARGE_MAP
 val googleMapsApiKey: String = secret("googleMapsApiKey", "GOOGLE_MAPS_API_KEY")
 
 /**
+ * The ChargeAhead backend. With both set, charging sites come from there and
+ * the provider keys stay on the server; empty falls back to the direct
+ * sources.
+ */
+val chargeAheadBaseUrl: String = secret("chargeAheadBaseUrl", "CHARGEAHEAD_BASE_URL")
+val chargeAheadToken: String = secret("chargeAheadToken", "CHARGEAHEAD_TOKEN")
+
+/**
  * Play refuses any upload whose versionCode is not strictly higher than
  * everything already in the account — across all tracks. The release
  * pipeline therefore determines the number (fastlane, from the Play API) and
@@ -78,6 +86,17 @@ android {
             "String",
             "OPEN_CHARGE_MAP_API_KEY",
             "\"${openChargeMapApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+        )
+
+        buildConfigField(
+            "String",
+            "CHARGEAHEAD_BASE_URL",
+            "\"${chargeAheadBaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+        )
+        buildConfigField(
+            "String",
+            "CHARGEAHEAD_TOKEN",
+            "\"${chargeAheadToken.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
 
         // The Maps SDK reads its key from the manifest, not from code.

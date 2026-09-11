@@ -68,6 +68,8 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.androidx.room.runtime)
             implementation(libs.androidx.sqlite.bundled)
+
+            api(libs.chargeahead.api.model)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
