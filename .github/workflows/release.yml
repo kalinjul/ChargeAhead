@@ -27,6 +27,11 @@ concurrency:
 permissions:
   contents: read
 
+# Read by settings.gradle.kts to resolve org.julakali.chargeahead:api-model.
+env:
+  CHARGEAHEAD_MAVEN_USER: ${{ secrets.CHARGEAHEAD_MAVEN_USER }}
+  CHARGEAHEAD_MAVEN_PASSWORD: ${{ secrets.CHARGEAHEAD_MAVEN_PASSWORD }}
+
 jobs:
   play-internal:
     name: Play Store (internal track)
@@ -102,6 +107,11 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
           OPEN_CHARGE_MAP_API_KEY: ${{ secrets.OPEN_CHARGE_MAP_API_KEY }}
+          # With both set, charging sites come from the backend and the OCM key
+          # above goes unused. The token is extractable from the APK - the
+          # backend's daily quota is what limits the damage.
+          CHARGEAHEAD_BASE_URL: ${{ vars.CHARGEAHEAD_BASE_URL }}
+          CHARGEAHEAD_TOKEN: ${{ secrets.CHARGEAHEAD_TOKEN }}
           VERSION_NAME: ${{ steps.version.outputs.name }}
           # Read by fastlane (Appfile) and by supply itself.
           PLAY_JSON_KEY_FILE: ${{ steps.credentials.outputs.json_key }}

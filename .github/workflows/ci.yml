@@ -20,10 +20,19 @@ concurrency:
 permissions:
   contents: read
 
-# No secrets are handed to any job here, on purpose. Pull requests from forks
-# never get them, so CI has to be green without: the app then falls back to
-# labeled demo data and to the map placeholder (README.md, "OpenChargeMap
-# key"), which keeps that path continuously exercised.
+# Read by settings.gradle.kts to resolve org.julakali.chargeahead:api-model.
+env:
+  CHARGEAHEAD_MAVEN_USER: ${{ secrets.CHARGEAHEAD_MAVEN_USER }}
+  CHARGEAHEAD_MAVEN_PASSWORD: ${{ secrets.CHARGEAHEAD_MAVEN_PASSWORD }}
+
+# The only secret here is the Maven access to the contract module: without it
+# nothing resolves and nothing compiles. That is the price of serving
+# api-model from our own backend, and it means a pull request from a fork
+# cannot be built here.
+#
+# No provider keys, deliberately: the app then falls back to labeled demo data
+# and to the map placeholder (README.md, "OpenChargeMap key"), which keeps that
+# path continuously exercised.
 jobs:
   android:
     name: Android build + shared tests
@@ -46,6 +55,16 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Check the Maven credentials
+        # Without them every Gradle task dies at dependency resolution with a
+        # 401 that says nothing about the cause. A fork's pull request never
+        # sees secrets, so this is where that run stops, legibly.
+        run: |
+          if [ -z "${CHARGEAHEAD_MAVEN_USER:-}" ] || [ -z "${CHARGEAHEAD_MAVEN_PASSWORD:-}" ]; then
+            echo "::error title=No Maven credentials::org.julakali.chargeahead:api-model cannot be resolved. Pull requests from forks do not get secrets and cannot be built here."
+            exit 1
+          fi
 
       - name: Build debug APK
         run: ./gradlew :androidApp:assembleDebug
@@ -88,6 +107,16 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Check the Maven credentials
+        # Without them every Gradle task dies at dependency resolution with a
+        # 401 that says nothing about the cause. A fork's pull request never
+        # sees secrets, so this is where that run stops, legibly.
+        run: |
+          if [ -z "${CHARGEAHEAD_MAVEN_USER:-}" ] || [ -z "${CHARGEAHEAD_MAVEN_PASSWORD:-}" ]; then
+            echo "::error title=No Maven credentials::org.julakali.chargeahead:api-model cannot be resolved. Pull requests from forks do not get secrets and cannot be built here."
+            exit 1
+          fi
 
       - name: Cache Kotlin/Native toolchain
         uses: actions/cache@v4
