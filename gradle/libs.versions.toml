@@ -26,7 +26,7 @@ playServicesLocation = "21.4.0"
 playServicesMaps = "20.0.0"
 mapsCompose = "6.6.0"
 
-chargeaheadApi = "0.4.0"
+chargeaheadApi = "0.5.1"
 
 [libraries]
 # --- shared (Kotlin Multiplatform) ---
