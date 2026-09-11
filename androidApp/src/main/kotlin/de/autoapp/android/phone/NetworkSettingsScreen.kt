@@ -11,11 +11,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -116,26 +117,31 @@ fun NetworkSettingsScreen(
                     modifier = Modifier.padding(top = 16.dp),
                 )
             } else {
-                AppCard(modifier = Modifier.padding(vertical = 8.dp)) {
-                    // Not lazy: the flow wraps pills across rows, so there are no
-                    // rows to recycle. A few hundred pills is fine.
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(9.dp),
+                AppCard(modifier = Modifier.fillMaxSize().padding(vertical = 8.dp)) {
+                    // Lazy so opening doesn't compose all ~500 pills up front: a
+                    // LazyColumn of chunks, each a FlowRow that wraps its pills.
+                    // Only the visible chunks compose.
+                    LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(9.dp),
-                        modifier = Modifier
-                            .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
-                        uiState.networks.forEach { network ->
-                            // Keyed so its colour/scale state stays with this pill
-                            // as the list reorders selected-to-top.
-                            key(network.key) {
-                                OperatorPill(
-                                    name = network.name,
-                                    selected = network.key in uiState.selected,
-                                    fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
-                                    onClick = { onNetworkToggled(network.key) },
-                                )
+                        items(uiState.networks.chunked(PILLS_PER_CHUNK), key = { it.first().key }) { chunk ->
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                verticalArrangement = Arrangement.spacedBy(9.dp),
+                            ) {
+                                chunk.forEach { network ->
+                                    // Keyed so its colour/scale state stays with
+                                    // this pill as the list reorders.
+                                    key(network.key) {
+                                        OperatorPill(
+                                            name = network.name,
+                                            selected = network.key in uiState.selected,
+                                            fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
+                                            onClick = { onNetworkToggled(network.key) },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -196,6 +202,9 @@ private fun OperatorPill(
 /** Dark ink on a light fill, white on a dark one — so a brand pill stays legible. */
 private fun Color.readableInk(): Color =
     if (luminance() > 0.55f) Color(0xFF202124) else Color.White
+
+/** Pills per lazy row-chunk — a chunk is one FlowRow, so only visible ones compose. */
+private const val PILLS_PER_CHUNK = 30
 
 /**
  * Brand colours for the networks we recognise, keyed by catalog key. Everything
