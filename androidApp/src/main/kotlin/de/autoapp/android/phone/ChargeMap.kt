@@ -34,9 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -69,6 +69,13 @@ import de.autoapp.shared.domain.OperatorShortName
 val hasGoogleMapsKey: Boolean get() = BuildConfig.HAS_GOOGLE_MAPS_KEY
 
 private fun LatLon.toLatLng() = LatLng(lat, lon)
+
+/** A charger prepared for the map: its icon and position resolved off the recomposition path. */
+private class ChargerMarker(
+    val charger: de.autoapp.shared.MapCharger,
+    val position: LatLng,
+    val icon: BitmapDescriptor,
+)
 
 /**
  * Home map: viewport-driven. The map reports every settled camera position
@@ -135,6 +142,23 @@ fun HomeGoogleMap(
     val density = LocalDensity.current
     val iconCache = remember { mutableMapOf<PillKey, BitmapDescriptor>() }
 
+    // Build each marker's key, icon and LatLng once per charger-list change, not
+    // once per recomposition of the map content (that ran ChargeSpeed/operator
+    // lookups for a few hundred markers every frame the map redrew).
+    val markers = remember(chargers, density) {
+        chargers.map { charger ->
+            val pillKey = PillKey(
+                ChargeSpeed.of(charger.maxPowerKw),
+                OperatorShortName.of(charger.site.operator),
+            )
+            ChargerMarker(
+                charger = charger,
+                position = charger.site.position.toLatLng(),
+                icon = iconCache.getOrPut(pillKey) { markerPillDescriptor(density, pillKey) },
+            )
+        }
+    }
+
     Box(modifier = modifier) {
         GoogleMap(
             cameraPositionState = cameraPositionState,
@@ -149,19 +173,14 @@ fun HomeGoogleMap(
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
-            chargers.forEach { charger ->
-                val pillKey = PillKey(
-                    ChargeSpeed.of(charger.maxPowerKw),
-                    OperatorShortName.of(charger.site.operator),
-                )
-                val icon = iconCache.getOrPut(pillKey) { markerPillDescriptor(density, pillKey) }
-                key(charger.site.id) {
+            markers.forEach { marker ->
+                key(marker.charger.site.id) {
                     Marker(
-                        state = rememberMarkerState(position = charger.site.position.toLatLng()),
-                        icon = icon,
-                        title = charger.site.name,
+                        state = rememberMarkerState(position = marker.position),
+                        icon = marker.icon,
+                        title = marker.charger.site.name,
                         anchor = Offset(0.5f, 0.5f),
-                        onClick = { onChargerTapped(charger); true },
+                        onClick = { onChargerTapped(marker.charger); true },
                     )
                 }
             }
@@ -212,8 +231,10 @@ fun HomeGoogleMap(
                     contentDescription = stringResource(R.string.map_compass),
                     tint = Color(0xFFD93025),
                     // Counter-rotated like a real compass needle: it points
-                    // north however the map is turned.
-                    modifier = Modifier.rotate(-cameraPositionState.position.bearing),
+                    // north however the map is turned. In graphicsLayer, not
+                    // Modifier.rotate, so reading the camera bearing invalidates
+                    // the draw, not the whole composable, every pan frame.
+                    modifier = Modifier.graphicsLayer { rotationZ = -cameraPositionState.position.bearing },
                 )
             }
         }
@@ -245,10 +266,14 @@ fun TripGoogleMap(
 ) {
     val cameraPositionState = rememberCameraPositionState()
 
-    LaunchedEffect(routePoints) {
-        if (routePoints.isEmpty()) return@LaunchedEffect
+    // Convert the (potentially long) route once per route change, not on every
+    // recomposition of the map content.
+    val routeLatLngs = remember(routePoints) { routePoints.map { it.toLatLng() } }
+
+    LaunchedEffect(routeLatLngs) {
+        if (routeLatLngs.isEmpty()) return@LaunchedEffect
         val bounds = LatLngBounds.builder()
-            .apply { routePoints.forEach { include(it.toLatLng()) } }
+            .apply { routeLatLngs.forEach { include(it) } }
             .build()
         cameraPositionState.move(CameraUpdateFactory.newLatLngBounds(bounds, BOUNDS_PADDING_PX))
     }
@@ -259,9 +284,9 @@ fun TripGoogleMap(
         uiSettings = MapUiSettings(zoomControlsEnabled = false),
         modifier = modifier,
     ) {
-        if (routePoints.size >= 2) {
+        if (routeLatLngs.size >= 2) {
             Polyline(
-                points = routePoints.map { it.toLatLng() },
+                points = routeLatLngs,
                 color = androidx.compose.ui.graphics.Color(0xFF1A73E8),
                 width = 14f,
             )

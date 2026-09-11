@@ -118,6 +118,9 @@ fun NetworkSettingsScreen(
                     modifier = Modifier.padding(top = 16.dp),
                 )
             } else {
+                // Chunked once per list change, not per recomposition — this
+                // screen recomposes on every keystroke and every pill toggle.
+                val chunks = remember(uiState.networks) { uiState.networks.chunked(PILLS_PER_CHUNK) }
                 AppCard(modifier = Modifier.fillMaxSize().padding(vertical = 8.dp)) {
                     // Lazy so opening doesn't compose all ~500 pills up front: a
                     // LazyColumn of chunks, each a FlowRow that wraps its pills.
@@ -126,7 +129,7 @@ fun NetworkSettingsScreen(
                         verticalArrangement = Arrangement.spacedBy(9.dp),
                         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
-                        items(uiState.networks.chunked(PILLS_PER_CHUNK), key = { it.first().key }) { chunk ->
+                        items(chunks, key = { it.first().key }) { chunk ->
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(9.dp),
                                 verticalArrangement = Arrangement.spacedBy(9.dp),
