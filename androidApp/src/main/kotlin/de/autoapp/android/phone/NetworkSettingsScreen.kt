@@ -1,12 +1,10 @@
 package de.autoapp.android.phone
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +23,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -60,10 +60,11 @@ fun NetworksRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Leaving the composition is the commit — that covers the back arrow,
-    // the system back gesture and the drawer alike, which a callback on the
-    // back arrow alone would not.
+    // Entering freezes the pill order for the visit; leaving the composition is
+    // the commit — the latter covers the back arrow, the system back gesture
+    // and the drawer alike, which a callback on the back arrow alone would not.
     DisposableEffect(viewModel) {
+        viewModel.onEnter()
         onDispose { viewModel.onLeave() }
     }
 
@@ -164,32 +165,36 @@ private fun OperatorPill(
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    // The toggle is optimistic — it flips on the staged state right away, well
-    // before the debounced fetch. These just make the flip a fade, not a jump.
+    // Plain Compose colour crossfades — fill and ink change together, in step,
+    // so there is no half-transparent frame where white text sits on a not-yet
+    // filled pill (the "ghost" the hand-rolled bloom produced).
     val container by animateColorAsState(
         targetValue = if (selected) fill else scheme.surfaceVariant,
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = 200),
         label = "pillContainer",
     )
     val content by animateColorAsState(
         targetValue = if (selected) fill.readableInk() else scheme.onSurface,
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = 200),
         label = "pillContent",
     )
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "pillScale",
-    )
+    // The one custom touch: a tap dents the pill in and springs it back past its
+    // size. Driven off the click, not the press state — a quick tap barely moved
+    // the press scale before release, so the bounce never showed.
+    val scope = rememberCoroutineScope()
+    val scale = remember { Animatable(1f) }
     Surface(
-        onClick = onClick,
+        onClick = {
+            onClick()
+            scope.launch {
+                scale.snapTo(0.9f)
+                scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium))
+            }
+        },
         shape = CircleShape,
         color = container,
         contentColor = content,
-        interactionSource = interaction,
-        modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale },
+        modifier = Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value },
     ) {
         Text(
             name,

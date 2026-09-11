@@ -47,6 +47,14 @@ class NetworksViewModel(
     /** The edited preferences — `null` while this visit has changed nothing. */
     private val staged = MutableStateFlow<NetworkPreferences?>(null)
 
+    /**
+     * The order to draw the pills in, frozen for the visit. Ticking a network
+     * lifts it to the top *next* time — while the screen is open the list holds
+     * still, so a tap doesn't yank the pill out from under the finger. `null`
+     * until [onEnter] snapshots it; the ordering falls back to committed-first.
+     */
+    private val displayOrder = MutableStateFlow<List<String>?>(null)
+
     /** The pending debounced commit, restarted on every edit. */
     private var commitJob: Job? = null
 
@@ -54,7 +62,8 @@ class NetworksViewModel(
         settings.networks,
         staged,
         search,
-    ) { stored, staged, search ->
+        displayOrder,
+    ) { stored, staged, search, order ->
         val edited = staged ?: stored
         val matches = if (search.isNotBlank()) {
             val needle = OperatorKey.folded(search.trim())
@@ -62,15 +71,10 @@ class NetworksViewModel(
         } else {
             NetworkCatalog.all
         }
-        // Selected networks float to the top so the driver's picks stay in
-        // view; the rest is plain alphabetical. Selection follows the staged
-        // edit, so a tick lifts its network straight away.
-        val ordered = matches.sortedWith(
-            compareByDescending<Network> { it.key in edited.preferredOperators }
-                .thenBy { OperatorKey.folded(it.name) },
-        )
         NetworksUiState(
-            networks = ordered,
+            // Selection follows the staged edit — a tick colours in at once —
+            // but the order follows the frozen snapshot, so the pill stays put.
+            networks = order.orderFor(matches) ?: matches.committedFirst(stored),
             selected = edited.preferredOperators,
             onlyPreferred = edited.onlyPreferred,
             search = search,
@@ -89,6 +93,15 @@ class NetworksViewModel(
     }
 
     fun onOnlyPreferredChanged(enabled: Boolean) = edit { it.copy(onlyPreferred = enabled) }
+
+    /**
+     * The screen was opened — snapshot the order from what is committed, so the
+     * driver's picks sit on top now and stay put until they leave and return.
+     */
+    fun onEnter() {
+        displayOrder.value = null
+        viewModelScope.launch { displayOrder.value = settings.networks.first().orderedKeys() }
+    }
 
     /**
      * The screen is being left — commit at once, cancelling any pending
@@ -129,6 +142,23 @@ class NetworksViewModel(
         // the screen, so the next visit starts from what was just stored.
         staged.value = null
     }
+
+    /** The frozen order applied to whatever [matches] survived the search. */
+    private fun List<String>?.orderFor(matches: List<Network>): List<Network>? {
+        val order = this ?: return null
+        val index = order.withIndex().associate { (i, key) -> key to i }
+        return matches.sortedBy { index[it.key] ?: Int.MAX_VALUE }
+    }
+
+    /** Committed picks first, then alphabetical — the order a fresh visit sees. */
+    private fun List<Network>.committedFirst(committed: NetworkPreferences): List<Network> =
+        sortedWith(
+            compareByDescending<Network> { it.key in committed.preferredOperators }
+                .thenBy { OperatorKey.folded(it.name) },
+        )
+
+    private fun NetworkPreferences.orderedKeys(): List<String> =
+        NetworkCatalog.all.committedFirst(this).map { it.key }
 
     private companion object {
         const val COMMIT_DEBOUNCE_MS = 5_000L
