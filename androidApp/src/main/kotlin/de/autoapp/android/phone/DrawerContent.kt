@@ -25,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -107,19 +108,21 @@ internal fun DrawerContent(
                 onToggle = { onFilters(filters.copy(slowMode = it)) },
                 modifier = Modifier.padding(top = 8.dp),
             )
-            if (applyingFilters) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.padding(top = 10.dp, start = 4.dp),
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                    Text(
-                        stringResource(R.string.map_applying_filters),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+            // Always laid out, only faded in: popping the spinner in and out
+            // shoved the whole drawer down on every filter tap.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .padding(top = 10.dp, start = 4.dp)
+                    .alpha(if (applyingFilters) 1f else 0f),
+            ) {
+                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                Text(
+                    stringResource(R.string.map_applying_filters),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
 
