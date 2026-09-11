@@ -166,8 +166,11 @@ private fun SelectedVehiclePanel(
                     style = MaterialTheme.typography.titleSmall.tabular,
                 )
                 AppSlider(
+                    // Snap to half a kWh: nobody tunes their consumption to the
+                    // third decimal, and a clean value keeps the advanced screen's
+                    // field from showing 17.834.
                     value = consumption,
-                    onValueChange = { consumption = it },
+                    onValueChange = { consumption = (it * 2).roundToInt() / 2f },
                     onValueChangeFinished = {
                         onSelect(vehicle.copy(consumptionKwhPer100Km = consumption.toDouble()))
                     },
@@ -192,7 +195,7 @@ private fun SelectedVehiclePanel(
                 )
                 AppSlider(
                     value = soc,
-                    onValueChange = { soc = it },
+                    onValueChange = { soc = it.roundToInt().toFloat() },
                     onValueChangeFinished = { onSocChange(soc.toDouble()) },
                     valueRange = 0f..100f,
                     enabled = !socFromCar,
