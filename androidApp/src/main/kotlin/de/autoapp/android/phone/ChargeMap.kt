@@ -220,79 +220,6 @@ fun HomeGoogleMap(
     }
 }
 
-/**
- * Small white chip, like the hotel/POI price chips in Google Maps: one bolt
- * per power class, colored by [ChargeSpeed].
- *
- * The color carries charging speed, not reachability — color-coding
- * reachability on a map read as arbitrary noise (design interview
- * 2026-09-07), while speed is the one property the driver compares between
- * two pins at map scale. The bolt count repeats that ordering without color,
- * for anyone who cannot tell the red from the green one.
- *
- * The label names the network, nothing else. The price used to sit here and
- * doesn't any more: every price this app knows is an estimate against the
- * driver's tariffs, and a number that precise on a pin reads as a fact. It
- * belongs where the caveat fits with it — one tap away, in the detail view.
- *
- * Sites whose operator isn't one of the well-known networks show their bolts
- * alone; see [OperatorShortName].
- */
-@Composable
-private fun ChargerPill(speed: ChargeSpeed, label: String?) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        // The bolts overlap instead of queueing up: three of them at full
-        // width made the widest pins on the map, and the pins are what the
-        // map is for. The glyph fills 14 of the drawable's 24 units, so at
-        // BOLT_SIZE the ink is ~8 dp wide inside a 14 dp box — this pitch
-        // slides the next bolt into the diagonal notch of the previous one.
-        horizontalArrangement = Arrangement.spacedBy(BOLT_PITCH - BOLT_SIZE),
-        modifier = Modifier
-            .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(50))
-            .border(1.dp, Color(0xFFDADCE0), androidx.compose.foundation.shape.RoundedCornerShape(50))
-            .padding(horizontal = 6.dp, vertical = 3.dp),
-    ) {
-        repeat(speed.bolts) {
-            val bolt = painterResource(R.drawable.ic_bolt)
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(BOLT_SIZE)) {
-                // An oversized white copy underneath, so the bolt that
-                // follows cuts a visible edge into the one before it instead
-                // of fusing with it into one green zigzag. Each bolt paints
-                // over its left neighbor — that is the whole trick, and it
-                // needs the halo to be drawn per bolt, not once behind all.
-                Icon(
-                    painter = bolt,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(BOLT_SIZE + BOLT_HALO),
-                )
-                Icon(
-                    painter = bolt,
-                    contentDescription = null,
-                    tint = speed.markerColor(),
-                    modifier = Modifier.size(BOLT_SIZE),
-                )
-            }
-        }
-        if (label != null) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF202124),
-                modifier = Modifier.padding(start = 5.dp, end = 2.dp),
-            )
-        }
-    }
-}
-
-/** Red below 50 kW, amber up to 100, green above — the traffic light everyone reads without a legend. */
-private fun ChargeSpeed.markerColor(): Color = when (this) {
-    ChargeSpeed.SLOW -> Color(0xFFD93025)
-    ChargeSpeed.MEDIUM -> Color(0xFFF9AB00)
-    ChargeSpeed.FAST, ChargeSpeed.ULTRA, ChargeSpeed.HYPER -> Color(0xFF188038)
-}
-
 /** Circular disc with a white ring — the planned-stop badges on the trip map. */
 @Composable
 private fun ChargeBadge(color: Color, content: @Composable () -> Unit) {
@@ -359,14 +286,6 @@ fun TripGoogleMap(
         Marker(state = rememberMarkerState(position = destination.toLatLng()))
     }
 }
-
-private val BOLT_SIZE = 14.dp
-
-/** How far the next bolt sits from the previous one — less than the ink is wide, so they interlock. */
-private val BOLT_PITCH = 6.dp
-
-/** How much wider the white copy under each bolt is drawn; the separating edge. */
-private val BOLT_HALO = 3.dp
 
 /** Frankfurt — dead center of the target market, only shown before the first fix. */
 private val FALLBACK_CENTER = LatLon(50.11, 8.68)

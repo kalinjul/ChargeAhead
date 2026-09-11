@@ -20,12 +20,15 @@ import kotlin.math.ceil
 data class PillKey(val speed: ChargeSpeed, val label: String?)
 
 /**
- * The charger pill drawn straight to a bitmap for use as a plain Marker icon.
+ * The charger pill drawn straight to a bitmap for use as a plain Marker icon:
+ * a white chip with one-to-three bolts — count and colour carry charging speed,
+ * a red/amber/green traffic light — plus the operator's short name; sites whose
+ * operator isn't a known network show their bolts alone (see [OperatorShortName]).
  *
- * MarkerComposable rasterizes a composable per marker on the main thread, so a
- * few hundred at once froze the UI. This draws each *distinct* pill once; the
- * caller caches by [PillKey], so N markers cost N cheap adds plus one raster per
- * appearance. Mirrors the `ChargerPill` composable — keep the two in sync.
+ * Drawn by hand rather than with MarkerComposable because that rasterizes a
+ * composable *per marker* on the main thread — a few hundred at once froze the
+ * UI. Here each *distinct* pill is drawn once; the caller caches by [PillKey],
+ * so N markers cost N cheap adds plus one raster per appearance.
  */
 fun markerPillDescriptor(density: Density, key: PillKey): BitmapDescriptor = with(density) {
     val boltSize = 14.dp.toPx()
