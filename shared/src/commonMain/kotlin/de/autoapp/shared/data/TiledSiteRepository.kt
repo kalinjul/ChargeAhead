@@ -17,6 +17,12 @@ import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.NetworkCatalog
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.TimeProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -48,10 +54,33 @@ class TiledSiteRepository(
 
     private val dao = database.chargeSites()
 
-    // Two concurrent fetches of the same area would be pure waste.
-    private val mutex = Mutex()
+    // De-duplicate fetches per request instead of serializing them globally:
+    // two identical in-flight fetches share one round-trip, but a fetch for a
+    // different area no longer waits behind an unrelated one that's stuck on a
+    // slow (up to the source timeout) network call. App-scoped singleton, so the
+    // scope lives as long as the repository and needs no cancellation.
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val inFlight = mutableMapOf<String, Deferred<List<ChargeSite>>>()
+    private val inFlightGuard = Mutex()
 
-    override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = mutex.withLock {
+    override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        val key = requestKey(area, networks)
+        val deferred = inFlightGuard.withLock {
+            inFlight[key] ?: scope.async { loadSites(area, networks) }.also { fetch ->
+                inFlight[key] = fetch
+                // Drop it once it settles, so the map only ever holds live
+                // fetches — not a growing history of every area ever queried.
+                fetch.invokeOnCompletion {
+                    scope.launch { inFlightGuard.withLock { if (inFlight[key] === fetch) inFlight.remove(key) } }
+                }
+            }
+        }
+        // await() outside the guard: holding it across the fetch would be the
+        // very global serialization we're removing.
+        return deferred.await()
+    }
+
+    private suspend fun loadSites(area: SearchArea, networks: List<Network>): List<ChargeSite> {
         val keys = if (networks.isEmpty()) listOf(NetworkCatalog.UNFILTERED) else networks.map { it.key }
         val missing = keys.filterNot { isCovered(area, it) }
         if (missing.isNotEmpty()) {
@@ -62,15 +91,25 @@ class TiledSiteRepository(
                 logWarning("Source '${source.id}' did not respond", fetchFailure)
                 val stored = readStored(area)
                 if (stored.isEmpty()) throw fetchFailure
-                return@withLock stored
+                return stored
             }
         }
-        readStored(area)
+        return readStored(area)
     }
 
     /** Discards coverage, not the sites themselves: the store stays readable. */
-    override suspend fun invalidate(): Unit = mutex.withLock {
+    override suspend fun invalidate() {
         dao.clearCoverage(source.id)
+    }
+
+    private fun requestKey(area: SearchArea, networks: List<Network>): String {
+        val box = area.boundingBox
+        val networkKeys = if (networks.isEmpty()) {
+            NetworkCatalog.UNFILTERED
+        } else {
+            networks.map { it.key }.sorted().joinToString(",")
+        }
+        return "${box.south},${box.west},${box.north},${box.east}|$networkKeys"
     }
 
     /**
