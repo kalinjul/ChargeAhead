@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -109,12 +109,6 @@ fun TripPlanScreen(
     }
 
     val startName = stringResource(R.string.trip_start)
-    val pins = plan.stops.mapIndexed { index, stop ->
-        MapPin(stop.site.position, operatorColor(stop.site.operator), label = "${index + 1}")
-    } + listOfNotNull(
-        startPosition?.let { MapPin(it, MapColors.position) },
-        MapPin(plan.destination.position, androidx.compose.ui.graphics.Color(0xFFD93025), emphasized = true),
-    )
 
     socInput?.let { input ->
         StartSocDialog(
@@ -127,14 +121,27 @@ fun TripPlanScreen(
 
     Column(modifier = modifier.fillMaxSize()) {
         if (hasGoogleMapsKey) {
+            val mapStops = remember(plan) {
+                plan.stops.mapIndexed { index, stop -> (index + 1) to stop.site.position }
+            }
             TripGoogleMap(
                 routePoints = plan.route.points,
-                stops = plan.stops.mapIndexed { index, stop -> (index + 1) to stop.site.position },
+                stops = mapStops,
                 destination = plan.destination.position,
                 hasLocationPermission = hasLocationPermission,
                 modifier = Modifier.fillMaxWidth().height(220.dp),
             )
         } else {
+            // Only the placeholder map needs the pin list — don't build it at all
+            // when Google Maps is drawing, and don't rebuild it every recomposition.
+            val pins = remember(plan, startPosition) {
+                plan.stops.mapIndexed { index, stop ->
+                    MapPin(stop.site.position, operatorColor(stop.site.operator), label = "${index + 1}")
+                } + listOfNotNull(
+                    startPosition?.let { MapPin(it, MapColors.position) },
+                    MapPin(plan.destination.position, Color(0xFFD93025), emphasized = true),
+                )
+            }
             MapCanvas(
                 center = null,
                 pins = pins,
@@ -196,8 +203,7 @@ fun TripPlanScreen(
                     trailingDescription = stringResource(R.string.trip_soc_edit),
                 )
             }
-            items(plan.stops.size) { index ->
-                val stop = plan.stops[index]
+            itemsIndexed(plan.stops, key = { _, stop -> stop.site.id }) { index, stop ->
                 StationCard(
                     rank = index + 1,
                     badgeColor = operatorColor(stop.site.operator),

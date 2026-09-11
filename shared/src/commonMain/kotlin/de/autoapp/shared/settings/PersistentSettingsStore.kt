@@ -18,6 +18,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -53,7 +55,20 @@ class PersistentSettingsStore(
     private val mutableManualSoc = MutableStateFlow(readManualSoc())
     override val manualSocPercent: StateFlow<Double?> = mutableManualSoc.asStateFlow()
 
-    override suspend fun setVehicle(profile: VehicleProfile?) {
+    // Every write goes through here: off the main thread (SharedPreferences'
+    // commit() is a blocking disk write + JSON encode) AND serialized, because
+    // several of these do read-modify-write on an in-memory list and the
+    // Default pool is multi-threaded — two concurrent edits would otherwise
+    // race and one could vanish.
+    private val writeMutex = Mutex()
+
+    private suspend fun write(block: () -> Unit) = withContext(writeDispatcher) { writeMutex.withLock(action = block) }
+
+    override suspend fun setVehicle(profile: VehicleProfile?) = write { writeVehicle(profile) }
+
+    // The un-locked core, so [removeVehicle] can reuse it while already holding
+    // the write lock (Mutex is not reentrant).
+    private fun writeVehicle(profile: VehicleProfile?) {
         // The selected vehicle stays on the legacy keys so the car UIs and
         // older installs read it unchanged; the garage is bookkeeping on top.
         storage.putString(KEY_NAME, profile?.displayName)
@@ -77,11 +92,11 @@ class PersistentSettingsStore(
         }
     }
 
-    override suspend fun removeVehicle(displayName: String) {
+    override suspend fun removeVehicle(displayName: String) = write {
         val remaining = mutableVehicles.value.filterNot { it.displayName == displayName }
         writeGarage(remaining)
         if (mutableVehicle.value?.displayName == displayName) {
-            setVehicle(remaining.firstOrNull())
+            writeVehicle(remaining.firstOrNull())
         }
     }
 
@@ -106,13 +121,16 @@ class PersistentSettingsStore(
             .orEmpty()
             .mapNotNull { it.toProfileOrNull() }
 
-    private val mutableDestination = MutableStateFlow(readDestinations().firstOrNull { it.current }?.toDomain())
+    // Parsed once, not twice: both the current-destination and the recents flow
+    // are derived from the same read.
+    private val storedDestinations = readDestinations()
+    private val mutableDestination = MutableStateFlow(storedDestinations.firstOrNull { it.current }?.toDomain())
     override val destination: StateFlow<Destination?> = mutableDestination.asStateFlow()
 
-    private val mutableRecent = MutableStateFlow(readDestinations().map(StoredDestination::toDomain))
+    private val mutableRecent = MutableStateFlow(storedDestinations.map(StoredDestination::toDomain))
     override val recentDestinations: StateFlow<List<Destination>> = mutableRecent.asStateFlow()
 
-    override suspend fun setDestination(destination: Destination?) {
+    override suspend fun setDestination(destination: Destination?) = write {
         val previous = mutableRecent.value
         val updated = if (destination == null) {
             previous
@@ -135,10 +153,7 @@ class PersistentSettingsStore(
     private val mutableNetworks = MutableStateFlow(readNetworks())
     override val networks: StateFlow<NetworkPreferences> = mutableNetworks.asStateFlow()
 
-    // Off the main thread: SharedPreferences uses a blocking commit(), and a
-    // filter toggle writes on every tap — on Main that parks the UI thread and
-    // freezes the loading spinner it just kicked off.
-    override suspend fun setNetworks(preferences: NetworkPreferences) = withContext(writeDispatcher) {
+    override suspend fun setNetworks(preferences: NetworkPreferences) = write {
         storage.putString(KEY_ONLY_PREFERRED, preferences.onlyPreferred.toString())
         storage.putJson(
             KEY_PREFERRED_NETWORKS,
@@ -158,7 +173,7 @@ class PersistentSettingsStore(
     private val mutableFilters = MutableStateFlow(readFilters())
     override val chargeFilters: StateFlow<ChargeFilters> = mutableFilters.asStateFlow()
 
-    override suspend fun setChargeFilters(filters: ChargeFilters) = withContext(writeDispatcher) {
+    override suspend fun setChargeFilters(filters: ChargeFilters) = write {
         storage.putJson(
             KEY_CHARGE_FILTERS,
             StoredFilters(filters.minPowerKw, filters.maxDistanceKm),
@@ -174,15 +189,15 @@ class PersistentSettingsStore(
     private val mutableSavedRoutes = MutableStateFlow(readSavedRoutes())
     override val savedRoutes: StateFlow<List<SavedRoute>> = mutableSavedRoutes.asStateFlow()
 
-    override suspend fun saveRoute(route: SavedRoute) {
+    override suspend fun saveRoute(route: SavedRoute) = write {
         writeSavedRoutes(listOf(route) + mutableSavedRoutes.value.filterNot { it.id == route.id })
     }
 
-    override suspend fun renameSavedRoute(id: String, name: String) {
+    override suspend fun renameSavedRoute(id: String, name: String) = write {
         writeSavedRoutes(mutableSavedRoutes.value.map { if (it.id == id) it.copy(name = name) else it })
     }
 
-    override suspend fun removeSavedRoute(id: String) {
+    override suspend fun removeSavedRoute(id: String) = write {
         writeSavedRoutes(mutableSavedRoutes.value.filterNot { it.id == id })
     }
 
@@ -211,7 +226,7 @@ class PersistentSettingsStore(
     private val mutableCarData = MutableStateFlow(readCarData())
     override val carDebugData: StateFlow<List<CarDataPoint>> = mutableCarData.asStateFlow()
 
-    override suspend fun recordCarDataPoint(point: CarDataPoint) {
+    override suspend fun recordCarDataPoint(point: CarDataPoint) = write {
         val updated = mutableCarData.value.filterNot { it.kind == point.kind } + point
         storage.putJson(
             KEY_CAR_DEBUG,
@@ -233,7 +248,7 @@ class PersistentSettingsStore(
     private val mutableDiagnostics = MutableStateFlow(readDiagnostics())
     override val socDiagnostics: StateFlow<SoCDiagnostics?> = mutableDiagnostics.asStateFlow()
 
-    override suspend fun recordSoCDiagnostics(diagnostics: SoCDiagnostics) {
+    override suspend fun recordSoCDiagnostics(diagnostics: SoCDiagnostics) = write {
         storage.putJson(
             KEY_SOC_DIAGNOSTICS,
             StoredDiagnostics(
@@ -253,7 +268,7 @@ class PersistentSettingsStore(
         return SoCDiagnostics(stored.checkedAtMillis, outcome, stored.detail)
     }
 
-    override suspend fun setManualSocPercent(socPercent: Double?) {
+    override suspend fun setManualSocPercent(socPercent: Double?) = write {
         val clamped = socPercent?.coerceIn(0.0, 100.0)
         storage.putString(KEY_MANUAL_SOC, clamped?.toString())
         mutableManualSoc.value = clamped

@@ -154,57 +154,69 @@ private fun SelectedVehiclePanel(
             ),
         )
 
-        // Slider commits on release, not on every pixel: each commit rewrites
-        // the garage entry and would otherwise spam the settings store.
-        var consumption by remember(vehicle.displayName) {
-            mutableStateOf(vehicle.consumptionKwhPer100Km.toFloat())
-        }
-        AppCard {
-            Column(modifier = Modifier.padding(13.dp)) {
-                Text(
-                    stringResource(R.string.garage_consumption, consumption.toDouble().oneDecimal()),
-                    style = MaterialTheme.typography.titleSmall.tabular,
-                )
-                AppSlider(
-                    // Snap to half a kWh: nobody tunes their consumption to the
-                    // third decimal, and a clean value keeps the advanced screen's
-                    // field from showing 17.834.
-                    value = consumption,
-                    onValueChange = { consumption = (it * 2).roundToInt() / 2f },
-                    onValueChangeFinished = {
-                        onSelect(vehicle.copy(consumptionKwhPer100Km = consumption.toDouble()))
-                    },
-                    valueRange = 12f..30f,
-                )
-                presetConsumptionFor(vehicle.displayName)?.let { spec ->
-                    Fineprint(stringResource(R.string.garage_consumption_hint, spec.oneDecimal()))
-                }
-            }
-        }
-
-        var soc by remember(socPercent == null) { mutableStateOf((socPercent ?: 80.0).toFloat()) }
-        AppCard {
-            Column(modifier = Modifier.padding(13.dp)) {
-                Text(
-                    if (socPercent == null && !socFromCar) {
-                        stringResource(R.string.garage_soc_unset)
-                    } else {
-                        stringResource(R.string.garage_soc, soc.roundToInt())
-                    },
-                    style = MaterialTheme.typography.titleSmall.tabular,
-                )
-                AppSlider(
-                    value = soc,
-                    onValueChange = { soc = it.roundToInt().toFloat() },
-                    onValueChangeFinished = { onSocChange(soc.toDouble()) },
-                    valueRange = 0f..100f,
-                    enabled = !socFromCar,
-                )
-            }
-        }
+        // Each slider keeps its drag state inside its own card, so dragging one
+        // doesn't recompose the specs grid (and re-scan the catalog) every frame.
+        ConsumptionCard(vehicle = vehicle, onSelect = onSelect)
+        SocCard(socPercent = socPercent, socFromCar = socFromCar, onSocChange = onSocChange)
 
         TextButton(onClick = onOpenAdvanced) {
             Text(stringResource(R.string.garage_advanced))
+        }
+    }
+}
+
+@Composable
+private fun ConsumptionCard(vehicle: VehicleProfile, onSelect: (VehicleProfile) -> Unit) {
+    // Slider commits on release, not on every pixel: each commit rewrites the
+    // garage entry and would otherwise spam the settings store.
+    var consumption by remember(vehicle.displayName) {
+        mutableStateOf(vehicle.consumptionKwhPer100Km.toFloat())
+    }
+    val presetConsumption = remember(vehicle.displayName) { presetConsumptionFor(vehicle.displayName) }
+    AppCard {
+        Column(modifier = Modifier.padding(13.dp)) {
+            Text(
+                stringResource(R.string.garage_consumption, consumption.toDouble().oneDecimal()),
+                style = MaterialTheme.typography.titleSmall.tabular,
+            )
+            AppSlider(
+                // Snap to half a kWh: nobody tunes their consumption to the
+                // third decimal, and a clean value keeps the advanced screen's
+                // field from showing 17.834.
+                value = consumption,
+                onValueChange = { consumption = (it * 2).roundToInt() / 2f },
+                onValueChangeFinished = {
+                    onSelect(vehicle.copy(consumptionKwhPer100Km = consumption.toDouble()))
+                },
+                valueRange = 12f..30f,
+            )
+            presetConsumption?.let { spec ->
+                Fineprint(stringResource(R.string.garage_consumption_hint, spec.oneDecimal()))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SocCard(socPercent: Double?, socFromCar: Boolean, onSocChange: (Double) -> Unit) {
+    var soc by remember(socPercent == null) { mutableStateOf((socPercent ?: 80.0).toFloat()) }
+    AppCard {
+        Column(modifier = Modifier.padding(13.dp)) {
+            Text(
+                if (socPercent == null && !socFromCar) {
+                    stringResource(R.string.garage_soc_unset)
+                } else {
+                    stringResource(R.string.garage_soc, soc.roundToInt())
+                },
+                style = MaterialTheme.typography.titleSmall.tabular,
+            )
+            AppSlider(
+                value = soc,
+                onValueChange = { soc = it.roundToInt().toFloat() },
+                onValueChangeFinished = { onSocChange(soc.toDouble()) },
+                valueRange = 0f..100f,
+                enabled = !socFromCar,
+            )
         }
     }
 }

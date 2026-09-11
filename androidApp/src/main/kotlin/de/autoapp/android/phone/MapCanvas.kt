@@ -135,13 +135,14 @@ private fun frameFor(
     return MapFrame(mid, (min(widthPx, heightPx) / (radiusKm * 2.0)).toFloat(), widthPx, heightPx)
 }
 
+private val OPERATOR_PALETTE = listOf(
+    Color(0xFF1A73E8), Color(0xFF188038), Color(0xFFF9AB00),
+    Color(0xFFD93025), Color(0xFF9334E6), Color(0xFF12A4AF),
+    Color(0xFFE8710A), Color(0xFF7CB342),
+)
+
 /** Stable, friendly color per operator, so pins are tellable apart without a legend. */
 fun operatorColor(operator: String?): Color {
     if (operator == null) return Color(0xFF5F6368)
-    val palette = listOf(
-        Color(0xFF1A73E8), Color(0xFF188038), Color(0xFFF9AB00),
-        Color(0xFFD93025), Color(0xFF9334E6), Color(0xFF12A4AF),
-        Color(0xFFE8710A), Color(0xFF7CB342),
-    )
-    return palette[(operator.hashCode() and Int.MAX_VALUE) % palette.size]
+    return OPERATOR_PALETTE[(operator.hashCode() and Int.MAX_VALUE) % OPERATOR_PALETTE.size]
 }

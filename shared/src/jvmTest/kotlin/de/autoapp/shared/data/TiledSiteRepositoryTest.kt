@@ -16,8 +16,12 @@ import de.autoapp.shared.domain.TimeProvider
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.destination
 import de.autoapp.shared.domain.NetworkCatalog
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -349,5 +353,58 @@ class TiledSiteRepositoryTest {
         repository.sitesIn(requireNotNull(route.aheadOf(start.destination(180.0, 40.0))))
 
         assertEquals(1, source.queries)
+    }
+
+    @Test
+    fun aStalledFetch_doesNotBlockFetchesForOtherAreas() = runBlocking<Unit> {
+        // Area A's fetch hangs on the network; a fetch for area B must still
+        // complete instead of waiting behind it — the old global lock did wait.
+        val gate = CompletableDeferred<Unit>()
+        val source = object : ChargeSiteSource {
+            override val id = "test"
+            var queries = 0
+            override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+                queries++
+                if (queries == 1) gate.await() // only the first area stalls
+                return emptyList()
+            }
+        }
+        val repository = TiledSiteRepository(source, database(), ControllableClock())
+
+        val stalled = async { repository.sitesIn(area()) }
+        while (source.queries < 1) yield() // let area A reach its gated query
+
+        // Would time out if it queued behind the stalled fetch.
+        withTimeout(5_000) { repository.sitesIn(SectorArea.circle(LatLon(52.5, 13.4), 40.0)) }
+
+        assertTrue(stalled.isActive, "area A's fetch is still stalled")
+        gate.complete(Unit)
+        stalled.await()
+    }
+
+    @Test
+    fun concurrentFetchesForTheSameArea_hitTheSourceOnce() = runBlocking {
+        val gate = CompletableDeferred<Unit>()
+        val source = object : ChargeSiteSource {
+            override val id = "test"
+            var queries = 0
+            override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+                queries++
+                gate.await()
+                return listOf(site("a", 0.0, 10.0))
+            }
+        }
+        val repository = TiledSiteRepository(source, database(), ControllableClock())
+        val a = area()
+
+        val first = async { repository.sitesIn(a) }
+        while (source.queries < 1) yield() // first fetch is in flight
+        val second = async { repository.sitesIn(a) }
+        yield() // let the second reach the de-dup
+        gate.complete(Unit)
+
+        assertEquals(listOf("a"), first.await().map { it.id })
+        assertEquals(listOf("a"), second.await().map { it.id })
+        assertEquals(1, source.queries, "the identical concurrent fetch was de-duplicated")
     }
 }

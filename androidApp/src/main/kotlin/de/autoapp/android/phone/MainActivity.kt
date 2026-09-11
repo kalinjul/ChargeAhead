@@ -189,10 +189,10 @@ private fun PhoneApp() {
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
-                val homeUi by homeViewModel.uiState.collectAsStateWithLifecycle()
+                val applyingFilters by homeViewModel.applyingFilters.collectAsStateWithLifecycle()
                 DrawerContent(
                     uiState = drawerUi,
-                    applyingFilters = homeUi.applyingFilters,
+                    applyingFilters = applyingFilters,
                     // The drawer stays open: the page slides in over it from the
                     // right, and back slides it away to reveal the drawer again.
                     onOpen = { target -> openFromRoot(target) },

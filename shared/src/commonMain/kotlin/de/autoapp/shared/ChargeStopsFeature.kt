@@ -69,6 +69,12 @@ class ChargeStopsFeature(
     /** Called by [close] — this is where the creator releases its own resources. */
     private val onClose: () -> Unit = {},
     /**
+     * A one-shot task run on the feature's own scope at creation — cache
+     * pruning uses it, so a slow prune is cancelled with the feature instead
+     * of lingering on a detached scope nobody owns.
+     */
+    private val onStart: (suspend () -> Unit)? = null,
+    /**
      * The phone's planning flows, assembled by the factory on the same
      * repository and settings. `null` in tests that assemble by hand and
      * don't need it.
@@ -77,6 +83,10 @@ class ChargeStopsFeature(
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+
+    init {
+        onStart?.let { task -> scope.launch { task() } }
+    }
     private val courseTracker = CourseTracker()
 
     // Prevents the location loop and an externally triggered refresh() from

@@ -21,10 +21,7 @@ import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.SoCSource
 import de.autoapp.shared.domain.TimeProvider
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 
 /**
  * Assembles the feature from its parts.
@@ -65,13 +62,6 @@ object ChargeStopsFeatureFactory {
         val httpClient = createHttpClient()
         val database = createChargeSiteDatabase(databaseFactory)
 
-        CoroutineScope(Dispatchers.Default).launch {
-            runCatching {
-                val keys = settingsStore.networks.first().preferredOperators
-                pruneCache(database, keys, timeProvider.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
-            }
-        }
-
         // Each source gets its own store and thus its own tile coverage: the
         // official register covers only Germany, OpenChargeMap the whole
         // world. A shared coverage record would falsely claim that a tile
@@ -110,6 +100,13 @@ object ChargeStopsFeatureFactory {
             geocoder = NominatimGeocoder(httpClient),
             isDemo = key == null,
             onClose = { httpClient.close() },
+            // Prune stale cache on the feature's own scope, not a detached one.
+            onStart = {
+                runCatching {
+                    val keys = settingsStore.networks.first().preferredOperators
+                    pruneCache(database, keys, timeProvider.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
+                }
+            },
             planning = PlanningFeature(
                 tripPlanner = TripPlanner(routeEngine, repository),
                 repository = repository,

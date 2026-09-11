@@ -11,6 +11,7 @@ import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.SectorArea
+import de.autoapp.shared.domain.distanceKmTo
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.ViewportArea
@@ -100,7 +101,8 @@ class PlanningFeature(
      * Fetch stays on the visible viewport (no bigger downloads). Render reads
      * a padded area from cache — two screens past each edge — so markers don't
      * pop in/out while panning. Filtered by the physical filters (networks,
-     * minimum power) and capped strongest-first.
+     * minimum power) and capped nearest-first, so what's in view is never
+     * dropped to keep a stronger charger off-screen in the padding.
      */
     suspend fun chargersIn(viewport: BoundingBox): List<MapCharger> {
         val filters = settings.chargeFilters.first()
@@ -113,6 +115,11 @@ class PlanningFeature(
 
         // Render from a padded area so markers stay visible while panning.
         val stored = repository.storedSitesIn(viewport.paddedByViewports(MAP_RENDER_PADDING_VIEWPORTS))
+
+        // Cap keeps the nearest to the visible centre, so a dense city never
+        // drops an in-view charger to keep a stronger one off-screen: the far
+        // padding markers are the ones that go.
+        val centre = LatLon((viewport.south + viewport.north) / 2.0, (viewport.west + viewport.east) / 2.0)
 
         return stored.mapNotNull { site ->
             if (filters.slowMode) {
@@ -130,7 +137,7 @@ class PlanningFeature(
             if (power < filters.minPowerKw) return@mapNotNull null
             MapCharger(site, power)
         }
-            .sortedByDescending { it.maxPowerKw }
+            .sortedBy { centre.distanceKmTo(it.site.position) }
             .take(MAX_MAP_CHARGERS)
     }
 
@@ -153,7 +160,7 @@ class PlanningFeature(
         const val MIN_FETCH_RADIUS_KM = 15.0
 
         /** More markers than this and the map is unreadable anyway. */
-        const val MAX_MAP_CHARGERS = 300
+        const val MAX_MAP_CHARGERS = 200
 
         // render two screens past each edge, from cache, so markers don't vanish when you scroll back
         const val MAP_RENDER_PADDING_VIEWPORTS = 2.0

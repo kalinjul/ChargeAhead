@@ -124,14 +124,29 @@ class PlanningFeatureViewportTest {
     }
 
     @Test
-    fun `the cap keeps the strongest sites`() = runBlocking<Unit> {
-        val many = (1..350).map { site("s$it", "EnBW", 150.0 + it) }
+    fun `the cap keeps the nearest sites, dropping the far ones`() = runBlocking<Unit> {
+        // 350 sites marching away from the viewport centre; only the nearest fit,
+        // so an in-view charger is never dropped to keep a distant one.
+        val centreLat = (viewport.south + viewport.north) / 2.0
+        val centreLon = (viewport.west + viewport.east) / 2.0
+        val many = (1..350).map { i ->
+            ChargeSite(
+                id = "demo:s$i",
+                name = "s$i",
+                operator = "EnBW",
+                position = LatLon(centreLat + i * 0.001, centreLon),
+                connectors = listOf(Connector(ConnectorType.CCS2, 150.0, 2)),
+            )
+        }
         val feature = featureWith(many) { setChargeFilters(ChargeFilters(minPowerKw = 50.0)) }
 
         val chargers = feature.chargersIn(viewport)
         assertEquals(PlanningFeature.MAX_MAP_CHARGERS, chargers.size)
-        assertTrue(chargers.first().maxPowerKw >= chargers.last().maxPowerKw)
-        assertEquals(500.0, chargers.first().maxPowerKw)
+        assertEquals(
+            (1..PlanningFeature.MAX_MAP_CHARGERS).map { "demo:s$it" },
+            chargers.map { it.site.id },
+            "the nearest sites survive, the far ones are dropped",
+        )
     }
 
     @Test

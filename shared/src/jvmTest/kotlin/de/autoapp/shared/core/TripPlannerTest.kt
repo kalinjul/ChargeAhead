@@ -127,6 +127,26 @@ class TripPlannerTest {
     }
 
     @Test
+    fun `chargers beside the route still project onto it, in driving order`() = runBlocking<Unit> {
+        val route = straightRoute()
+        // Shift each charger ~1 km off the line (within STOP_BUFFER_KM): the plan
+        // must use the projection onto the route, not the raw position — and that
+        // projection now runs per fetch-chunk instead of over the whole route.
+        val beside = sitesAlong(route).map {
+            it.copy(position = LatLon(it.position.lat + 0.01, it.position.lon))
+        }
+        val plan = assertIs<TripPlanResult.Planned>(
+            planner(route, beside).plan(start, destination, id4, startSocPercent = 90.0),
+        ).plan
+
+        assertTrue(plan.stops.isNotEmpty(), "a 660 km trip past roadside chargers still needs a stop")
+        assertEquals(plan.stops.sortedBy { it.kmFromStart }, plan.stops, "projected stops stay in driving order")
+        plan.stops.forEach {
+            assertTrue(it.kmFromStart in 0.0..route.distanceKm, "km-from-start stays on the route")
+        }
+    }
+
+    @Test
     fun `candidates are fetched in source-sized segments, not one giant area`() = runBlocking<Unit> {
         val route = straightRoute()
         val queriedRadii = mutableListOf<Double>()
