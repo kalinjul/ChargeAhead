@@ -157,14 +157,32 @@ class NetworksViewModelTest {
     }
 
     @Test
-    fun `ticking a network floats it to the top`() = runBlocking<Unit> {
+    fun `ticking a network does not reshuffle the open list`() = runBlocking<Unit> {
+        val settings = settings()
+        val vm = NetworksViewModel(settings)
+        vm.onEnter()
+        val key = NetworkCatalog.all.last().key
+
+        val before = vm.uiState.await { it.networks.isNotEmpty() }.networks.map { it.key }
+        vm.onNetworkToggled(key)
+        val after = vm.uiState.await { key in it.selected }.networks.map { it.key }
+
+        assertEquals(before, after, "the order is frozen while the screen is open")
+    }
+
+    @Test
+    fun `the next visit floats the newly ticked network to the top`() = runBlocking<Unit> {
         val settings = settings()
         val vm = NetworksViewModel(settings)
         val key = NetworkCatalog.all.last().key
 
+        vm.onEnter()
         vm.onNetworkToggled(key)
+        vm.uiState.await { key in it.selected }
+        vm.onLeave() // commit — the pick is stored now
+        vm.onEnter() // reopening re-sorts from what was stored
 
-        val state = vm.uiState.await { key in it.selected }
+        val state = vm.uiState.await { it.networks.first().key == key }
         assertEquals(key, state.networks.first().key)
         assertEquals(NetworkCatalog.all.size, state.networks.size, "nothing dropped")
     }

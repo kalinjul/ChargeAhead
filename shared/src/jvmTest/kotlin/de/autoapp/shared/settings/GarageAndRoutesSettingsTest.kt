@@ -33,6 +33,31 @@ class GarageAndRoutesSettingsTest {
     }
 
     @Test
+    fun `re-selecting a vehicle keeps its place in the garage`() = runBlocking<Unit> {
+        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        store.setVehicle(profile("ID.4"))
+        store.setVehicle(profile("Model 3"))
+
+        // Picking the first car again must not shove it to the end.
+        store.setVehicle(profile("ID.4"))
+
+        assertEquals(listOf("ID.4", "Model 3"), store.vehicles.value.map { it.displayName })
+        assertEquals("ID.4", store.vehicle.value?.displayName)
+    }
+
+    @Test
+    fun `editing a vehicle updates it in place`() = runBlocking<Unit> {
+        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        store.setVehicle(profile("ID.4"))
+        store.setVehicle(profile("Model 3"))
+
+        store.setVehicle(profile("ID.4").copy(consumptionKwhPer100Km = 21.0))
+
+        assertEquals(listOf("ID.4", "Model 3"), store.vehicles.value.map { it.displayName })
+        assertEquals(21.0, store.vehicles.value.first { it.displayName == "ID.4" }.consumptionKwhPer100Km)
+    }
+
+    @Test
     fun `garage survives the process, selection included`() = runBlocking<Unit> {
         val storage = InMemoryKeyValueStorage()
         PersistentSettingsStore(storage).apply {

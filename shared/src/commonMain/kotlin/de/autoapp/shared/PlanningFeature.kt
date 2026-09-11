@@ -14,7 +14,9 @@ import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.ViewportArea
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 
 /** A charger as the map shows it: the site and its strongest DC power. */
 data class MapCharger(
@@ -49,12 +51,15 @@ class PlanningFeature(
         from: LatLon,
         destination: Destination,
         socOverridePercent: Double? = null,
-    ): TripPlanResult {
-        val vehicle = settings.vehicle.first() ?: return TripPlanResult.NoVehicle
+    ): TripPlanResult = withContext(Dispatchers.Default) {
+        // Off Main, like [chargeNow]: routing and charge-stop optimisation are
+        // the heaviest work in the app, and on the main thread they froze the
+        // plan sheet's close animation and the planning spinner it kicked off.
+        val vehicle = settings.vehicle.first() ?: return@withContext TripPlanResult.NoVehicle
         val soc = socOverridePercent
             ?: settings.manualSocPercent.first()
             ?: DEFAULT_ASSUMED_SOC_PERCENT
-        return tripPlanner.plan(
+        tripPlanner.plan(
             from = from,
             destination = destination,
             vehicle = vehicle,
@@ -65,7 +70,11 @@ class PlanningFeature(
     }
 
     /** The best chargers around [position], honoring — and if need be relaxing — the filters. */
-    suspend fun chargeNow(position: LatLon): ChargeNowResult {
+    suspend fun chargeNow(position: LatLon): ChargeNowResult = withContext(Dispatchers.Default) {
+        // The whole sweep runs here, off Main. The ViewModel flips to Loading
+        // and the sheet draws its skeleton first; on Main the blocking DB query
+        // below held the very frame that would have drawn it, so the sheet only
+        // appeared a second later, already full of data.
         val filters = settings.chargeFilters.first()
         val networks = settings.networks.first()
         // Fetch wider than the distance filter allows: the relax ladder's
@@ -77,7 +86,7 @@ class PlanningFeature(
         } catch (failure: Exception) {
             emptyList()
         }
-        return ChargeNowRanker.rank(
+        ChargeNowRanker.rank(
             sites = sites,
             position = position,
             filters = filters,

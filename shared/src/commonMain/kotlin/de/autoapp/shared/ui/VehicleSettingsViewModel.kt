@@ -148,8 +148,13 @@ internal fun String.toPositiveDoubleOrNull(): Double? =
 internal fun String.toPercentOrNull(): Double? =
     replace(',', '.').trim().toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
 
-/** Whole numbers without the ".0" — 77 instead of 77.0. */
+/**
+ * One decimal at most, whole numbers without the ".0" — 77 instead of 77.0,
+ * 17.8 instead of a slider's 17.83400000001. A garage slider can store an
+ * ugly float; the field must not echo it back.
+ */
 internal fun Double.asInput(): String {
-    val rounded = round(this)
-    return if (abs(this - rounded) < 0.001) rounded.toLong().toString() else toString()
+    val oneDecimal = round(this * 10) / 10
+    val whole = round(oneDecimal)
+    return if (abs(oneDecimal - whole) < 0.001) whole.toLong().toString() else oneDecimal.toString()
 }

@@ -64,8 +64,15 @@ class PersistentSettingsStore(
         mutableVehicle.value = profile
 
         if (profile != null) {
-            val updated = mutableVehicles.value
-                .filterNot { it.displayName == profile.displayName } + profile
+            val current = mutableVehicles.value
+            // A known car is updated in its slot; only a new one is appended.
+            // Re-selecting used to drop the car and re-add it at the end, which
+            // shuffled the list under the driver on every pick.
+            val updated = if (current.any { it.displayName == profile.displayName }) {
+                current.map { if (it.displayName == profile.displayName) profile else it }
+            } else {
+                current + profile
+            }
             writeGarage(updated)
         }
     }
