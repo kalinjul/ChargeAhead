@@ -29,9 +29,6 @@ internal data object AddCar : PhoneDestination
 internal data object VehicleEdit : PhoneDestination
 
 @Serializable
-internal data object Subscriptions : PhoneDestination
-
-@Serializable
 internal data object Networks : PhoneDestination
 
 @Serializable

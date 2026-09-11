@@ -12,7 +12,6 @@ import kotlinx.coroutines.launch
 /** The navigation drawer: what is set, and the filters that can be set from there. */
 data class DrawerUiState(
     val vehicleName: String? = null,
-    val activeTariffCount: Int = 0,
     /** How many networks are picked; `0` means: no network filter. */
     val preferredNetworkCount: Int = 0,
     val filters: ChargeFilters = ChargeFilters(),
@@ -32,13 +31,11 @@ class DrawerViewModel(
 
     val uiState: StateFlow<DrawerUiState> = combine(
         settings.vehicle,
-        settings.activeTariffIds,
         settings.networks,
         settings.chargeFilters,
-    ) { vehicle, tariffs, networks, filters ->
+    ) { vehicle, networks, filters ->
         DrawerUiState(
             vehicleName = vehicle?.displayName,
-            activeTariffCount = tariffs.size,
             // Count what the picker can actually tick and the fetch actually
             // filters by — resolved catalog networks — not the raw stored keys,
             // which may still hold keys from an older catalog that resolve to

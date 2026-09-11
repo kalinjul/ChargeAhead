@@ -81,17 +81,15 @@ class GarageAndRoutesSettingsTest {
     }
 
     @Test
-    fun `filters and tariffs round-trip`() = runBlocking<Unit> {
+    fun `filters round-trip`() = runBlocking<Unit> {
         val storage = InMemoryKeyValueStorage()
         PersistentSettingsStore(storage).apply {
-            setChargeFilters(ChargeFilters(minPowerKw = 300.0, maxPriceEuroPerKwh = 0.6, maxDistanceKm = 2.5))
-            setActiveTariffIds(setOf("ionity-passport", "enbw-m"))
+            setChargeFilters(ChargeFilters(minPowerKw = 300.0, maxDistanceKm = 2.5))
         }
 
         val reloaded = PersistentSettingsStore(storage)
         assertEquals(300.0, reloaded.chargeFilters.value.minPowerKw)
         assertEquals(2.5, reloaded.chargeFilters.value.maxDistanceKm)
-        assertEquals(setOf("ionity-passport", "enbw-m"), reloaded.activeTariffIds.value)
     }
 
     @Test

@@ -29,7 +29,6 @@ fun StationCard(
     title: String,
     metaLine: String,
     address: String?,
-    priceEuroPerKwh: Double?,
     onSend: (() -> Unit)?,
     sendContentDescription: String?,
     modifier: Modifier = Modifier,
@@ -68,7 +67,6 @@ fun StationCard(
                 }
                 extraLine?.let { MetaText(it) }
             }
-            priceEuroPerKwh?.let { PriceText(it) }
             onSend?.let {
                 GoButton(
                     // The destination flag, not an arrow: every hand-off to

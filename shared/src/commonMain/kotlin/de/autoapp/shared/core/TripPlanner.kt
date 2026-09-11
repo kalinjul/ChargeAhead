@@ -8,11 +8,9 @@ import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.PolylineArea
-import de.autoapp.shared.domain.PriceQuote
 import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
 import de.autoapp.shared.domain.SiteRepository
-import de.autoapp.shared.domain.TariffSource
 import de.autoapp.shared.domain.VehicleProfile
 import de.autoapp.shared.domain.distanceKmTo
 import de.autoapp.shared.domain.distanceKmToSegment
@@ -30,7 +28,6 @@ data class PlannedStop(
     /** Driving plus charging time until departure from this stop. */
     val etaMinutesFromStart: Double,
     val maxPowerKw: Double,
-    val quote: PriceQuote,
 )
 
 data class TripPlan(
@@ -40,8 +37,6 @@ data class TripPlan(
     val driveMinutes: Double,
     val chargeMinutes: Double,
     val arrivalSocPercent: Double,
-    /** Sum over stops of energy × best price. Estimates all the way down — see [PriceQuote.isEstimate]. */
-    val estimatedCostEuro: Double?,
 ) {
     val totalMinutes: Double get() = driveMinutes + chargeMinutes
 }
@@ -80,7 +75,6 @@ sealed interface TripPlanResult {
 class TripPlanner(
     private val routeEngine: RouteEngine,
     private val repository: SiteRepository,
-    private val tariffs: TariffSource,
 ) {
 
     suspend fun plan(
@@ -90,7 +84,6 @@ class TripPlanner(
         startSocPercent: Double,
         filters: ChargeFilters = ChargeFilters(),
         networks: NetworkPreferences = NetworkPreferences(),
-        activeTariffIds: Set<String> = emptySet(),
     ): TripPlanResult {
         val route = try {
             routeEngine.route(from, destination.position)
@@ -131,7 +124,6 @@ class TripPlanner(
                 chargeMinutes = chargeMinutes,
                 etaMinutesFromStart = stop.kmFromStart * minutesPerKm + chargeMinutesTotal,
                 maxPowerKw = stop.maxPowerKw,
-                quote = tariffs.quote(stop.site, activeTariffIds),
             )
 
             socNow = departureSoc
@@ -146,10 +138,6 @@ class TripPlanner(
         if (!reachesDestination) return TripPlanResult.NoChargerInReach(afterKm = kmNow)
 
         val arrivalSoc = RangeCalculator.socOnArrivalPercent(vehicle, socNow, totalKm - kmNow)
-        val cost = stops
-            .mapNotNull { stop -> stop.quote.best?.let { it.euroPerKwh * stop.chargeKwh } }
-            .takeIf { it.size == stops.size }
-            ?.sum()
 
         return TripPlanResult.Planned(
             TripPlan(
@@ -159,7 +147,6 @@ class TripPlanner(
                 driveMinutes = route.durationMinutes,
                 chargeMinutes = chargeMinutesTotal,
                 arrivalSocPercent = arrivalSoc,
-                estimatedCostEuro = cost,
             ),
         )
     }

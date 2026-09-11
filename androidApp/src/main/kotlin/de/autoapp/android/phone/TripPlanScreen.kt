@@ -50,7 +50,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
-import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.StationCard
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.ChargeStopFormatter
@@ -77,7 +76,6 @@ fun TripPlanScreen(
     startPosition: LatLon?,
     startSocPercent: Double?,
     isSaved: Boolean,
-    isEstimate: Boolean,
     hasLocationPermission: Boolean,
     // Selectable points along the trip: 0 = start, 1..n = stops, n+1 =
     // destination. The selection lives in TripViewModel; this screen only
@@ -103,11 +101,6 @@ fun TripPlanScreen(
     val selectionB = selection.b
 
     val pointCount = plan.stops.size + 2
-    fun pointName(index: Int): String = when (index) {
-        0 -> ""
-        pointCount - 1 -> plan.destination.name
-        else -> plan.stops[index - 1].site.name
-    }
 
     fun pointPosition(index: Int): LatLon? = when (index) {
         0 -> startPosition ?: plan.route.points.firstOrNull()
@@ -220,7 +213,6 @@ fun TripPlanScreen(
                         stop.arrivalSocPercent.roundToInt(),
                         stop.chargeMinutes.roundToInt(),
                     ),
-                    priceEuroPerKwh = stop.quote.best?.euroPerKwh,
                     selected = selecting && selection.includes(index + 1),
                     onClick = { if (selecting) onPickPoint(index + 1) else onOpenStop(stop) },
                     // Section-select mode repurposes the card tap; hide the send
@@ -244,9 +236,6 @@ fun TripPlanScreen(
                 )
             }
             item {
-                if (isEstimate) {
-                    Fineprint(stringResource(R.string.trip_estimate_note))
-                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -281,18 +270,11 @@ fun TripPlanScreen(
                             contentDescription = null,
                             modifier = Modifier.size(15.dp),
                         )
-                        val label = if (selecting && selectionA != null && selectionB != null) {
-                            val lo = minOf(selectionA!!, selectionB!!)
-                            val hi = maxOf(selectionA!!, selectionB!!)
-                            stringResource(
-                                R.string.trip_send_selected,
-                                pointName(lo).ifEmpty { startName },
-                                pointName(hi),
-                            )
-                        } else {
-                            stringResource(R.string.trip_send_maps)
-                        }
-                        Text(label, maxLines = 1, modifier = Modifier.padding(start = 6.dp))
+                        Text(
+                            stringResource(R.string.trip_send_maps),
+                            maxLines = 1,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
                     }
                     OutlinedButton(
                         onClick = onToggleSelecting,
@@ -362,10 +344,6 @@ private fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
                 Text(
                     buildString {
                         append(stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)))
-                        plan.estimatedCostEuro?.let {
-                            append(" · ")
-                            append(stringResource(R.string.trip_summary_cost, it.twoDecimals()))
-                        }
                     },
                     style = MaterialTheme.typography.bodySmall.tabular,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

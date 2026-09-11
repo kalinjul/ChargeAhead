@@ -21,7 +21,7 @@ object ChargeAheadColors {
     val trafficText = Color(0xFFB06000)
 }
 
-/** The mockup's `.num`: prices, times and distances that don't wobble. */
+/** The mockup's `.num`: times and distances that don't wobble. */
 val TextStyle.tabular: TextStyle get() = copy(fontFeatureSettings = "tnum")
 
 // docs/mockup/index.html :root — the palette, translated slot by slot.

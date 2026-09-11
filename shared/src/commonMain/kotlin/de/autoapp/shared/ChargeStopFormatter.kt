@@ -137,9 +137,6 @@ object ChargeStopFormatter {
     /** e.g. "150 kW". */
     fun powerKwLabel(powerKw: Double): String = "${formatPowerKw(powerKw)} kW"
 
-    /** e.g. "0,54 €/kWh". */
-    fun pricePerKwhLabel(euroPerKwh: Double): String = "${formatEuro(euroPerKwh)}/kWh"
-
     /** e.g. "25 min". */
     fun minutesLabel(minutes: Double): String = "${formatWholeNumber(minutes)} min"
 
@@ -152,15 +149,11 @@ object ChargeStopFormatter {
             candidate.site.operator,
         ).joinToString(" · ")
 
-    /** e.g. "150 kW · 6 Ladepunkte · ca. 0,54 €/kWh". */
+    /** e.g. "150 kW · 6 Ladepunkte". */
     fun chargeNowSecondaryLine(candidate: ChargeNowCandidate): String =
         listOfNotNull(
             "${formatPowerKw(candidate.maxPowerKw)} kW",
             chargePointSummary(candidate.site),
-            candidate.quote.best?.let { price ->
-                val prefix = if (candidate.quote.isEstimate) "ca. " else ""
-                "$prefix${formatEuro(price.euroPerKwh)}/kWh"
-            },
         ).joinToString(" · ")
 
     /**
@@ -183,11 +176,6 @@ object ChargeStopFormatter {
         } else {
             formatDistanceKm(distanceKm)
         }
-
-    private fun formatEuro(value: Double): String {
-        val cents = round(value * 100.0).toLong()
-        return "${cents / 100},${(cents % 100).toString().padStart(2, '0')} €"
-    }
 
     /**
      * Display name of a connector type, also used by settings screens. Public

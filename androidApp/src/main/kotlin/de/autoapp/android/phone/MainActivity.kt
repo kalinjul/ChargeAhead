@@ -76,7 +76,7 @@ import kotlin.math.roundToInt
 
 /**
  * The phone app: map-first, the flows from the design mockup (docs/mockup) —
- * plan a route with charging stops, "charge now", garage, subscriptions,
+ * plan a route with charging stops, "charge now", garage,
  * filters, saved routes.
  *
  * State lives in the shared ViewModels (`de.autoapp.shared.ui`); what stays
@@ -279,7 +279,6 @@ private fun PhoneApp() {
                                     startPosition = trip.startPosition,
                                     startSocPercent = trip.startSocPercent,
                                     isSaved = trip.isSaved,
-                                    isEstimate = trip.isEstimate,
                                     hasLocationPermission = hasPermission,
                                     selection = trip.selection,
                                     socInput = trip.socInput,
@@ -352,12 +351,6 @@ private fun PhoneApp() {
                     entry<VehicleEdit> {
                         Page(title = stringResource(R.string.phone_settings_title), onBack = ::pop) { pagePadding ->
                             VehicleSettingsRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
-                        }
-                    }
-
-                    entry<Subscriptions> {
-                        Page(title = stringResource(R.string.subs_title), onBack = ::pop) { pagePadding ->
-                            SubscriptionsRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                         }
                     }
 

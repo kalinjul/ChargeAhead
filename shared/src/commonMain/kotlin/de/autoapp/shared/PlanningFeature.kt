@@ -10,29 +10,21 @@ import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
-import de.autoapp.shared.domain.PriceQuote
 import de.autoapp.shared.domain.SectorArea
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.SiteRepository
-import de.autoapp.shared.domain.TariffSource
 import de.autoapp.shared.domain.ViewportArea
 import kotlinx.coroutines.flow.first
 
-/**
- * A charger as the map shows it: the site and its strongest DC power.
- *
- * No price. The map stopped showing one, and quoting every site in the
- * viewport against the driver's tariffs cost up to [PlanningFeature.MAX_MAP_CHARGERS]
- * lookups per camera move for a number nobody read.
- */
+/** A charger as the map shows it: the site and its strongest DC power. */
 data class MapCharger(
     val site: ChargeSite,
     val maxPowerKw: Double,
 )
 
 /**
- * The phone's planning flows: trip with charging stops, "charge now", and
- * per-site price quotes. Assembled by [ChargeStopsFeatureFactory] on the same
+ * The phone's planning flows: trip with charging stops, "charge now", and the
+ * map's chargers. Assembled by [ChargeStopsFeatureFactory] on the same
  * repository and settings as the car feature, so both see the same world.
  *
  * Reads the driver's configuration from [SettingsStore] at call time rather
@@ -42,7 +34,6 @@ data class MapCharger(
 class PlanningFeature(
     private val tripPlanner: TripPlanner,
     private val repository: SiteRepository,
-    private val tariffs: TariffSource,
     private val settings: SettingsStore,
 ) {
 
@@ -70,7 +61,6 @@ class PlanningFeature(
             startSocPercent = soc,
             filters = settings.chargeFilters.first(),
             networks = settings.networks.first(),
-            activeTariffIds = settings.activeTariffIds.first(),
         )
     }
 
@@ -92,14 +82,8 @@ class PlanningFeature(
             position = position,
             filters = filters,
             networks = networks,
-            tariffs = tariffs,
-            activeTariffIds = settings.activeTariffIds.first(),
         )
     }
-
-    /** Price rows for a site's detail view, against the currently active tariffs. */
-    suspend fun quote(site: ChargeSite): PriceQuote =
-        tariffs.quote(site, settings.activeTariffIds.first())
 
     /**
      * The chargers the map should show for its current viewport.
