@@ -26,6 +26,8 @@ playServicesLocation = "21.4.0"
 playServicesMaps = "20.0.0"
 mapsCompose = "6.6.0"
 
+chargeaheadApi = "0.5.1"
+
 [libraries]
 # --- shared (Kotlin Multiplatform) ---
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -39,6 +41,10 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 # ViewModel, multiplatform: AndroidX publishes this artifact for iOS and JVM
 # too, so the shared ViewModels compile for every target (plans/technical-debts).
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+
+# The backend's wire contract. Served from the backend itself, see
+# settings.gradle.kts.
+chargeahead-api-model = { module = "org.julakali.chargeahead:api-model", version.ref = "chargeaheadApi" }
 
 # --- HTTP (ab M1: OpenChargeMap) ---
 ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }

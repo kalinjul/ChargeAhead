@@ -386,6 +386,23 @@ If it's missing, `DemoSiteSource` stands in for the real source and
 passing off invented charging stations as real would, in an app for the car,
 be not just sloppy but dangerous.
 
+### The ChargeAhead backend
+
+With `chargeAheadBaseUrl` and `chargeAheadToken` in `local.properties`,
+charging sites, the destination search and route calculation come from the
+backend instead of from OpenChargeMap, Nominatim and OSRM directly, and no
+provider key is needed in the app. Both must be set; one alone is ignored (`BackendConfig.of`). Android
+only so far — iOS still goes to the providers directly.
+
+The destination search then runs against Photon rather than Nominatim, which
+is the point: Nominatim is a geocoder and answers a half-typed word with a
+street of that name.
+
+The contract module `org.julakali.chargeahead:api-model` comes from the
+backend's own Maven repository, which needs `chargeahead.maven.user` and
+`chargeahead.maven.password` in `~/.gradle/gradle.properties` — never in the
+repository.
+
 ## Rules for the phone UI
 
 Every screen's state lives in a **ViewModel in

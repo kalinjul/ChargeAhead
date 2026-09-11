@@ -1,6 +1,9 @@
 package de.autoapp.shared
 
 import de.autoapp.shared.core.TripPlanner
+import de.autoapp.shared.data.BackendChargeSiteSource
+import de.autoapp.shared.data.BackendGeocoder
+import de.autoapp.shared.data.BackendRouteEngine
 import de.autoapp.shared.data.BnetzaSource
 import de.autoapp.shared.data.CombinedSoCSource
 import de.autoapp.shared.data.MergingSiteRepository
@@ -43,6 +46,11 @@ object ChargeStopsFeatureFactory {
      *   supplies a value, it wins over the driver's manual entry; on iOS there
      *   is none, and in Android Auto projection only rarely.
      */
+    /**
+     * @param backend base URL and token of the ChargeAhead backend. Set, it
+     *   replaces the direct provider sources and [openChargeMapKey] is not
+     *   needed; `null` keeps the app talking to the providers itself.
+     */
     fun create(
         locationSource: LocationSource,
         openChargeMapKey: String?,
@@ -50,6 +58,7 @@ object ChargeStopsFeatureFactory {
         databaseFactory: DatabaseFactory,
         hardwareSoCSource: SoCSource? = null,
         timeProvider: TimeProvider = TimeProvider { currentTimeMillis() },
+        backend: BackendConfig? = null,
     ): ChargeStopsFeature {
         // Trimmed, not just checked for emptiness: a trailing space from
         // local.properties or an .xcconfig would otherwise travel URL-encoded
@@ -66,17 +75,19 @@ object ChargeStopsFeatureFactory {
         // official register covers only Germany, OpenChargeMap the whole
         // world. A shared coverage record would falsely claim that a tile
         // beyond the border had been checked.
-        val primary: ChargeSiteSource = if (key != null) {
-            OpenChargeMapSource(httpClient, key)
-        } else {
-            DemoSiteSource()
+        val primary: ChargeSiteSource = when {
+            backend != null -> BackendChargeSiteSource(httpClient, backend.baseUrl, backend.token)
+            key != null -> OpenChargeMapSource(httpClient, key)
+            else -> DemoSiteSource()
         }
+
+        val isDemo = backend == null && key == null
 
         val sources = buildList {
             add(primary)
-            // Without an OCM key, the app runs on demo data; adding the
-            // official register alongside it would undermine that labeling.
-            if (key != null) add(BnetzaSource(httpClient))
+            // On demo data, adding the official register alongside it would
+            // undermine that labeling.
+            if (!isDemo) add(BnetzaSource(httpClient))
         }
 
         val repository: SiteRepository = MergingSiteRepository(
@@ -85,7 +96,10 @@ object ChargeStopsFeatureFactory {
             },
         )
 
-        val routeEngine = OsrmRouteEngine(httpClient)
+        val routeEngine = when (backend) {
+            null -> OsrmRouteEngine(httpClient)
+            else -> BackendRouteEngine(httpClient, backend.baseUrl, backend.token)
+        }
 
         return ChargeStopsFeature(
             locationSource = locationSource,
@@ -97,8 +111,11 @@ object ChargeStopsFeatureFactory {
                 hardware = hardwareSoCSource,
             ),
             routeEngine = routeEngine,
-            geocoder = NominatimGeocoder(httpClient),
-            isDemo = key == null,
+            geocoder = when (backend) {
+                null -> NominatimGeocoder(httpClient)
+                else -> BackendGeocoder(httpClient, backend.baseUrl, backend.token)
+            },
+            isDemo = isDemo,
             onClose = { httpClient.close() },
             // Prune stale cache on the feature's own scope, not a detached one.
             onStart = {

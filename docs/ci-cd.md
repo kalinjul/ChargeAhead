@@ -28,9 +28,14 @@ as done:
   `swiftc`, the job emits a warning annotation and passes: the check was
   never load-bearing, and a red build here would say nothing about the code.
 
-CI gets **no secrets**. Pull requests from forks never see them anyway, so
-the build has to work without: the app falls back to labeled demo data and
-to the map placeholder. That path is therefore continuously exercised.
+CI gets **one** secret: the Maven access to the contract module. `api-model`
+comes from the ChargeAhead backend's own repository, and without credentials
+nothing resolves and nothing compiles. Consequence, and it is a real one:
+**a pull request from a fork cannot be built here.** A preflight step in both
+Gradle jobs says so outright instead of letting the run die on a 401.
+
+No provider keys, as before: the app then falls back to labeled demo data and
+to the map placeholder, so that path stays continuously exercised.
 
 Not part of CI (deliberately): the live contract tests against
 OpenChargeMap, OSRM, Nominatim and BNetzA. They only run with `OCM_LIVE=1`
@@ -74,17 +79,35 @@ checked-in fallback (`androidApp/build.gradle.kts`), so nothing about
 ## Secrets
 
 All of these are repository secrets (*Settings → Secrets and variables →
-Actions*). Only `release.yml` reads them.
+Actions*), except the one variable noted as such.
 
-| Secret | Contents |
-| --- | --- |
-| `ANDROID_KEYSTORE_BASE64` | the upload keystore, base64-encoded |
-| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
-| `ANDROID_KEY_ALIAS` | alias of the key inside the keystore |
-| `ANDROID_KEY_PASSWORD` | password of that key |
-| `PLAY_SERVICE_ACCOUNT_JSON` | the service account JSON, whole file |
-| `GOOGLE_MAPS_API_KEY` | Maps SDK key, goes into the manifest |
-| `OPEN_CHARGE_MAP_API_KEY` | OpenChargeMap key, goes into `BuildConfig` |
+| Secret | Read by | Contents |
+| --- | --- | --- |
+| `CHARGEAHEAD_MAVEN_USER` | both | user of the backend's Maven repository |
+| `CHARGEAHEAD_MAVEN_PASSWORD` | both | its password, from `/root/chargeahead/maven-password.txt` on the host |
+| `ANDROID_KEYSTORE_BASE64` | release | the upload keystore, base64-encoded |
+| `ANDROID_KEYSTORE_PASSWORD` | release | keystore password |
+| `ANDROID_KEY_ALIAS` | release | alias of the key inside the keystore |
+| `ANDROID_KEY_PASSWORD` | release | password of that key |
+| `PLAY_SERVICE_ACCOUNT_JSON` | release | the service account JSON, whole file |
+| `GOOGLE_MAPS_API_KEY` | release | Maps SDK key, goes into the manifest |
+| `OPEN_CHARGE_MAP_API_KEY` | release | OpenChargeMap key, unused once the backend is configured |
+| `CHARGEAHEAD_TOKEN` | release | API token, from `/root/chargeahead/api-token.txt` on the host |
+
+One **variable** (same page, *Variables* tab) rather than a secret, because a
+URL is not one:
+
+| Variable | Read by | Contents |
+| --- | --- | --- |
+| `CHARGEAHEAD_BASE_URL` | release | `https://api.chargeahead.julakali.org` |
+
+### The app token is extractable
+
+`CHARGEAHEAD_TOKEN` ends up in `BuildConfig` and therefore in the APK. Anyone
+who unpacks a release can read it. That is accepted for now — the backend's
+daily quota per token is what limits what a leaked one can cost, and rotating
+it means regenerating it on the host and shipping a new build. Real per-user
+authentication (OIDC) is the way out, and is not built yet.
 
 ### Keystore
 

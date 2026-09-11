@@ -6,6 +6,7 @@ import androidx.car.app.Session
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import de.autoapp.android.BuildConfig
+import de.autoapp.shared.BackendConfig
 import de.autoapp.shared.ChargeStopsFeatureFactory
 import de.autoapp.shared.data.FusedLocationSource
 import de.autoapp.shared.db.DatabaseFactory
@@ -39,6 +40,7 @@ class ChargeSession : Session(), KoinComponent {
                 settingsStore = settings,
             ),
             timeProvider = time,
+            backend = BackendConfig.of(BuildConfig.CHARGEAHEAD_BASE_URL, BuildConfig.CHARGEAHEAD_TOKEN),
         )
 
         // Side channel for the phone's debug view: record whatever this head
