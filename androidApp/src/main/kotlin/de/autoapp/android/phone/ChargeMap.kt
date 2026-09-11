@@ -3,14 +3,13 @@ package de.autoapp.android.phone
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -38,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -129,20 +129,11 @@ fun HomeGoogleMap(
 
     val scope = rememberCoroutineScope()
 
-    // Stream markers onto the map a few per frame instead of rasterizing all of
-    // them (up to MAX_MAP_CHARGERS) in one frame — a full-set swap, like an
-    // AC-mode toggle, would otherwise block long enough to freeze the loading
-    // spinner. Existing pins stay put (no re-raster); only new ones are paced.
-    val rendered = remember { mutableStateListOf<de.autoapp.shared.MapCharger>() }
-    LaunchedEffect(chargers) {
-        val target = chargers.associateBy { it.site.id }
-        rendered.retainAll { it.site.id in target }
-        val shown = rendered.mapTo(HashSet()) { it.site.id }
-        for (batch in chargers.filter { it.site.id !in shown }.chunked(MARKER_STREAM_BATCH)) {
-            rendered.addAll(batch)
-            withFrameNanos { }
-        }
-    }
+    // Each distinct pill (speed + operator label) is rasterized once into a
+    // BitmapDescriptor and reused as a plain Marker icon — so a few hundred
+    // markers cost a handful of rasters, not one per marker (which froze the UI).
+    val density = LocalDensity.current
+    val iconCache = remember { mutableMapOf<PillKey, BitmapDescriptor>() }
 
     Box(modifier = modifier) {
         GoogleMap(
@@ -158,19 +149,20 @@ fun HomeGoogleMap(
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
-            rendered.forEach { charger ->
-                val label = OperatorShortName.of(charger.site.operator)
-                val speed = ChargeSpeed.of(charger.maxPowerKw)
+            chargers.forEach { charger ->
+                val pillKey = PillKey(
+                    ChargeSpeed.of(charger.maxPowerKw),
+                    OperatorShortName.of(charger.site.operator),
+                )
+                val icon = iconCache.getOrPut(pillKey) { markerPillDescriptor(density, pillKey) }
                 key(charger.site.id) {
-                    MarkerComposable(
-                        keys = arrayOf<Any>(charger.site.id, speed, label.orEmpty()),
+                    Marker(
                         state = rememberMarkerState(position = charger.site.position.toLatLng()),
+                        icon = icon,
                         title = charger.site.name,
                         anchor = Offset(0.5f, 0.5f),
                         onClick = { onChargerTapped(charger); true },
-                    ) {
-                        ChargerPill(speed = speed, label = label)
-                    }
+                    )
                 }
             }
         }
@@ -383,7 +375,4 @@ private const val HOME_ZOOM = 11f
 /** Below this, no chargers load and none show — the map stays clean and cheap. */
 const val MIN_CHARGER_ZOOM = 10f
 private const val BOUNDS_PADDING_PX = 120
-
-/** Markers added to the map per frame, so a big set streams in without a stall. */
-private const val MARKER_STREAM_BATCH = 8
 
