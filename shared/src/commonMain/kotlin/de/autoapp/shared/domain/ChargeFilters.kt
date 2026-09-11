@@ -13,9 +13,17 @@ data class ChargeFilters(
     val minPowerKw: Double = DEFAULT_MIN_POWER_KW,
     /** Radius for "charge now", not for route planning. */
     val maxDistanceKm: Double = DEFAULT_MAX_DISTANCE_KM,
+    /**
+     * Browse the slow chargers (< 50 kW) instead of the fast ones: the map
+     * then shows only those, from every network, ignoring the other filters.
+     * A transient view mode — not persisted, so a restart lands back on fast.
+     */
+    val slowMode: Boolean = false,
 ) {
     val isDefault: Boolean
-        get() = minPowerKw == DEFAULT_MIN_POWER_KW && maxDistanceKm == DEFAULT_MAX_DISTANCE_KM
+        get() = minPowerKw == DEFAULT_MIN_POWER_KW &&
+            maxDistanceKm == DEFAULT_MAX_DISTANCE_KM &&
+            !slowMode
 
     companion object {
         const val DEFAULT_MIN_POWER_KW = 150.0

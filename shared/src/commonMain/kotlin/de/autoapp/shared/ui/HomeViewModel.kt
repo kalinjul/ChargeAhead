@@ -8,21 +8,22 @@ import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.Reachability
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.distanceKmTo
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
 
 /**
  * The map screen: where the driver is, which chargers are in view, and
@@ -82,33 +83,34 @@ class HomeViewModel(
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
 
     init {
-        // The marker query reads the filters, so the query has to re-run when
-        // they change — not only when the driver happens to pan. The minimum
-        // power is picked out of the filters on purpose: price and distance
-        // are ranking concerns that the map does not apply, and the drawer's
+        // One pipeline drives both the markers and the "applying filters" flag,
+        // so the flag can't race itself: a filter/network change (not a pan)
+        // marks applying = true, the query runs off the main thread, and the
+        // true always precedes the false because they share one ordered flow.
+        // Minimum power is picked out of the filters on purpose — price and
+        // distance are ranking concerns the map doesn't apply, and the drawer's
         // sliders would otherwise fire a query per pixel dragged.
+        var lastFilterSig: Pair<NetworkPreferences, Pair<Double, Boolean>>? = null
         combine(
             viewport,
-            settings.chargeFilters.map { it.minPowerKw }.distinctUntilChanged(),
             settings.networks,
-        ) { viewport, _, _ -> viewport }
-            // Panning fires viewport changes far faster than the query
-            // answers. Without cancelling the previous one, a slow early
-            // response can land after a fast later one and put markers from a
-            // different part of the country on the map.
-            .mapLatest { viewport -> viewport?.let { planning.chargersIn(it) }.orEmpty() }
-            .onEach { chargers -> map.update { it.copy(chargers = chargers, applyingFilters = false) } }
-            .launchIn(viewModelScope)
-
-        // A filter or network change re-queries the map, which can take a
-        // while; flag it so the map shows "applying filters" instead of just
-        // appearing to hang. Panning is not a filter change, so it stays out.
-        combine(
-            settings.networks,
-            settings.chargeFilters.map { it.minPowerKw }.distinctUntilChanged(),
-        ) { _, _ -> }
-            .drop(1) // the first combination is the initial load, not a change
-            .onEach { map.update { it.copy(applyingFilters = true) } }
+            settings.chargeFilters.map { it.minPowerKw to it.slowMode }.distinctUntilChanged(),
+        ) { viewport, networks, filterKey -> Triple(viewport, networks, filterKey) }
+            // Panning fires viewport changes far faster than the query answers;
+            // mapLatest cancels a superseded query so late markers from another
+            // viewport can't land on the current one.
+            .mapLatest { (viewport, networks, filterKey) ->
+                val sig = networks to filterKey
+                val filterChanged = lastFilterSig != null && sig != lastFilterSig
+                lastFilterSig = sig
+                if (filterChanged) map.update { it.copy(applyingFilters = true) }
+                // Room read + filter + sort off the main thread — a filter
+                // toggle (AC mode especially) mustn't freeze the UI.
+                val chargers = withContext(Dispatchers.Default) {
+                    viewport?.let { planning.chargersIn(it) }.orEmpty()
+                }
+                map.update { it.copy(chargers = chargers, applyingFilters = false) }
+            }
             .launchIn(viewModelScope)
     }
 

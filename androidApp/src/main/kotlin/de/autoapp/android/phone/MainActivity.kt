@@ -18,12 +18,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -46,7 +47,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
@@ -65,6 +65,7 @@ import de.autoapp.shared.core.MapsHandoff
 import de.autoapp.shared.core.TripPlan
 import de.autoapp.shared.ui.ChargeNowViewModel
 import de.autoapp.shared.ui.DrawerViewModel
+import de.autoapp.shared.ui.HomeViewModel
 import de.autoapp.shared.ui.PlanSheetViewModel
 import de.autoapp.shared.ui.TripEvent
 import de.autoapp.shared.ui.TripUiState
@@ -114,6 +115,9 @@ private fun PhoneApp() {
     // these three are here because the app bar, the drawer and the sheets
     // read them, not one screen.
     val drawerViewModel: DrawerViewModel = phoneViewModel()
+    // Same activity-scoped instance the map uses; the drawer reads its
+    // applyingFilters to show a spinner while a filter toggle refetches.
+    val homeViewModel: HomeViewModel = phoneViewModel()
     val tripViewModel: TripViewModel = phoneViewModel()
     val planSheetViewModel: PlanSheetViewModel = phoneViewModel()
     val chargeNowViewModel: ChargeNowViewModel = phoneViewModel()
@@ -185,12 +189,13 @@ private fun PhoneApp() {
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+                val homeUi by homeViewModel.uiState.collectAsStateWithLifecycle()
                 DrawerContent(
                     uiState = drawerUi,
-                    // Close first, then navigate: the page swap disposes the
-                    // map and its jank freezes a concurrently running drawer
-                    // animation — the drawer then just hangs there, open.
-                    onOpen = { target -> scope.launch { drawerState.close(); openFromRoot(target) } },
+                    applyingFilters = homeUi.applyingFilters,
+                    // The drawer stays open: the page slides in over it from the
+                    // right, and back slides it away to reveal the drawer again.
+                    onOpen = { target -> openFromRoot(target) },
                     onFilters = drawerViewModel::onFiltersChanged,
                 )
             }
@@ -203,60 +208,49 @@ private fun PhoneApp() {
             snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
             contentWindowInsets = WindowInsets(0),
         ) { padding ->
-            Box(Modifier.fillMaxSize()) {
-                // The map is built once here and kept — full-screen pages ride
-                // above it. Rebuilding the GoogleMap on every back press is what
-                // stalled the UI thread for ~1.5 s (fix/menu-back-lag).
-                HomeRoute(
-                    hasPermission = hasPermission,
-                    planningInProgress = tripUi is TripUiState.Planning,
-                    onRequestPermission = {
-                        permissionLauncher.launch(
-                            arrayOf(
-                                Manifest.permission.ACCESS_FINE_LOCATION,
-                                Manifest.permission.ACCESS_COARSE_LOCATION,
-                            ),
-                        )
-                    },
-                    onMenu = { scope.launch { drawerState.open() } },
-                    onPlan = { sheet = Sheet.PLAN; planSheetViewModel.onSheetOpened() },
-                    onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
-                    onRoutes = { sheet = Sheet.ROUTES },
-                    // No scaffold padding: the map draws under the (dark-iconed)
-                    // status bar, like every maps app.
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                )
-
-                // A page on top covers the map; swallow any touch that slips
-                // past it so the hidden map doesn't pan out from under the page.
-                if (backStack.lastOrNull() != Home) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .pointerInput(Unit) {
-                                awaitPointerEventScope {
-                                    while (true) {
-                                        awaitPointerEvent().changes.forEach { it.consume() }
-                                    }
-                                }
-                            },
+            // Just the map. Full-screen pages are a separate layer above the
+            // drawer (below), so they slide in over the still-open drawer. The
+            // map is built once here and kept — rebuilding the GoogleMap on
+            // every back press is what stalled the UI thread (fix/menu-back-lag).
+            HomeRoute(
+                hasPermission = hasPermission,
+                planningInProgress = tripUi is TripUiState.Planning,
+                onRequestPermission = {
+                    permissionLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
                     )
-                }
+                },
+                onMenu = { scope.launch { drawerState.open() } },
+                onPlan = { sheet = Sheet.PLAN; planSheetViewModel.onSheetOpened() },
+                onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
+                onRoutes = { sheet = Sheet.ROUTES },
+                // No scaffold padding: the map draws under the (dark-iconed)
+                // status bar, like every maps app.
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+            )
+        }
+    }
 
-                NavDisplay(
-                    backStack = backStack,
-                    onBack = { pop() },
-                    // NavDisplay's default push/pop is a 700 ms fade (nav3's
-                    // DEFAULT_TRANSITION_DURATION_MILLISECOND) — sluggish on a back
-                    // press. Same fade, made quick; the predictive-back gesture
-                    // keeps its own spring.
-                    transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
-                    popTransitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
-                    entryProvider = entryProvider {
-                        // Home is the persistent layer below; its slot is empty.
-                        entry<Home> { }
+    // Full-screen pages: a layer ABOVE the drawer that slides in from the right
+    // and slides back out to reveal the still-open drawer. Predictive back drags
+    // it rightward. The empty Home slot lets the map + drawer show through.
+    NavDisplay(
+        backStack = backStack,
+        onBack = { pop() },
+        transitionSpec = {
+            slideInHorizontally(tween(300)) { it } togetherWith fadeOut(tween(300))
+        },
+        popTransitionSpec = {
+            fadeIn(tween(300)) togetherWith slideOutHorizontally(tween(300)) { it }
+        },
+        entryProvider = entryProvider {
+            // Home is the map + drawer below; its slot is empty.
+            entry<Home> { }
 
                     entry<Trip> {
                         val trip = planned
@@ -375,12 +369,9 @@ private fun PhoneApp() {
                             CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                         }
                     }
-                },
-                modifier = Modifier.fillMaxSize().padding(padding),
-                )
-            }
-        }
-    }
+        },
+        modifier = Modifier.fillMaxSize(),
+    )
 
     when (sheet) {
         Sheet.NONE -> Unit
@@ -412,13 +403,13 @@ private fun PhoneApp() {
         }
     }
 
-    // Drawer and sheets close before the stack pops — the order the old
-    // hand-rolled hierarchy had. Registered after NavDisplay so this handler
-    // wins while it is enabled; the page pops are NavDisplay's business.
-    BackHandler(enabled = drawerState.isOpen || sheet != Sheet.NONE) {
+    // A sheet, or the drawer once no page is over it, closes on back. While a
+    // page IS open the drawer stays open underneath, so back must pop the page
+    // (NavDisplay's job) — hence the size check keeps this handler out of the way.
+    BackHandler(enabled = sheet != Sheet.NONE || (drawerState.isOpen && backStack.size == 1)) {
         when {
-            drawerState.isOpen -> scope.launch { drawerState.close() }
-            else -> sheet = Sheet.NONE
+            sheet != Sheet.NONE -> sheet = Sheet.NONE
+            else -> scope.launch { drawerState.close() }
         }
     }
 }

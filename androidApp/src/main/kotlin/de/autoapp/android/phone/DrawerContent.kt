@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -17,6 +18,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,6 +35,8 @@ import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppSlider
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.PrefRow
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.material3.Switch
 import de.autoapp.android.phone.components.SectionLabel
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.domain.ChargeFilters
@@ -41,6 +49,7 @@ internal fun DrawerContent(
     uiState: DrawerUiState,
     onOpen: (PhoneDestination) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
+    applyingFilters: Boolean = false,
 ) {
     val filters = uiState.filters
 
@@ -93,6 +102,25 @@ internal fun DrawerContent(
         Column {
             SectionLabel(stringResource(R.string.drawer_min_power))
             PowerSegments(filters, onFilters)
+            AcModeToggle(
+                active = filters.slowMode,
+                onToggle = { onFilters(filters.copy(slowMode = it)) },
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            if (applyingFilters) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.padding(top = 10.dp, start = 4.dp),
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    Text(
+                        stringResource(R.string.map_applying_filters),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
 
         Column {
@@ -130,10 +158,63 @@ internal fun networksSummary(preferredCount: Int): String =
         stringResource(R.string.drawer_networks_all)
     }
 
+/** The one lit-up control in the drawer: a card that tints when AC mode is on. */
+@Composable
+private fun AcModeToggle(active: Boolean, onToggle: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    // Optimistic: the switch flips on tap right away instead of waiting for the
+    // filter to round-trip through the ViewModel and start the map fetch. It
+    // reconciles with [active] if the state is changed from elsewhere.
+    var shown by remember { mutableStateOf(active) }
+    LaunchedEffect(active) { shown = active }
+
+    val container by animateColorAsState(
+        if (shown) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+        label = "acContainer",
+    )
+    val accent by animateColorAsState(
+        if (shown) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        label = "acAccent",
+    )
+    Surface(
+        onClick = {
+            shown = !shown
+            onToggle(shown)
+        },
+        shape = MaterialTheme.shapes.medium,
+        color = container,
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            // A small "AC" badge that lights up with the mode.
+            Surface(shape = MaterialTheme.shapes.small, color = accent.copy(alpha = if (shown) 1f else 0.12f)) {
+                Text(
+                    "AC",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (shown) MaterialTheme.colorScheme.onPrimary else accent,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.drawer_slow_mode), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    stringResource(R.string.drawer_slow_mode_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = shown, onCheckedChange = null)
+        }
+    }
+}
+
 /** The mockup's `.seg`: soft track, white active segment with blue text. */
 @Composable
 private fun PowerSegments(filters: ChargeFilters, onFilters: (ChargeFilters) -> Unit) {
-    val steps = listOf(11.0, 50.0, 150.0, 300.0)
+    val steps = listOf(50.0, 150.0, 300.0)
     Row(
         horizontalArrangement = Arrangement.spacedBy(3.dp),
         modifier = Modifier

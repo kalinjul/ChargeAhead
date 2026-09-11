@@ -74,6 +74,25 @@ class PlanningFeatureViewportTest {
     }
 
     @Test
+    fun `slow mode shows only sub-50kW chargers and ignores the fast filters`() = runBlocking<Unit> {
+        val feature = featureWith(
+            listOf(
+                site("hpc", "Ionity", 350.0),
+                site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2),
+                site("schuko", "Hotel", 3.7, ConnectorType.SCHUKO),
+            ),
+        ) {
+            // Filters that would normally hide the AC posts and everything but
+            // Ionity — slow mode drops both.
+            setChargeFilters(ChargeFilters(minPowerKw = 150.0, slowMode = true))
+            setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
+        }
+
+        val ids = feature.chargersIn(viewport).map { it.site.id }.toSet()
+        assertEquals(setOf("demo:wallbox", "demo:schuko"), ids)
+    }
+
+    @Test
     fun `viewport fetch passes the network selection to the repository`() = runBlocking<Unit> {
         val capturedNetworks = mutableListOf<List<Network>>()
         val settings = de.autoapp.shared.settings.PersistentSettingsStore(de.autoapp.shared.settings.InMemoryKeyValueStorage())

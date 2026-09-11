@@ -13,9 +13,12 @@ import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SoCDiagnostics
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.VehicleProfile
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -32,6 +35,9 @@ import kotlinx.serialization.json.Json
  */
 class PersistentSettingsStore(
     private val storage: KeyValueStorage,
+    // Where the blocking SharedPreferences writes run. Off Main in production;
+    // tests pass an unconfined one so a write completes synchronously.
+    private val writeDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : SettingsStore {
 
     private val mutableVehicle = MutableStateFlow(readVehicle())
@@ -122,7 +128,10 @@ class PersistentSettingsStore(
     private val mutableNetworks = MutableStateFlow(readNetworks())
     override val networks: StateFlow<NetworkPreferences> = mutableNetworks.asStateFlow()
 
-    override suspend fun setNetworks(preferences: NetworkPreferences) {
+    // Off the main thread: SharedPreferences uses a blocking commit(), and a
+    // filter toggle writes on every tap — on Main that parks the UI thread and
+    // freezes the loading spinner it just kicked off.
+    override suspend fun setNetworks(preferences: NetworkPreferences) = withContext(writeDispatcher) {
         storage.putString(KEY_ONLY_PREFERRED, preferences.onlyPreferred.toString())
         storage.putJson(
             KEY_PREFERRED_NETWORKS,
@@ -142,7 +151,7 @@ class PersistentSettingsStore(
     private val mutableFilters = MutableStateFlow(readFilters())
     override val chargeFilters: StateFlow<ChargeFilters> = mutableFilters.asStateFlow()
 
-    override suspend fun setChargeFilters(filters: ChargeFilters) {
+    override suspend fun setChargeFilters(filters: ChargeFilters) = withContext(writeDispatcher) {
         storage.putJson(
             KEY_CHARGE_FILTERS,
             StoredFilters(filters.minPowerKw, filters.maxDistanceKm),

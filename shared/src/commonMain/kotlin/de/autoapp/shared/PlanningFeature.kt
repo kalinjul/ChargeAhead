@@ -1,6 +1,7 @@
 package de.autoapp.shared
 
 import de.autoapp.shared.core.ChargeNowRanker
+import de.autoapp.shared.core.MIN_DC_POWER_KW
 import de.autoapp.shared.core.ChargeNowResult
 import de.autoapp.shared.core.TripPlanResult
 import de.autoapp.shared.core.TripPlanner
@@ -96,13 +97,22 @@ class PlanningFeature(
         val filters = settings.chargeFilters.first()
         val networks = settings.networks.first()
 
-        // Fetch on the strict viewport only — no bigger downloads.
-        runCatching { repository.sitesIn(ViewportArea(viewport), networks.selectedNetworks()) }
+        // Fetch on the strict viewport only — no bigger downloads. Slow mode
+        // browses every network, so it fetches unfiltered.
+        val fetchNetworks = if (filters.slowMode) emptyList() else networks.selectedNetworks()
+        runCatching { repository.sitesIn(ViewportArea(viewport), fetchNetworks) }
 
         // Render from a padded area so markers stay visible while panning.
         val stored = repository.storedSitesIn(viewport.paddedByViewports(MAP_RENDER_PADDING_VIEWPORTS))
 
         return stored.mapNotNull { site ->
+            if (filters.slowMode) {
+                // Browse slow chargers: the strongest connector of any type, as
+                // long as it stays under the DC floor. Network and minimum-power
+                // filters are deliberately ignored here.
+                val power = site.connectors.maxOfOrNull { it.maxPowerKw } ?: return@mapNotNull null
+                return@mapNotNull if (power < MIN_DC_POWER_KW) MapCharger(site, power) else null
+            }
             if (!networks.allowsSite(site)) return@mapNotNull null
             val power = site.connectors
                 .filter { it.type == ConnectorType.CCS2 || it.type == ConnectorType.TESLA_NACS }

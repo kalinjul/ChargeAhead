@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -36,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -127,6 +129,12 @@ fun HomeGoogleMap(
 
     val scope = rememberCoroutineScope()
 
+    // Each distinct pill (speed + operator label) is rasterized once into a
+    // BitmapDescriptor and reused as a plain Marker icon — so a few hundred
+    // markers cost a handful of rasters, not one per marker (which froze the UI).
+    val density = LocalDensity.current
+    val iconCache = remember { mutableMapOf<PillKey, BitmapDescriptor>() }
+
     Box(modifier = modifier) {
         GoogleMap(
             cameraPositionState = cameraPositionState,
@@ -142,18 +150,19 @@ fun HomeGoogleMap(
             modifier = Modifier.fillMaxSize(),
         ) {
             chargers.forEach { charger ->
-                val label = OperatorShortName.of(charger.site.operator)
-                val speed = ChargeSpeed.of(charger.maxPowerKw)
+                val pillKey = PillKey(
+                    ChargeSpeed.of(charger.maxPowerKw),
+                    OperatorShortName.of(charger.site.operator),
+                )
+                val icon = iconCache.getOrPut(pillKey) { markerPillDescriptor(density, pillKey) }
                 key(charger.site.id) {
-                    MarkerComposable(
-                        keys = arrayOf<Any>(charger.site.id, speed, label.orEmpty()),
+                    Marker(
                         state = rememberMarkerState(position = charger.site.position.toLatLng()),
+                        icon = icon,
                         title = charger.site.name,
                         anchor = Offset(0.5f, 0.5f),
                         onClick = { onChargerTapped(charger); true },
-                    ) {
-                        ChargerPill(speed = speed, label = label)
-                    }
+                    )
                 }
             }
         }
@@ -209,76 +218,6 @@ fun HomeGoogleMap(
             }
         }
     }
-}
-
-/**
- * Small white chip, like the hotel/POI chips in Google Maps: one bolt per
- * power class, colored by [ChargeSpeed].
- *
- * The color carries charging speed, not reachability — color-coding
- * reachability on a map read as arbitrary noise (design interview
- * 2026-09-07), while speed is the one property the driver compares between
- * two pins at map scale. The bolt count repeats that ordering without color,
- * for anyone who cannot tell the red from the green one.
- *
- * The label names the network, nothing else.
- *
- * Sites whose operator isn't one of the well-known networks show their bolts
- * alone; see [OperatorShortName].
- */
-@Composable
-private fun ChargerPill(speed: ChargeSpeed, label: String?) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        // The bolts overlap instead of queueing up: three of them at full
-        // width made the widest pins on the map, and the pins are what the
-        // map is for. The glyph fills 14 of the drawable's 24 units, so at
-        // BOLT_SIZE the ink is ~8 dp wide inside a 14 dp box — this pitch
-        // slides the next bolt into the diagonal notch of the previous one.
-        horizontalArrangement = Arrangement.spacedBy(BOLT_PITCH - BOLT_SIZE),
-        modifier = Modifier
-            .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(50))
-            .border(1.dp, Color(0xFFDADCE0), androidx.compose.foundation.shape.RoundedCornerShape(50))
-            .padding(horizontal = 6.dp, vertical = 3.dp),
-    ) {
-        repeat(speed.bolts) {
-            val bolt = painterResource(R.drawable.ic_bolt)
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.size(BOLT_SIZE)) {
-                // An oversized white copy underneath, so the bolt that
-                // follows cuts a visible edge into the one before it instead
-                // of fusing with it into one green zigzag. Each bolt paints
-                // over its left neighbor — that is the whole trick, and it
-                // needs the halo to be drawn per bolt, not once behind all.
-                Icon(
-                    painter = bolt,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(BOLT_SIZE + BOLT_HALO),
-                )
-                Icon(
-                    painter = bolt,
-                    contentDescription = null,
-                    tint = speed.markerColor(),
-                    modifier = Modifier.size(BOLT_SIZE),
-                )
-            }
-        }
-        if (label != null) {
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelMedium,
-                color = Color(0xFF202124),
-                modifier = Modifier.padding(start = 5.dp, end = 2.dp),
-            )
-        }
-    }
-}
-
-/** Red below 50 kW, amber up to 100, green above — the traffic light everyone reads without a legend. */
-private fun ChargeSpeed.markerColor(): Color = when (this) {
-    ChargeSpeed.SLOW -> Color(0xFFD93025)
-    ChargeSpeed.MEDIUM -> Color(0xFFF9AB00)
-    ChargeSpeed.FAST, ChargeSpeed.ULTRA, ChargeSpeed.HYPER -> Color(0xFF188038)
 }
 
 /** Circular disc with a white ring — the planned-stop badges on the trip map. */
@@ -347,14 +286,6 @@ fun TripGoogleMap(
         Marker(state = rememberMarkerState(position = destination.toLatLng()))
     }
 }
-
-private val BOLT_SIZE = 14.dp
-
-/** How far the next bolt sits from the previous one — less than the ink is wide, so they interlock. */
-private val BOLT_PITCH = 6.dp
-
-/** How much wider the white copy under each bolt is drawn; the separating edge. */
-private val BOLT_HALO = 3.dp
 
 /** Frankfurt — dead center of the target market, only shown before the first fix. */
 private val FALLBACK_CENTER = LatLon(50.11, 8.68)

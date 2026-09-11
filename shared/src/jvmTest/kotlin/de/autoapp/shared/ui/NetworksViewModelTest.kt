@@ -33,7 +33,8 @@ class NetworksViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun settings() = TrackingSettingsStore(PersistentSettingsStore(InMemoryKeyValueStorage()))
+    private fun settings() =
+        TrackingSettingsStore(PersistentSettingsStore(InMemoryKeyValueStorage(), Dispatchers.Unconfined))
 
     @Test
     fun `toggling stages without touching settings`() = runBlocking<Unit> {
