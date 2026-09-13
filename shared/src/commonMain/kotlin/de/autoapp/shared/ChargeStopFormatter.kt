@@ -120,12 +120,12 @@ object ChargeStopFormatter {
     fun plannedStopPrimaryLine(stop: PlannedStop): String =
         "Nach ${formatDistanceKm(stop.kmFromStart)} · Ankunft ca. ${formatWholeNumber(stop.arrivalSocPercent)} %"
 
-    /** e.g. "150 kW · 6 Ladepunkte · ca. 25 min laden". */
+    /** e.g. "150 kW · 6 Ladepunkte · ca. 25 min laden bis 69 %". */
     fun plannedStopSecondaryLine(stop: PlannedStop): String =
         listOfNotNull(
             "${formatPowerKw(stop.maxPowerKw)} kW",
             chargePointSummary(stop.site),
-            "ca. ${formatWholeNumber(stop.chargeMinutes)} min laden",
+            "ca. ${chargeToLabel(stop)}",
         ).joinToString(" · ")
 
     /** A bare distance for message texts, same rules as the row lines. */
@@ -139,6 +139,10 @@ object ChargeStopFormatter {
 
     /** e.g. "25 min". */
     fun minutesLabel(minutes: Double): String = "${formatWholeNumber(minutes)} min"
+
+    /** e.g. "25 min laden bis 69 %" — how long, and what it buys. */
+    fun chargeToLabel(stop: PlannedStop): String =
+        "${minutesLabel(stop.chargeMinutes)} laden bis ${formatWholeNumber(stop.departureSocPercent)} %"
 
     // --- Car rows: charge now ---
 

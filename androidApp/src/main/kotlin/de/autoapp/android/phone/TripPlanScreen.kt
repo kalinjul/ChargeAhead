@@ -237,6 +237,7 @@ fun TripPlanScreen(
                         etaText(stop.etaMinutesFromStart - stop.chargeMinutes),
                         stop.arrivalSocPercent.roundToInt(),
                         stop.chargeMinutes.roundToInt(),
+                        stop.departureSocPercent.roundToInt(),
                     ),
                     selected = selecting && selection.includes(index + 1),
                     onClick = { if (selecting) onPickPoint(index + 1) else onOpenStop(stop) },
