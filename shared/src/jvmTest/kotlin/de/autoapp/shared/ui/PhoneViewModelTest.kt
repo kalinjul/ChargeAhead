@@ -84,11 +84,16 @@ class PhoneViewModelTest {
         val state = viewModel.uiState.await { it.name == "Testwagen" }
         assertEquals("77", state.battery)
         assertEquals("17,", state.consumption, "the comma must survive being written through")
-        assertEquals(17.0, settings.vehicle.first()?.consumptionKwhPer100Km)
+        // The profile is written from a coroutine, so wait for it rather than
+        // sampling the store and hoping the write already landed.
+        assertEquals(17.0, settings.vehicle.awaitValue { it != null }?.consumptionKwhPer100Km)
 
         viewModel.onConsumptionChanged("17,8")
         assertEquals("17,8", viewModel.uiState.await { it.consumption == "17,8" }.consumption)
-        assertEquals(17.8, settings.vehicle.first()?.consumptionKwhPer100Km)
+        assertEquals(
+            17.8,
+            settings.vehicle.awaitValue { it?.consumptionKwhPer100Km != 17.0 }?.consumptionKwhPer100Km,
+        )
     }
 
     /**
@@ -229,6 +234,10 @@ class PhoneViewModelTest {
     }
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
+        withTimeout(TIMEOUT_MILLIS) { first(matching) }
+
+    /** Same for a store flow: the writes behind it are asynchronous. */
+    private suspend fun <T> Flow<T>.awaitValue(matching: (T) -> Boolean): T =
         withTimeout(TIMEOUT_MILLIS) { first(matching) }
 
     private fun stubFeature() = ChargeStopsFeature(

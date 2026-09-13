@@ -37,7 +37,7 @@ struct TripPlanView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(index + 1) · \(stop.site.name)")
                                 .font(.headline)
-                            Text("\(ChargeStopFormatter.shared.minutesLabel(minutes: stop.chargeMinutes)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: stop.maxPowerKw))")
+                            Text("\(ChargeStopFormatter.shared.chargeToLabel(stop: stop)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: stop.maxPowerKw))")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
