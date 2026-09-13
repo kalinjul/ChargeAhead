@@ -53,10 +53,11 @@ class NetworksViewModel(
     private val staged = MutableStateFlow<NetworkPreferences?>(null)
 
     /**
-     * The order to draw the pills in, frozen for the visit. Ticking a network
-     * lifts it to the top *next* time — while the screen is open the list holds
-     * still, so a tap doesn't yank the pill out from under the finger. `null`
-     * until [onEnter] snapshots it; the ordering falls back to committed-first.
+     * The order to draw the pills in, frozen while the list is being read.
+     * Ticking a network lifts it to the top only once the list is rebuilt
+     * anyway — clearing the search field, or the next visit — so a tap doesn't
+     * yank the pill out from under the finger. `null` until [onEnter]
+     * snapshots it; the ordering falls back to committed-first.
      */
     private val displayOrder = MutableStateFlow<List<String>?>(null)
 
@@ -107,7 +108,12 @@ class NetworksViewModel(
     }.stateIn(viewModelScope, WhileUiSubscribed, NetworksUiState())
 
     fun onSearchChanged(query: String) {
+        val cleared = search.value.isNotBlank() && query.isBlank()
         search.value = query
+        // Clearing the field rebuilds the list from the whole catalog anyway,
+        // so re-sorting here yanks no pill out from under the finger — and the
+        // networks just ticked while searching are where they belong: on top.
+        if (cleared) refreshOrder()
     }
 
     fun onNetworkToggled(key: String) = edit { preferences ->
@@ -125,7 +131,14 @@ class NetworksViewModel(
      */
     fun onEnter() {
         displayOrder.value = null
-        viewModelScope.launch { displayOrder.value = settings.networks.first().orderedKeys() }
+        refreshOrder()
+    }
+
+    /** Re-freeze the order from the selection as it stands, edits included. */
+    private fun refreshOrder() {
+        viewModelScope.launch {
+            displayOrder.value = (staged.value ?: settings.networks.first()).orderedKeys()
+        }
     }
 
     /**
