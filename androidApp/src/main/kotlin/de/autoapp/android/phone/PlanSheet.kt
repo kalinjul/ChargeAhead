@@ -167,6 +167,7 @@ fun PlanSheetContent(
         uiState.socEditorInput?.let { input ->
             SocEditDialog(
                 value = input,
+                title = stringResource(R.string.soc_dialog_title),
                 confirmLabel = stringResource(R.string.soc_dialog_apply),
                 onValueChange = onSocInputChange,
                 onConfirm = onSocConfirm,

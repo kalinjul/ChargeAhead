@@ -264,6 +264,9 @@
     <string name="garage_no_car_yet">Noch kein Auto — eins aus der Liste wählen.</string>
     <string name="garage_none_found">Kein Fahrzeug gefunden.</string>
     <string name="garage_preset_line">%1$s kWh · %2$s kWh/100 km · %3$d kW DC</string>
+    <string name="garage_arrival_soc">Ladestand am Ziel: %1$d %%</string>
+    <string name="garage_arrival_hint">So voll soll der Akku bei der Ankunft noch sein — die Planung lädt dafür.</string>
+    <string name="garage_arrival_title">Ladestand am Ziel</string>
     <string name="garage_advanced">Werte anpassen (Batterie, Anschlüsse)</string>
     <string name="garage_connector">Anschluss</string>
     <string name="garage_connector_ccs">CCS</string>

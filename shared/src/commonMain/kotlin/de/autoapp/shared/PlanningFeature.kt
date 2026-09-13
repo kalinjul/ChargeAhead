@@ -47,6 +47,9 @@ class PlanningFeature(
      * just typed without persisting it first; otherwise the stored manual
      * value applies, and without one, [DEFAULT_ASSUMED_SOC_PERCENT] — the UI
      * must then say the start level is assumed, not known.
+     *
+     * The level to arrive with is not overridable the same way: it is a
+     * standing preference of the driver's, not a per-trip entry.
      */
     suspend fun planTrip(
         from: LatLon,
@@ -65,6 +68,7 @@ class PlanningFeature(
             destination = destination,
             vehicle = vehicle,
             startSocPercent = soc,
+            arrivalSocPercent = settings.arrivalSocPercent.first(),
             filters = settings.chargeFilters.first(),
             networks = settings.networks.first(),
         )

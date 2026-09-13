@@ -54,3 +54,20 @@ data class EnergyState(
  * charging site with no buffer, and that site could be occupied or broken.
  */
 const val DEFAULT_RESERVE_SOC_PERCENT = 10.0
+
+/**
+ * Charge level the driver wants to still have when arriving at the
+ * destination, unless they set their own.
+ *
+ * The default is the reserve: planning has always aimed to arrive with the
+ * buffer intact, and a driver who never touches the setting gets exactly the
+ * trips they got before.
+ */
+const val DEFAULT_ARRIVAL_SOC_PERCENT = DEFAULT_RESERVE_SOC_PERCENT
+
+/**
+ * The highest arrival level worth offering: a stop normally charges to 80 %
+ * because everything above that is slow, and asking to *arrive* fuller than
+ * that turns every leg into a slow-charge session.
+ */
+const val MAX_ARRIVAL_SOC_PERCENT = 80.0

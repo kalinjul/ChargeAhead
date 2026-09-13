@@ -26,12 +26,14 @@ import de.autoapp.android.phone.components.AppSlider
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.KeyValueGrid
 import de.autoapp.android.phone.components.SectionLabel
+import de.autoapp.android.phone.components.SocEditDialog
 import de.autoapp.android.phone.components.TickRow
 import de.autoapp.android.phone.components.TickStyle
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.core.RangeCalculator
 import de.autoapp.shared.domain.VehicleCatalog
 import de.autoapp.shared.domain.VehicleProfile
+import de.autoapp.shared.ui.ARRIVAL_SOC_RANGE
 import de.autoapp.shared.ui.GarageUiState
 import de.autoapp.shared.ui.GarageViewModel
 import kotlin.math.roundToInt
@@ -55,6 +57,10 @@ fun GarageRoute(
         onSelect = viewModel::onVehicleSelected,
         onRemove = viewModel::onVehicleRemoved,
         onSocChange = viewModel::onSocChanged,
+        onArrivalSocEdit = viewModel::onArrivalSocEditRequested,
+        onArrivalSocInputChange = viewModel::onArrivalSocInputChanged,
+        onArrivalSocConfirm = viewModel::onArrivalSocConfirmed,
+        onArrivalSocDismiss = viewModel::onArrivalSocEditDismissed,
         onOpenAdvanced = onOpenAdvanced,
         onOpenAdd = onOpenAdd,
         modifier = modifier,
@@ -67,6 +73,10 @@ fun GarageScreen(
     onSelect: (VehicleProfile) -> Unit,
     onRemove: (String) -> Unit,
     onSocChange: (Double) -> Unit,
+    onArrivalSocEdit: () -> Unit,
+    onArrivalSocInputChange: (String) -> Unit,
+    onArrivalSocConfirm: () -> Unit,
+    onArrivalSocDismiss: () -> Unit,
     onOpenAdvanced: () -> Unit,
     onOpenAdd: () -> Unit,
     modifier: Modifier = Modifier,
@@ -74,6 +84,20 @@ fun GarageScreen(
     val vehicles = uiState.vehicles
     val selected = uiState.selected
     var deleteMode by remember { mutableStateOf(false) }
+
+    // The same editor the plan sheet and the trip's start row open, on the
+    // level that has to be left over instead of the one to start from.
+    uiState.arrivalSocInput?.let { input ->
+        SocEditDialog(
+            value = input,
+            title = stringResource(R.string.garage_arrival_title),
+            confirmLabel = stringResource(R.string.soc_dialog_apply),
+            onValueChange = onArrivalSocInputChange,
+            onConfirm = onArrivalSocConfirm,
+            onDismiss = onArrivalSocDismiss,
+            valueRange = ARRIVAL_SOC_RANGE.first.toFloat()..ARRIVAL_SOC_RANGE.last.toFloat(),
+        )
+    }
 
     LazyColumn(
         modifier = modifier,
@@ -119,8 +143,10 @@ fun GarageScreen(
                     vehicle = selected,
                     socPercent = uiState.socPercent,
                     socFromCar = uiState.socFromCar,
+                    arrivalSocPercent = uiState.arrivalSocPercent,
                     onSelect = onSelect,
                     onSocChange = onSocChange,
+                    onArrivalSocEdit = onArrivalSocEdit,
                     onOpenAdvanced = onOpenAdvanced,
                 )
             }
@@ -133,8 +159,10 @@ private fun SelectedVehiclePanel(
     vehicle: VehicleProfile,
     socPercent: Double?,
     socFromCar: Boolean,
+    arrivalSocPercent: Double,
     onSelect: (VehicleProfile) -> Unit,
     onSocChange: (Double) -> Unit,
+    onArrivalSocEdit: () -> Unit,
     onOpenAdvanced: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -158,6 +186,7 @@ private fun SelectedVehiclePanel(
         // doesn't recompose the specs grid (and re-scan the catalog) every frame.
         ConsumptionCard(vehicle = vehicle, onSelect = onSelect)
         SocCard(socPercent = socPercent, socFromCar = socFromCar, onSocChange = onSocChange)
+        ArrivalSocCard(percent = arrivalSocPercent, onEdit = onArrivalSocEdit)
 
         TextButton(onClick = onOpenAdvanced) {
             Text(stringResource(R.string.garage_advanced))
@@ -217,6 +246,24 @@ private fun SocCard(socPercent: Double?, socFromCar: Boolean, onSocChange: (Doub
                 valueRange = 0f..100f,
                 enabled = !socFromCar,
             )
+        }
+    }
+}
+
+/**
+ * How full the battery should still be at the destination — a preference, not
+ * a per-trip entry, so it lives with the car rather than in the plan sheet.
+ * Tapping opens the shared charge-level dialog.
+ */
+@Composable
+private fun ArrivalSocCard(percent: Double, onEdit: () -> Unit) {
+    AppCard(onClick = onEdit) {
+        Column(modifier = Modifier.padding(13.dp)) {
+            Text(
+                stringResource(R.string.garage_arrival_soc, percent.roundToInt()),
+                style = MaterialTheme.typography.titleSmall.tabular,
+            )
+            Fineprint(stringResource(R.string.garage_arrival_hint))
         }
     }
 }

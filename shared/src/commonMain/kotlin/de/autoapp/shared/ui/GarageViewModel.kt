@@ -3,15 +3,21 @@ package de.autoapp.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import de.autoapp.shared.ChargeStopsFeature
+import de.autoapp.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
+import de.autoapp.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.SoCSourceKind
 import de.autoapp.shared.domain.VehicleProfile
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
-/** The driver's cars and the charge level the selected one is at. */
+/** The driver's cars and the charge levels the selected one plans with. */
 data class GarageUiState(
     val vehicles: List<VehicleProfile> = emptyList(),
     val selected: VehicleProfile? = null,
@@ -21,6 +27,10 @@ data class GarageUiState(
      * value typed here would be silently overwritten on the next update.
      */
     val socFromCar: Boolean = false,
+    /** How full the battery should still be at the destination. */
+    val arrivalSocPercent: Double = DEFAULT_ARRIVAL_SOC_PERCENT,
+    /** The arrival-level dialog's entry; `null` while it is closed. */
+    val arrivalSocInput: String? = null,
 )
 
 /** The garage screen: choose, edit, remove a car. */
@@ -29,17 +39,22 @@ class GarageViewModel(
     feature: ChargeStopsFeature,
 ) : ViewModel() {
 
+    private val arrivalSocEditor = MutableStateFlow<String?>(null)
+
     val uiState: StateFlow<GarageUiState> = combine(
         settings.vehicles,
         settings.vehicle,
         settings.manualSocPercent,
-        feature.state,
-    ) { vehicles, selected, socPercent, state ->
+        settings.arrivalSocPercent,
+        combine(feature.state, arrivalSocEditor, ::Pair),
+    ) { vehicles, selected, socPercent, arrivalSoc, (state, arrivalEditor) ->
         GarageUiState(
             vehicles = vehicles,
             selected = selected,
             socPercent = socPercent,
             socFromCar = state.socSource == SoCSourceKind.CAR_HARDWARE,
+            arrivalSocPercent = arrivalSoc,
+            arrivalSocInput = arrivalEditor,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, GarageUiState())
 
@@ -55,4 +70,33 @@ class GarageViewModel(
     fun onSocChanged(socPercent: Double) {
         viewModelScope.launch { settings.setManualSocPercent(socPercent) }
     }
+
+    /** Opens the arrival-level dialog on the level currently in force. */
+    fun onArrivalSocEditRequested() {
+        viewModelScope.launch {
+            arrivalSocEditor.value = settings.arrivalSocPercent.first().roundToInt().toString()
+        }
+    }
+
+    fun onArrivalSocInputChanged(input: String) {
+        // Only while the dialog is open: a stray keystroke must not reopen it.
+        arrivalSocEditor.update { open -> open?.let { input.filter(Char::isDigit).take(3) } }
+    }
+
+    fun onArrivalSocEditDismissed() {
+        arrivalSocEditor.value = null
+    }
+
+    /**
+     * Written straight through, like every other garage edit: the trip the
+     * driver plans next is the one that should honour it.
+     */
+    fun onArrivalSocConfirmed() {
+        val entered = arrivalSocEditor.value?.toIntOrNull()?.takeIf { it in ARRIVAL_SOC_RANGE } ?: return
+        arrivalSocEditor.value = null
+        viewModelScope.launch { settings.setArrivalSocPercent(entered.toDouble()) }
+    }
 }
+
+/** What the planner can honour as an arrival level — see [MAX_ARRIVAL_SOC_PERCENT]. */
+val ARRIVAL_SOC_RANGE = 0..MAX_ARRIVAL_SOC_PERCENT.toInt()

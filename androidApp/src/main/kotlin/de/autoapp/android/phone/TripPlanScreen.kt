@@ -109,6 +109,7 @@ fun TripPlanScreen(
     socInput?.let { input ->
         SocEditDialog(
             value = input,
+            title = stringResource(R.string.soc_dialog_title),
             confirmLabel = stringResource(R.string.trip_soc_confirm),
             onValueChange = onSocInputChange,
             onConfirm = onSocConfirm,

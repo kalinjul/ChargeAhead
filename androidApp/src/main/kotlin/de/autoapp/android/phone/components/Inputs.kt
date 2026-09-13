@@ -146,35 +146,37 @@ fun AppSlider(
 }
 
 /** Where the charge slider sits while the typed value is not a usable percentage. */
-private const val DEFAULT_SOC_PERCENT = 80
+private const val DEFAULT_SOC_PERCENT = 80f
 
-/** The charge levels the planner accepts — 0 % is not a trip, it is a tow. */
-private val SOC_RANGE = 1f..100f
+/** The start levels the planner accepts — 0 % is not a trip, it is a tow. */
+val SOC_RANGE = 1f..100f
 
 /**
  * The one charge-level editor: type the number or drag the slider, both on
- * the same value. Used from the plan sheet and from the trip's start row, so
- * that "set the charge level" looks the same wherever it is reached from —
- * only what confirming does differs, which is what [confirmLabel] says.
+ * the same value. Used from the plan sheet, from the trip's start row and
+ * from the garage's arrival level, so that "set a charge level" looks the
+ * same wherever it is reached from — what differs is [title], and what
+ * confirming does, which is what [confirmLabel] says.
  */
 @Composable
 fun SocEditDialog(
     value: String,
+    title: String,
     confirmLabel: String,
     onValueChange: (String) -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = SOC_RANGE,
 ) {
-    val percent = value.toIntOrNull()?.takeIf { it.toFloat() in SOC_RANGE }
+    val percent = value.toIntOrNull()?.takeIf { it.toFloat() in valueRange }
     // The keyboard comes up with the dialog: it was opened to set a number,
     // not to tap a field first. The slider is there for the driver who would
     // rather not type at all.
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    val socLabel = stringResource(R.string.soc_dialog_title)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(socLabel) },
+        title = { Text(title) },
         text = {
             Column {
                 OutlinedTextField(
@@ -191,10 +193,10 @@ fun SocEditDialog(
                 // value is unusable the slider parks at the default — the
                 // field stays the place that flags it.
                 AppSlider(
-                    value = (percent ?: DEFAULT_SOC_PERCENT).toFloat(),
+                    value = (percent?.toFloat() ?: DEFAULT_SOC_PERCENT).coerceIn(valueRange),
                     onValueChange = { onValueChange(it.roundToInt().toString()) },
-                    valueRange = SOC_RANGE,
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = socLabel },
+                    valueRange = valueRange,
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = title },
                 )
             }
         },

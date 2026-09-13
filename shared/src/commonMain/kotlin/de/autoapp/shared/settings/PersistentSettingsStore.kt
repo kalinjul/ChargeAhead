@@ -1,6 +1,8 @@
 package de.autoapp.shared.settings
 
 import de.autoapp.shared.domain.CarDataKind
+import de.autoapp.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
+import de.autoapp.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import de.autoapp.shared.domain.CarDataPoint
 import de.autoapp.shared.domain.CarDataStatus
 import de.autoapp.shared.domain.ChargeFilters
@@ -54,6 +56,9 @@ class PersistentSettingsStore(
 
     private val mutableManualSoc = MutableStateFlow(readManualSoc())
     override val manualSocPercent: StateFlow<Double?> = mutableManualSoc.asStateFlow()
+
+    private val mutableArrivalSoc = MutableStateFlow(readArrivalSoc())
+    override val arrivalSocPercent: StateFlow<Double> = mutableArrivalSoc.asStateFlow()
 
     // Every write goes through here: off the main thread (SharedPreferences'
     // commit() is a blocking disk write + JSON encode) AND serialized, because
@@ -274,6 +279,12 @@ class PersistentSettingsStore(
         mutableManualSoc.value = clamped
     }
 
+    override suspend fun setArrivalSocPercent(socPercent: Double) = write {
+        val clamped = socPercent.coerceIn(0.0, MAX_ARRIVAL_SOC_PERCENT)
+        storage.putString(KEY_ARRIVAL_SOC, clamped.toString())
+        mutableArrivalSoc.value = clamped
+    }
+
     private fun readVehicle(): VehicleProfile? {
         val battery = storage.getStringOrNull(KEY_BATTERY_KWH)?.toDoubleOrNull() ?: return null
         val consumption = storage.getStringOrNull(KEY_CONSUMPTION)?.toDoubleOrNull() ?: return null
@@ -309,6 +320,10 @@ class PersistentSettingsStore(
 
     private fun readManualSoc(): Double? =
         storage.getStringOrNull(KEY_MANUAL_SOC)?.toDoubleOrNull()?.coerceIn(0.0, 100.0)
+
+    private fun readArrivalSoc(): Double =
+        storage.getStringOrNull(KEY_ARRIVAL_SOC)?.toDoubleOrNull()?.coerceIn(0.0, MAX_ARRIVAL_SOC_PERCENT)
+            ?: DEFAULT_ARRIVAL_SOC_PERCENT
 
     @Serializable
     private data class StoredVehicle(
@@ -389,6 +404,7 @@ class PersistentSettingsStore(
         const val KEY_DC_PEAK = "vehicle.dcPeakPowerKw"
         const val KEY_GARAGE = "vehicle.garage"
         const val KEY_MANUAL_SOC = "energy.manualSocPercent"
+        const val KEY_ARRIVAL_SOC = "energy.arrivalSocPercent"
         const val KEY_CHARGE_FILTERS = "filters.charge"
         const val KEY_SAVED_ROUTES = "routes.saved"
         const val KEY_CAR_DEBUG = "car.debugData"
