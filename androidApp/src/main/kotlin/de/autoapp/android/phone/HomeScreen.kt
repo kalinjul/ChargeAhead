@@ -113,6 +113,7 @@ fun HomeScreen(
                 onViewportChanged = onViewportChanged,
                 onChargerTapped = onChargerTapped,
                 onLocate = onLocate,
+                searchingLocation = uiState.searchingLocation,
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
@@ -154,8 +155,18 @@ fun HomeScreen(
         }
 
         Column(
-            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 16.dp),
+            // Horizontal room for the burger on the left and the two map
+            // buttons on the right: a full-width box here runs straight over
+            // them, and the longer location hint wraps rather than collide.
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(horizontal = 70.dp)
+                .padding(top = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
+            // Three of these can stand at once now (zoom hint, filter spinner,
+            // location hint); stacked flush they read as one broken box.
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (!hasGoogleMapsKey) {
                 Text(
@@ -173,6 +184,24 @@ fun HomeScreen(
                     Text(
                         stringResource(R.string.map_zoom_hint),
                         style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
+            }
+            // Location is running and getting nowhere. The spinner on the
+            // button says "working on it"; after long enough, that alone is
+            // no longer honest and the reason belongs on screen.
+            if (uiState.locationUnavailable) {
+                Surface(
+                    shape = MaterialTheme.shapes.small,
+                    color = MaterialTheme.colorScheme.surface,
+                    shadowElevation = 2.dp,
+                ) {
+                    Text(
+                        stringResource(R.string.phone_status_location_unavailable),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     )
                 }

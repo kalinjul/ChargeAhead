@@ -14,16 +14,20 @@ import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.distanceKmTo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The map screen: where the driver is, which chargers are in view, and
@@ -42,6 +46,17 @@ data class HomeUiState(
     val filtersCustomized: Boolean = false,
     /** A filter/network change is re-querying the map — the overlay says so. */
     val applyingFilters: Boolean = false,
+    /**
+     * Location is running but has not delivered a position yet — the
+     * location button spins instead of looking idle.
+     */
+    val searchingLocation: Boolean = false,
+    /**
+     * Long enough without a fix that a spinner alone is no longer honest.
+     * Stays alongside [searchingLocation]: the request really is still
+     * running, it just isn't getting anywhere, and saying so is the point.
+     */
+    val locationUnavailable: Boolean = false,
 )
 
 /**
@@ -57,9 +72,21 @@ class HomeViewModel(
     private val feature: ChargeStopsFeature,
     private val planning: PlanningFeature,
     settings: SettingsStore,
+    /**
+     * How long the button may spin before the map says something.
+     *
+     * A GPS cold start under open sky can legitimately take this long, so the
+     * hint is worded as advice, not as a verdict — and it disappears by itself
+     * the moment a fix lands. A parameter so the timeout path is testable
+     * without a twenty-second test.
+     */
+    private val locationTimeoutMillis: Long = DEFAULT_LOCATION_TIMEOUT_MILLIS,
 ) : ViewModel() {
 
     private val map = MutableStateFlow(MapState())
+
+    private val attempt = MutableStateFlow(LocationAttempt())
+    private var attemptJob: Job? = null
 
     /** The section of the world the map shows; `null` = zoomed out past the marker threshold. */
     private val viewport = MutableStateFlow<BoundingBox?>(null)
@@ -69,7 +96,8 @@ class HomeViewModel(
         settings.chargeFilters,
         settings.networks,
         map,
-    ) { state, filters, networks, mapState ->
+        attempt,
+    ) { state, filters, networks, mapState, attempt ->
         HomeUiState(
             position = state.position,
             stops = state.stops,
@@ -79,6 +107,11 @@ class HomeViewModel(
             selectedStop = mapState.selectedStop,
             filtersCustomized = !filters.isDefault || networks.isActive,
             applyingFilters = mapState.applyingFilters,
+            // Both are gated on the position rather than being cleared by
+            // hand: a fix that arrives late — after the timeout, from the
+            // stream — silences spinner and hint on its own.
+            searchingLocation = attempt.running && state.position == null,
+            locationUnavailable = attempt.timedOut && state.position == null,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
 
@@ -125,6 +158,7 @@ class HomeViewModel(
     /** Location permission granted: the pipeline may run. Calling it twice is harmless. */
     fun onLocationPermissionGranted() {
         feature.start()
+        beginLocating()
     }
 
     /**
@@ -137,6 +171,24 @@ class HomeViewModel(
     fun onLocateRequested() {
         feature.start()
         feature.locate()
+        beginLocating()
+    }
+
+    /**
+     * Marks an attempt as under way and gives it a deadline. A running
+     * attempt is left alone — the deadline belongs to the first tap, not to
+     * every repeat of it.
+     */
+    private fun beginLocating() {
+        if (attemptJob?.isActive == true) return
+        attempt.value = LocationAttempt(running = true)
+        attemptJob = viewModelScope.launch {
+            val position = withTimeoutOrNull(locationTimeoutMillis) {
+                feature.state.first { it.position != null }
+            }
+            // The request stays subscribed either way; only the hint changes.
+            if (position == null) attempt.update { it.copy(timedOut = true) }
+        }
     }
 
     /** `null` means: zoomed out past the point where markers are useful. */
@@ -170,10 +222,19 @@ class HomeViewModel(
         map.update { it.copy(selectedStop = null) }
     }
 
+    private data class LocationAttempt(
+        val running: Boolean = false,
+        val timedOut: Boolean = false,
+    )
+
     private data class MapState(
         val chargers: List<MapCharger> = emptyList(),
         val belowMinZoom: Boolean = false,
         val selectedStop: ChargeStop? = null,
         val applyingFilters: Boolean = false,
     )
+
+    companion object {
+        const val DEFAULT_LOCATION_TIMEOUT_MILLIS = 20_000L
+    }
 }

@@ -1,6 +1,7 @@
 package de.autoapp.shared.ui
 
 import org.koin.core.module.Module
+import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 
@@ -10,7 +11,11 @@ import org.koin.dsl.module
  * PlanningFeature; nothing here knows where those come from.
  */
 fun sharedUiModule(): Module = module {
-    viewModelOf(::HomeViewModel)
+    // Spelled out, not viewModelOf: HomeViewModel's last parameter is a
+    // timeout with a default, and viewModelOf binds every parameter from the
+    // container — including that Long, which nothing provides. It compiles and
+    // then crashes on first composition. Leave this one explicit.
+    viewModel { HomeViewModel(get(), get(), get()) }
     viewModelOf(::TripViewModel)
     viewModelOf(::PlanSheetViewModel)
     viewModelOf(::ChargeNowViewModel)
