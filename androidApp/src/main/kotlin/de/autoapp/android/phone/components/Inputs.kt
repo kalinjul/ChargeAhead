@@ -3,35 +3,46 @@ package de.autoapp.android.phone.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
-
+import kotlin.math.roundToInt
 /**
  * The mockup's `.searchwrap`: bordered, rounded, magnifier left, no underline.
  *
@@ -131,5 +142,67 @@ fun AppSlider(
             )
         },
         valueRange = valueRange,
+    )
+}
+
+/** Where the charge slider sits while the typed value is not a usable percentage. */
+private const val DEFAULT_SOC_PERCENT = 80
+
+/** The charge levels the planner accepts — 0 % is not a trip, it is a tow. */
+private val SOC_RANGE = 1f..100f
+
+/**
+ * The one charge-level editor: type the number or drag the slider, both on
+ * the same value. Used from the plan sheet and from the trip's start row, so
+ * that "set the charge level" looks the same wherever it is reached from —
+ * only what confirming does differs, which is what [confirmLabel] says.
+ */
+@Composable
+fun SocEditDialog(
+    value: String,
+    confirmLabel: String,
+    onValueChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val percent = value.toIntOrNull()?.takeIf { it.toFloat() in SOC_RANGE }
+    // The keyboard comes up with the dialog: it was opened to set a number,
+    // not to tap a field first. The slider is there for the driver who would
+    // rather not type at all.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    val socLabel = stringResource(R.string.soc_dialog_title)
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(socLabel) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    isError = percent == null,
+                    suffix = { Text("%") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.focusRequester(focusRequester),
+                )
+                // Whole percent only, so a drag settles between steps rather
+                // than rewriting the field once per frame. While the typed
+                // value is unusable the slider parks at the default — the
+                // field stays the place that flags it.
+                AppSlider(
+                    value = (percent ?: DEFAULT_SOC_PERCENT).toFloat(),
+                    onValueChange = { onValueChange(it.roundToInt().toString()) },
+                    valueRange = SOC_RANGE,
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = socLabel },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = percent != null) { Text(confirmLabel) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.soc_dialog_cancel)) }
+        },
     )
 }

@@ -59,7 +59,6 @@ import androidx.navigation3.ui.NavDisplay
 import de.autoapp.android.R
 import de.autoapp.android.phone.components.AppSheet
 import de.autoapp.android.phone.components.AppTopBar
-import de.autoapp.android.phone.components.TopBarIcon
 import de.autoapp.android.phone.theme.ChargeAheadTheme
 import de.autoapp.shared.core.MapsHandoff
 import de.autoapp.shared.core.TripPlan
@@ -265,14 +264,6 @@ private fun PhoneApp() {
                                     trip.plan.stops.size,
                                 ),
                                 onBack = ::pop,
-                                actions = {
-                                    TopBarIcon(
-                                        painterResource(R.drawable.ic_filter),
-                                        stringResource(R.string.trip_filters),
-                                        onClick = { scope.launch { drawerState.open() } },
-                                        badge = drawerUi.filtersCustomized,
-                                    )
-                                },
                             ) { pagePadding ->
                                 TripPlanScreen(
                                     plan = trip.plan,

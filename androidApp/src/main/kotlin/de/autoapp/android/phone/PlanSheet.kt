@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -30,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -40,6 +38,7 @@ import de.autoapp.android.phone.components.AppCard
 import de.autoapp.android.phone.components.AppChip
 import de.autoapp.android.phone.components.Fineprint
 import de.autoapp.android.phone.components.SectionLabel
+import de.autoapp.android.phone.components.SocEditDialog
 import de.autoapp.android.phone.components.sheetListPadding
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
@@ -67,7 +66,10 @@ fun PlanSheetRoute(
         uiState = uiState,
         onQueryChange = viewModel::onQueryChanged,
         onDestinationChosen = viewModel::onDestinationChosen,
-        onSocChange = viewModel::onSocChanged,
+        onSocEdit = viewModel::onSocEditRequested,
+        onSocInputChange = viewModel::onSocInputChanged,
+        onSocConfirm = viewModel::onSocConfirmed,
+        onSocDismiss = viewModel::onSocEditDismissed,
         onPlan = onPlan,
         modifier = modifier,
     )
@@ -78,7 +80,10 @@ fun PlanSheetContent(
     uiState: PlanSheetUiState,
     onQueryChange: (String) -> Unit,
     onDestinationChosen: (Destination) -> Unit,
-    onSocChange: (String) -> Unit,
+    onSocEdit: () -> Unit,
+    onSocInputChange: (String) -> Unit,
+    onSocConfirm: () -> Unit,
+    onSocDismiss: () -> Unit,
     onPlan: (Destination, Double) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -143,26 +148,31 @@ fun PlanSheetContent(
         vehicleName?.let { name ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AppChip(text = name, icon = painterResource(R.drawable.ic_car))
+                // The level is set in the shared dialog, the same one the trip
+                // screen's start row opens — typing and dragging live there,
+                // this pill only shows what came out of it.
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                    ) {
-                        BasicTextField(
-                            value = uiState.socInput,
-                            onValueChange = onSocChange,
-                            textStyle = MaterialTheme.typography.labelMedium.tabular.copy(
-                                color = if (socPercent == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                            ),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            singleLine = true,
-                            modifier = Modifier.width(28.dp),
-                        )
-                        Text("%", style = MaterialTheme.typography.labelMedium)
-                    }
+                    Text(
+                        stringResource(R.string.plan_soc_value, uiState.socInput),
+                        style = MaterialTheme.typography.labelMedium.tabular,
+                        color = if (socPercent == null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier
+                            .clickable(onClick = onSocEdit)
+                            .padding(horizontal = 14.dp, vertical = 9.dp),
+                    )
                 }
                 Fineprint(stringResource(R.string.plan_soc_hint))
             }
+        }
+
+        uiState.socEditorInput?.let { input ->
+            SocEditDialog(
+                value = input,
+                confirmLabel = stringResource(R.string.soc_dialog_apply),
+                onValueChange = onSocInputChange,
+                onConfirm = onSocConfirm,
+                onDismiss = onSocDismiss,
+            )
         }
 
         when {

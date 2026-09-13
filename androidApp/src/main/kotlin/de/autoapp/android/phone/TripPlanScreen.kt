@@ -18,26 +18,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -46,10 +39,10 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.SocEditDialog
 import de.autoapp.android.phone.components.StationCard
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.ChargeStopFormatter
@@ -110,9 +103,13 @@ fun TripPlanScreen(
 
     val startName = stringResource(R.string.trip_start)
 
+    // The quick charge-level entry behind the start row. Confirming it
+    // re-plans: every stop after it depends on the level, so there is nothing
+    // to patch in place — which is what the confirm button says.
     socInput?.let { input ->
-        StartSocDialog(
+        SocEditDialog(
             value = input,
+            confirmLabel = stringResource(R.string.trip_soc_confirm),
             onValueChange = onSocInputChange,
             onConfirm = onSocConfirm,
             onDismiss = onSocDismiss,
@@ -380,48 +377,6 @@ private fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
-}
-
-/**
- * The quick charge-level entry behind the start row. Confirming it re-plans:
- * every stop after it depends on the level, so there is nothing to patch in
- * place.
- */
-@Composable
-private fun StartSocDialog(
-    value: String,
-    onValueChange: (String) -> Unit,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    val percent = value.toIntOrNull()?.takeIf { it in 1..100 }
-    // "Quick" only holds if the keyboard is already up: the driver opened
-    // this to type a number, not to tap a field first.
-    val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.trip_soc_title)) },
-        text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                isError = percent == null,
-                suffix = { Text("%") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.focusRequester(focusRequester),
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onConfirm, enabled = percent != null) {
-                Text(stringResource(R.string.trip_soc_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.trip_soc_cancel)) }
-        },
-    )
 }
 
 @Composable
