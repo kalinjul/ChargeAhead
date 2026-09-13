@@ -48,7 +48,7 @@
     <string name="phone_platform_label">Plattform</string>
     <string name="phone_stops_heading">Ladestopps voraus</string>
     <string name="phone_action_refresh">Aktualisieren</string>
-    <string name="phone_permission_message">Ohne Standortfreigabe kann nicht gesucht werden, was voraus liegt.</string>
+    <string name="phone_permission_message">Für die Anzeige der Position auf der Karte und die Routenplanung wird der Standort benötigt.</string>
     <string name="phone_permission_action">Standort freigeben</string>
     <string name="phone_demo_notice">Kein OpenChargeMap-Schlüssel hinterlegt — die Liste zeigt erfundene Demodaten. Schlüssel als openChargeMapApiKey in local.properties eintragen.</string>
     <string name="phone_status_waiting">Standort wird ermittelt …</string>
