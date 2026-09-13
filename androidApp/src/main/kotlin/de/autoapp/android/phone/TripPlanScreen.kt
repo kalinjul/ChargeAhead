@@ -46,10 +46,13 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
+import de.autoapp.android.phone.components.AppSlider
 import de.autoapp.android.phone.components.StationCard
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.ChargeStopFormatter
@@ -382,6 +385,9 @@ private fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
     }
 }
 
+/** Where the charge slider sits while the typed value is not a usable percentage. */
+private const val DEFAULT_START_SOC_PERCENT = 80
+
 /**
  * The quick charge-level entry behind the start row. Confirming it re-plans:
  * every stop after it depends on the level, so there is nothing to patch in
@@ -403,15 +409,30 @@ private fun StartSocDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.trip_soc_title)) },
         text = {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                singleLine = true,
-                isError = percent == null,
-                suffix = { Text("%") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.focusRequester(focusRequester),
-            )
+            Column {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    isError = percent == null,
+                    suffix = { Text("%") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.focusRequester(focusRequester),
+                )
+                // The same value, dragged instead of typed — for the driver
+                // who wants "about three quarters" and not a number. Whole
+                // percent only, so a drag settles between steps rather than
+                // rewriting the field once per frame; while the typed value is
+                // unusable the slider parks at the default and the field stays
+                // the place that flags it.
+                val socLabel = stringResource(R.string.trip_soc_title)
+                AppSlider(
+                    value = (percent ?: DEFAULT_START_SOC_PERCENT).toFloat(),
+                    onValueChange = { onValueChange(it.roundToInt().toString()) },
+                    valueRange = 1f..100f,
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = socLabel },
+                )
+            }
         },
         confirmButton = {
             TextButton(onClick = onConfirm, enabled = percent != null) {
