@@ -15,10 +15,7 @@ data class DrawerUiState(
     /** How many networks are picked; `0` means: no network filter. */
     val preferredNetworkCount: Int = 0,
     val filters: ChargeFilters = ChargeFilters(),
-) {
-    /** Something is narrowing the results — the map and the trip screen badge this. */
-    val filtersCustomized: Boolean get() = !filters.isDefault || preferredNetworkCount > 0
-}
+)
 
 /**
  * The drawer is not a screen but it carries state of its own — and it is

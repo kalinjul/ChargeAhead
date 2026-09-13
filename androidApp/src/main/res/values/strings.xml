@@ -278,7 +278,6 @@
         <item quantity="one">%1$d Stopp</item>
         <item quantity="other">%1$d Stopps</item>
     </plurals>
-    <string name="trip_filters">Filter</string>
     <string name="detail_stop_x_of_y">Stopp %1$d von %2$d</string>
 
     <!-- Phone: drawer networks summary -->
