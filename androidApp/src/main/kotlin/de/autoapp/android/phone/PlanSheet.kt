@@ -161,7 +161,6 @@ fun PlanSheetContent(
                             .padding(horizontal = 14.dp, vertical = 9.dp),
                     )
                 }
-                Fineprint(stringResource(R.string.plan_soc_hint))
             }
         }
 
