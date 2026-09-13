@@ -127,6 +127,18 @@ class HomeViewModel(
         feature.start()
     }
 
+    /**
+     * The location button was tapped with no position to center on. Starting
+     * the pipeline again is deliberate and harmless: if it never came up —
+     * because the permission arrived late, or the car surface had claimed the
+     * location stream — this is the tap that fixes it. [ChargeStopsFeature.locate]
+     * then asks for a fix now instead of waiting out the stream.
+     */
+    fun onLocateRequested() {
+        feature.start()
+        feature.locate()
+    }
+
     /** `null` means: zoomed out past the point where markers are useful. */
     fun onViewportChanged(viewport: BoundingBox?) {
         // Set before the query runs, not after: otherwise the zoom hint stays

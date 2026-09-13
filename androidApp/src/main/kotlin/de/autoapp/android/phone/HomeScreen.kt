@@ -47,6 +47,13 @@ fun HomeRoute(
     hasPermission: Boolean,
     planningInProgress: Boolean,
     onRequestPermission: () -> Unit,
+    /**
+     * The location button with nothing to center on. Owned by the activity:
+     * it takes the permission and the device's location settings in order —
+     * both need an Activity to show anything — and asks for the fix once they
+     * are in place.
+     */
+    onLocate: () -> Unit,
     onMenu: () -> Unit,
     onPlan: () -> Unit,
     onChargeNow: () -> Unit,
@@ -69,6 +76,7 @@ fun HomeRoute(
         onViewportChanged = viewModel::onViewportChanged,
         onChargerTapped = viewModel::onChargerSelected,
         onRequestPermission = onRequestPermission,
+        onLocate = onLocate,
         onMenu = onMenu,
         onPlan = onPlan,
         onChargeNow = onChargeNow,
@@ -89,6 +97,7 @@ fun HomeScreen(
     onViewportChanged: (BoundingBox?) -> Unit,
     onChargerTapped: (MapCharger) -> Unit,
     onRequestPermission: () -> Unit,
+    onLocate: () -> Unit,
     onMenu: () -> Unit,
     onPlan: () -> Unit,
     onChargeNow: () -> Unit,
@@ -103,6 +112,7 @@ fun HomeScreen(
                 hasLocationPermission = hasPermission,
                 onViewportChanged = onViewportChanged,
                 onChargerTapped = onChargerTapped,
+                onLocate = onLocate,
                 modifier = Modifier.fillMaxSize(),
             )
         } else {

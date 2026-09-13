@@ -52,6 +52,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -143,11 +145,52 @@ private fun PhoneApp() {
         if (target != Home) backStack.add(target)
     }
 
+    // The device-settings half of the location handshake — the dialog that
+    // turns on "Improve Location Accuracy". Once the settings can serve us,
+    // the fix is asked for right away.
+    val checkLocationSettings = rememberLocationSettingsCheck {
+        homeViewModel.onLocateRequested()
+    }
+
+    // Set when the location button had to ask for the permission first, so
+    // the grant carries on into the settings check instead of stopping there
+    // and making the driver tap a second time.
+    var locateAfterPermission by remember { mutableStateOf(false) }
+
     var hasPermission by remember { mutableStateOf(context.hasLocationPermission()) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { results ->
         hasPermission = results.values.any { it }
+        if (hasPermission && locateAfterPermission) checkLocationSettings()
+        locateAfterPermission = false
+    }
+
+    // Re-read on every resume, not only once. The grant can happen outside
+    // this launcher — in the system settings, or through the car surface's own
+    // request — and the map would otherwise keep the permission card up over a
+    // permission it already holds (issue #36).
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        hasPermission = context.hasLocationPermission()
+    }
+
+    fun requestLocationPermission() {
+        permissionLauncher.launch(
+            arrayOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+            ),
+        )
+    }
+
+    /** Everything the location button needs from the platform, in order. */
+    fun onLocate() {
+        if (hasPermission) {
+            checkLocationSettings()
+        } else {
+            locateAfterPermission = true
+            requestLocationPermission()
+        }
     }
 
     val planned = tripUi as? TripUiState.Planned
@@ -214,14 +257,8 @@ private fun PhoneApp() {
             HomeRoute(
                 hasPermission = hasPermission,
                 planningInProgress = tripUi is TripUiState.Planning,
-                onRequestPermission = {
-                    permissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION,
-                        ),
-                    )
-                },
+                onRequestPermission = ::requestLocationPermission,
+                onLocate = ::onLocate,
                 onMenu = { scope.launch { drawerState.open() } },
                 onPlan = { sheet = Sheet.PLAN; planSheetViewModel.onSheetOpened() },
                 onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },

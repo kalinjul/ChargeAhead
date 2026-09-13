@@ -11,6 +11,7 @@ import de.autoapp.shared.domain.DEFAULT_RESERVE_SOC_PERCENT
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.EnergyState
 import de.autoapp.shared.domain.Fix
+import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.LocationSource
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.data.OperatorCatalog
@@ -34,6 +35,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -93,6 +95,11 @@ class ChargeStopsFeature(
     // computing concurrently and racing each other when publishing.
     private val recomputeMutex = Mutex()
 
+    // The stream collects on one coroutine, but locate() delivers its one-shot
+    // fix from another — and both walk the course tracker and the last-fix
+    // fields. Always taken before recomputeMutex, never the other way round.
+    private val fixMutex = Mutex()
+
     // isDemo is set in the initial state already, not only once the first list
     // arrives: otherwise the demo notice would appear late in the UI and the
     // driver would briefly see the header without it.
@@ -122,7 +129,13 @@ class ChargeStopsFeature(
     val currentEnergy: StateFlow<EnergyState?> = mutableEnergy.asStateFlow()
 
     private var locationJob: Job? = null
-    private var settingsJob: Job? = null
+    private var sensorJob: Job? = null
+    private var planningJob: Job? = null
+
+    // Whether the running location collector feeds recompute() or only the
+    // raw fix. Read from the shared collectors, so an upgrade from
+    // sensors-only to the full pipeline needs no second set of them.
+    private var computesStops = false
     private var latestFix: Fix? = null
     private var lastComputedFix: Fix? = null
     private var recomputeOnNextFix = false
@@ -139,90 +152,133 @@ class ChargeStopsFeature(
     private var routedProvider: RouteProvider? = null
     private var networks: NetworkPreferences = NetworkPreferences()
 
-    /** Starts processing location updates. Calling it more than once is a no-op. */
+    /**
+     * Starts the full pipeline: location updates, charge state, and the
+     * computed corridor list. Calling it more than once is a no-op; calling
+     * it on an instance that is already running [startSensors] upgrades that
+     * instance instead of being silently ignored.
+     */
     fun start() {
-        if (locationJob?.isActive == true) return
-        locationJob = scope.launch {
-            locationSource.updates
-                .catch {
-                    // The location stream terminates when permission is missing
-                    // or location services are off. The last known list stays,
-                    // and the reason is surfaced alongside it.
-                    publish(
-                        mutableState.value.copy(
-                            phase = ChargeStopsState.Phase.FAILED,
-                            failure = ChargeStopsState.FailureReason.LOCATION_UNAVAILABLE,
-                        ),
-                    )
-                }
-                .collect(::onFix)
-        }
-
-        settingsJob = scope.launch {
-            // A changed vehicle or a newly typed-in charge level changes range,
-            // which affects both classification and corridor size. Both must
-            // take effect immediately, not only at the next location update —
-            // that could be two kilometers away.
-            settingsStore?.vehicle?.collect { updated ->
-                vehicle = updated
-                recomputeLatest()
-            }
-        }
-
-        scope.launch {
-            socSource?.energy?.collect { updated ->
-                energy = updated
-                mutableEnergy.value = updated
-                recomputeLatest()
-            }
-        }
-
-        scope.launch {
-            settingsStore?.destination?.collect(::onDestinationChanged)
-        }
-
-        scope.launch {
-            settingsStore?.networks?.collect { updated ->
-                networks = updated
-                recomputeLatest()
-            }
-        }
-
-        scope.launch {
-            val cached = operatorCatalog?.options().orEmpty()
-            if (cached.isEmpty()) return@launch
-            recomputeMutex.withLock {
-                // A live recompute may already have won the race; its list is fresher.
-                if (mutableState.value.availableOperators.isEmpty()) {
-                    publish(mutableState.value.copy(availableOperators = cached))
-                }
-            }
-        }
+        startSensorCollectors()
+        startPlanningCollectors()
+        startLocation(computeStops = true)
     }
 
     /**
      * Tracks location and charge state without computing charging stops — for
      * the car UI, which plans on demand and has no corridor list to feed.
-     * Use either [start] or [startSensors] per instance, not both.
+     *
+     * Phone and car share one app-scoped instance (ARCHITECTURE.md section 8),
+     * so both entry points can run against the same feature. Sensors-only
+     * never displaces a running full pipeline; [start] does upgrade a running
+     * sensors-only one.
      */
     fun startSensors() {
-        if (locationJob?.isActive == true) return
-        locationJob = scope.launch {
-            locationSource.updates
-                // The fix stays null; screens keep saying they are waiting for
-                // a location instead of planning from a stale one.
-                .catch { error -> logWarning("Location stream ended", error) }
-                .collect { raw ->
-                    val fix = courseTracker.update(raw)
-                    latestFix = fix
-                    mutableFix.value = fix
-                }
+        startSensorCollectors()
+        startLocation(computeStops = false)
+    }
+
+    /**
+     * Asks the location source for a fix right now instead of waiting for the
+     * stream's next update — what the map's location button needs when it has
+     * no position to center on yet.
+     */
+    fun locate() {
+        scope.launch {
+            val fix = try {
+                locationSource.currentFix()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (error: Exception) {
+                logWarning("Could not read the current location", error)
+                null
+            }
+            fix?.let { onFix(it) }
+        }
+    }
+
+    private fun startLocation(computeStops: Boolean) {
+        if (locationJob?.isActive == true) {
+            // The computing stream covers everything the sensors-only one
+            // does, so only the upgrade replaces a running collector. Without
+            // this, whichever surface started first left the other with a
+            // silently dead pipeline (issue #36).
+            if (!computeStops || computesStops) return
+            locationJob?.cancel()
         }
 
-        scope.launch {
+        computesStops = computeStops
+        locationJob = scope.launch {
+            locationSource.updates
+                .catch { error ->
+                    if (computeStops) {
+                        // The location stream terminates when permission is
+                        // missing or location services are off. The last known
+                        // list stays, and the reason is surfaced alongside it.
+                        publish(
+                            mutableState.value.copy(
+                                phase = ChargeStopsState.Phase.FAILED,
+                                failure = ChargeStopsState.FailureReason.LOCATION_UNAVAILABLE,
+                            ),
+                        )
+                    } else {
+                        // The fix stays null; screens keep saying they are
+                        // waiting for a location instead of planning from a
+                        // stale one.
+                        logWarning("Location stream ended", error)
+                    }
+                }
+                .collect(::onFix)
+        }
+    }
+
+    private fun startSensorCollectors() {
+        if (sensorJob?.isActive == true) return
+        sensorJob = scope.launch {
             socSource?.energy?.collect { updated ->
                 energy = updated
                 mutableEnergy.value = updated
+                // Sensors-only has no list to recompute; the upgrade to the
+                // full pipeline flips this without restarting the collector.
+                if (computesStops) recomputeLatest()
+            }
+        }
+    }
+
+    private fun startPlanningCollectors() {
+        if (planningJob?.isActive == true) return
+        planningJob = scope.launch {
+            launch {
+                // A changed vehicle or a newly typed-in charge level changes
+                // range, which affects both classification and corridor size.
+                // Both must take effect immediately, not only at the next
+                // location update — that could be two kilometers away.
+                settingsStore?.vehicle?.collect { updated ->
+                    vehicle = updated
+                    recomputeLatest()
+                }
+            }
+
+            launch {
+                settingsStore?.destination?.collect(::onDestinationChanged)
+            }
+
+            launch {
+                settingsStore?.networks?.collect { updated ->
+                    networks = updated
+                    recomputeLatest()
+                }
+            }
+
+            launch {
+                val cached = operatorCatalog?.options().orEmpty()
+                if (cached.isEmpty()) return@launch
+                recomputeMutex.withLock {
+                    // A live recompute may already have won the race; its list is fresher.
+                    if (mutableState.value.availableOperators.isEmpty()) {
+                        publish(mutableState.value.copy(availableOperators = cached))
+                    }
+                }
             }
         }
     }
@@ -333,15 +389,25 @@ class ChargeStopsFeature(
     fun close() {
         scope.cancel()
         locationJob = null
-        settingsJob = null
+        sensorJob = null
+        planningJob = null
         onClose()
     }
 
-    private suspend fun onFix(rawFix: Fix) {
+    private suspend fun onFix(rawFix: Fix) = fixMutex.withLock {
         val fix = courseTracker.update(rawFix)
         val hadNoFix = latestFix == null
         latestFix = fix
         mutableFix.value = fix
+
+        // The position comes from the fix itself, not only from a successful
+        // recompute: a failing site query used to leave the map without a
+        // location the device demonstrably had, and the location button dead
+        // with it (issue #36).
+        publishPosition(fix.position)
+
+        // Sensors-only tracks the fix and stops here — no corridor list to feed.
+        if (!computesStops) return
 
         // A destination might have been set before the first location arrived.
         if (hadNoFix) ensureRoute()
@@ -408,6 +474,15 @@ class ChargeStopsFeature(
 
     private fun List<de.autoapp.shared.domain.ChargeSite>.toOperatorOptions(): List<OperatorOption> =
         OperatorOptions.fromNames(map { it.operator })
+
+    /**
+     * Position only — no list, so [mutableStops] stays untouched. Uses
+     * [MutableStateFlow.update] rather than a read-copy-write, because this
+     * runs outside [recomputeMutex] and must not clobber a concurrent publish.
+     */
+    private fun publishPosition(position: LatLon) {
+        mutableState.update { it.copy(position = position) }
+    }
 
     private fun publish(next: ChargeStopsState) {
         mutableState.value = next
