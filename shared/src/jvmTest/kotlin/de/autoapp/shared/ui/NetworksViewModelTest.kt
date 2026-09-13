@@ -171,6 +171,25 @@ class NetworksViewModelTest {
     }
 
     @Test
+    fun `clearing the search floats a network ticked while searching to the top`() = runBlocking<Unit> {
+        val settings = settings()
+        val vm = NetworksViewModel(settings)
+        val network = NetworkCatalog.all.last()
+        vm.onEnter()
+        vm.uiState.await { it.networks.isNotEmpty() }
+
+        vm.onSearchChanged(network.name)
+        vm.uiState.await { it.search == network.name }
+        vm.onNetworkToggled(network.key)
+        vm.uiState.await { network.key in it.selected }
+        vm.onSearchChanged("")
+
+        val state = vm.uiState.await { it.networks.size == NetworkCatalog.all.size && it.networks.first().key == network.key }
+        assertEquals(network.key, state.networks.first().key)
+        assertEquals(NetworkCatalog.all.size, state.networks.size, "nothing dropped")
+    }
+
+    @Test
     fun `the next visit floats the newly ticked network to the top`() = runBlocking<Unit> {
         val settings = settings()
         val vm = NetworksViewModel(settings)
