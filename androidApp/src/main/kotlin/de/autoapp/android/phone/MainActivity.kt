@@ -273,6 +273,7 @@ private fun PhoneApp() {
                                     hasLocationPermission = hasPermission,
                                     selection = trip.selection,
                                     socInput = trip.socInput,
+                                    arrivalSocInput = trip.arrivalSocInput,
                                     onToggleSelecting = tripViewModel::onSectionSelectingToggled,
                                     onPickPoint = tripViewModel::onSectionPointPicked,
                                     onSectionSent = tripViewModel::onSectionSent,
@@ -287,6 +288,10 @@ private fun PhoneApp() {
                                     onSocInputChange = tripViewModel::onStartSocInputChanged,
                                     onSocConfirm = tripViewModel::onStartSocConfirmed,
                                     onSocDismiss = tripViewModel::onStartSocEditDismissed,
+                                    onEditArrivalSoc = tripViewModel::onArrivalSocEditRequested,
+                                    onArrivalSocInputChange = tripViewModel::onArrivalSocInputChanged,
+                                    onArrivalSocConfirm = tripViewModel::onArrivalSocConfirmed,
+                                    onArrivalSocDismiss = tripViewModel::onArrivalSocEditDismissed,
                                     modifier = Modifier.fillMaxSize().padding(pagePadding),
                                 )
                             }

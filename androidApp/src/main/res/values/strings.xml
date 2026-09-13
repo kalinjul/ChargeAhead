@@ -206,6 +206,7 @@
     <string name="trip_maps_sent">An Google Maps übergeben</string>
     <string name="trip_replan">Neu planen</string>
     <string name="trip_soc_edit">Ladestand am Start ändern</string>
+    <string name="trip_arrival_soc_edit">Ladestand am Ziel ändern</string>
     <string name="trip_soc_confirm">Neu planen</string>
 
     <!-- Phone: charge-level dialog, shared by the plan sheet and the trip screen -->
