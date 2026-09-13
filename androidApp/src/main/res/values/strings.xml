@@ -175,6 +175,7 @@
     <string name="plan_to">Nach</string>
     <string name="plan_cta">Route planen</string>
     <string name="plan_soc_hint">Ladestand jetzt</string>
+    <string name="plan_soc_value">%1$s %%</string>
     <string name="plan_search_hint">Ziel suchen</string>
     <string name="plan_no_results">Keine Treffer</string>
     <string name="plan_search_failed">Zielsuche nicht erreichbar</string>
@@ -205,10 +206,13 @@
     <string name="trip_destination">Ziel</string>
     <string name="trip_maps_sent">An Google Maps übergeben</string>
     <string name="trip_replan">Neu planen</string>
-    <string name="trip_soc_title">Ladestand jetzt</string>
     <string name="trip_soc_edit">Ladestand am Start ändern</string>
     <string name="trip_soc_confirm">Neu planen</string>
-    <string name="trip_soc_cancel">Abbrechen</string>
+
+    <!-- Phone: charge-level dialog, shared by the plan sheet and the trip screen -->
+    <string name="soc_dialog_title">Ladestand jetzt</string>
+    <string name="soc_dialog_cancel">Abbrechen</string>
+    <string name="soc_dialog_apply">Übernehmen</string>
 
     <!-- Phone: charge now -->
     <string name="cn_title">Jetzt laden</string>

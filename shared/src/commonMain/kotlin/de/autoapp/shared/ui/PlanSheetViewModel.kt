@@ -14,11 +14,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /** Entering a destination and the charge level to start from. */
@@ -32,10 +34,12 @@ data class PlanSheetUiState(
     val recent: List<Destination> = emptyList(),
     val vehicleName: String? = null,
     val socInput: String = "",
+    /** The charge-level dialog's entry; `null` while it is closed. */
+    val socEditorInput: String? = null,
     val from: LatLon? = null,
 ) {
-    /** `null` while the typed value is not a usable percentage. */
-    val socPercent: Int? get() = socInput.toIntOrNull()?.takeIf { it in 1..100 }
+    /** `null` while the entered value is not a usable percentage. */
+    val socPercent: Int? get() = socInput.toIntOrNull()?.takeIf { it in SOC_PERCENT_RANGE }
 
     val canPlan: Boolean get() = chosen != null && socPercent != null && vehicleName != null
 
@@ -47,6 +51,13 @@ data class PlanSheetUiState(
     }
 }
 
+/** The charge levels the planner accepts — 0 % is not a trip, it is a tow. */
+internal val SOC_PERCENT_RANGE = 1..100
+
+/** The sheet always shows a charge level: the stored one, or the assumption. */
+private fun Double?.asSocInput(): String =
+    (this ?: PlanningFeature.DEFAULT_ASSUMED_SOC_PERCENT).roundToInt().toString()
+
 /**
  * The destination search behind the plan sheet.
  *
@@ -57,7 +68,7 @@ data class PlanSheetUiState(
 @OptIn(FlowPreview::class)
 class PlanSheetViewModel(
     private val feature: ChargeStopsFeature,
-    settings: SettingsStore,
+    private val settings: SettingsStore,
 ) : ViewModel() {
 
     private val input = MutableStateFlow(InputState())
@@ -76,8 +87,8 @@ class PlanSheetViewModel(
             chosen = input.chosen,
             recent = recent,
             vehicleName = vehicle?.displayName,
-            socInput = input.socInput
-                ?: (storedSoc ?: PlanningFeature.DEFAULT_ASSUMED_SOC_PERCENT).roundToInt().toString(),
+            socInput = input.socInput ?: storedSoc.asSocInput(),
+            socEditorInput = input.socEditor,
             from = fix?.position,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, PlanSheetUiState())
@@ -136,8 +147,32 @@ class PlanSheetViewModel(
         }
     }
 
-    fun onSocChanged(socInput: String) {
-        input.update { it.copy(socInput = socInput.filter(Char::isDigit).take(3)) }
+    /**
+     * Opens the charge-level dialog on what the sheet currently shows — the
+     * level entered for this trip, or the stored one it falls back to.
+     */
+    fun onSocEditRequested() {
+        viewModelScope.launch {
+            val current = input.value.socInput ?: settings.manualSocPercent.first().asSocInput()
+            input.update { it.copy(socEditor = current) }
+        }
+    }
+
+    fun onSocInputChanged(socInput: String) {
+        // Only while the dialog is open: a stray keystroke must not reopen it.
+        input.update { state ->
+            state.copy(socEditor = state.socEditor?.let { socInput.filter(Char::isDigit).take(3) })
+        }
+    }
+
+    fun onSocEditDismissed() {
+        input.update { it.copy(socEditor = null) }
+    }
+
+    /** Takes the entered level over into the sheet. Planning stays on the button. */
+    fun onSocConfirmed() {
+        val entered = input.value.socEditor?.toIntOrNull()?.takeIf { it in SOC_PERCENT_RANGE } ?: return
+        input.update { it.copy(socInput = entered.toString(), socEditor = null) }
     }
 
     private data class SearchInput(val query: String, val chosen: Boolean) {
@@ -151,6 +186,8 @@ class PlanSheetViewModel(
         val chosen: Destination? = null,
         /** `null` = untouched, so the stored charge level still shows through. */
         val socInput: String? = null,
+        /** `null` = the charge-level dialog is closed. */
+        val socEditor: String? = null,
     )
 
     private companion object {
