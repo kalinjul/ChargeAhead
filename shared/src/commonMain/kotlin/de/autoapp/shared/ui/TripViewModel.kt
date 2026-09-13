@@ -36,6 +36,8 @@ sealed interface TripUiState {
         val selection: SectionSelection = SectionSelection(),
         /** The quick charge-level editor's input; `null` while it is closed. */
         val socInput: String? = null,
+        /** The arrival-level editor's input; `null` while it is closed. */
+        val arrivalSocInput: String? = null,
     ) : TripUiState
 }
 
@@ -113,6 +115,7 @@ class TripViewModel(
     private val isPlanning = MutableStateFlow(false)
     private val selection = MutableStateFlow(SectionSelection())
     private val socEditor = MutableStateFlow<String?>(null)
+    private val arrivalSocEditor = MutableStateFlow<String?>(null)
     private val events = MutableStateFlow<TripEvent?>(null)
 
     val event: StateFlow<TripEvent?> = events.asStateFlow()
@@ -124,10 +127,11 @@ class TripViewModel(
         val planning: Boolean,
         val selection: SectionSelection,
         val socInput: String?,
+        val arrivalSocInput: String?,
     )
 
     val uiState: StateFlow<TripUiState> = combine(
-        combine(currentPlan, isPlanning, selection, socEditor, ::PlanInputs),
+        combine(currentPlan, isPlanning, selection, socEditor, arrivalSocEditor, ::PlanInputs),
         settings.savedRoutes,
         settings.manualSocPercent,
         feature.state,
@@ -143,6 +147,7 @@ class TripViewModel(
                 startSocPercent = socPercent,
                 selection = inputs.selection,
                 socInput = inputs.socInput,
+                arrivalSocInput = inputs.arrivalSocInput,
             )
         }
     }.stateIn(viewModelScope, WhileUiSubscribed, TripUiState.NoPlan)
@@ -161,6 +166,7 @@ class TripViewModel(
         // with a clean selection and no half-typed charge level.
         selection.value = SectionSelection()
         socEditor.value = null
+        arrivalSocEditor.value = null
         isPlanning.value = true
         viewModelScope.launch {
             socPercent?.let { settings.setManualSocPercent(it) }
@@ -240,6 +246,37 @@ class TripViewModel(
         val destination = currentPlan.value?.destination ?: return
         socEditor.value = null
         plan(destination, socPercent.toDouble())
+    }
+
+    /** Opens the arrival-level editor on the level this plan was made with. */
+    fun onArrivalSocEditRequested() {
+        viewModelScope.launch {
+            arrivalSocEditor.value = settings.arrivalSocPercent.first().roundToInt().toString()
+        }
+    }
+
+    fun onArrivalSocInputChanged(input: String) {
+        // Only while the editor is open: a stray keystroke must not reopen it.
+        arrivalSocEditor.update { open -> open?.let { input.filter(Char::isDigit).take(3) } }
+    }
+
+    fun onArrivalSocEditDismissed() {
+        arrivalSocEditor.value = null
+    }
+
+    /**
+     * Re-plans the same destination for the arrival level just entered. Like
+     * the start level, it changes every stop after it — and it is a standing
+     * preference, so it is stored rather than used for this one plan.
+     */
+    fun onArrivalSocConfirmed() {
+        val socPercent = arrivalSocEditor.value?.toIntOrNull()?.takeIf { it in ARRIVAL_SOC_RANGE } ?: return
+        val destination = currentPlan.value?.destination ?: return
+        arrivalSocEditor.value = null
+        viewModelScope.launch {
+            settings.setArrivalSocPercent(socPercent.toDouble())
+            plan(destination)
+        }
     }
 
     fun onSectionSelectingToggled() {

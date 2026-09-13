@@ -103,6 +103,12 @@ interface SettingsStore {
 
     val manualSocPercent: Flow<Double?>
 
+    /**
+     * How full the battery should still be at the destination. Trip planning
+     * charges for it; [DEFAULT_ARRIVAL_SOC_PERCENT] applies until it is set.
+     */
+    val arrivalSocPercent: Flow<Double>
+
     /** `null` means: no destination set, the corridor ahead in the direction of travel applies. */
     val destination: Flow<Destination?>
 
@@ -142,6 +148,8 @@ interface SettingsStore {
     suspend fun removeVehicle(displayName: String)
 
     suspend fun setManualSocPercent(socPercent: Double?)
+
+    suspend fun setArrivalSocPercent(socPercent: Double)
 
     suspend fun setChargeFilters(filters: ChargeFilters)
 

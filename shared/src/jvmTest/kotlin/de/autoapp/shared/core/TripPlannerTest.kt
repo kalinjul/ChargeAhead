@@ -88,6 +88,40 @@ class TripPlannerTest {
         }
     }
 
+    /** Issue #21: the driver sets what has to be left at the destination. */
+    @Test
+    fun `plans to arrive with the requested charge level`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val plan = assertIs<TripPlanResult.Planned>(
+            planner(route, sitesAlong(route))
+                .plan(start, destination, id4, startSocPercent = 90.0, arrivalSocPercent = 50.0),
+        ).plan
+
+        assertTrue(
+            plan.arrivalSocPercent >= 50.0 - 1e-9,
+            "asked to arrive at 50 %, arrives at ${plan.arrivalSocPercent}",
+        )
+        // Only the stop that finishes the trip charges past the 80 % mark, and
+        // only because the arrival level asks for it.
+        plan.stops.dropLast(1).forEach { stop ->
+            assertTrue(stop.departureSocPercent <= 80.0 + 1e-9, "intermediate stops stay fast")
+        }
+    }
+
+    /** The other end of the same setting: arriving on fumes is the driver's call. */
+    @Test
+    fun `a low arrival level plans fewer stops than a high one`() = runBlocking<Unit> {
+        val route = straightRoute()
+        fun stopsFor(arrivalSoc: Double) = assertIs<TripPlanResult.Planned>(
+            runBlocking {
+                planner(route, sitesAlong(route))
+                    .plan(start, destination, id4, startSocPercent = 90.0, arrivalSocPercent = arrivalSoc)
+            },
+        ).plan.stops.size
+
+        assertTrue(stopsFor(0.0) <= stopsFor(70.0), "a full arrival cannot cost fewer stops than an empty one")
+    }
+
     @Test
     fun `short trip needs no stop`() = runBlocking<Unit> {
         val points = listOf(start, interpolate(start, end, 0.1))

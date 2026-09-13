@@ -47,6 +47,7 @@ import de.autoapp.android.phone.components.StationCard
 import de.autoapp.android.phone.theme.tabular
 import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.core.MapsHandoff
+import de.autoapp.shared.ui.ARRIVAL_SOC_RANGE
 import de.autoapp.shared.ui.SectionSelection
 import de.autoapp.shared.core.PlannedStop
 import de.autoapp.shared.core.TripPlan
@@ -76,6 +77,8 @@ fun TripPlanScreen(
     selection: SectionSelection,
     // The quick charge-level entry on the start row: `null` while closed.
     socInput: String?,
+    // The same on the destination row, for the level to arrive with.
+    arrivalSocInput: String?,
     onToggleSelecting: () -> Unit,
     onPickPoint: (Int) -> Unit,
     onSectionSent: () -> Unit,
@@ -87,6 +90,10 @@ fun TripPlanScreen(
     onSocInputChange: (String) -> Unit,
     onSocConfirm: () -> Unit,
     onSocDismiss: () -> Unit,
+    onEditArrivalSoc: () -> Unit,
+    onArrivalSocInputChange: (String) -> Unit,
+    onArrivalSocConfirm: () -> Unit,
+    onArrivalSocDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
@@ -109,10 +116,25 @@ fun TripPlanScreen(
     socInput?.let { input ->
         SocEditDialog(
             value = input,
+            title = stringResource(R.string.soc_dialog_title),
             confirmLabel = stringResource(R.string.trip_soc_confirm),
             onValueChange = onSocInputChange,
             onConfirm = onSocConfirm,
             onDismiss = onSocDismiss,
+        )
+    }
+
+    // The level to arrive with, edited where it is read: on the destination
+    // row. Confirming re-plans for the same reason the start level does.
+    arrivalSocInput?.let { input ->
+        SocEditDialog(
+            value = input,
+            title = stringResource(R.string.garage_arrival_title),
+            confirmLabel = stringResource(R.string.trip_soc_confirm),
+            onValueChange = onArrivalSocInputChange,
+            onConfirm = onArrivalSocConfirm,
+            onDismiss = onArrivalSocDismiss,
+            valueRange = ARRIVAL_SOC_RANGE.first.toFloat()..ARRIVAL_SOC_RANGE.last.toFloat(),
         )
     }
 
@@ -235,7 +257,11 @@ fun TripPlanScreen(
                         plan.arrivalSocPercent.roundToInt(),
                     ),
                     selected = selecting && selection.includes(pointCount - 1),
-                    onClick = { if (selecting) onPickPoint(pointCount - 1) },
+                    // Same deal as the start row: outside selection mode the
+                    // destination row is where the arrival level is set.
+                    onClick = { if (selecting) onPickPoint(pointCount - 1) else onEditArrivalSoc() },
+                    trailingIcon = if (selecting) null else painterResource(R.drawable.ic_pen),
+                    trailingDescription = stringResource(R.string.trip_arrival_soc_edit),
                 )
             }
             item {

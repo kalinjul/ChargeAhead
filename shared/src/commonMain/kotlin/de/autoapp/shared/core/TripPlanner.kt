@@ -3,6 +3,7 @@ package de.autoapp.shared.core
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ConnectorType
+import de.autoapp.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
 import de.autoapp.shared.domain.DEFAULT_RESERVE_SOC_PERCENT
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
@@ -82,6 +83,7 @@ class TripPlanner(
         destination: Destination,
         vehicle: VehicleProfile,
         startSocPercent: Double,
+        arrivalSocPercent: Double = DEFAULT_ARRIVAL_SOC_PERCENT,
         filters: ChargeFilters = ChargeFilters(),
         networks: NetworkPreferences = NetworkPreferences(),
     ): TripPlanResult {
@@ -97,6 +99,11 @@ class TripPlanner(
         val totalKm = route.distanceKm
         val minutesPerKm = route.durationMinutes / totalKm
 
+        // What has to be left in the battery at the destination. Never below
+        // the reserve: the driver asking to arrive empty doesn't make the last
+        // kilowatt-hours any more plannable.
+        val arrivalReserve = maxOf(arrivalSocPercent, DEFAULT_RESERVE_SOC_PERCENT)
+
         val stops = mutableListOf<PlannedStop>()
         var socNow = startSocPercent
         var kmNow = 0.0
@@ -104,13 +111,16 @@ class TripPlanner(
 
         while (stops.size < MAX_STOPS) {
             val reachKm = kmNow + RangeCalculator.rangeKm(vehicle, socNow)
-            if (totalKm <= reachKm - ARRIVAL_HEADROOM_KM) break
+            // Driving on to the destination is only "done" if the battery
+            // still holds the arrival level there — a charger, unlike the
+            // destination, may be approached down to the reserve.
+            if (totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow, arrivalReserve) - ARRIVAL_HEADROOM_KM) break
 
             val stop = pickStop(candidates, kmNow, reachKm, filters, networks)
                 ?: return TripPlanResult.NoChargerInReach(afterKm = kmNow)
 
             val arrivalSoc = RangeCalculator.socOnArrivalPercent(vehicle, socNow, stop.kmFromStart - kmNow)
-            val departureSoc = departureSocFor(vehicle, stop.kmFromStart, totalKm, arrivalSoc)
+            val departureSoc = departureSocFor(vehicle, stop.kmFromStart, totalKm, arrivalSoc, arrivalReserve)
             val chargeKwh = (departureSoc - arrivalSoc) / 100.0 * vehicle.usableBatteryKwh
             val chargeMinutes = chargeMinutes(chargeKwh, stop.maxPowerKw, vehicle)
             chargeMinutesTotal += chargeMinutes
@@ -134,7 +144,7 @@ class TripPlanner(
         // destination — with a healthy vehicle profile that's a sign of a
         // degenerate input (a moped battery for a continental trip), and an
         // honest refusal beats a 14-stop plan nobody would drive.
-        val reachesDestination = totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow)
+        val reachesDestination = totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow, arrivalReserve)
         if (!reachesDestination) return TripPlanResult.NoChargerInReach(afterKm = kmNow)
 
         val arrivalSoc = RangeCalculator.socOnArrivalPercent(vehicle, socNow, totalKm - kmNow)
@@ -249,18 +259,31 @@ class TripPlanner(
         return (late.ifEmpty { pool }).maxByOrNull { it.maxPowerKw * 1000.0 + it.kmFromStart }
     }
 
-    /** Charge to what the rest of the trip needs (plus margin), never past [TARGET_SOC_PERCENT]. */
+    /**
+     * Charge to what the rest of the trip needs (plus margin), on top of what
+     * has to be left at the destination.
+     *
+     * The [TARGET_SOC_PERCENT] cap holds for the same reason as always:
+     * everything above it charges so slowly that driving on and stopping
+     * again wins. The exception is the stop that could otherwise finish the
+     * trip — one that reaches the destination on a normal charge and only
+     * falls short of the *arrival* level the driver asked for. Capping that
+     * one would answer a request for a full-ish arrival with an extra stop
+     * nobody wanted, so it charges on, up to full.
+     */
     private fun departureSocFor(
         vehicle: VehicleProfile,
         stopKm: Double,
         totalKm: Double,
         arrivalSoc: Double,
+        arrivalReserve: Double,
     ): Double {
         val remainingKm = totalKm - stopKm
         val neededKwh = remainingKm / 100.0 * vehicle.consumptionKwhPer100Km
-        val neededSoc = neededKwh / vehicle.usableBatteryKwh * 100.0 +
-            DEFAULT_RESERVE_SOC_PERCENT + CHARGE_MARGIN_SOC
-        return neededSoc.coerceIn(arrivalSoc, TARGET_SOC_PERCENT)
+        val driveSoc = neededKwh / vehicle.usableBatteryKwh * 100.0 + CHARGE_MARGIN_SOC
+        val finishesTheTrip = driveSoc + DEFAULT_RESERVE_SOC_PERCENT <= TARGET_SOC_PERCENT
+        val cap = if (finishesTheTrip) FULL_SOC_PERCENT else TARGET_SOC_PERCENT
+        return (driveSoc + arrivalReserve).coerceAtMost(cap).coerceAtLeast(arrivalSoc)
     }
 
     private fun chargeMinutes(kwh: Double, sitePowerKw: Double, vehicle: VehicleProfile): Double {
@@ -313,6 +336,9 @@ class TripPlanner(
     private companion object {
         /** Charging past 80 % is slow enough that driving on and stopping again wins. */
         const val TARGET_SOC_PERCENT = 80.0
+
+        /** Nothing charges past this, whatever the arrival level asks for. */
+        const val FULL_SOC_PERCENT = 100.0
 
         /** On top of reserve + need, so a headwind doesn't turn the plan into a tow job. */
         const val CHARGE_MARGIN_SOC = 5.0
