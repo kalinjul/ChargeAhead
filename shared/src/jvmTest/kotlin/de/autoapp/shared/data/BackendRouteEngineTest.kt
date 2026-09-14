@@ -13,6 +13,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -39,6 +40,56 @@ class BackendRouteEngineTest {
             baseUrl = "https://example.invalid/",
             token = "test-token",
         )
+    }
+
+    /** The backend coalesces server-side; the client only carries it across. */
+    @Test
+    fun theSpeedProfileIsCarriedAcross() = runBlocking {
+        val engine = engineRespondingWith(
+            """
+            {
+              "points": [{"lat": 48.9, "lon": 11.4}, {"lat": 49.1, "lon": 11.6}],
+              "distanceKm": 94.2,
+              "durationMinutes": 63.0,
+              "provider": "osm",
+              "attribution": "OpenStreetMap",
+              "segments": [
+                {"fromKm": 0.0, "distanceKm": 8.2, "durationMinutes": 12.0},
+                {"fromKm": 8.2, "distanceKm": 86.0, "durationMinutes": 51.0}
+              ]
+            }
+            """.trimIndent(),
+        )
+
+        val route = assertNotNull(engine.route(from, to))
+
+        assertEquals(2, route.segments.size)
+        assertEquals(0.0, route.segments[0].fromKm)
+        assertEquals(8.2, route.segments[0].distanceKm)
+        assertEquals(12.0, route.segments[0].durationMinutes)
+        assertEquals(8.2, route.segments[1].fromKm)
+        assertTrue(route.segments[1].averageSpeedKmh > route.segments[0].averageSpeedKmh)
+    }
+
+    /** An older server sends no profile at all, and the field must stay optional. */
+    @Test
+    fun aResponseWithoutAProfileStillMaps() = runBlocking {
+        val engine = engineRespondingWith(
+            """
+            {
+              "points": [{"lat": 48.9, "lon": 11.4}, {"lat": 49.1, "lon": 11.6}],
+              "distanceKm": 94.2,
+              "durationMinutes": 63.0,
+              "provider": "osm",
+              "attribution": "OpenStreetMap"
+            }
+            """.trimIndent(),
+        )
+
+        val route = assertNotNull(engine.route(from, to))
+
+        assertTrue(route.segments.isEmpty())
+        assertEquals(94.2, route.distanceKm)
     }
 
     @Test

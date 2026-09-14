@@ -4,7 +4,7 @@ What is built, what comes next, and which questions are still open.
 Design and platform constraints live in **[ARCHITECTURE.md](ARCHITECTURE.md)**;
 this file only says *what* gets built in which order, and *why not yet*.
 
-As of: 2026-09-05
+As of: 2026-09-14
 
 ---
 
@@ -100,8 +100,16 @@ Still open:
    not approved by Apple is documented inconsistently. Needs practical
    verification once a Mac with Xcode is available. Affects the M0 schedule
    on the iOS side.
-3. **Consumption model** — a constant value is enough for M2. What comes
-   next, in order of expected benefit:
+3. **Consumption model** — **speed is in** (2026-09-14). `Route` carries a
+   speed profile (`segments`, per-stretch distance and time), the backend
+   supplies it from the routing provider's own steps, and
+   `SpeedAwareConsumption` prices each stretch at the speed it implies. The
+   charging curve went the same way: `GenericChargeCurve` replaced the flat
+   `AVERAGE_CURVE_FACTOR = 0.65`, and charge time is integrated over the SoC
+   band. Both are described in ARCHITECTURE.md §5.1.
+
+   The blocker named below is therefore gone: `ConsumptionModel` knows the
+   route. What is still open, in order of expected benefit:
 
    - **Elevation profile.** The biggest systematic error on routes with
      grade. Over the Alps, the same car uses a multiple of the flat-ground
@@ -117,12 +125,19 @@ Still open:
      every kilometer driven. Aging it forward over the distance driven
      would be the same calculation that already produces the arrival SoC —
      until then, the UI has to make visible how old the value is.
-   - **Temperature and speed**, plus, from M4, the rolling average from
-     actual SoC drop over distance.
+   - **Temperature.** Winter costs 20–40 % (heating, battery, air density),
+     and it slows the charging curve as much as it raises consumption — the
+     one factor that hits both halves of the estimate. Needs the same weather
+     source as the headwind.
+   - From M4, the rolling average from actual SoC drop over distance.
 
-   All of this hinges on the same point: the `ConsumptionModel` type has to
-   know the route, not just its length. As long as `VehicleProfile` carries
-   a scalar consumption value, none of this is possible.
+   Elevation lands on `RouteSegment` (an ascent and a descent per stretch, the
+   same km-indexed shape, additive to the wire contract); temperature and wind
+   land on `ConsumptionModel`. Neither needs another structural change.
+
+   Still true, and untouched by the above: the planner is greedy, and
+   `TARGET_SOC_PERCENT = 80` is now an empirical question rather than an
+   assumption, because there is a curve to answer it with.
 
 4. **Vehicle list.** Deliberately not built in M2: the driver enters usable
    capacity and consumption themselves. That's honest — the numbers are in

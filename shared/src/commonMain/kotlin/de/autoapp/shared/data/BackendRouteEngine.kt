@@ -3,6 +3,7 @@ package de.autoapp.shared.data
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
+import de.autoapp.shared.domain.RouteSegment
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.bearerAuth
@@ -48,6 +49,13 @@ class BackendRouteEngine(
             points = points,
             distanceKm = route.distanceKm,
             durationMinutes = route.durationMinutes,
+            segments = route.segments.map {
+                RouteSegment(
+                    fromKm = it.fromKm,
+                    distanceKm = it.distanceKm,
+                    durationMinutes = it.durationMinutes,
+                )
+            },
         )
     }
 

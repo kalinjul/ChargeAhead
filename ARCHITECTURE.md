@@ -242,10 +242,9 @@ data class Connector(
 data class VehicleProfile(
     val displayName: String,
     val usableBatteryKwh: Double,
-    val consumption: ConsumptionModel, // kWh/100 km, possibly temperature-/speed-dependent
+    val consumptionKwhPer100Km: Double, // at the reference speed, see 5.1
+    val dcPeakPowerKw: Double?,        // null means unknown
     val acceptedConnectors: Set<ConnectorType>,
-    val maxDcPowerKw: Double,
-    val maxAcPowerKw: Double,
 )
 
 data class EnergyState(
@@ -295,10 +294,46 @@ available_kWh = usableBatteryKwh × (soc − reserveSoc) / 100
 range_km = available_kWh / consumption_kWh_per_100km × 100
 ```
 
-`reserveSoc` is configurable, default 10%. Consumption starts as a fixed
-value from the vehicle profile; a rolling average from actual SoC drop over
-distance is, from M4 on, a clear improvement, but it requires reliable SoC
-measurements — so it's unusable with manual entry.
+`reserveSoc` is configurable, default 10%. A rolling average from actual SoC
+drop over distance is, from M4 on, a clear improvement, but it requires
+reliable SoC measurements — so it's unusable with manual entry.
+
+This scalar form still governs the corridor list and the reachability rating,
+which have no route to work with: there, straight-line distance times
+`ROUTE_DETOUR_FACTOR` is all that is known, and a finer consumption model would
+be false precision on top of a coarse distance.
+
+**Trip planning uses a route-aware model instead** (`core/ConsumptionModel.kt`).
+`SpeedAwareConsumption` walks `Route.segments` — the per-stretch distance and
+time the route service supplies — and scales the driver's figure per segment:
+
+```
+factor(v) = 0.45 + 0.45 × (v / vRef)² + 0.10 × (vRef / v)
+```
+
+Energy per kilometre is roughly `rolling + drag·v² + auxiliary/v`. Absolute
+coefficients would need drag area and mass the app cannot ask for, so the
+*shares* those terms hold at the reference speed are fixed instead, and the
+whole thing is normalised to return the configured value unchanged at
+`vRef = 100 km/h`. That makes the reference speed a claim about what the
+driver's number means, which is why the garage says so next to the slider.
+Without segments the route's own average speed applies.
+
+### 5.1a Charging time
+
+`core/ChargeCurve.kt`. A DC session holds close to its peak while the battery
+is empty and tapers hard once it is not; `GenericChargeCurve` is flat to 50 %,
+then falls to 0.35 of peak at 80 % and 0.15 at 100 %. `chargeMinutes`
+integrates over the SoC band rather than dividing by one average, because the
+number the driver reads is the time, and the same kilowatt-hours cost very
+different amounts of it depending on where in the battery they go.
+
+The accepted power is `min(sitePower, dcPeak, usableBatteryKwh × 2.5)`. The
+C-rate ceiling is there because a catalog peak is often a figure held for
+seconds on a preconditioned pack, and a small battery cannot sustain it.
+
+One shape for every car: per-model curves are data the app does not have. They
+can replace it later without any caller changing.
 
 ### 5.2 Reachability
 
