@@ -95,7 +95,7 @@ class TripPlanner(
 
         val candidates = candidatesAlong(route, vehicle, networks)
 
-        val cumulativeKm = cumulativeDistances(route.points)
+        val consumption = SpeedAwareConsumption(vehicle.consumptionKwhPer100Km)
         val totalKm = route.distanceKm
         val minutesPerKm = route.durationMinutes / totalKm
 
@@ -110,19 +110,21 @@ class TripPlanner(
         var chargeMinutesTotal = 0.0
 
         while (stops.size < MAX_STOPS) {
-            val reachKm = kmNow + RangeCalculator.rangeKm(vehicle, socNow)
+            val reachKm = consumption.reachKm(route, kmNow, availableKwh(vehicle, socNow))
             // Driving on to the destination is only "done" if the battery
             // still holds the arrival level there — a charger, unlike the
             // destination, may be approached down to the reserve.
-            if (totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow, arrivalReserve) - ARRIVAL_HEADROOM_KM) break
+            val reachWithArrivalLevel = consumption.reachKm(route, kmNow, availableKwh(vehicle, socNow, arrivalReserve))
+            if (totalKm <= reachWithArrivalLevel - ARRIVAL_HEADROOM_KM) break
 
             val stop = pickStop(candidates, kmNow, reachKm, filters, networks)
                 ?: return TripPlanResult.NoChargerInReach(afterKm = kmNow)
 
-            val arrivalSoc = RangeCalculator.socOnArrivalPercent(vehicle, socNow, stop.kmFromStart - kmNow)
-            val departureSoc = departureSocFor(vehicle, stop.kmFromStart, totalKm, arrivalSoc, arrivalReserve)
+            val arrivalSoc = socAfter(consumption, route, vehicle, socNow, kmNow, stop.kmFromStart)
+            val departureSoc =
+                departureSocFor(consumption, route, vehicle, stop.kmFromStart, totalKm, arrivalSoc, arrivalReserve)
             val chargeKwh = (departureSoc - arrivalSoc) / 100.0 * vehicle.usableBatteryKwh
-            val chargeMinutes = chargeMinutes(chargeKwh, stop.maxPowerKw, vehicle)
+            val chargeMinutes = chargeMinutes(vehicle, stop.maxPowerKw, arrivalSoc, departureSoc)
             chargeMinutesTotal += chargeMinutes
 
             stops += PlannedStop(
@@ -144,10 +146,11 @@ class TripPlanner(
         // destination — with a healthy vehicle profile that's a sign of a
         // degenerate input (a moped battery for a continental trip), and an
         // honest refusal beats a 14-stop plan nobody would drive.
-        val reachesDestination = totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow, arrivalReserve)
+        val reachesDestination =
+            totalKm <= consumption.reachKm(route, kmNow, availableKwh(vehicle, socNow, arrivalReserve))
         if (!reachesDestination) return TripPlanResult.NoChargerInReach(afterKm = kmNow)
 
-        val arrivalSoc = RangeCalculator.socOnArrivalPercent(vehicle, socNow, totalKm - kmNow)
+        val arrivalSoc = socAfter(consumption, route, vehicle, socNow, kmNow, totalKm)
 
         return TripPlanResult.Planned(
             TripPlan(
@@ -176,7 +179,7 @@ class TripPlanner(
      * Chunks keep every query at the radius the sources were built for.
      */
     private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
-        val cumulative = cumulativeDistances(route.points)
+        val cumulative = cumulativeDistances(route)
         val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }
         val seen = LinkedHashMap<String, Candidate>()
 
@@ -234,9 +237,9 @@ class TripPlanner(
         // battery, insisting on 40 km of driving before the first stop would
         // reject a charger 5 km away — and the plan would fail exactly when
         // the driver needs it most.
-        // The 15 % cap matters at the bottom end: the reach already contains
-        // the 10 % reserve (RangeCalculator), and a second fat margin on a
-        // 20 km reach would exclude every reachable charger.
+        // The 15 % cap matters at the bottom end: the reach already keeps the
+        // 10 % reserve unspent, and a second fat margin on a 20 km reach would
+        // exclude every reachable charger.
         val reachAheadKm = reachKm - kmNow
         val minAheadKm = minOf(MIN_LEG_KM, reachAheadKm * 0.2)
         val maxAheadKm = reachAheadKm - minOf(STOP_SAFETY_KM, reachAheadKm * 0.15)
@@ -270,38 +273,73 @@ class TripPlanner(
      * falls short of the *arrival* level the driver asked for. Capping that
      * one would answer a request for a full-ish arrival with an extra stop
      * nobody wanted, so it charges on, up to full.
+     *
+     * That exception only applies when charging on would actually reach the
+     * requested arrival level. A stop that cannot get there even at 100 % still
+     * needs another stop after it, and lifting the cap would buy the slowest
+     * part of the curve for nothing.
      */
     private fun departureSocFor(
+        consumption: ConsumptionModel,
+        route: Route,
         vehicle: VehicleProfile,
         stopKm: Double,
         totalKm: Double,
         arrivalSoc: Double,
         arrivalReserve: Double,
     ): Double {
-        val remainingKm = totalKm - stopKm
-        val neededKwh = remainingKm / 100.0 * vehicle.consumptionKwhPer100Km
+        val neededKwh = consumption.energyKwh(route, stopKm, totalKm)
         val driveSoc = neededKwh / vehicle.usableBatteryKwh * 100.0 + CHARGE_MARGIN_SOC
-        val finishesTheTrip = driveSoc + DEFAULT_RESERVE_SOC_PERCENT <= TARGET_SOC_PERCENT
-        val cap = if (finishesTheTrip) FULL_SOC_PERCENT else TARGET_SOC_PERCENT
+        val reachesOnANormalCharge = driveSoc + DEFAULT_RESERVE_SOC_PERCENT <= TARGET_SOC_PERCENT
+        val arrivalLevelIsReachable = driveSoc + arrivalReserve <= FULL_SOC_PERCENT
+        val cap = if (reachesOnANormalCharge && arrivalLevelIsReachable) FULL_SOC_PERCENT else TARGET_SOC_PERCENT
         return (driveSoc + arrivalReserve).coerceAtMost(cap).coerceAtLeast(arrivalSoc)
     }
 
-    private fun chargeMinutes(kwh: Double, sitePowerKw: Double, vehicle: VehicleProfile): Double {
-        val peak = minOf(sitePowerKw, vehicle.dcPeakPowerKw ?: sitePowerKw)
-        // The curve tapers hard above ~60 %; a flat factor over the whole
-        // session is the workable approximation until the consumption model
-        // knows real curves (ROADMAP open item 3).
-        val averageKw = peak * AVERAGE_CURVE_FACTOR
-        return kwh / averageKw * 60.0
+    /** Energy above [reserveSocPercent], the part that may be planned into a leg. */
+    private fun availableKwh(
+        vehicle: VehicleProfile,
+        socPercent: Double,
+        reserveSocPercent: Double = DEFAULT_RESERVE_SOC_PERCENT,
+    ): Double = vehicle.usableBatteryKwh * (socPercent - reserveSocPercent).coerceAtLeast(0.0) / 100.0
+
+    /**
+     * Relative to the full battery, not to the portion above the reserve — the
+     * driver reads off the same number their car's own display shows, so it may
+     * fall below the reserve but never below zero.
+     */
+    private fun socAfter(
+        consumption: ConsumptionModel,
+        route: Route,
+        vehicle: VehicleProfile,
+        socPercent: Double,
+        fromKm: Double,
+        toKm: Double,
+    ): Double {
+        val neededSoc = consumption.energyKwh(route, fromKm, toKm) / vehicle.usableBatteryKwh * 100.0
+        return (socPercent - neededSoc).coerceAtLeast(0.0)
     }
 
-    private fun cumulativeDistances(points: List<LatLon>): List<Double> {
+    /**
+     * Scaled so the last entry is the route's own length.
+     *
+     * [Route.points] is the simplified path, so summing it cuts every corner
+     * and lands short — on a long route by kilometres. Everything else here
+     * measures in `route.distanceKm`: the destination check, the reach, and the
+     * segments of the speed profile. Without the scaling, a candidate's
+     * km-from-start would be read in one frame and spent in another.
+     */
+    private fun cumulativeDistances(route: Route): List<Double> {
+        val points = route.points
         val distances = ArrayList<Double>(points.size)
         distances += 0.0
         for (i in 1 until points.size) {
             distances += distances[i - 1] + points[i - 1].distanceKmTo(points[i])
         }
-        return distances
+        val walked = distances.last()
+        if (walked <= 0.0) return distances
+        val scale = route.distanceKm / walked
+        return distances.map { it * scale }
     }
 
     private data class Projection(val kmFromStart: Double, val distanceKm: Double)
@@ -360,8 +398,6 @@ class TripPlanner(
 
         /** A destination this close to the range edge doesn't need a final stop. */
         const val ARRIVAL_HEADROOM_KM = 0.0
-
-        const val AVERAGE_CURVE_FACTOR = 0.65
 
         const val MAX_STOPS = 8
     }

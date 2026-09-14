@@ -8,6 +8,7 @@ import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.NetworkPreferences
 import de.autoapp.shared.domain.Route
+import de.autoapp.shared.domain.RouteSegment
 import de.autoapp.shared.domain.RouteEngine
 import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
@@ -36,10 +37,10 @@ class TripPlannerTest {
         dcPeakPowerKw = 135.0,
     )
 
-    private fun straightRoute(pointCount: Int = 40): Route {
+    private fun straightRoute(pointCount: Int = 40, averageSpeedKmh: Double = 110.0): Route {
         val points = (0 until pointCount).map { interpolate(start, end, it / (pointCount - 1.0)) }
         val km = 660.0
-        return Route(points = points, distanceKm = km, durationMinutes = km / 110.0 * 60.0)
+        return Route(points = points, distanceKm = km, durationMinutes = km / averageSpeedKmh * 60.0)
     }
 
     private fun engineReturning(route: Route?): RouteEngine = object : RouteEngine {
@@ -177,6 +178,111 @@ class TripPlannerTest {
         assertEquals(plan.stops.sortedBy { it.kmFromStart }, plan.stops, "projected stops stay in driving order")
         plan.stops.forEach {
             assertTrue(it.kmFromStart in 0.0..route.distanceKm, "km-from-start stays on the route")
+        }
+    }
+
+    /**
+     * The point of the speed profile. The same road at motorway pace costs
+     * enough more energy to change the plan, and a planner that cannot see that
+     * promises a trip the car does not make.
+     */
+    @Test
+    fun `a faster route needs at least as many stops as a slow one`() = runBlocking<Unit> {
+        fun stopsAt(speedKmh: Double): Int {
+            val route = straightRoute(averageSpeedKmh = speedKmh)
+            return assertIs<TripPlanResult.Planned>(
+                runBlocking { planner(route, sitesAlong(route)).plan(start, destination, id4, startSocPercent = 90.0) },
+            ).plan.stops.size
+        }
+
+        val slow = stopsAt(90.0)
+        val fast = stopsAt(150.0)
+
+        assertTrue(fast >= slow, "150 km/h darf nicht weniger Stopps brauchen als 90: $fast gegen $slow")
+        assertTrue(fast > slow, "150 km/h muss teurer sein als 90: $fast gegen $slow")
+    }
+
+    /** The speed profile beats the route average where the two disagree. */
+    @Test
+    fun `the segments decide the plan, not the route average`() = runBlocking<Unit> {
+        val flat = straightRoute(averageSpeedKmh = 110.0)
+        // Same distance and same total time, but driven in two very different halves.
+        val mixed = flat.copy(
+            segments = listOf(
+                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0 / 75.0 * 60.0),
+                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 330.0 / 205.0 * 60.0),
+            ),
+        )
+
+        val flatPlan = assertIs<TripPlanResult.Planned>(
+            planner(flat, sitesAlong(flat)).plan(start, destination, id4, startSocPercent = 90.0),
+        ).plan
+        val mixedPlan = assertIs<TripPlanResult.Planned>(
+            planner(mixed, sitesAlong(mixed)).plan(start, destination, id4, startSocPercent = 90.0),
+        ).plan
+
+        assertTrue(
+            mixedPlan.stops.first().kmFromStart > flatPlan.stops.first().kmFromStart,
+            "die langsame erste Hälfte muss den ersten Stopp nach hinten schieben",
+        )
+    }
+
+    /**
+     * A route the service gave no breakdown for still has to plan. The average
+     * speed is then all there is, and the result must stay in the same
+     * ballpark as before the profile existed.
+     */
+    @Test
+    fun `a route without segments still plans`() = runBlocking<Unit> {
+        val route = straightRoute()
+        assertTrue(route.segments.isEmpty())
+
+        val plan = assertIs<TripPlanResult.Planned>(
+            planner(route, sitesAlong(route)).plan(start, destination, id4, startSocPercent = 90.0),
+        ).plan
+
+        assertTrue(plan.stops.size in 2..4, "unerwartete Stoppzahl: ${plan.stops.size}")
+        assertTrue(plan.stops.all { it.chargeMinutes > 0.0 })
+    }
+
+    /**
+     * With a real curve the time depends on *where* in the battery the energy
+     * goes, not just how much of it there is.
+     */
+    @Test
+    fun `charge time follows the curve, not a flat average`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val plan = assertIs<TripPlanResult.Planned>(
+            planner(route, sitesAlong(route)).plan(start, destination, id4, startSocPercent = 90.0),
+        ).plan
+
+        plan.stops.forEach { stop ->
+            val averageKw = stop.chargeKwh / stop.chargeMinutes * 60.0
+            assertTrue(
+                averageKw < minOf(stop.maxPowerKw, id4.dcPeakPowerKw!!) + 1e-9,
+                "kein Stopp darf über der Spitzenleistung laden: $averageKw",
+            )
+        }
+    }
+
+    /**
+     * Charging past 80 % buys the slowest part of the curve. A stop may only do
+     * it when that actually delivers the arrival level the driver asked for —
+     * otherwise it charges slowly *and* another stop follows anyway.
+     */
+    @Test
+    fun `a stop that cannot reach the arrival level anyway stays under the cap`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val plan = assertIs<TripPlanResult.Planned>(
+            planner(route, sitesAlong(route))
+                .plan(start, destination, id4, startSocPercent = 90.0, arrivalSocPercent = 70.0),
+        ).plan
+
+        plan.stops.dropLast(1).forEach { stop ->
+            assertTrue(
+                stop.departureSocPercent <= 80.0 + 1e-9,
+                "Zwischenstopp bei km ${stop.kmFromStart} lädt auf ${stop.departureSocPercent} %",
+            )
         }
     }
 

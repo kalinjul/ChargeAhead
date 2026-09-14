@@ -256,7 +256,7 @@
     <string name="garage_range">Reichweite</string>
     <string name="garage_range_value">≈ %1$d km</string>
     <string name="garage_consumption">Dein Verbrauch: %1$s kWh/100 km</string>
-    <string name="garage_consumption_hint">Datenblatt sagt %1$s — an die eigene Fahrweise anpassen.</string>
+    <string name="garage_consumption_hint">Datenblatt sagt %1$s — an die eigene Fahrweise anpassen. Gemeint ist der Wert bei rund 100 km/h; für schnellere oder langsamere Abschnitte rechnet die Planung selbst um.</string>
     <string name="garage_soc">Ladestand: %1$d %%</string>
     <string name="garage_soc_unset">Ladestand: nicht eingetragen</string>
     <string name="garage_search">Fahrzeug suchen</string>
