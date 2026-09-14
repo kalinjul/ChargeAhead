@@ -239,7 +239,7 @@ class ChargeStopFormatterTest {
     @Test
     fun plannedStopSecondaryLine_showsPowerCountAndChargeTime() {
         assertEquals(
-            "150 kW · 6 Ladepunkte · ca. 25 min laden",
+            "150 kW · 6 Ladepunkte · ca. 25 min laden bis 80 %",
             ChargeStopFormatter.plannedStopSecondaryLine(plannedStop()),
         )
     }
@@ -255,9 +255,14 @@ class ChargeStopFormatterTest {
         )
 
         assertEquals(
-            "150 kW · ca. 25 min laden",
+            "150 kW · ca. 25 min laden bis 80 %",
             ChargeStopFormatter.plannedStopSecondaryLine(plannedStop(partiallyCounted)),
         )
+    }
+
+    @Test
+    fun chargeToLabel_showsTimeAndTargetLevel() {
+        assertEquals("25 min laden bis 80 %", ChargeStopFormatter.chargeToLabel(plannedStop()))
     }
 
     @Test

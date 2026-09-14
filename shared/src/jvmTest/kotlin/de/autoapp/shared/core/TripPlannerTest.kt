@@ -23,8 +23,7 @@ import kotlin.test.assertTrue
 
 class TripPlannerTest {
 
-    // Roughly Amsterdam → München as a straight line; the planner only sees
-    // the geometry, not the map, so a synthetic line is a valid route.
+    // Roughly Amsterdam → München; the planner only sees geometry, not a map.
     private val start = LatLon(52.37, 4.90)
     private val end = LatLon(48.14, 11.58)
     private val destination = Destination("München", end)
@@ -98,12 +97,12 @@ class TripPlannerTest {
                 .plan(start, destination, id4, startSocPercent = 90.0, arrivalSocPercent = 50.0),
         ).plan
 
+        // Not just "at least 50" — overshooting makes the setting undialable.
         assertTrue(
-            plan.arrivalSocPercent >= 50.0 - 1e-9,
+            plan.arrivalSocPercent in 49.0..51.0,
             "asked to arrive at 50 %, arrives at ${plan.arrivalSocPercent}",
         )
-        // Only the stop that finishes the trip charges past the 80 % mark, and
-        // only because the arrival level asks for it.
+        // Only the trip-finishing stop may charge past the 80 % mark.
         plan.stops.dropLast(1).forEach { stop ->
             assertTrue(stop.departureSocPercent <= 80.0 + 1e-9, "intermediate stops stay fast")
         }
@@ -150,8 +149,7 @@ class TripPlannerTest {
 
     @Test
     fun `a nearly empty battery still gets a plan when a charger is close`() = runBlocking<Unit> {
-        // 15 % in an ID.4 is ~20 km of reach — the fixed 40 km minimum leg
-        // used to make this fail at km 0 with a charger 15 km away.
+        // 15 % is ~20 km of reach; a fixed 40 km minimum leg used to fail here.
         val route = straightRoute()
         val result = planner(route, sitesAlong(route, everyKm = 15.0))
             .plan(start, destination, id4, startSocPercent = 15.0)
@@ -164,9 +162,8 @@ class TripPlannerTest {
     @Test
     fun `chargers beside the route still project onto it, in driving order`() = runBlocking<Unit> {
         val route = straightRoute()
-        // Shift each charger ~1 km off the line (within STOP_BUFFER_KM): the plan
-        // must use the projection onto the route, not the raw position — and that
-        // projection now runs per fetch-chunk instead of over the whole route.
+        // Chargers ~1 km off the line: the plan must use the projection onto
+        // the route, not the raw position.
         val beside = sitesAlong(route).map {
             it.copy(position = LatLon(it.position.lat + 0.01, it.position.lon))
         }

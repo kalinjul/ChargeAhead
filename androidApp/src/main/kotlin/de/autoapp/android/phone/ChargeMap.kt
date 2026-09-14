@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
@@ -90,6 +91,8 @@ fun HomeGoogleMap(
     hasLocationPermission: Boolean,
     onViewportChanged: (de.autoapp.shared.domain.BoundingBox?) -> Unit,
     onChargerTapped: (de.autoapp.shared.MapCharger) -> Unit,
+    onLocate: () -> Unit,
+    searchingLocation: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val cameraPositionState = rememberCameraPositionState {
@@ -194,22 +197,40 @@ fun HomeGoogleMap(
                 .padding(12.dp),
         ) {
             SmallFloatingActionButton(
+                // With a position, center on it. Without one, the button used
+                // to do nothing at all — no request, no feedback, which is
+                // exactly what issue #36 reported. Now it asks for a fix.
                 onClick = {
-                    position?.let {
+                    val target = position
+                    if (target == null) {
+                        onLocate()
+                    } else {
                         scope.launch {
                             cameraPositionState.animate(
-                                CameraUpdateFactory.newLatLngZoom(it.toLatLng(), HOME_ZOOM),
+                                CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM),
                             )
                         }
                     }
                 },
                 containerColor = MaterialTheme.colorScheme.surface,
             ) {
-                Icon(
-                    imageVector = Icons.Filled.MyLocation,
-                    contentDescription = stringResource(R.string.map_my_location),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+                // Spinning crosshair while location is running but has nothing
+                // yet — the difference between "working on it" and "idle" was
+                // invisible before (issue #36). Same footprint as the icon, so
+                // the button doesn't resize under the finger.
+                if (searchingLocation) {
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Filled.MyLocation,
+                        contentDescription = stringResource(R.string.map_my_location),
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                }
             }
             SmallFloatingActionButton(
                 onClick = {

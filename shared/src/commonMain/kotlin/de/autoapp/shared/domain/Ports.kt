@@ -11,6 +11,17 @@ import kotlinx.coroutines.flow.Flow
 /** Ongoing stream of location fixes. */
 interface LocationSource {
     val updates: Flow<Fix>
+
+    /**
+     * The best fix obtainable right now — the platform's last known one, or a
+     * freshly computed one. For everything that must not wait for the stream's
+     * next update: the map's location button, and the first position after a
+     * cold start.
+     *
+     * `null` when none can be had. The default says "no shortcut, the stream
+     * is the only way" — correct for sources that have nothing cached.
+     */
+    suspend fun currentFix(): Fix? = null
 }
 
 /** A charging-site data source (OCM in M1, BNetzA from M3 onward). */

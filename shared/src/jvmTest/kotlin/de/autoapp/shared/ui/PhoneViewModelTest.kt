@@ -84,11 +84,16 @@ class PhoneViewModelTest {
         val state = viewModel.uiState.await { it.name == "Testwagen" }
         assertEquals("77", state.battery)
         assertEquals("17,", state.consumption, "the comma must survive being written through")
-        assertEquals(17.0, settings.vehicle.first()?.consumptionKwhPer100Km)
+        // The profile is written from a coroutine, so wait for it rather than
+        // sampling the store and hoping the write already landed.
+        assertEquals(17.0, settings.vehicle.awaitValue { it != null }?.consumptionKwhPer100Km)
 
         viewModel.onConsumptionChanged("17,8")
         assertEquals("17,8", viewModel.uiState.await { it.consumption == "17,8" }.consumption)
-        assertEquals(17.8, settings.vehicle.first()?.consumptionKwhPer100Km)
+        assertEquals(
+            17.8,
+            settings.vehicle.awaitValue { it?.consumptionKwhPer100Km != 17.0 }?.consumptionKwhPer100Km,
+        )
     }
 
     /**
@@ -228,7 +233,40 @@ class PhoneViewModelTest {
         return PlanningFeature(TripPlanner(engine, repository), repository, settings)
     }
 
+    @Test
+    fun `without a fix the location button says it is searching`() = runBlocking {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = HomeViewModel(stubFeature(), planningOver(emptyList(), settings), settings)
+
+        viewModel.onLocateRequested()
+
+        // Spinner yes, hint no: the deadline is twenty seconds away.
+        val searching = viewModel.uiState.await { it.searchingLocation }
+        assertTrue(!searching.locationUnavailable)
+    }
+
+    @Test
+    fun `past the deadline the map says why it is still empty`() = runBlocking {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = HomeViewModel(
+            stubFeature(),
+            planningOver(emptyList(), settings),
+            settings,
+            locationTimeoutMillis = 50L,
+        )
+
+        viewModel.onLocateRequested()
+
+        // The request is still running — that is the point of showing both.
+        val givenUp = viewModel.uiState.await { it.locationUnavailable }
+        assertTrue(givenUp.searchingLocation)
+    }
+
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
+        withTimeout(TIMEOUT_MILLIS) { first(matching) }
+
+    /** Same for a store flow: the writes behind it are asynchronous. */
+    private suspend fun <T> Flow<T>.awaitValue(matching: (T) -> Boolean): T =
         withTimeout(TIMEOUT_MILLIS) { first(matching) }
 
     private fun stubFeature() = ChargeStopsFeature(

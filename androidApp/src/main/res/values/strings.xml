@@ -48,7 +48,7 @@
     <string name="phone_platform_label">Plattform</string>
     <string name="phone_stops_heading">Ladestopps voraus</string>
     <string name="phone_action_refresh">Aktualisieren</string>
-    <string name="phone_permission_message">Ohne Standortfreigabe kann nicht gesucht werden, was voraus liegt.</string>
+    <string name="phone_permission_message">Für die Anzeige der Position auf der Karte und die Routenplanung wird der Standort benötigt.</string>
     <string name="phone_permission_action">Standort freigeben</string>
     <string name="phone_demo_notice">Kein OpenChargeMap-Schlüssel hinterlegt — die Liste zeigt erfundene Demodaten. Schlüssel als openChargeMapApiKey in local.properties eintragen.</string>
     <string name="phone_status_waiting">Standort wird ermittelt …</string>
@@ -187,7 +187,7 @@
     <!-- Phone: trip plan -->
     <string name="trip_summary_distance">%1$d km</string>
     <string name="trip_stop_power">%1$d kW</string>
-    <string name="trip_stop_eta_charge">Ankunft %1$s · %2$d %% · %3$d min laden</string>
+    <string name="trip_stop_eta_charge">Ankunft %1$s · %2$d %% · %3$d min laden bis %4$d %%</string>
     <string name="trip_send_maps">An Maps senden</string>
     <string name="trip_select_section">Abschnitt wählen</string>
     <string name="trip_select_cancel">Abbrechen</string>
