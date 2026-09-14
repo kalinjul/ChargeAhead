@@ -233,6 +233,35 @@ class PhoneViewModelTest {
         return PlanningFeature(TripPlanner(engine, repository), repository, settings)
     }
 
+    @Test
+    fun `without a fix the location button says it is searching`() = runBlocking {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = HomeViewModel(stubFeature(), planningOver(emptyList(), settings), settings)
+
+        viewModel.onLocateRequested()
+
+        // Spinner yes, hint no: the deadline is twenty seconds away.
+        val searching = viewModel.uiState.await { it.searchingLocation }
+        assertTrue(!searching.locationUnavailable)
+    }
+
+    @Test
+    fun `past the deadline the map says why it is still empty`() = runBlocking {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = HomeViewModel(
+            stubFeature(),
+            planningOver(emptyList(), settings),
+            settings,
+            locationTimeoutMillis = 50L,
+        )
+
+        viewModel.onLocateRequested()
+
+        // The request is still running — that is the point of showing both.
+        val givenUp = viewModel.uiState.await { it.locationUnavailable }
+        assertTrue(givenUp.searchingLocation)
+    }
+
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
         withTimeout(TIMEOUT_MILLIS) { first(matching) }
 

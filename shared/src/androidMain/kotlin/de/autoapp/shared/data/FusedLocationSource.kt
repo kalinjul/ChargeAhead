@@ -4,17 +4,23 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Location
 import android.os.Looper
+import com.google.android.gms.location.CurrentLocationRequest
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
+import com.google.android.gms.tasks.CancellationTokenSource
+import com.google.android.gms.tasks.Task
 import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.LocationSource
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /**
  * Location source for Android via Google Play Services.
@@ -24,6 +30,11 @@ import kotlinx.coroutines.flow.callbackFlow
  * missing, the call throws a `SecurityException`; the flow then terminates
  * and the feature reports `LOCATION_UNAVAILABLE`. A silently empty flow would
  * be worse: it would look like "no location yet" and wait forever.
+ *
+ * Nor are the device's location *settings* checked here — that needs an
+ * Activity to show the resolution dialog, so it lives in the phone UI
+ * (`LocationSettings`) and is built from [locationRequest], the same request
+ * this source subscribes with.
  */
 class FusedLocationSource(
     context: Context,
@@ -37,9 +48,7 @@ class FusedLocationSource(
 
     @SuppressLint("MissingPermission")
     override val updates: Flow<Fix> = callbackFlow {
-        val request = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
-            .setMinUpdateDistanceMeters(minDistanceMeters)
-            .build()
+        val request = locationRequest(intervalMillis, minDistanceMeters)
 
         val callback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
@@ -48,6 +57,13 @@ class FusedLocationSource(
         }
 
         try {
+            // Seed from what the platform already knows, before subscribing.
+            // Without it the map shows nothing at all until the first streamed
+            // fix — and with Google Location Accuracy off and no sky in view,
+            // that can be never (issue #36). A stale fix beats an empty map;
+            // the stream corrects it as soon as it has something better.
+            client.lastLocation.awaitOrNull()?.let { trySend(it.toFix()) }
+
             client.requestLocationUpdates(request, callback, Looper.getMainLooper())
         } catch (missingPermission: SecurityException) {
             close(missingPermission)
@@ -55,6 +71,33 @@ class FusedLocationSource(
         }
 
         awaitClose { client.removeLocationUpdates(callback) }
+    }
+
+    /**
+     * The cached fix if there is one, otherwise a freshly computed one.
+     *
+     * `getCurrentLocation` is the one call that actively powers up the
+     * hardware for a single answer — that is what makes the location button
+     * do something on a device that has no fix yet.
+     */
+    @SuppressLint("MissingPermission")
+    override suspend fun currentFix(): Fix? {
+        val cached = try {
+            client.lastLocation.awaitOrNull()
+        } catch (missingPermission: SecurityException) {
+            return null
+        }
+        if (cached != null) return cached.toFix()
+
+        val request = CurrentLocationRequest.Builder()
+            .setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+            .setMaxUpdateAgeMillis(MAX_CACHED_AGE_MILLIS)
+            .build()
+        return try {
+            client.getCurrentLocation(request, CancellationTokenSource().token).awaitOrNull()?.toFix()
+        } catch (missingPermission: SecurityException) {
+            null
+        }
     }
 
     private fun Location.toFix(): Fix = Fix(
@@ -75,5 +118,40 @@ class FusedLocationSource(
 
         /** Below 50 m, movement can't be distinguished from location inaccuracy. */
         const val DEFAULT_MIN_DISTANCE_METERS = 50f
+
+        /** Anything older than this is not worth waiting out a fresh fix for. */
+        private const val MAX_CACHED_AGE_MILLIS = 60_000L
+
+        /**
+         * The request this source subscribes with. Public because the phone's
+         * location-settings check has to ask about *this* request — asking
+         * about a different one would either miss a problem or invent one.
+         */
+        fun locationRequest(
+            intervalMillis: Long = DEFAULT_INTERVAL_MILLIS,
+            minDistanceMeters: Float = DEFAULT_MIN_DISTANCE_METERS,
+        ): LocationRequest =
+            LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, intervalMillis)
+                .setMinUpdateDistanceMeters(minDistanceMeters)
+                .build()
     }
+}
+
+/**
+ * Awaits a Play Services task, `null` on failure.
+ *
+ * Play Services ships its own `Task`; awaiting it without
+ * kotlinx-coroutines-play-services is a listener pair, and that's cheaper
+ * than pulling in the dependency for two call sites. A failed location task
+ * is not exceptional — it means "no location", and every caller here treats
+ * it that way.
+ */
+internal suspend fun <T> Task<T>.awaitOrNull(): T? = suspendCancellableCoroutine { continuation ->
+    addOnSuccessListener { result -> continuation.resume(result) }
+    addOnFailureListener { error ->
+        // A SecurityException is the missing permission and has to reach the
+        // caller; everything else is just "no answer".
+        if (error is SecurityException) continuation.resumeWithException(error) else continuation.resume(null)
+    }
+    addOnCanceledListener { continuation.resume(null) }
 }
