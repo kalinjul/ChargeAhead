@@ -57,21 +57,12 @@ sealed interface TripPlanResult {
 }
 
 /**
- * Plans a trip with charging stops: route from the [RouteEngine], candidate
- * sites along it from the [SiteRepository], stops chosen greedily.
+ * Plans a trip with charging stops, chosen greedily: drive as far as the
+ * battery safely allows, then take the strongest matching charger near the
+ * end of that reach. Not cost-optimal; errs toward fewer, later, faster stops.
  *
- * Greedy means: drive as far as the battery safely allows, then take the
- * strongest matching charger near the end of that reach. That is
- * prototype-grade — a cost-optimal planner would weigh detour, price, and
- * charging curve against each other globally. Good enough to be honest about
- * times and SoC, which is what the UI shows; not good enough to promise the
- * *optimal* stop set. It errs toward fewer, later, faster stops, which
- * matches how people actually drive long distance.
- *
- * Filters narrow the candidates but never starve a leg: a leg with no charger
- * that passes the filters falls back to any usable fast charger — arriving on
- * a disliked network beats not arriving. The fallback is marked on the stop's
- * quote so the UI can say so.
+ * Filters narrow the candidates but never starve a leg — a leg with no
+ * matching charger falls back to any usable fast one.
  */
 class TripPlanner(
     private val routeEngine: RouteEngine,
@@ -95,13 +86,10 @@ class TripPlanner(
 
         val candidates = candidatesAlong(route, vehicle, networks)
 
-        val cumulativeKm = cumulativeDistances(route.points)
         val totalKm = route.distanceKm
         val minutesPerKm = route.durationMinutes / totalKm
 
-        // What has to be left in the battery at the destination. Never below
-        // the reserve: the driver asking to arrive empty doesn't make the last
-        // kilowatt-hours any more plannable.
+        // What has to be left at the destination, never below the reserve.
         val arrivalReserve = maxOf(arrivalSocPercent, DEFAULT_RESERVE_SOC_PERCENT)
 
         val stops = mutableListOf<PlannedStop>()
@@ -111,10 +99,8 @@ class TripPlanner(
 
         while (stops.size < MAX_STOPS) {
             val reachKm = kmNow + RangeCalculator.rangeKm(vehicle, socNow)
-            // Driving on to the destination is only "done" if the battery
-            // still holds the arrival level there — a charger, unlike the
-            // destination, may be approached down to the reserve.
-            if (totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow, arrivalReserve) - ARRIVAL_HEADROOM_KM) break
+            // Done only if the battery still holds the arrival level there.
+            if (totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow, arrivalReserve) + ARRIVAL_HEADROOM_KM) break
 
             val stop = pickStop(candidates, kmNow, reachKm, filters, networks)
                 ?: return TripPlanResult.NoChargerInReach(afterKm = kmNow)
@@ -140,11 +126,10 @@ class TripPlanner(
             kmNow = stop.kmFromStart
         }
 
-        // More stops than MAX_STOPS means the loop above didn't reach the
-        // destination — with a healthy vehicle profile that's a sign of a
-        // degenerate input (a moped battery for a continental trip), and an
-        // honest refusal beats a 14-stop plan nobody would drive.
-        val reachesDestination = totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow, arrivalReserve)
+        // Hitting MAX_STOPS without arriving means degenerate input; refuse
+        // rather than emit a 14-stop plan nobody would drive.
+        val reachesDestination =
+            totalKm <= kmNow + RangeCalculator.rangeKm(vehicle, socNow, arrivalReserve) + ARRIVAL_HEADROOM_KM
         if (!reachesDestination) return TripPlanResult.NoChargerInReach(afterKm = kmNow)
 
         val arrivalSoc = RangeCalculator.socOnArrivalPercent(vehicle, socNow, totalKm - kmNow)
@@ -169,11 +154,9 @@ class TripPlanner(
     )
 
     /**
-     * Fetched segment by segment, not as one polyline over the whole route:
-     * the sources query radially with a result cap (OpenChargeMapSource), and
-     * a single query over a 600 km route returns an arbitrary subset of a
-     * 600 km circle — of which the 3 km route buffer keeps almost nothing.
-     * Chunks keep every query at the radius the sources were built for.
+     * Fetched in chunks, not as one polyline: the sources query radially with
+     * a result cap, so a single query over a long route returns an arbitrary
+     * subset of a huge circle, of which the route buffer keeps almost nothing.
      */
     private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
         val cumulative = cumulativeDistances(route.points)
@@ -201,9 +184,6 @@ class TripPlanner(
                     .maxOfOrNull { it.maxPowerKw }
                     ?: continue
                 if (power < MIN_DC_POWER_KW) continue
-                // One pass over this chunk's segments yields both the buffer
-                // check and the km-from-start; the site was fetched from this
-                // chunk, so there is no reason to scan the whole route for it.
                 val projection = projectOntoChunk(site.position, route.points, cumulative, startIndex, endIndex)
                 if (projection.distanceKm > STOP_BUFFER_KM) continue
                 seen[site.id] = Candidate(
@@ -219,9 +199,8 @@ class TripPlanner(
     }
 
     /**
-     * The stop for one leg: as late as safely possible, preferring chargers
-     * that pass the filters, among those the strongest, among equals the
-     * later one. Filters are dropped only when the window would go empty.
+     * The stop for one leg: as late as safely possible, strongest first,
+     * filters dropped only when the window would otherwise go empty.
      */
     private fun pickStop(
         candidates: List<Candidate>,
@@ -230,13 +209,8 @@ class TripPlanner(
         filters: ChargeFilters,
         networks: NetworkPreferences,
     ): Candidate? {
-        // Both margins scale down with the reach: with 30 km left in the
-        // battery, insisting on 40 km of driving before the first stop would
-        // reject a charger 5 km away — and the plan would fail exactly when
-        // the driver needs it most.
-        // The 15 % cap matters at the bottom end: the reach already contains
-        // the 10 % reserve (RangeCalculator), and a second fat margin on a
-        // 20 km reach would exclude every reachable charger.
+        // Both margins scale down with the reach: fixed ones would reject
+        // every reachable charger when little battery is left.
         val reachAheadKm = reachKm - kmNow
         val minAheadKm = minOf(MIN_LEG_KM, reachAheadKm * 0.2)
         val maxAheadKm = reachAheadKm - minOf(STOP_SAFETY_KM, reachAheadKm * 0.15)
@@ -252,24 +226,17 @@ class TripPlanner(
         }
         val pool = preferred.ifEmpty { window }
 
-        // Late beats strong, but only within the last stretch of the reach:
-        // a 350 kW charger 30 km earlier wins against a 50 kW one at the edge.
+        // Late beats strong, but only within the last stretch of the reach.
         val lateStart = kmNow + maxAheadKm - LATE_WINDOW_KM
         val late = pool.filter { it.kmFromStart >= lateStart }
         return (late.ifEmpty { pool }).maxByOrNull { it.maxPowerKw * 1000.0 + it.kmFromStart }
     }
 
     /**
-     * Charge to what the rest of the trip needs (plus margin), on top of what
-     * has to be left at the destination.
-     *
-     * The [TARGET_SOC_PERCENT] cap holds for the same reason as always:
-     * everything above it charges so slowly that driving on and stopping
-     * again wins. The exception is the stop that could otherwise finish the
-     * trip — one that reaches the destination on a normal charge and only
-     * falls short of the *arrival* level the driver asked for. Capping that
-     * one would answer a request for a full-ish arrival with an extra stop
-     * nobody wanted, so it charges on, up to full.
+     * Charge to what the rest of the trip needs plus the arrival level, and
+     * nothing more — a margin on top would put the planned arrival above the
+     * level the driver just set. Only the stop that finishes the trip may
+     * pass [TARGET_SOC_PERCENT]; capping that one would cost an extra stop.
      */
     private fun departureSocFor(
         vehicle: VehicleProfile,
@@ -280,17 +247,15 @@ class TripPlanner(
     ): Double {
         val remainingKm = totalKm - stopKm
         val neededKwh = remainingKm / 100.0 * vehicle.consumptionKwhPer100Km
-        val driveSoc = neededKwh / vehicle.usableBatteryKwh * 100.0 + CHARGE_MARGIN_SOC
-        val finishesTheTrip = driveSoc + DEFAULT_RESERVE_SOC_PERCENT <= TARGET_SOC_PERCENT
+        val driveSoc = neededKwh / vehicle.usableBatteryKwh * 100.0
+        val finishesTheTrip = driveSoc + FINISH_MARGIN_SOC + DEFAULT_RESERVE_SOC_PERCENT <= TARGET_SOC_PERCENT
         val cap = if (finishesTheTrip) FULL_SOC_PERCENT else TARGET_SOC_PERCENT
         return (driveSoc + arrivalReserve).coerceAtMost(cap).coerceAtLeast(arrivalSoc)
     }
 
     private fun chargeMinutes(kwh: Double, sitePowerKw: Double, vehicle: VehicleProfile): Double {
         val peak = minOf(sitePowerKw, vehicle.dcPeakPowerKw ?: sitePowerKw)
-        // The curve tapers hard above ~60 %; a flat factor over the whole
-        // session is the workable approximation until the consumption model
-        // knows real curves (ROADMAP open item 3).
+        // Flat factor instead of a real charging curve (ROADMAP open item 3).
         val averageKw = peak * AVERAGE_CURVE_FACTOR
         return kwh / averageKw * 60.0
     }
@@ -308,10 +273,8 @@ class TripPlanner(
 
     /**
      * Projects [position] onto one chunk's segments — `[fromIndex, toIndex)` —
-     * not the whole route. Returns the km-from-start and the perpendicular
-     * distance in a single pass, so the buffer check and the position don't each
-     * sweep the polyline. Scanning the full route (thousands of points) for
-     * every candidate was the dominant cost of planning a long trip.
+     * returning km-from-start and perpendicular distance in a single pass.
+     * Sweeping the whole route per candidate dominated long-trip planning.
      */
     private fun projectOntoChunk(
         position: LatLon,
@@ -340,8 +303,8 @@ class TripPlanner(
         /** Nothing charges past this, whatever the arrival level asks for. */
         const val FULL_SOC_PERCENT = 100.0
 
-        /** On top of reserve + need, so a headwind doesn't turn the plan into a tow job. */
-        const val CHARGE_MARGIN_SOC = 5.0
+        /** Only decides whether a stop counts as trip-finishing; never added to the charge target. */
+        const val FINISH_MARGIN_SOC = 5.0
 
         /** Max straight-line distance from the route — same trade-off as PolylineArea (open item 8). */
         const val STOP_BUFFER_KM = 3.0
@@ -358,8 +321,12 @@ class TripPlanner(
         /** "Late" preference window at the end of the reach. */
         const val LATE_WINDOW_KM = 80.0
 
-        /** A destination this close to the range edge doesn't need a final stop. */
-        const val ARRIVAL_HEADROOM_KM = 0.0
+        /**
+         * The last stop charges to exactly the arrival level, so the reach after
+         * it equals the remaining distance — without this tolerance a rounding
+         * difference would buy a whole extra stop.
+         */
+        const val ARRIVAL_HEADROOM_KM = 1.0
 
         const val AVERAGE_CURVE_FACTOR = 0.65
 
