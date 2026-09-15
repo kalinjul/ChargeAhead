@@ -1,8 +1,12 @@
 package de.autoapp.shared.core
 
 import de.autoapp.shared.domain.ChargeSite
+import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.EnergyState
+import de.autoapp.shared.domain.Fix
+import de.autoapp.shared.domain.Route
+import de.autoapp.shared.domain.RouteSegment
 import de.autoapp.shared.domain.SoCSourceKind
 import de.autoapp.shared.domain.VehicleProfile
 import de.autoapp.shared.domain.ConnectorType
@@ -14,6 +18,7 @@ import de.autoapp.shared.domain.destination
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -247,6 +252,56 @@ class ChargeStopPlannerTest {
         val planned = ChargeStopPlanner.plan(southSector, listOf(both))
 
         assertEquals(ConnectorType.CHADEMO, planned.single().primaryConnector?.type)
+    }
+
+    // --- issue #55: on a route, the list prices like the trip plan ---
+
+    /** Straight south from [origin]; the road is 10 % longer than the line, as roads are. */
+    private fun routeSouth(speedKmh: Double): Route {
+        val points = listOf(origin, origin.destination(180.0, 50.0), origin.destination(180.0, 100.0))
+        return Route(
+            points = points,
+            distanceKm = 110.0,
+            durationMinutes = 110.0 / speedKmh * 60.0,
+            segments = listOf(RouteSegment(fromKm = 0.0, distanceKm = 110.0, durationMinutes = 110.0 / speedKmh * 60.0)),
+        )
+    }
+
+    private fun planOnRoute(route: Route, sites: List<ChargeSite>, socPercent: Double = 80.0): List<ChargeStop> {
+        val provider = RoutedRouteProvider(route)
+        val fix = Fix(origin, bearingDeg = 180.0, speedMps = 30.0, timestampMillis = 0L)
+        return ChargeStopPlanner.plan(
+            area = provider.searchArea(fix, rangeKm = 300.0),
+            sites = sites,
+            vehicle = vehicle,
+            energy = chargeState(socPercent),
+            routeAhead = assertNotNull(provider.progressAt(fix)),
+        )
+    }
+
+    @Test
+    fun onARoute_distanceIsKmAlongIt_notTheDetourGuess() {
+        val stop = planOnRoute(routeSouth(100.0), listOf(site("a", 180.0, 50.0))).single()
+
+        assertEquals(55.0, stop.distanceKm, 0.1)
+    }
+
+    @Test
+    fun onARoute_arrivalLevelFollowsTheSpeedProfile() {
+        val slow = routeSouth(80.0)
+        val fast = routeSouth(150.0)
+        val sites = listOf(site("a", 180.0, 50.0))
+
+        val slowStop = planOnRoute(slow, sites).single()
+        val fastStop = planOnRoute(fast, sites).single()
+
+        val expected = 80.0 - SpeedAwareConsumption(vehicle.consumptionKwhPer100Km).energyKwh(fast, 0.0, 55.0) /
+            vehicle.usableBatteryKwh * 100.0
+        assertEquals(expected, fastStop.socOnArrivalPercent!!, 1e-6)
+        assertTrue(
+            fastStop.socOnArrivalPercent!! < slowStop.socOnArrivalPercent!!,
+            "150 km/h must arrive lower than 80 km/h: ${fastStop.socOnArrivalPercent} vs ${slowStop.socOnArrivalPercent}",
+        )
     }
 
     @Test
