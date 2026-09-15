@@ -1,6 +1,5 @@
 package de.autoapp.android.car
 
-import android.content.pm.PackageManager
 import androidx.car.app.CarContext
 import androidx.car.app.hardware.CarHardwareManager
 import androidx.car.app.hardware.common.CarValue
@@ -21,7 +20,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import java.util.concurrent.Executor
 import kotlin.math.roundToInt
 
 /**
@@ -38,11 +39,13 @@ import kotlin.math.roundToInt
 class CarHardwareDebugRecorder(
     private val carContext: CarContext,
     private val time: TimeProvider,
+    private val permissions: CarPermissions,
+    /** Shared with the SoC source — a second energy listener would miss the host's answer. */
+    private val energyLevels: CarEnergyLevels,
     private val settingsStore: SettingsStore,
 ) {
 
     private var carInfo: CarInfo? = null
-    private var energyListener: OnCarDataAvailableListener<EnergyLevel>? = null
     private var speedListener: OnCarDataAvailableListener<Speed>? = null
     private var mileageListener: OnCarDataAvailableListener<Mileage>? = null
 
@@ -50,7 +53,8 @@ class CarHardwareDebugRecorder(
     private var scope: CoroutineScope? = null
 
     fun start() {
-        scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val newScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        scope = newScope
         val info = try {
             carContext.getCarService(CarHardwareManager::class.java).carInfo
         } catch (unavailable: Exception) {
@@ -66,21 +70,58 @@ class CarHardwareDebugRecorder(
             record(CarDataKind.ENERGY_PROFILE, profile.toPoint())
         }
 
-        // Streamed values, each behind its own car permission.
-        energyListener = listenOrRecordDenied(
-            listOf(CarDataKind.BATTERY_PERCENT, CarDataKind.RANGE, CarDataKind.ENERGY_IS_LOW),
-            PERMISSION_ENERGY,
-        ) {
-            OnCarDataAvailableListener<EnergyLevel> { level ->
+        newScope.launch(Dispatchers.Main) {
+            energyLevels.readings.collect(::recordEnergy)
+        }
+
+        // The driver can grant car permissions mid-session; re-register on
+        // every change so the debug view doesn't keep reporting NO_PERMISSION
+        // until the next connection.
+        newScope.launch(Dispatchers.Main) {
+            combine(permissions.granted(PERMISSION_SPEED), permissions.granted(PERMISSION_MILEAGE)) { _, _ -> }
+                .collect { registerListeners(info, executor) }
+        }
+    }
+
+    fun stop() {
+        carInfo?.let(::unregisterListeners)
+        scope?.cancel()
+        scope = null
+    }
+
+    private fun recordEnergy(reading: CarEnergyLevels.Reading) {
+        val kinds = listOf(CarDataKind.BATTERY_PERCENT, CarDataKind.RANGE, CarDataKind.ENERGY_IS_LOW)
+        when (reading) {
+            // Already recorded for every kind in start().
+            is CarEnergyLevels.Reading.NoCarHardware -> Unit
+
+            // Every data point this subscription feeds — marking only one of
+            // them would send whoever reads the debug view hunting for a data
+            // problem that is a permission problem.
+            is CarEnergyLevels.Reading.NoPermission -> kinds.forEach { record(it, CarDataStatus.NO_PERMISSION) }
+
+            is CarEnergyLevels.Reading.Level -> {
+                val level = reading.level
                 record(CarDataKind.BATTERY_PERCENT, level.batteryPercent.toPoint { "${it.roundToInt()} %" })
                 record(
                     CarDataKind.RANGE,
                     level.rangeRemainingMeters.toPoint { "${(it / 1000.0).roundToInt()} km" },
                 )
                 record(CarDataKind.ENERGY_IS_LOW, level.energyIsLow.toPoint { if (it) "ja" else "nein" })
-            }.also { info.addEnergyLevelListener(executor, it) }
+            }
         }
+    }
 
+    private fun unregisterListeners(info: CarInfo) {
+        speedListener?.let(info::removeSpeedListener)
+        mileageListener?.let(info::removeMileageListener)
+        speedListener = null; mileageListener = null
+    }
+
+    private fun registerListeners(info: CarInfo, executor: Executor) {
+        unregisterListeners(info)
+
+        // Streamed values, each behind its own car permission.
         speedListener = listenOrRecordDenied(listOf(CarDataKind.SPEED), PERMISSION_SPEED) {
             OnCarDataAvailableListener<Speed> { speed ->
                 record(
@@ -100,22 +141,9 @@ class CarHardwareDebugRecorder(
         }
     }
 
-    fun stop() {
-        carInfo?.let { info ->
-            energyListener?.let(info::removeEnergyLevelListener)
-            speedListener?.let(info::removeSpeedListener)
-            mileageListener?.let(info::removeMileageListener)
-        }
-        energyListener = null; speedListener = null; mileageListener = null
-        scope?.cancel()
-        scope = null
-    }
-
     /**
      * Registers a listener if its permission is granted; otherwise records
-     * NO_PERMISSION for **every** data point that listener would feed —
-     * marking only one of them would send whoever reads the debug view
-     * hunting for a data problem that is a permission problem.
+     * NO_PERMISSION for **every** data point that listener would feed.
      * Registration itself may also throw SecurityException — same outcome.
      */
     private fun <T> listenOrRecordDenied(
@@ -123,7 +151,7 @@ class CarHardwareDebugRecorder(
         permission: String,
         register: () -> OnCarDataAvailableListener<T>,
     ): OnCarDataAvailableListener<T>? {
-        if (carContext.checkSelfPermission(permission) != PackageManager.PERMISSION_GRANTED) {
+        if (!permissions.granted(permission).value) {
             kinds.forEach { record(it, CarDataStatus.NO_PERMISSION) }
             return null
         }
@@ -192,7 +220,6 @@ class CarHardwareDebugRecorder(
     }
 
     private companion object {
-        const val PERMISSION_ENERGY = "com.google.android.gms.permission.CAR_FUEL"
         const val PERMISSION_SPEED = "com.google.android.gms.permission.CAR_SPEED"
         const val PERMISSION_MILEAGE = "com.google.android.gms.permission.CAR_MILEAGE"
     }
