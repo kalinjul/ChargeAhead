@@ -407,4 +407,60 @@ class TiledSiteRepositoryTest {
         assertEquals(listOf("a"), second.await().map { it.id })
         assertEquals(1, source.queries, "the identical concurrent fetch was de-duplicated")
     }
+
+    /**
+     * Answers like the real sources do: only what lies inside the requested
+     * shape. BNetzA buffers the polyline server-side, OCM and the backend
+     * query a chain of circles — none of them returns the bounding box.
+     */
+    private class ShapeClippingSource(private val sites: List<ChargeSite>) : ChargeSiteSource {
+        override val id = "test"
+        var queries = 0
+            private set
+
+        override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            queries++
+            return sites.filter { it.position in area }
+        }
+    }
+
+    private fun siteAt(id: String, position: LatLon) = ChargeSite(
+        id = id,
+        name = "Ladepark $id",
+        operator = "TestNetz",
+        position = position,
+        connectors = listOf(Connector(ConnectorType.CCS2, maxPowerKw = 150.0, count = 4)),
+    )
+
+    @Test
+    fun afterARoute_aSiteOffTheCorridorButInsideItsBox_isStillFound() = runBlocking {
+        // A diagonal route: its box is ~57 × 57 km, the corridor only ~6 km
+        // wide. The site sits ~28 km off the route, inside the box — the
+        // route fetch never asked for it, so the area around it is unchecked.
+        val offCorridor = start.destination(90.0, 40.0).destination(180.0, 10.0)
+        val source = ShapeClippingSource(listOf(siteAt("off", offCorridor)))
+        val repository = TiledSiteRepository(source, database(), ControllableClock())
+        val route = PolylineArea(listOf(start, start.destination(135.0, 80.0)), bufferKm = 3.0)
+
+        repository.sitesIn(route)
+        val nearby = repository.sitesIn(SectorArea.circle(offCorridor, 3.0))
+
+        assertEquals(listOf("off"), nearby.map { it.id }, "The route's box was recorded as checked")
+    }
+
+    @Test
+    fun afterANarrowRouteBuffer_aWiderBufferOnTheSameRoute_findsTheSitesInBetween() = runBlocking {
+        // The car list follows the route with 2 km, the trip planner with 3 km.
+        // A site 2.5 km off the route belongs to the second answer.
+        val route = listOf(start, start.destination(180.0, 80.0), start.destination(180.0, 170.0))
+        val between = start.destination(180.0, 40.0).destination(90.0, 2.5)
+        val source = ShapeClippingSource(listOf(siteAt("between", between)))
+        val repository = TiledSiteRepository(source, database(), ControllableClock())
+
+        repository.sitesIn(PolylineArea(route, bufferKm = 2.0))
+        val wider = PolylineArea(route, bufferKm = 3.0)
+        val found = repository.sitesIn(wider).filter { it.position in wider }
+
+        assertEquals(listOf("between"), found.map { it.id }, "The 2 km fetch was recorded as covering the 3 km buffer")
+    }
 }

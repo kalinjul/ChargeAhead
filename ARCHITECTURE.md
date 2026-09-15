@@ -521,6 +521,23 @@ touches a good 1600 of them, and 1600 network queries would be absurd. The
 whole area is fetched radially in one go; recording happens tile by tile in
 a transaction.
 
+**Recorded is the shape, not its box** (`Coverage`, issue #69). The sources
+answer for the circle or route buffer they were asked for, never for its
+bounding box. Recording the box claimed ~85 % of a diagonal route chunk's
+box as checked although nobody had queried it — a later map view or
+"charge now" there showed only the chargers from the old corridor. So:
+
+- a fetch records only the tiles its shape **fully contains**;
+- a query needs every tile its shape **touches**;
+- a route buffer (2–3 km) never contains a whole 0.1° tile, so a route fetch
+  is additionally stored as a corridor (`corridorCoverage`: points, buffer,
+  timestamp). A route query is covered when each piece of it (≤ 1 km) lies
+  inside a stored corridor of at least its width, or on fresh tiles.
+
+Recording too little costs a refetch, recording too much hides chargers — the
+rule always errs toward the refetch. No spatial SQL extension is needed:
+SQL preselects by box, the geometry runs in `commonMain`.
+
 Reading always happens from the database; the source only refills it. If
 refilling fails, what's already read is still delivered — a dead zone must
 not empty the list, only stop it from getting better. Only once the local
