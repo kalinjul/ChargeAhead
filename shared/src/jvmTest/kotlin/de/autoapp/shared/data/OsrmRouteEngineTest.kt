@@ -36,19 +36,6 @@ class OsrmRouteEngineTest {
         {"code":"Ok","routes":[{
           "distance":170123.4,"duration":6480.0,
           "geometry":{"type":"LineString","coordinates":[
-            [11.0767,49.4521],[11.19,49.19],[11.46,48.93],[11.5820,48.1351]]},
-          "legs":[{"steps":[
-            {"distance":8000.0,"duration":720.0,"name":"Stadt"},
-            {"distance":150000.0,"duration":4500.0,"name":"A9"},
-            {"distance":12123.4,"duration":1260.0,"name":"Stadt"}]}]
-        }]}
-    """.trimIndent()
-
-    /** An older server, or one asked without steps. */
-    private val responseWithoutSteps = """
-        {"code":"Ok","routes":[{
-          "distance":170123.4,"duration":6480.0,
-          "geometry":{"type":"LineString","coordinates":[
             [11.0767,49.4521],[11.19,49.19],[11.46,48.93],[11.5820,48.1351]]}
         }]}
     """.trimIndent()
@@ -62,31 +49,16 @@ class OsrmRouteEngineTest {
         assertTrue(abs(route.durationMinutes - 108.0) < 0.01, "Was ${route.durationMinutes}")
     }
 
-    /** The steps are the only speed profile OSRM offers without the full geometry. */
+    /** The speed profile comes from the backend only (#56); steps aren't even asked for. */
     @Test
-    fun theStepsAreAskedForAndBecomeSegments() = runBlocking {
+    fun carriesNoSpeedProfile() = runBlocking {
         var request: HttpRequestData? = null
         val route = assertNotNull(
             engineRespondingWith(validResponse) { request = it }.route(nuernberg, muenchen),
         )
 
-        assertEquals("true", assertNotNull(request).url.parameters["steps"])
-        assertEquals(3, route.segments.size)
-        assertEquals(0.0, route.segments.first().fromKm, 1e-9)
-        assertEquals(route.distanceKm, route.segments.sumOf { it.distanceKm }, 1e-6)
-        assertTrue(
-            route.segments[1].averageSpeedKmh > route.segments[0].averageSpeedKmh,
-            "Die Autobahn muss schneller sein als die Stadt",
-        )
-    }
-
-    /** No breakdown means no profile, not a guessed one. */
-    @Test
-    fun withoutStepsThereAreNoSegments() = runBlocking {
-        val route = assertNotNull(engineRespondingWith(responseWithoutSteps).route(nuernberg, muenchen))
-
+        assertNull(assertNotNull(request).url.parameters["steps"])
         assertTrue(route.segments.isEmpty())
-        assertTrue(abs(route.distanceKm - 170.12) < 0.01)
     }
 
     @Test
