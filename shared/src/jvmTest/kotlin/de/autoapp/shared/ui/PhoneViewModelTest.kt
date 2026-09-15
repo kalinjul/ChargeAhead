@@ -3,6 +3,7 @@ package de.autoapp.shared.ui
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.core.TripPlanner
+import de.autoapp.shared.domain.Address
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeFilters
 import de.autoapp.shared.domain.Network
@@ -14,6 +15,7 @@ import de.autoapp.shared.domain.Fix
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.LocationSource
 import de.autoapp.shared.domain.NetworkPreferences
+import de.autoapp.shared.domain.Place
 import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
 import de.autoapp.shared.domain.SearchArea
@@ -169,6 +171,25 @@ class PhoneViewModelTest {
 
         viewModel.onSheetOpened()
         assertEquals("", viewModel.uiState.await { it.chosen == null }.query)
+    }
+
+    /** Issue #43: the field used to keep only the name, dropping street and city. */
+    @Test
+    fun `a picked search result fills the field with its address`() = runBlocking<Unit> {
+        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val viewModel = PlanSheetViewModel(stubFeature(), settings)
+        val place = Place(
+            name = "Uebel und Gefährlich",
+            description = "Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg",
+            position = LatLon(53.556, 9.968),
+            address = Address(street = "Feldstraße 66", postalCode = "20359", town = "Hamburg"),
+        )
+
+        viewModel.onPlaceChosen(place)
+
+        val state = viewModel.uiState.await { it.chosen != null }
+        assertEquals("Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg", state.query)
+        assertEquals(Destination("Uebel und Gefährlich", place.position), state.chosen)
     }
 
     /**

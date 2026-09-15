@@ -8,6 +8,7 @@ import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.Place
 import de.autoapp.shared.domain.Reachability
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -180,6 +181,27 @@ class ChargeStopFormatterTest {
         )
 
         assertEquals("Hauptstr. 5, 85095 Denkendorf", ChargeStopFormatter.addressLine(withAddress))
+    }
+
+    @Test
+    fun label_appendsTheAddressToTheName() {
+        val place = Place(
+            name = "Uebel und Gefährlich",
+            description = "Uebel und Gefährlich, Feldstraße, Hamburg",
+            position = LatLon(53.556, 9.968),
+            address = Address(street = "Feldstraße 66", postalCode = "20359", town = "Hamburg"),
+        )
+
+        assertEquals("Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg", ChargeStopFormatter.label(place))
+    }
+
+    @Test
+    fun label_withoutAddress_fallsBackToTheDescription() {
+        val place = Place(name = "Munster", description = "Munster, Heidekreis, 29633", position = LatLon(52.98, 10.08))
+        val bare = Place(name = "Munster", description = "Munster", position = LatLon(52.98, 10.08))
+
+        assertEquals("Munster, Heidekreis, 29633", ChargeStopFormatter.label(place))
+        assertEquals("Munster", ChargeStopFormatter.label(bare))
     }
 
     @Test

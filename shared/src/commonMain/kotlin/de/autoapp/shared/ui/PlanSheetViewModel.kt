@@ -2,6 +2,7 @@ package de.autoapp.shared.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.domain.Destination
@@ -142,9 +143,20 @@ class PlanSheetViewModel(
     }
 
     fun onDestinationChosen(destination: Destination) {
-        input.update {
-            it.copy(chosen = destination, query = destination.name, results = emptyList(), searching = false)
-        }
+        choose(destination, query = destination.name)
+    }
+
+    /**
+     * The field shows the full address, not just the name: "Uebel und
+     * Gefährlich" alone doesn't say which city it was. The destination keeps
+     * the short name — it titles the trip and the recents list.
+     */
+    fun onPlaceChosen(place: Place) {
+        choose(Destination(place.name, place.position), query = ChargeStopFormatter.label(place))
+    }
+
+    private fun choose(destination: Destination, query: String) {
+        input.update { it.copy(chosen = destination, query = query, results = emptyList(), searching = false) }
     }
 
     /**
