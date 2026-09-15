@@ -11,11 +11,11 @@ import de.autoapp.shared.domain.Network
 import de.autoapp.shared.domain.SearchArea
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.HttpRequestBuilder
-import io.ktor.client.request.get
+import io.ktor.client.request.forms.submitForm
 import io.ktor.client.request.header
-import io.ktor.client.request.parameter
 import io.ktor.http.HttpHeaders
+import io.ktor.http.ParametersBuilder
+import io.ktor.http.parameters
 
 /**
  * The Bundesnetzagentur's charging register — officially reported data for
@@ -78,23 +78,27 @@ class BnetzaSource(
     }
 
     private suspend fun fetchPage(area: SearchArea, offset: Int, networks: List<Network>): ArcGisResponse {
-        return httpClient.get(baseUrl) {
-            header(HttpHeaders.UserAgent, OpenChargeMapSource.USER_AGENT)
-            parameter("f", "json")
+        // POST, not GET: a route's polyline outgrows the URL — at 3.5 kB the
+        // service answered 404.
+        val form = parameters {
+            append("f", "json")
             applyGeometry(area)
-            parameter("inSR", "4326")
-            parameter("spatialRel", "esriSpatialRelIntersects")
+            append("inSR", "4326")
+            append("spatialRel", "esriSpatialRelIntersects")
             // A charging facility under maintenance is not a viable charging stop.
             // The service only knows these two values — verified nationwide.
             // Networks non-empty: LIKE prefilter so Germany doesn't ship in its entirety;
             // on-device resolve() applies word-boundary correctness downstream.
-            parameter("where", whereClause(networks))
-            parameter("outFields", REQUESTED_FIELDS)
+            append("where", whereClause(networks))
+            append("outFields", REQUESTED_FIELDS)
             // Coordinates already come back as fields; the geometry would just
             // be the same information a second time.
-            parameter("returnGeometry", "false")
-            parameter("resultRecordCount", pageSize)
-            parameter("resultOffset", offset)
+            append("returnGeometry", "false")
+            append("resultRecordCount", pageSize.toString())
+            append("resultOffset", offset.toString())
+        }
+        return httpClient.submitForm(url = baseUrl, formParameters = form) {
+            header(HttpHeaders.UserAgent, OpenChargeMapSource.USER_AGENT)
         }.body()
     }
 
@@ -107,23 +111,23 @@ class BnetzaSource(
      * that's 769 charging facilities instead of 33,508 — a rectangle around
      * the route would fall in between and buy nothing.
      */
-    private fun HttpRequestBuilder.applyGeometry(area: SearchArea) {
+    private fun ParametersBuilder.applyGeometry(area: SearchArea) {
         when (area) {
             is PolylineArea -> {
                 val path = area.points.joinToString(",") { "[${it.lon},${it.lat}]" }
-                parameter("geometryType", "esriGeometryPolyline")
-                parameter("geometry", """{"paths":[[$path]],"spatialReference":{"wkid":4326}}""")
+                append("geometryType", "esriGeometryPolyline")
+                append("geometry", """{"paths":[[$path]],"spatialReference":{"wkid":4326}}""")
                 // ArcGIS does its own buffering; meters, because the service
                 // otherwise works in degrees, and a degree value would mean
                 // something different depending on latitude.
-                parameter("distance", area.bufferKm * 1000.0)
-                parameter("units", "esriSRUnit_Meter")
+                append("distance", (area.bufferKm * 1000.0).toString())
+                append("units", "esriSRUnit_Meter")
             }
 
             else -> {
                 val box = area.boundingBox
-                parameter("geometryType", "esriGeometryEnvelope")
-                parameter(
+                append("geometryType", "esriGeometryEnvelope")
+                append(
                     "geometry",
                     """{"xmin":${box.west},"ymin":${box.south},"xmax":${box.east},"ymax":${box.north},""" +
                         """"spatialReference":{"wkid":4326}}""",
