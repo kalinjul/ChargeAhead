@@ -155,6 +155,8 @@ Still open:
    production use and comes with no guarantee. It sits behind the
    `RouteEngine` port and is swappable for a dedicated instance without
    changing anything else. **It must be replaced before any release.**
+   It carries no speed profile: coalescing steps into segments lives in the
+   backend only (#56), so without a backend, planning uses the average speed.
 
 6. **Destination search via Nominatim.** Chosen because it's the easiest to
    replace with a dedicated instance — its interface is identical to the

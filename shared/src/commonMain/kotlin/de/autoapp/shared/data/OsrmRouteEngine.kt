@@ -1,7 +1,5 @@
 package de.autoapp.shared.data
 
-import de.autoapp.shared.core.RawStep
-import de.autoapp.shared.core.RouteSegments
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
@@ -41,9 +39,6 @@ class OsrmRouteEngine(
             parameter("overview", "simplified")
             parameter("geometries", "geojson")
             parameter("alternatives", "false")
-            // The per-maneuver distances and durations are the only speed
-            // profile OSRM offers without pulling the full geometry.
-            parameter("steps", "true")
         }.body()
 
         // "NoRoute" means: there's no road connection. That's not an error
@@ -58,16 +53,13 @@ class OsrmRouteEngine(
         }
         if (points.size < 2) return null
 
-        val distanceKm = route.distance / 1000.0
-        val steps = route.legs.flatMap { leg ->
-            leg.steps.map { RawStep(distanceKm = it.distance / 1000.0, durationMinutes = it.duration / 60.0) }
-        }
-
+        // No speed profile: coalescing steps into segments is the backend's job,
+        // and a second copy here would drift from it (#56). Planning falls back
+        // to the route's average speed.
         return Route(
             points = points,
-            distanceKm = distanceKm,
+            distanceKm = route.distance / 1000.0,
             durationMinutes = route.duration / 60.0,
-            segments = RouteSegments.coalesce(steps, distanceKm),
         )
     }
 
@@ -92,24 +84,6 @@ internal data class OsrmRoute(
     /** Seconds. */
     val duration: Double = 0.0,
     val geometry: OsrmGeometry = OsrmGeometry(),
-    val legs: List<OsrmLeg> = emptyList(),
-)
-
-@Serializable
-internal data class OsrmLeg(
-    val steps: List<OsrmStep> = emptyList(),
-)
-
-/**
- * Distance and duration only, so the step geometry and the turn instructions —
- * the bulk of a `steps=true` answer — are dropped while parsing.
- */
-@Serializable
-internal data class OsrmStep(
-    /** Meters. */
-    val distance: Double = 0.0,
-    /** Seconds. */
-    val duration: Double = 0.0,
 )
 
 @Serializable
