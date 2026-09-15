@@ -3,6 +3,7 @@ package de.autoapp.shared.data
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import de.autoapp.shared.db.ChargeSiteDatabase
+import de.autoapp.shared.db.CorridorCoverageEntity
 import de.autoapp.shared.db.TileCoverageEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
@@ -22,8 +23,20 @@ class CachePruneTest {
             TileCoverageEntity("ocm", "enbw", 3, 3, 1L),           // stale → drop
         ))
         pruneCache(db, selectedKeys = setOf("enbw"), now = 10_000L, ttlMillis = 5_000L)
-        assertEquals(1L, dao.freshTileCount("ocm", "enbw", 1, 1, 1, 1, 0L))
-        assertEquals(0L, dao.freshTileCount("ocm", "ionity", 2, 2, 2, 2, 0L))
-        assertEquals(0L, dao.freshTileCount("ocm", "enbw", 3, 3, 3, 3, 0L))
+        assertEquals(1, dao.freshTilesIn("ocm", "enbw", 1, 1, 1, 1, 0L).size)
+        assertEquals(0, dao.freshTilesIn("ocm", "ionity", 2, 2, 2, 2, 0L).size)
+        assertEquals(0, dao.freshTilesIn("ocm", "enbw", 3, 3, 3, 3, 0L).size)
+    }
+
+    @Test fun prune_drops_stale_and_deselected_corridors() = runTest {
+        val dao = db.chargeSites()
+        fun corridor(key: String, fetchedAt: Long) =
+            CorridorCoverageEntity(0, "ocm", key, "48.0,11.0;48.5,11.0", 2.0, 48.0, 10.9, 48.5, 11.1, fetchedAt)
+        dao.markCorridorsFetched(listOf(corridor("enbw", 10_000L), corridor("ionity", 10_000L), corridor("enbw", 1L)))
+
+        pruneCache(db, selectedKeys = setOf("enbw"), now = 10_000L, ttlMillis = 5_000L)
+
+        assertEquals(1, dao.freshCorridorsIn("ocm", "enbw", 47.0, 10.0, 49.0, 12.0, 0L).size)
+        assertEquals(0, dao.freshCorridorsIn("ocm", "ionity", 47.0, 10.0, 49.0, 12.0, 0L).size)
     }
 }

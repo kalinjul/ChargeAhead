@@ -15,7 +15,7 @@ class ChargeSiteDaoTest {
             .setDriver(BundledSQLiteDriver()).setQueryCoroutineContext(Dispatchers.IO).build()
         val dao = db.chargeSites()
         dao.markTilesFetched(listOf(TileCoverageEntity("ocm", "enbw", 481, 115, 1_000L)))
-        assertEquals(1L, dao.freshTileCount("ocm", "enbw", 481, 481, 115, 115, 0L))
-        assertEquals(0L, dao.freshTileCount("ocm", "ionity", 481, 481, 115, 115, 0L))
+        assertEquals(listOf(TileIndex(481, 115)), dao.freshTilesIn("ocm", "enbw", 481, 481, 115, 115, 0L))
+        assertEquals(emptyList(), dao.freshTilesIn("ocm", "ionity", 481, 481, 115, 115, 0L))
     }
 }

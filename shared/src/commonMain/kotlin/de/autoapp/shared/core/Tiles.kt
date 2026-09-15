@@ -55,6 +55,14 @@ object Tiles {
         maxTileLon = indexOf(area.east),
     )
 
+    /** The rectangle a tile spans, in degrees. */
+    fun boundsOf(tile: Tile): BoundingBox = BoundingBox(
+        south = tile.lat * SIZE_DEGREES,
+        west = tile.lon * SIZE_DEGREES,
+        north = (tile.lat + 1) * SIZE_DEGREES,
+        east = (tile.lon + 1) * SIZE_DEGREES,
+    )
+
     data class Tile(val lat: Int, val lon: Int)
 
     data class TileRange(
