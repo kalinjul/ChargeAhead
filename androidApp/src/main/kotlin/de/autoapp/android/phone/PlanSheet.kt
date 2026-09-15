@@ -66,6 +66,7 @@ fun PlanSheetRoute(
         uiState = uiState,
         onQueryChange = viewModel::onQueryChanged,
         onDestinationChosen = viewModel::onDestinationChosen,
+        onPlaceChosen = viewModel::onPlaceChosen,
         onSocEdit = viewModel::onSocEditRequested,
         onSocInputChange = viewModel::onSocInputChanged,
         onSocConfirm = viewModel::onSocConfirmed,
@@ -80,6 +81,7 @@ fun PlanSheetContent(
     uiState: PlanSheetUiState,
     onQueryChange: (String) -> Unit,
     onDestinationChosen: (Destination) -> Unit,
+    onPlaceChosen: (Place) -> Unit,
     onSocEdit: () -> Unit,
     onSocInputChange: (String) -> Unit,
     onSocConfirm: () -> Unit,
@@ -214,9 +216,9 @@ fun PlanSheetContent(
                             if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                             PlaceRow(
                                 title = place.name,
-                                detail = place.detailLine(),
+                                detail = ChargeStopFormatter.detailLine(place),
                                 distanceKm = uiState.from?.distanceKmTo(place.position),
-                                onClick = { onDestinationChosen(Destination(place.name, place.position)) },
+                                onClick = { onPlaceChosen(place) },
                             )
                         }
                     }
@@ -241,14 +243,6 @@ fun PlanSheetContent(
         }
     }
 }
-
-/**
- * The structured address when it says more than the name again — otherwise
- * the description chain, which is what tells two same-name towns apart.
- */
-private fun Place.detailLine(): String? =
-    address?.takeIf { it.street != null || it.postalCode != null }?.let(ChargeStopFormatter::addressLine)
-        ?: description.removePrefix("$name, ").takeIf { it != name }
 
 /** A destination row: name, where it is, how far away — the standard list look. */
 @Composable

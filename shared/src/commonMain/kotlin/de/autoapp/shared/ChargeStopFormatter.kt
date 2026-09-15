@@ -7,6 +7,7 @@ import de.autoapp.shared.domain.ChargeSite
 import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
+import de.autoapp.shared.domain.Place
 import de.autoapp.shared.domain.Reachability
 import kotlin.math.round
 
@@ -69,6 +70,17 @@ object ChargeStopFormatter {
             .joinToString(", ")
             .takeIf { it.isNotBlank() }
     }
+
+    /**
+     * The structured address when it says more than the name again — otherwise
+     * the description chain, which is what tells two same-name towns apart.
+     */
+    fun detailLine(place: Place): String? =
+        place.address?.takeIf { it.street != null || it.postalCode != null }?.let(::addressLine)
+            ?: place.description.removePrefix("${place.name}, ").takeIf { it != place.name }
+
+    /** e.g. "Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg" — what a picked result leaves in the search field. */
+    fun label(place: Place): String = listOfNotNull(place.name, detailLine(place)).joinToString(", ")
 
     /**
      * Every connector individually, strongest first — e.g. "CCS 300 kW · 6 Ladepunkte".
