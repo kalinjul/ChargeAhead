@@ -88,7 +88,6 @@ class TripPlanner(
 
         val consumption = SpeedAwareConsumption(vehicle.consumptionKwhPer100Km)
         val totalKm = route.distanceKm
-        val minutesPerKm = route.durationMinutes / totalKm
 
         // What has to be left at the destination, never below the reserve.
         val arrivalReserve = maxOf(arrivalSocPercent, DEFAULT_RESERVE_SOC_PERCENT)
@@ -121,7 +120,7 @@ class TripPlanner(
                 departureSocPercent = departureSoc,
                 chargeKwh = chargeKwh,
                 chargeMinutes = chargeMinutes,
-                etaMinutesFromStart = stop.kmFromStart * minutesPerKm + chargeMinutesTotal,
+                etaMinutesFromStart = driveMinutesTo(route, stop.kmFromStart) + chargeMinutesTotal,
                 maxPowerKw = stop.maxPowerKw,
             )
 
@@ -267,6 +266,26 @@ class TripPlanner(
         socPercent: Double,
         reserveSocPercent: Double = DEFAULT_RESERVE_SOC_PERCENT,
     ): Double = vehicle.usableBatteryKwh * (socPercent - reserveSocPercent).coerceAtLeast(0.0) / 100.0
+
+    /**
+     * Driving time from the start to [km], on the same speed profile the energy
+     * is priced on. Whatever the segments don't cover — all of it, on a route
+     * without them — runs at the route average.
+     */
+    private fun driveMinutesTo(route: Route, km: Double): Double {
+        val to = km.coerceIn(0.0, route.distanceKm)
+        val averageMinutesPerKm = if (route.distanceKm <= 0.0) 0.0 else route.durationMinutes / route.distanceKm
+        var minutes = 0.0
+        var coveredKm = 0.0
+        for (segment in route.segments) {
+            val end = minOf(segment.fromKm + segment.distanceKm, to)
+            val overlap = end - maxOf(segment.fromKm, 0.0)
+            if (overlap <= 0.0 || segment.distanceKm <= 0.0) continue
+            minutes += segment.durationMinutes * overlap / segment.distanceKm
+            coveredKm += overlap
+        }
+        return minutes + (to - coveredKm).coerceAtLeast(0.0) * averageMinutesPerKm
+    }
 
     /** Relative to the full battery, like the car's own display; never below zero. */
     private fun socAfter(

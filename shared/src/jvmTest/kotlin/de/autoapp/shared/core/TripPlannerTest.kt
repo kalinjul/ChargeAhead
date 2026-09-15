@@ -224,6 +224,43 @@ class TripPlannerTest {
         )
     }
 
+    /** Issue #54: clock time runs on the same speed profile as the energy. */
+    @Test
+    fun `stop ETAs follow the segments, not the route average`() = runBlocking<Unit> {
+        // Slow first half, fast second half; the segments add up to the route's own duration.
+        val mixed = straightRoute().copy(
+            durationMinutes = 330.0 + 110.0,
+            segments = listOf(
+                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0),
+                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 110.0),
+            ),
+        )
+        fun driveMinutes(fromKm: Double, toKm: Double): Double {
+            val slowKm = (minOf(toKm, 330.0) - minOf(fromKm, 330.0)).coerceAtLeast(0.0)
+            return slowKm * 1.0 + (toKm - fromKm - slowKm) / 3.0
+        }
+
+        val plan = assertIs<TripPlanResult.Planned>(
+            planner(mixed, sitesAlong(mixed)).plan(start, destination, id4, startSocPercent = 90.0),
+        ).plan
+
+        val first = plan.stops.first()
+        val averageEta = first.kmFromStart * mixed.durationMinutes / mixed.distanceKm + first.chargeMinutes
+        assertTrue(
+            first.etaMinutesFromStart > averageEta,
+            "first stop at km ${first.kmFromStart}: ${first.etaMinutesFromStart} must be later than $averageEta",
+        )
+        assertEquals(driveMinutes(0.0, first.kmFromStart) + first.chargeMinutes, first.etaMinutesFromStart, 1e-6)
+
+        val last = plan.stops.last()
+        assertEquals(
+            plan.totalMinutes,
+            last.etaMinutesFromStart + driveMinutes(last.kmFromStart, mixed.distanceKm),
+            1e-6,
+            "last ETA plus the rest of the drive must add up to the total",
+        )
+    }
+
     /**
      * A route the service gave no breakdown for still has to plan. The average
      * speed is then all there is, and the result must stay in the same
