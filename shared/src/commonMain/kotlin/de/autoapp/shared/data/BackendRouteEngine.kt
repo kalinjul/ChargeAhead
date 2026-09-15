@@ -41,7 +41,10 @@ class BackendRouteEngine(
         if (response.status == HttpStatusCode.NoContent) return null
 
         val route: RouteResponse = response.body()
-        val points = route.points.map { LatLon(it.lat, it.lon) }
+        // `points` strays up to a kilometre from the road; a server older than
+        // the encoded line sends nothing better, so it stays the fallback.
+        val points = route.encodedPolyline?.let(::decodePolyline)?.takeIf { it.size >= 2 }
+            ?: route.points.map { LatLon(it.lat, it.lon) }
         // A route of one point is not a route; the domain type rejects it.
         if (points.size < 2) return null
 
