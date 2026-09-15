@@ -216,7 +216,7 @@ data class ChargeSite(
 
 data class ChargeStop(
     val site: ChargeSite,
-    val distanceKm: Double,          // straight-line distance x ROUTE_DETOUR_FACTOR
+    val distanceKm: Double,          // on a route: road km along it; in the corridor: straight line x ROUTE_DETOUR_FACTOR
     val reachability: Reachability,
     val socOnArrivalPercent: Double?,
     // The connector shown on the first line: the strongest one THIS vehicle

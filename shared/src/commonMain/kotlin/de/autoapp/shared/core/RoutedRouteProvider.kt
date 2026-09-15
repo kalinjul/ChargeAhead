@@ -25,14 +25,27 @@ class RoutedRouteProvider(
 ) : RouteProvider {
 
     private val fullArea = PolylineArea(route.points, bufferKm)
+    private val measure = RouteMeasure(route)
 
-    override fun searchArea(fix: Fix, rangeKm: Double): SearchArea {
+    override fun searchArea(fix: Fix, rangeKm: Double): SearchArea =
+        areaAhead(fix) ?: fallback.searchArea(fix, rangeKm)
+
+    /**
+     * The vehicle's position on the route — `null` exactly when [searchArea]
+     * falls back, so a list searched in the corridor is never priced against
+     * the route.
+     */
+    fun progressAt(fix: Fix): RouteProgress? {
+        if (areaAhead(fix) == null) return null
+        val projection = measure.project(fix.position)
+        return RouteProgress(measure, projection.kmFromStart, projection.segmentIndex)
+    }
+
+    private fun areaAhead(fix: Fix): PolylineArea? {
         // Far off the route, it no longer tells us anything about what's
         // ahead — the direction of travel takes over again.
-        if (fullArea.distanceKmTo(fix.position) > maxDeviationKm) {
-            return fallback.searchArea(fix, rangeKm)
-        }
-        return fullArea.aheadOf(fix.position) ?: fallback.searchArea(fix, rangeKm)
+        if (fullArea.distanceKmTo(fix.position) > maxDeviationKm) return null
+        return fullArea.aheadOf(fix.position)
     }
 
     companion object {

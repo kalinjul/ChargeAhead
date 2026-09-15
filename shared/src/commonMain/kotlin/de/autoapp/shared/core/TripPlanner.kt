@@ -13,9 +13,6 @@ import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
 import de.autoapp.shared.domain.SiteRepository
 import de.autoapp.shared.domain.VehicleProfile
-import de.autoapp.shared.domain.distanceKmTo
-import de.autoapp.shared.domain.distanceKmToSegment
-import de.autoapp.shared.domain.projectionOnSegment
 
 /** One planned charging stop along a trip. */
 data class PlannedStop(
@@ -162,7 +159,8 @@ class TripPlanner(
      * subset of a huge circle, of which the route buffer keeps almost nothing.
      */
     private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
-        val cumulative = cumulativeDistances(route)
+        val measure = RouteMeasure(route)
+        val cumulative = measure.cumulativeKm
         val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }
         val seen = LinkedHashMap<String, Candidate>()
 
@@ -187,7 +185,7 @@ class TripPlanner(
                     .maxOfOrNull { it.maxPowerKw }
                     ?: continue
                 if (power < MIN_DC_POWER_KW) continue
-                val projection = projectOntoChunk(site.position, route.points, cumulative, startIndex, endIndex)
+                val projection = measure.project(site.position, startIndex, endIndex)
                 if (projection.distanceKm > STOP_BUFFER_KM) continue
                 seen[site.id] = Candidate(
                     site = site,
@@ -279,55 +277,6 @@ class TripPlanner(
     ): Double {
         val neededSoc = consumption.energyKwh(route, fromKm, toKm) / vehicle.usableBatteryKwh * 100.0
         return (socPercent - neededSoc).coerceAtLeast(0.0)
-    }
-
-    /**
-     * Scaled so the last entry is the route's own length.
-     *
-     * [Route.points] is the simplified path, so summing it cuts every corner
-     * and lands short — on a long route by kilometres. Everything else here
-     * measures in `route.distanceKm`: the destination check, the reach, and the
-     * segments of the speed profile. Without the scaling, a candidate's
-     * km-from-start would be read in one frame and spent in another.
-     */
-    private fun cumulativeDistances(route: Route): List<Double> {
-        val points = route.points
-        val distances = ArrayList<Double>(points.size)
-        distances += 0.0
-        for (i in 1 until points.size) {
-            distances += distances[i - 1] + points[i - 1].distanceKmTo(points[i])
-        }
-        val walked = distances.last()
-        if (walked <= 0.0) return distances
-        val scale = route.distanceKm / walked
-        return distances.map { it * scale }
-    }
-
-    private data class Projection(val kmFromStart: Double, val distanceKm: Double)
-
-    /**
-     * Projects [position] onto one chunk's segments — `[fromIndex, toIndex)` —
-     * returning km-from-start and perpendicular distance in a single pass.
-     * Sweeping the whole route per candidate dominated long-trip planning.
-     */
-    private fun projectOntoChunk(
-        position: LatLon,
-        points: List<LatLon>,
-        cumulative: List<Double>,
-        fromIndex: Int,
-        toIndex: Int,
-    ): Projection {
-        var bestKm = cumulative[fromIndex]
-        var bestDistance = Double.MAX_VALUE
-        for (i in fromIndex until toIndex) {
-            val distance = position.distanceKmToSegment(points[i], points[i + 1])
-            if (distance < bestDistance) {
-                bestDistance = distance
-                val fraction = position.projectionOnSegment(points[i], points[i + 1])
-                bestKm = cumulative[i] + (cumulative[i + 1] - cumulative[i]) * fraction
-            }
-        }
-        return Projection(bestKm, bestDistance)
     }
 
     private companion object {

@@ -149,7 +149,7 @@ class ChargeStopsFeature(
     // stays in place as long as the destination is set — the route is not
     // recomputed on every location update, only trimmed from the front.
     private var destination: Destination? = null
-    private var routedProvider: RouteProvider? = null
+    private var routedProvider: RoutedRouteProvider? = null
     private var networks: NetworkPreferences = NetworkPreferences()
 
     /**
@@ -425,7 +425,9 @@ class ChargeStopsFeature(
         // delaying the next update by up to 2 km.
         lastComputedFix = fix
 
-        val area = (routedProvider ?: routeProvider).searchArea(fix, currentRangeKm())
+        val routed = routedProvider
+        val area = (routed ?: routeProvider).searchArea(fix, currentRangeKm())
+        val routeAhead = routed?.progressAt(fix)
         publish(
             mutableState.value.copy(
                 phase = ChargeStopsState.Phase.LOADING,
@@ -444,6 +446,7 @@ class ChargeStopsFeature(
                         energy = energy,
                         reserveSocPercent = reserveSocPercent,
                         networks = networks,
+                        routeAhead = routeAhead,
                     ),
                     phase = ChargeStopsState.Phase.READY,
                     failure = null,

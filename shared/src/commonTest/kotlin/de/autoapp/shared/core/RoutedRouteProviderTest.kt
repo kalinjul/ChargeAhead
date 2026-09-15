@@ -9,6 +9,8 @@ import de.autoapp.shared.domain.destination
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RoutedRouteProviderTest {
@@ -71,6 +73,22 @@ class RoutedRouteProviderTest {
     fun atTheDestination_itFallsBackToTheCorridor() {
         // Otherwise the list would be empty at the end of every trip.
         assertIs<SectorArea>(provider.searchArea(fix(a9.last()), rangeKm = 300.0))
+    }
+
+    @Test
+    fun progressAdvancesAlongTheRoute() {
+        val atTheStart = assertNotNull(provider.progressAt(fix(a9.first())))
+        val later = assertNotNull(provider.progressAt(fix(a9[3])))
+
+        assertEquals(0.0, atTheStart.kmFromStart, 1e-9)
+        assertTrue(later.kmFromStart in 1.0..route.distanceKm, "km-from-start was ${later.kmFromStart}")
+    }
+
+    @Test
+    fun whereTheAreaFallsBack_thereIsNoProgress() {
+        // A list searched in the corridor must not be priced against the route.
+        assertNull(provider.progressAt(fix(LatLon(49.02, 12.10))))
+        assertNull(provider.progressAt(fix(a9.last())))
     }
 
     @Test

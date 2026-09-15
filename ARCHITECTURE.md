@@ -298,10 +298,13 @@ range_km = available_kWh / consumption_kWh_per_100km × 100
 drop over distance is, from M4 on, a clear improvement, but it requires
 reliable SoC measurements — so it's unusable with manual entry.
 
-This scalar form still governs the corridor list and the reachability rating,
+This scalar form still governs the corridor list and its reachability rating,
 which have no route to work with: there, straight-line distance times
 `ROUTE_DETOUR_FACTOR` is all that is known, and a finer consumption model would
-be false precision on top of a coarse distance.
+be false precision on top of a coarse distance. Once a destination is set, the
+car list measures road km along the route and prices them with the same
+speed-aware model as trip planning, so phone and car show the same arrival level
+for the same site (issue #55).
 
 **Trip planning uses a route-aware model instead** (`core/ConsumptionModel.kt`).
 `SpeedAwareConsumption` walks `Route.segments` — the per-stretch distance and
