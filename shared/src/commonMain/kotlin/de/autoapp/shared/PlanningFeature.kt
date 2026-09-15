@@ -27,7 +27,7 @@ data class MapCharger(
 
 /**
  * The phone's planning flows: trip with charging stops, "charge now", and the
- * map's chargers. Assembled by [ChargeStopsFeatureFactory] on the same
+ * map's chargers. Declared in [chargeStopsModule] on the same
  * repository and settings as the car feature, so both see the same world.
  *
  * Reads the driver's configuration from [SettingsStore] at call time rather

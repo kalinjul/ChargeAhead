@@ -589,8 +589,9 @@ SettingsStore     ──┘         ▲                        │
                         XRoute (androidApp) ──► XScreen (stateless Compose)
 ```
 
-**Scoping.** `SettingsStore` and the phone's `ChargeStopsFeature` are
-application-scoped Koin singletons in `appModule` (androidApp) — the
+**Scoping.** `SettingsStore` (`appModule`, androidApp) and the phone's
+`ChargeStopsFeature` and `PlanningFeature` (`chargeStopsModule`, shared) are
+application-scoped Koin singletons — the
 ViewModels share them, because two instances would mean two location streams
 and two stores that never see each other's writes. The ViewModels are
 declared in `sharedUiModule` (`shared/ui/SharedUiModule.kt`, so iOS can
