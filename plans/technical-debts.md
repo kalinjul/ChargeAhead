@@ -26,8 +26,10 @@
       `sharedUiModule` (`shared/ui`) declares every ViewModel via
       `viewModelOf`, `startKoin` runs in `ChargeAheadApp`. The hand-wired
       `PhoneViewModels.kt` and `ChargeStopsFeatureProvider` are gone; no
-      ViewModel was touched. `ChargeStopsFeatureFactory` stays — it is
-      shared assembly, not wiring.
+      ViewModel was touched. `ChargeStopsFeatureFactory` later gave way to
+      `chargeStopsModule` (shared): the car session builds only its own
+      feature on the app graph's singletons. iOS still builds its graph
+      inside `IosEntryPoints` — a real Koin start from Swift is part of #39.
 - [x] Use MVI-like pattern as in "Now in android", see
       https://github.com/android/nowinandroid/blob/main/feature/interests/impl/src/main/kotlin/com/google/samples/apps/nowinandroid/feature/interests/impl/InterestsViewModel.kt
       — done together with the ViewModels above.

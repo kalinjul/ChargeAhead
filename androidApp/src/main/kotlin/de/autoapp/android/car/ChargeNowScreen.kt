@@ -14,6 +14,7 @@ import androidx.lifecycle.lifecycleScope
 import de.autoapp.android.R
 import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.ChargeStopsFeature
+import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.core.ChargeNowCandidate
 import de.autoapp.shared.core.ChargeNowResult
 import de.autoapp.shared.core.RelaxedFilter
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 class ChargeNowScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
+    private val planning: PlanningFeature,
 ) : Screen(carContext) {
 
     // onGetTemplate() is synchronous and therefore only reads the last
@@ -44,7 +46,7 @@ class ChargeNowScreen(
     private suspend fun load(fix: Fix) {
         result = null
         invalidate()
-        result = feature.planning?.chargeNow(fix.position)
+        result = planning.chargeNow(fix.position)
         invalidate()
     }
 

@@ -2,6 +2,7 @@ package de.autoapp.shared
 
 import de.autoapp.shared.data.CoreLocationSource
 import de.autoapp.shared.db.DatabaseFactory
+import de.autoapp.shared.domain.LocationSource
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.settings.PersistentSettingsStore
 import de.autoapp.shared.settings.UserDefaultsStorage
@@ -10,13 +11,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import org.koin.core.Koin
+import org.koin.dsl.koinApplication
+import org.koin.dsl.module
 
 /**
  * The entry point for Swift. Two things that would otherwise be awkward from Swift:
  *
  * 1. Kotlin's default arguments don't appear in the generated Objective-C
- *    header — [ChargeStopsFeatureFactory.create] would have to be called from
- *    Swift with all parameters, including the clock.
+ *    header, and Koin's reified `get()` doesn't cross at all — these
+ *    functions resolve from the graph on Swift's behalf.
  * 2. A `StateFlow` can't be subscribed to as an `AsyncSequence` or Combine
  *    publisher without SKIE. [ChargeStopsWatcher] turns it into a plain callback.
  *
@@ -26,6 +30,27 @@ fun createSettingsStore(): SettingsStore =
     PersistentSettingsStore(UserDefaultsStorage())
 
 /**
+ * The process-wide graph, built on the first [createChargeStopsFeature] call.
+ * Interim: Swift still hands over key and store per call, so the first call's
+ * values win — they are process constants on the Swift side anyway. Issue #39
+ * replaces this with an explicit Koin start from Swift.
+ */
+private var graph: Koin? = null
+
+private fun graph(openChargeMapKey: String?, settingsStore: SettingsStore): Koin =
+    graph ?: koinApplication {
+        modules(
+            module {
+                single { settingsStore }
+                single<LocationSource> { CoreLocationSource() }
+                single { DatabaseFactory() }
+                single { ChargeStopsConfig(openChargeMapKey, backend = null) }
+            },
+            chargeStopsModule(),
+        )
+    }.koin.also { graph = it }
+
+/**
  * @param settingsStore the same instance that also backs the settings view —
  *   otherwise the feature would never see changes the driver makes.
  */
@@ -33,14 +58,9 @@ fun createChargeStopsFeature(
     openChargeMapKey: String?,
     settingsStore: SettingsStore,
 ): ChargeStopsFeature =
-    ChargeStopsFeatureFactory.create(
-        locationSource = CoreLocationSource(),
-        openChargeMapKey = openChargeMapKey,
-        settingsStore = settingsStore,
-        databaseFactory = DatabaseFactory(),
-        // No vehicle-data API on iOS (ARCHITECTURE.md 1.2).
-        hardwareSoCSource = null,
-    )
+    // Each caller owns its feature, as before; the data graph beneath is shared.
+    // No vehicle-data API on iOS (ARCHITECTURE.md 1.2).
+    graph(openChargeMapKey, settingsStore).newChargeStopsFeature(locationSource = CoreLocationSource())
 
 /**
  * Reports every state change to Swift.
@@ -79,12 +99,15 @@ data class TripPlanOutcome(
  * bridge pattern as [ChargeStopsWatcher], for the same reason: Kotlin
  * `suspend` crosses to Swift as a completion handler with awkward types and
  * without default arguments.
+ *
+ * @param feature unused beyond proving [createChargeStopsFeature] ran and the
+ *   graph exists; kept so the Swift call site stays unchanged until #39.
  */
-class PlanningBridge(feature: ChargeStopsFeature) {
+class PlanningBridge(@Suppress("UNUSED_PARAMETER") feature: ChargeStopsFeature) {
 
-    private val planning = requireNotNull(feature.planning) {
-        "Feature was assembled without planning — use ChargeStopsFeatureFactory.create"
-    }
+    private val planning: PlanningFeature = requireNotNull(graph) {
+        "No graph yet — call createChargeStopsFeature first"
+    }.get()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun planTrip(

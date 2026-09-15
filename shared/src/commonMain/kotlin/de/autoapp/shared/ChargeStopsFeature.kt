@@ -76,12 +76,6 @@ class ChargeStopsFeature(
      * of lingering on a detached scope nobody owns.
      */
     private val onStart: (suspend () -> Unit)? = null,
-    /**
-     * The phone's planning flows, assembled by the factory on the same
-     * repository and settings. `null` in tests that assemble by hand and
-     * don't need it.
-     */
-    val planning: PlanningFeature? = null,
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)

@@ -19,6 +19,7 @@ import androidx.lifecycle.lifecycleScope
 import de.autoapp.android.R
 import de.autoapp.shared.ChargeStopFormatter
 import de.autoapp.shared.ChargeStopsFeature
+import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.core.MapsHandoff
 import de.autoapp.shared.core.PlannedStop
 import de.autoapp.shared.core.TripPlan
@@ -43,6 +44,7 @@ import kotlinx.coroutines.launch
 class RouteScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
+    private val planning: PlanningFeature,
     private val destination: Destination,
     private val title: String = destination.name,
 ) : Screen(carContext) {
@@ -63,7 +65,6 @@ class RouteScreen(
     private suspend fun plan(fix: Fix) {
         result = null
         invalidate()
-        val planning = feature.planning ?: return
         result = planning.planTrip(
             from = fix.position,
             destination = destination,
@@ -181,7 +182,7 @@ class RouteScreen(
     private fun chargeNowFab(): Action = Action.Builder()
         .setIcon(icon(R.drawable.ic_bolt))
         .setBackgroundColor(CarColor.PRIMARY)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature, planning)) }
         .build()
 
     /** Destination in reach without charging: no list to show, just the handoff. */
@@ -206,7 +207,7 @@ class RouteScreen(
     /** Body actions may carry titles — unlike the icon-only FAB. */
     private fun chargeNowTitledAction(): Action = Action.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature, planning)) }
         .build()
 
     private fun header(withRefresh: Boolean, subtitle: String? = null): Header {
