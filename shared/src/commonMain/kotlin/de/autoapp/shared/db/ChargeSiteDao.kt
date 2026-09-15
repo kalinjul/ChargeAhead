@@ -8,6 +8,8 @@ import androidx.room.Transaction
 
 data class OperatorCount(val operator: String?, val sites: Long)
 
+data class TileIndex(val tileLat: Long, val tileLon: Long)
+
 @Dao
 interface ChargeSiteDao {
 
@@ -20,23 +22,31 @@ interface ChargeSiteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun markTilesFetched(tiles: List<TileCoverageEntity>)
 
+    @Insert
+    suspend fun markCorridorsFetched(corridors: List<CorridorCoverageEntity>)
+
     /** One fetch, one transaction: sites and their coverage land together or not at all. */
     @Transaction
-    suspend fun recordFetch(sites: List<ChargeSiteEntity>, tiles: List<TileCoverageEntity>) {
+    suspend fun recordFetch(
+        sites: List<ChargeSiteEntity>,
+        tiles: List<TileCoverageEntity>,
+        corridors: List<CorridorCoverageEntity>,
+    ) {
         upsertSites(sites)
         markTilesFetched(tiles)
+        markCorridorsFetched(corridors)
     }
 
-    // Tiles of the area that are fresh enough. The caller compares the count
-    // against the number of requested tiles: if one is missing, it refetches.
+    // Fresh tiles within a tile range. Listed rather than counted: which
+    // tiles a query needs depends on its shape, not just on its box.
     @Query(
-        "SELECT count(*) FROM tileCoverage WHERE sourceId = :sourceId " +
+        "SELECT tileLat, tileLon FROM tileCoverage WHERE sourceId = :sourceId " +
             "AND networkKey = :networkKey " +
             "AND tileLat BETWEEN :minTileLat AND :maxTileLat " +
             "AND tileLon BETWEEN :minTileLon AND :maxTileLon " +
             "AND fetchedAtMillis > :notOlderThanMillis",
     )
-    suspend fun freshTileCount(
+    suspend fun freshTilesIn(
         sourceId: String,
         networkKey: String,
         minTileLat: Long,
@@ -44,17 +54,61 @@ interface ChargeSiteDao {
         minTileLon: Long,
         maxTileLon: Long,
         notOlderThanMillis: Long,
-    ): Long
+    ): List<TileIndex>
+
+    // Fresh corridors whose box overlaps the given one.
+    @Query(
+        "SELECT * FROM corridorCoverage WHERE sourceId = :sourceId " +
+            "AND networkKey = :networkKey " +
+            "AND south <= :north AND north >= :south AND west <= :east AND east >= :west " +
+            "AND fetchedAtMillis > :notOlderThanMillis",
+    )
+    suspend fun freshCorridorsIn(
+        sourceId: String,
+        networkKey: String,
+        south: Double,
+        west: Double,
+        north: Double,
+        east: Double,
+        notOlderThanMillis: Long,
+    ): List<CorridorCoverageEntity>
+
+    @Query("DELETE FROM tileCoverage WHERE sourceId = :sourceId")
+    suspend fun clearTileCoverage(sourceId: String)
+
+    @Query("DELETE FROM corridorCoverage WHERE sourceId = :sourceId")
+    suspend fun clearCorridorCoverage(sourceId: String)
 
     /** Discards coverage, not the sites themselves: the store stays readable. */
-    @Query("DELETE FROM tileCoverage WHERE sourceId = :sourceId")
-    suspend fun clearCoverage(sourceId: String)
+    @Transaction
+    suspend fun clearCoverage(sourceId: String) {
+        clearTileCoverage(sourceId)
+        clearCorridorCoverage(sourceId)
+    }
 
     @Query("DELETE FROM tileCoverage WHERE fetchedAtMillis <= :olderThanMillis")
-    suspend fun pruneStaleCoverage(olderThanMillis: Long)
+    suspend fun pruneStaleTiles(olderThanMillis: Long)
+
+    @Query("DELETE FROM corridorCoverage WHERE fetchedAtMillis <= :olderThanMillis")
+    suspend fun pruneStaleCorridors(olderThanMillis: Long)
+
+    @Transaction
+    suspend fun pruneStaleCoverage(olderThanMillis: Long) {
+        pruneStaleTiles(olderThanMillis)
+        pruneStaleCorridors(olderThanMillis)
+    }
 
     @Query("DELETE FROM tileCoverage WHERE networkKey NOT IN (:keys)")
-    suspend fun pruneCoverageNotIn(keys: List<String>)
+    suspend fun pruneTilesNotIn(keys: List<String>)
+
+    @Query("DELETE FROM corridorCoverage WHERE networkKey NOT IN (:keys)")
+    suspend fun pruneCorridorsNotIn(keys: List<String>)
+
+    @Transaction
+    suspend fun pruneCoverageNotIn(keys: List<String>) {
+        pruneTilesNotIn(keys)
+        pruneCorridorsNotIn(keys)
+    }
 
     @Query("DELETE FROM chargeSite WHERE fetchedAtMillis <= :olderThanMillis")
     suspend fun pruneStaleSites(olderThanMillis: Long)

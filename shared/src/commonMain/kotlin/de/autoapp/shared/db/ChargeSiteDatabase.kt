@@ -48,12 +48,36 @@ data class TileCoverageEntity(
     val fetchedAtMillis: Long,
 )
 
+// A fetched route buffer. It is far too narrow to fully contain a tile, so
+// without this a route fetch would record nothing at all and every later
+// route query would refetch. The box columns let SQL preselect the corridors
+// near a query; the geometry check itself runs in Coverage.
+@Entity(tableName = "corridorCoverage", indices = [Index("sourceId", "networkKey")])
+data class CorridorCoverageEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val sourceId: String,
+    val networkKey: String,
+    // Route points as "lat,lon;lat,lon;…".
+    val points: String,
+    val bufferKm: Double,
+    val south: Double,
+    val west: Double,
+    val north: Double,
+    val east: Double,
+    val fetchedAtMillis: Long,
+)
+
 // exportSchema = false for the same reason verifyMigrations was off under
 // SQLDelight: a schema snapshot per version costs more than it buys. The
 // tables are a regenerable cache, so a schema bump just drops and refetches
 // — see fallbackToDestructiveMigration in DatabaseFactory. No hand-written
-// Migration objects.
-@Database(entities = [ChargeSiteEntity::class, TileCoverageEntity::class], version = 2, exportSchema = false)
+// Migration objects. Version 3 also discards the old tile coverage, which
+// was recorded over bounding boxes and can't be trusted.
+@Database(
+    entities = [ChargeSiteEntity::class, TileCoverageEntity::class, CorridorCoverageEntity::class],
+    version = 3,
+    exportSchema = false,
+)
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)
 abstract class ChargeSiteDatabase : RoomDatabase() {
     abstract fun chargeSites(): ChargeSiteDao

@@ -49,6 +49,18 @@ class OsrmRouteEngineTest {
         assertTrue(abs(route.durationMinutes - 108.0) < 0.01, "Was ${route.durationMinutes}")
     }
 
+    /** The full geometry is thinned before anything downstream sees it. */
+    @Test
+    fun pointsOnAStraightStretchAreDropped() = runBlocking {
+        val straight = (0..50).joinToString(",") { "[11.0,${49.0 + it * 0.002}]" }
+        val body = """{"code":"Ok","routes":[{"distance":11000.0,"duration":600.0,
+                       "geometry":{"coordinates":[$straight]}}]}"""
+
+        val route = assertNotNull(engineRespondingWith(body).route(nuernberg, muenchen))
+
+        assertEquals(listOf(LatLon(49.0, 11.0), LatLon(49.1, 11.0)), route.points)
+    }
+
     /** The speed profile comes from the backend only (#56); steps aren't even asked for. */
     @Test
     fun carriesNoSpeedProfile() = runBlocking {
@@ -93,12 +105,12 @@ class OsrmRouteEngineTest {
     }
 
     @Test
-    fun queriesTheSimplifiedGeometry() = runBlocking {
+    fun queriesTheFullGeometry() = runBlocking {
         var seenRequest: HttpRequestData? = null
         engineRespondingWith(validResponse) { seenRequest = it }.route(nuernberg, muenchen)
 
         val request = requireNotNull(seenRequest)
-        assertEquals("simplified", request.url.parameters["overview"])
+        assertEquals("full", request.url.parameters["overview"])
         assertEquals("geojson", request.url.parameters["geometries"])
         // Longitude before latitude, separated by a semicolon.
         assertTrue(

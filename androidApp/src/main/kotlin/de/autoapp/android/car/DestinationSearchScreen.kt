@@ -10,6 +10,7 @@ import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import de.autoapp.android.R
 import de.autoapp.shared.ChargeStopsFeature
+import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.domain.Destination
 import de.autoapp.shared.domain.SettingsStore
 import de.autoapp.shared.domain.Place
@@ -24,6 +25,7 @@ import kotlinx.coroutines.launch
 class DestinationSearchScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
+    private val planning: PlanningFeature,
     private val settings: SettingsStore,
 ) : Screen(carContext) {
 
@@ -107,6 +109,6 @@ class DestinationSearchScreen(
         // The search screen replaces itself with the route: back from the
         // planned stops should land on the start screen, not in the keyboard.
         screenManager.pop()
-        screenManager.push(RouteScreen(carContext, feature, destination))
+        screenManager.push(RouteScreen(carContext, feature, planning, destination))
     }
 }

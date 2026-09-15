@@ -1,8 +1,10 @@
 package de.autoapp.shared.data
 
+import de.autoapp.shared.core.Coverage
 import de.autoapp.shared.core.Tiles
 import de.autoapp.shared.db.ChargeSiteDatabase
 import de.autoapp.shared.db.ChargeSiteEntity
+import de.autoapp.shared.db.CorridorCoverageEntity
 import de.autoapp.shared.db.TileCoverageEntity
 import de.autoapp.shared.logWarning
 import de.autoapp.shared.domain.Address
@@ -11,6 +13,7 @@ import de.autoapp.shared.domain.ChargeSiteSource
 import de.autoapp.shared.domain.Connector
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
+import de.autoapp.shared.domain.PolylineArea
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.SearchArea
 import de.autoapp.shared.domain.Network
@@ -20,9 +23,11 @@ import de.autoapp.shared.domain.TimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.job
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -66,14 +71,22 @@ class TiledSiteRepository(
     override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
         val key = requestKey(area, networks)
         val deferred = inFlightGuard.withLock {
-            inFlight[key] ?: scope.async { loadSites(area, networks) }.also { fetch ->
-                inFlight[key] = fetch
-                // Drop it once it settles, so the map only ever holds live
-                // fetches — not a growing history of every area ever queried.
-                fetch.invokeOnCompletion {
-                    scope.launch { inFlightGuard.withLock { if (inFlight[key] === fetch) inFlight.remove(key) } }
+            inFlight[key] ?: scope.async {
+                try {
+                    loadSites(area, networks)
+                } finally {
+                    // Drop it before the result is delivered, so the map only
+                    // ever holds live fetches. Removing it afterwards (e.g. from
+                    // invokeOnCompletion) let a caller that asks again right
+                    // away get this finished fetch back — a stale result that
+                    // skipped the TTL check. The guard is still held by the
+                    // caller registering this fetch, so this waits until then.
+                    val self = coroutineContext.job
+                    withContext(NonCancellable) {
+                        inFlightGuard.withLock { if (inFlight[key] === self) inFlight.remove(key) }
+                    }
                 }
-            }
+            }.also { fetch -> inFlight[key] = fetch }
         }
         // await() outside the guard: holding it across the fetch would be the
         // very global serialization we're removing.
@@ -113,26 +126,40 @@ class TiledSiteRepository(
     }
 
     /**
-     * Are all tiles in the area fresh for the given network key?
+     * Has the area's shape been fetched for the given network key?
      *
-     * Counted rather than checked one by one: querying 1500 tiles
-     * individually would mean 1500 requests to SQLite. The count is enough,
-     * because the primary key rules out duplicates — if the count matches the
-     * number of tiles the area has, every one of them is present.
+     * One read for the fresh tiles in the box, one for the corridors near a
+     * route; which of them the shape actually needs is decided in [Coverage].
      */
     private suspend fun isCovered(area: SearchArea, networkKey: String): Boolean {
-        val range = Tiles.rangeOf(area.boundingBox)
-        val fresh = dao.freshTileCount(
+        val notOlderThan = time.nowMillis() - ttlMillis
+        val box = area.boundingBox
+        val range = Tiles.rangeOf(box)
+        val freshTiles = dao.freshTilesIn(
             sourceId = source.id,
             networkKey = networkKey,
             minTileLat = range.minTileLat.toLong(),
             maxTileLat = range.maxTileLat.toLong(),
             minTileLon = range.minTileLon.toLong(),
             maxTileLon = range.maxTileLon.toLong(),
-            notOlderThanMillis = time.nowMillis() - ttlMillis,
-        )
+            notOlderThanMillis = notOlderThan,
+        ).mapTo(HashSet()) { Tiles.Tile(it.tileLat.toInt(), it.tileLon.toInt()) }
 
-        return fresh >= range.count.toLong()
+        val corridors = if (area is PolylineArea) {
+            dao.freshCorridorsIn(
+                sourceId = source.id,
+                networkKey = networkKey,
+                south = box.south,
+                west = box.west,
+                north = box.north,
+                east = box.east,
+                notOlderThanMillis = notOlderThan,
+            ).map { PolylineArea(it.points.decodePoints(), it.bufferKm) }
+        } else {
+            emptyList()
+        }
+
+        return Coverage.isCovered(area, freshTiles, corridors)
     }
 
     // networks = the Network objects to query the source with (missing ones only).
@@ -140,11 +167,31 @@ class TiledSiteRepository(
     private suspend fun fetchAndStore(area: SearchArea, networks: List<Network>, stampKeys: List<String>) {
         // The shape decides what "a bit bigger" looks like — a sector grows
         // into a full circle, a route buffer doesn't grow at all. What gets
-        // recorded is exactly the area that was actually fetched.
+        // recorded is what the source was asked for: the tiles that shape
+        // fully contains, plus the route itself as a corridor. Never its box —
+        // the sources don't answer for the box (issue #69).
         val fetchArea = area.prefetchArea(prefetchMarginKm)
         val sites = source.query(fetchArea, networks)
         val now = time.nowMillis()
-        val tiles = Tiles.covering(fetchArea.boundingBox)
+        val tiles = Coverage.tilesToRecord(fetchArea)
+        val corridors = if (fetchArea is PolylineArea) {
+            val box = fetchArea.boundingBox
+            stampKeys.map { key ->
+                CorridorCoverageEntity(
+                    sourceId = source.id,
+                    networkKey = key,
+                    points = fetchArea.points.encodePoints(),
+                    bufferKm = fetchArea.bufferKm,
+                    south = box.south,
+                    west = box.west,
+                    north = box.north,
+                    east = box.east,
+                    fetchedAtMillis = now,
+                )
+            }
+        } else {
+            emptyList()
+        }
 
         dao.recordFetch(
             sites = sites.map { site ->
@@ -174,6 +221,7 @@ class TiledSiteRepository(
                     )
                 }
             },
+            corridors = corridors,
         )
     }
 
@@ -217,6 +265,14 @@ internal fun String.decodeConnectors(): List<Connector> =
             )
         }
     }
+
+/** Route points as `lat,lon` pairs, separated by semicolons. */
+internal fun List<LatLon>.encodePoints(): String = joinToString(";") { "${it.lat},${it.lon}" }
+
+internal fun String.decodePoints(): List<LatLon> = split(";").map { pair ->
+    val (lat, lon) = pair.split(",")
+    LatLon(lat.toDouble(), lon.toDouble())
+}
 
 private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     id = id,

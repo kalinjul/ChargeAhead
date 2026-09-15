@@ -17,10 +17,8 @@ data class RouteSegment(
 /**
  * A calculated driving route.
  *
- * [points] is the simplified path, not every bend in the road: a few dozen
- * waypoints are enough for a buffer of a few kilometers, and OSRM returns a
- * 170 km highway trip with `overview=simplified` in 15 points and under a
- * kilobyte.
+ * [points] is simplified to within about 100 m of the road — far inside the
+ * search buffers, at a few hundred points for a trip across Germany.
  *
  * [segments] is how distance and time split up along the way — the only thing
  * that tells a motorway stretch from a town one. It is empty when the route

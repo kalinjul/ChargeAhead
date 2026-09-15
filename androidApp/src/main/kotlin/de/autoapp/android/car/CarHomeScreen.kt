@@ -15,6 +15,7 @@ import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import de.autoapp.android.R
 import de.autoapp.shared.ChargeStopsFeature
+import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SettingsStore
 import kotlinx.coroutines.flow.combine
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
+    private val planning: PlanningFeature,
     private val settings: SettingsStore,
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
@@ -121,14 +123,14 @@ class CarHomeScreen(
         .setTitle(carContext.getString(R.string.car_home_enter_destination))
         .setImage(icon(R.drawable.ic_search), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature, settings)) }
+        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature, planning, settings)) }
         .build()
 
     private fun chargeNowRow(): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
         .setImage(icon(R.drawable.ic_bolt), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature, planning)) }
         .build()
 
     private fun favoriteRow(route: SavedRoute): Row {
@@ -137,7 +139,7 @@ class CarHomeScreen(
             .setImage(icon(R.drawable.ic_heart_filled, CarColor.RED), Row.IMAGE_TYPE_ICON)
             .setBrowsable(true)
             .setOnClickListener {
-                screenManager.push(RouteScreen(carContext, feature, route.destination, route.name))
+                screenManager.push(RouteScreen(carContext, feature, planning, route.destination, route.name))
             }
         route.summary?.let { row.addText(it) }
         return row.build()

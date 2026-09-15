@@ -293,7 +293,7 @@ interface SettingsStore {
     suspend fun removeSavedRoute(id: String)
 }
 
-// The phone's planning flows, reachable as ChargeStopsFeature.planning.
+// The phone's planning flows, a Koin single in chargeStopsModule.
 // Swift goes through PlanningBridge (iosMain) — same reasoning as the watcher.
 class PlanningFeature {
     suspend fun planTrip(from, destination, socOverridePercent = null): TripPlanResult
@@ -335,10 +335,14 @@ data class ChargeStopsState(
     val isDemo: Boolean,
 )
 
-// Decides once for both platforms what happens without an API key.
-object ChargeStopsFeatureFactory {
-    fun create(locationSource: LocationSource, openChargeMapKey: String?, ...): ChargeStopsFeature
-}
+// The data graph (Koin), declared once for both platforms — decides what
+// happens without an API key. Platform modules supply LocationSource,
+// DatabaseFactory, SettingsStore and ChargeStopsConfig; one HttpClient,
+// database and repository per process, shared by phone and car.
+fun chargeStopsModule(): Module
+class ChargeStopsConfig(openChargeMapKey: String?, backend: BackendConfig?) { val isDemo: Boolean }
+// A feature the caller owns and closes — the car session's, with the car's battery.
+fun Koin.newChargeStopsFeature(locationSource, hardwareSoCSource = null): ChargeStopsFeature
 
 // So Android and iOS are guaranteed to show the same lines.
 object ChargeStopFormatter {

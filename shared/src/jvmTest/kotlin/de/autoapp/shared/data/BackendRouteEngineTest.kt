@@ -42,7 +42,7 @@ class BackendRouteEngineTest {
         )
     }
 
-    /** The backend coalesces server-side; the client only carries it across. */
+    /** The backend builds the segments; the client only carries them across. */
     @Test
     fun theSpeedProfileIsCarriedAcross() = runBlocking {
         val engine = engineRespondingWith(
@@ -116,6 +116,50 @@ class BackendRouteEngineTest {
         assertEquals(LatLon(48.9, 11.4), route.points.first())
         assertEquals(94.2, route.distanceKm)
         assertEquals(63.0, route.durationMinutes)
+    }
+
+    /** The coarse `points` are only for apps that predate the encoded line. */
+    @Test
+    fun theEncodedLineWinsOverThePoints() = runBlocking {
+        val engine = engineRespondingWith(
+            """
+            {
+              "points": [{"lat": 48.9, "lon": 11.4}, {"lat": 49.1, "lon": 11.6}],
+              "encodedPolyline": "_p~iF~ps|U_ulLnnqC_mqNvxq`@",
+              "distanceKm": 94.2,
+              "durationMinutes": 63.0,
+              "provider": "osm",
+              "attribution": "OpenStreetMap"
+            }
+            """.trimIndent(),
+        )
+
+        val route = assertNotNull(engine.route(from, to))
+
+        assertEquals(3, route.points.size)
+        assertEquals(38.5, route.points.first().lat, 1e-9)
+        assertEquals(-126.453, route.points.last().lon, 1e-9)
+    }
+
+    /** A line that decodes to less than a route must not throw away the usable points. */
+    @Test
+    fun anUnusableEncodedLineFallsBackToThePoints() = runBlocking {
+        val engine = engineRespondingWith(
+            """
+            {
+              "points": [{"lat": 48.9, "lon": 11.4}, {"lat": 49.1, "lon": 11.6}],
+              "encodedPolyline": "_p~iF",
+              "distanceKm": 94.2,
+              "durationMinutes": 63.0,
+              "provider": "osm",
+              "attribution": "OpenStreetMap"
+            }
+            """.trimIndent(),
+        )
+
+        val route = assertNotNull(engine.route(from, to))
+
+        assertEquals(listOf(LatLon(48.9, 11.4), LatLon(49.1, 11.6)), route.points)
     }
 
     /** No road connection is an answer, not a failure — and carries no body to read. */

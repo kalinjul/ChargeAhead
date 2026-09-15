@@ -3,12 +3,16 @@ package de.autoapp.shared.data
 import de.autoapp.shared.domain.ConnectorType
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.NetworkCatalog
+import de.autoapp.shared.domain.PolylineArea
 import de.autoapp.shared.domain.SectorArea
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.forms.FormDataContent
 import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.Parameters
 import io.ktor.http.headersOf
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -38,6 +42,9 @@ class BnetzaSourceTest {
         }
         return BnetzaSource(createHttpClient(engine))
     }
+
+    private val HttpRequestData.form: Parameters
+        get() = (body as FormDataContent).formData
 
     private fun feature(attributes: String) =
         """{"features":[{"attributes":{$attributes}}],"exceededTransferLimit":false}"""
@@ -168,7 +175,7 @@ class BnetzaSourceTest {
 
         val offsets = mutableListOf<String?>()
         val source = sourceRespondingWith(firstPage, secondPage) {
-            offsets += it.url.parameters["resultOffset"]
+            offsets += it.form["resultOffset"]
         }
 
         val sites = source.query(area)
@@ -211,7 +218,7 @@ class BnetzaSourceTest {
     fun builds_where_with_keyword_likes() = runBlocking {
         var where: String? = null
         val source = sourceRespondingWith("""{"features":[],"exceededTransferLimit":false}""") {
-            where = it.url.parameters["where"]
+            where = it.form["where"]
         }
         val sel = NetworkCatalog.selection(setOf("enbw", "ionity"))
         source.query(SectorArea.circle(LatLon(48.1, 11.5), 5.0), networks = sel)
@@ -225,7 +232,7 @@ class BnetzaSourceTest {
     fun base_clause_when_unfiltered() = runBlocking {
         var where: String? = null
         val source = sourceRespondingWith("""{"features":[],"exceededTransferLimit":false}""") {
-            where = it.url.parameters["where"]
+            where = it.form["where"]
         }
         source.query(SectorArea.circle(LatLon(48.1, 11.5), 5.0))
         assertEquals("Status='In Betrieb'", where)
@@ -240,11 +247,30 @@ class BnetzaSourceTest {
 
         source.query(area)
 
-        val parameter = requireNotNull(seen).url.parameters
+        val parameter = requireNotNull(seen).form
         assertEquals("Status='In Betrieb'", parameter["where"])
         assertEquals("esriGeometryEnvelope", parameter["geometryType"])
         assertEquals("4326", parameter["inSR"])
         assertEquals("false", parameter["returnGeometry"])
         assertTrue(parameter["geometry"]!!.contains("\"xmin\""))
+    }
+
+    /** A route within 100 m of the road runs to hundreds of points; in the URL, the service answered 404. */
+    @Test
+    fun aLongRouteTravelsInTheBody() = runBlocking {
+        var seen: HttpRequestData? = null
+        val source = sourceRespondingWith("""{"features":[],"exceededTransferLimit":false}""") {
+            seen = it
+        }
+        val route = PolylineArea((0..500).map { LatLon(48.0 + it * 0.002, 11.0 + it * 0.001) }, bufferKm = 2.0)
+
+        source.query(route)
+
+        val request = requireNotNull(seen)
+        assertEquals(HttpMethod.Post, request.method)
+        assertTrue(request.url.toString().length < 200, request.url.toString())
+        assertEquals("esriGeometryPolyline", request.form["geometryType"])
+        assertEquals("2000.0", request.form["distance"])
+        assertTrue(request.form["geometry"]!!.startsWith("""{"paths":[[[11.0,48.0],"""))
     }
 }
