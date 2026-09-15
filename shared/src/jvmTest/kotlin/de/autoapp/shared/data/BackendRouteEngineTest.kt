@@ -42,7 +42,7 @@ class BackendRouteEngineTest {
         )
     }
 
-    /** The backend coalesces server-side; the client only carries it across. */
+    /** The backend builds the segments; the client only carries them across. */
     @Test
     fun theSpeedProfileIsCarriedAcross() = runBlocking {
         val engine = engineRespondingWith(

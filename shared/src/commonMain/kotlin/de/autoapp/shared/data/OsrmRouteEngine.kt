@@ -53,7 +53,7 @@ class OsrmRouteEngine(
         }
         if (points.size < 2) return null
 
-        // No speed profile: coalescing steps into segments is the backend's job,
+        // No speed profile: turning steps into segments is the backend's job,
         // and a second copy here would drift from it (#56). Planning falls back
         // to the route's average speed.
         return Route(
