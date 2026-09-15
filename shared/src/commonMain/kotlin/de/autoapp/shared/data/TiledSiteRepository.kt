@@ -20,9 +20,11 @@ import de.autoapp.shared.domain.TimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.job
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -66,14 +68,22 @@ class TiledSiteRepository(
     override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
         val key = requestKey(area, networks)
         val deferred = inFlightGuard.withLock {
-            inFlight[key] ?: scope.async { loadSites(area, networks) }.also { fetch ->
-                inFlight[key] = fetch
-                // Drop it once it settles, so the map only ever holds live
-                // fetches — not a growing history of every area ever queried.
-                fetch.invokeOnCompletion {
-                    scope.launch { inFlightGuard.withLock { if (inFlight[key] === fetch) inFlight.remove(key) } }
+            inFlight[key] ?: scope.async {
+                try {
+                    loadSites(area, networks)
+                } finally {
+                    // Drop it before the result is delivered, so the map only
+                    // ever holds live fetches. Removing it afterwards (e.g. from
+                    // invokeOnCompletion) let a caller that asks again right
+                    // away get this finished fetch back — a stale result that
+                    // skipped the TTL check. The guard is still held by the
+                    // caller registering this fetch, so this waits until then.
+                    val self = coroutineContext.job
+                    withContext(NonCancellable) {
+                        inFlightGuard.withLock { if (inFlight[key] === self) inFlight.remove(key) }
+                    }
                 }
-            }
+            }.also { fetch -> inFlight[key] = fetch }
         }
         // await() outside the guard: holding it across the fetch would be the
         // very global serialization we're removing.
