@@ -3,6 +3,7 @@ package de.autoapp.shared.data
 import de.autoapp.shared.domain.LatLon
 import de.autoapp.shared.domain.Route
 import de.autoapp.shared.domain.RouteEngine
+import de.autoapp.shared.domain.simplified
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -21,9 +22,8 @@ import kotlinx.serialization.Serializable
  * self-hosted instance is a one-line configuration change — **it must be
  * replaced before any release** (ARCHITECTURE.md, open item 5).
  *
- * `overview=simplified` instead of `full`: for a two-kilometer buffer, the
- * coarse shape is enough. A 170 km highway trip comes back with 15 waypoints
- * in under a kilobyte this way — with `full` it would be thousands.
+ * `overview=full`, simplified here: OSRM's own `simplified` strays almost 4 km
+ * from the road on a long trip, wider than the search buffers.
  */
 class OsrmRouteEngine(
     private val httpClient: HttpClient,
@@ -36,7 +36,7 @@ class OsrmRouteEngine(
 
         val response: OsrmResponse = httpClient.get("$baseUrl/$coordinates") {
             header(HttpHeaders.UserAgent, OpenChargeMapSource.USER_AGENT)
-            parameter("overview", "simplified")
+            parameter("overview", "full")
             parameter("geometries", "geojson")
             parameter("alternatives", "false")
         }.body()
@@ -57,7 +57,7 @@ class OsrmRouteEngine(
         // and a second copy here would drift from it (#56). Planning falls back
         // to the route's average speed.
         return Route(
-            points = points,
+            points = points.simplified(SIMPLIFY_TOLERANCE_KM),
             distanceKm = route.distance / 1000.0,
             durationMinutes = route.duration / 60.0,
         )
@@ -68,6 +68,9 @@ class OsrmRouteEngine(
          * Public demo server. See the warning on the class.
          */
         const val DEFAULT_BASE_URL = "https://router.project-osrm.org/route/v1/driving"
+
+        /** The backend's tolerance, so both paths hand the planner the same line. */
+        const val SIMPLIFY_TOLERANCE_KM = 0.1
     }
 }
 

@@ -16,8 +16,7 @@ import kotlin.test.assertTrue
  * OCM_LIVE=1 ./gradlew :shared:jvmTest --tests '*OsrmLiveContractTest'
  * ```
  *
- * It also measures the assumption the whole switch from sector to route is
- * based on: that a simplified route stays small.
+ * It also checks that the full geometry, once simplified, stays small.
  */
 class OsrmLiveContractTest {
 
@@ -47,9 +46,8 @@ class OsrmLiveContractTest {
 
         val route = assertNotNull(runBlocking { engine().route(nuremberg, munich) })
 
-        // This is what the switch is based on: a couple dozen points are
-        // enough for a 2 km buffer. With overview=full it would be thousands.
-        assertTrue(route.points.size in 2..200, "Was ${route.points.size} waypoints")
+        // Unsimplified, this trip is about 2,000 points; at 100 m about 100 (#57).
+        assertTrue(route.points.size in 2..400, "Was ${route.points.size} waypoints")
     }
 
     @Test
