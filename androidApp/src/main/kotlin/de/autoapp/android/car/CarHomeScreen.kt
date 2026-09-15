@@ -1,7 +1,6 @@
 package de.autoapp.android.car
 
 import android.Manifest
-import android.content.pm.PackageManager
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
@@ -18,6 +17,7 @@ import de.autoapp.android.R
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.domain.SavedRoute
 import de.autoapp.shared.domain.SettingsStore
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 /**
@@ -30,11 +30,18 @@ class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
     private val settings: SettingsStore,
+    private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
     // onGetTemplate() is synchronous and therefore only reads the last
     // remembered state; changes are picked up via invalidate().
     private var favorites: List<SavedRoute> = emptyList()
+    private val fineLocation = permissions.granted(Manifest.permission.ACCESS_FINE_LOCATION)
+    private val coarseLocation = permissions.granted(Manifest.permission.ACCESS_COARSE_LOCATION)
+
+    // Seeded synchronously so the first template doesn't flash the
+    // permission message while the collector below starts up.
+    private var hasLocationPermission = fineLocation.value || coarseLocation.value
     private var permissionRequestPending = false
 
     init {
@@ -44,11 +51,20 @@ class CarHomeScreen(
                 invalidate()
             }
         }
-        if (hasLocationPermission()) feature.startSensors()
+        lifecycleScope.launch {
+            combine(fineLocation, coarseLocation) { fine, coarse -> fine || coarse }
+                .collect { granted ->
+                    hasLocationPermission = granted
+                    // Starting twice is a no-op, so this covers both the
+                    // session start and a grant later on.
+                    if (granted) feature.startSensors()
+                    invalidate()
+                }
+        }
     }
 
     override fun onGetTemplate(): Template {
-        if (!hasLocationPermission()) return permissionTemplate()
+        if (!hasLocationPermission) return permissionTemplate()
 
         val contentLimit = carContext
             .getCarService(ConstraintManager::class.java)
@@ -85,7 +101,7 @@ class CarHomeScreen(
         .addEndHeaderAction(
             Action.Builder()
                 .setIcon(icon(R.drawable.ic_battery))
-                .setOnClickListener { screenManager.push(SoCScreen(carContext, settings)) }
+                .setOnClickListener { screenManager.push(SoCScreen(carContext, settings, permissions)) }
                 .build(),
         )
         .build()
@@ -127,12 +143,6 @@ class CarHomeScreen(
         return row.build()
     }
 
-    private fun hasLocationPermission(): Boolean =
-        carContext.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED ||
-            carContext.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) ==
-            PackageManager.PERMISSION_GRANTED
-
     /**
      * In projection, the head unit can't show the permission dialog itself —
      * the host instructs the driver to confirm it on the phone. That's why
@@ -142,12 +152,12 @@ class CarHomeScreen(
         if (permissionRequestPending) return
         permissionRequestPending = true
 
-        carContext.requestPermissions(
+        // A grant arrives through the location collector in init, which also
+        // starts the sensors.
+        permissions.request(
             listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
-        ) { granted, _ ->
+        ) {
             permissionRequestPending = false
-            if (granted.isNotEmpty()) feature.startSensors()
-            invalidate()
         }
     }
 

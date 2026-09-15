@@ -1,6 +1,5 @@
 package de.autoapp.android.car
 
-import android.content.pm.PackageManager
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
@@ -30,12 +29,15 @@ import kotlinx.coroutines.launch
 class SoCScreen(
     carContext: CarContext,
     private val settings: SettingsStore,
+    private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
     // The current value belongs visibly on screen: without it the driver
     // might re-enter the same value or have to guess what was last set.
     private var currentPercent: Double? = null
     private var diagnostics: SoCDiagnostics? = null
+    private var hasCarFuelPermission =
+        permissions.granted(CarEnergyLevels.CAR_FUEL_PERMISSION).value
     private var permissionRequestPending = false
 
     init {
@@ -48,6 +50,12 @@ class SoCScreen(
         lifecycleScope.launch {
             settings.socDiagnostics.collect { updated ->
                 diagnostics = updated
+                invalidate()
+            }
+        }
+        lifecycleScope.launch {
+            permissions.granted(CarEnergyLevels.CAR_FUEL_PERMISSION).collect { granted ->
+                hasCarFuelPermission = granted
                 invalidate()
             }
         }
@@ -71,7 +79,7 @@ class SoCScreen(
         // Only offer what's still missing: if the permission is already
         // granted, the row would be a dead button.
         var reserved = 1
-        if (!hasCarFuelPermission()) {
+        if (!hasCarFuelPermission) {
             itemList.addItem(
                 Row.Builder()
                     .setTitle(carContext.getString(R.string.car_soc_carhardware_ask))
@@ -127,10 +135,6 @@ class SoCScreen(
         }
     }
 
-    private fun hasCarFuelPermission(): Boolean =
-        carContext.checkSelfPermission(CarHardwareSoCSource.CAR_FUEL_PERMISSION) ==
-            PackageManager.PERMISSION_GRANTED
-
     /**
      * Requested separately from location, and only here.
      *
@@ -143,7 +147,9 @@ class SoCScreen(
         permissionRequestPending = true
         invalidate()
 
-        carContext.requestPermissions(listOf(CarHardwareSoCSource.CAR_FUEL_PERMISSION)) { _, _ ->
+        // A grant reaches the SoC source through CarPermissions, which
+        // registers its listener in this same session.
+        permissions.request(listOf(CarEnergyLevels.CAR_FUEL_PERMISSION)) {
             permissionRequestPending = false
             invalidate()
         }
