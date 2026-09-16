@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -91,6 +92,9 @@ fun PlanSheetContent(
 ) {
     val vehicleName = uiState.vehicleName
     val socPercent = uiState.socPercent
+    // A picked destination ends the typing: the cursor and keyboard would
+    // otherwise stay on a field that has nothing left to ask.
+    val focusManager = LocalFocusManager.current
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Text(stringResource(R.string.plan_title), style = MaterialTheme.typography.titleMedium)
@@ -218,7 +222,10 @@ fun PlanSheetContent(
                                 title = place.name,
                                 detail = ChargeStopFormatter.detailLine(place),
                                 distanceKm = uiState.from?.distanceKmTo(place.position),
-                                onClick = { onPlaceChosen(place) },
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    onPlaceChosen(place)
+                                },
                             )
                         }
                     }
@@ -234,7 +241,10 @@ fun PlanSheetContent(
                                 title = destination.name,
                                 detail = null,
                                 distanceKm = uiState.from?.distanceKmTo(destination.position),
-                                onClick = { onDestinationChosen(destination) },
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    onDestinationChosen(destination)
+                                },
                             )
                         }
                     }
