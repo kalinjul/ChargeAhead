@@ -55,6 +55,7 @@ class TiledSiteRepository(
     private val time: TimeProvider,
     private val ttlMillis: Long = DEFAULT_TTL_MILLIS,
     private val prefetchMarginKm: Double = DEFAULT_PREFETCH_MARGIN_KM,
+    private val fetchActivity: SiteFetchActivity = SiteFetchActivity(),
 ) : SiteRepository {
 
     private val dao = database.chargeSites()
@@ -99,7 +100,7 @@ class TiledSiteRepository(
         if (missing.isNotEmpty()) {
             val toFetch = if (networks.isEmpty()) emptyList()
                           else networks.filter { it.key in missing }
-            val fetchFailure = runCatching { fetchAndStore(area, toFetch, missing) }.exceptionOrNull()
+            val fetchFailure = runCatching { fetchActivity.track { fetchAndStore(area, toFetch, missing) } }.exceptionOrNull()
             if (fetchFailure != null) {
                 logWarning("Source '${source.id}' did not respond", fetchFailure)
                 val stored = readStored(area)

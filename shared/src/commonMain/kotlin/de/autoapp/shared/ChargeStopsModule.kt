@@ -13,6 +13,7 @@ import de.autoapp.shared.data.NominatimGeocoder
 import de.autoapp.shared.data.OpenChargeMapSource
 import de.autoapp.shared.data.OperatorCatalog
 import de.autoapp.shared.data.OsrmRouteEngine
+import de.autoapp.shared.data.SiteFetchActivity
 import de.autoapp.shared.data.TiledSiteRepository
 import de.autoapp.shared.data.createHttpClient
 import de.autoapp.shared.data.pruneCache
@@ -72,6 +73,9 @@ fun chargeStopsModule(): Module = module {
     single<HttpClient> { createHttpClient() } withOptions { onClose { it?.close() } }
     single<ChargeSiteDatabase> { createChargeSiteDatabase(get()) }
 
+    // Shared by every source's store, so the map's spinner sees all of them.
+    single { SiteFetchActivity() }
+
     single<SiteRepository> {
         val config = get<ChargeStopsConfig>()
         val backend = config.backend
@@ -92,7 +96,14 @@ fun chargeStopsModule(): Module = module {
         // world. A shared coverage record would falsely claim that a tile
         // beyond the border had been checked.
         MergingSiteRepository(
-            sources.map { source -> TiledSiteRepository(source = source, database = get(), time = get()) },
+            sources.map { source ->
+                TiledSiteRepository(
+                    source = source,
+                    database = get(),
+                    time = get(),
+                    fetchActivity = get(),
+                )
+            },
         )
     }
 
