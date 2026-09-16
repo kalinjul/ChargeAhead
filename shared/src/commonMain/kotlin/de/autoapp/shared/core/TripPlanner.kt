@@ -23,10 +23,21 @@ data class PlannedStop(
     val departureSocPercent: Double,
     val chargeKwh: Double,
     val chargeMinutes: Double,
-    /** Driving plus charging time until departure from this stop. */
+    /** Driving, charging and stop time until departure from this stop. */
     val etaMinutesFromStart: Double,
     val maxPowerKw: Double,
-)
+    /** Time at the stop that is not charging: leaving the road, plugging in, paying. */
+    val stopMinutes: Double = 0.0,
+    /**
+     * How much longer the best plan without this stop takes, in real minutes
+     * (charging and stops; driving is the same either way), or null when no
+     * plan works without it. Penalties only steer the choice and are not in
+     * here, so a stop kept for a preferred network can save less than zero.
+     */
+    val savesMinutes: Double? = null,
+) {
+    val arrivalMinutesFromStart: Double get() = etaMinutesFromStart - chargeMinutes - stopMinutes
+}
 
 data class TripPlan(
     val route: Route,
@@ -35,8 +46,9 @@ data class TripPlan(
     val driveMinutes: Double,
     val chargeMinutes: Double,
     val arrivalSocPercent: Double,
+    val stopMinutes: Double = 0.0,
 ) {
-    val totalMinutes: Double get() = driveMinutes + chargeMinutes
+    val totalMinutes: Double get() = driveMinutes + chargeMinutes + stopMinutes
 }
 
 /** Why no plan came out. The distinction matters to the UI: one asks for patience, the other for a different car. */
@@ -54,12 +66,13 @@ sealed interface TripPlanResult {
 }
 
 /**
- * Plans a trip with charging stops, chosen greedily: drive as far as the
- * battery safely allows, then take the strongest matching charger near the
- * end of that reach. Not cost-optimal; errs toward fewer, later, faster stops.
+ * Plans a trip with the charging stops that get there soonest.
  *
- * Filters narrow the candidates but never starve a leg — a leg with no
- * matching charger falls back to any usable fast one.
+ * Every choice is priced in minutes — charging along the curve, the stop
+ * itself, the detour — and [ChargeStopOptimizer] finds the cheapest
+ * combination exactly. Filters and network preferences are prices, not hard
+ * limits: a charger outside them wins only when it saves more than its penalty,
+ * so no leg is ever starved by a preference.
  */
 class TripPlanner(
     private val routeEngine: RouteEngine,
@@ -82,93 +95,101 @@ class TripPlanner(
         } ?: return TripPlanResult.NoRoute
 
         val candidates = candidatesAlong(route, vehicle, networks)
-
         val consumption = SpeedAwareConsumption(vehicle.consumptionKwhPer100Km)
         val totalKm = route.distanceKm
 
         // What has to be left at the destination, never below the reserve.
         val arrivalReserve = maxOf(arrivalSocPercent, DEFAULT_RESERVE_SOC_PERCENT)
 
-        val stops = mutableListOf<PlannedStop>()
-        var socNow = startSocPercent
-        var kmNow = 0.0
-        var chargeMinutesTotal = 0.0
+        val tables = HashMap<Double, ChargeTimeTable>()
+        val nodes = candidates.map { candidate ->
+            ChargeStopOptimizer.Node(
+                km = candidate.kmFromStart,
+                energyFromStartSoc = socNeeded(consumption, route, vehicle, 0.0, candidate.kmFromStart),
+                fixedMinutes = fixedMinutes(candidate, filters, networks),
+                chargeTime = tables.getOrPut(acceptedPeakKw(vehicle, candidate.maxPowerKw)) {
+                    chargeTimeTable(vehicle, candidate.maxPowerKw)
+                },
+            )
+        }
+        val totalEnergySoc = socNeeded(consumption, route, vehicle, 0.0, totalKm)
 
-        while (stops.size < MAX_STOPS) {
-            val reachKm = consumption.reachKm(route, kmNow, availableKwh(vehicle, socNow))
-            // Done only if the battery still holds the arrival level there.
-            val reachWithArrivalLevel = consumption.reachKm(route, kmNow, availableKwh(vehicle, socNow, arrivalReserve))
-            if (totalKm <= reachWithArrivalLevel + ARRIVAL_HEADROOM_KM) break
+        val optimizer = ChargeStopOptimizer(MAX_DEPARTURE_SOC)
+        fun optimize(excluded: Int? = null) = optimizer.optimize(
+            nodes = nodes,
+            totalEnergySoc = totalEnergySoc,
+            startSoc = startSocPercent,
+            reserveSoc = DEFAULT_RESERVE_SOC_PERCENT,
+            arrivalSoc = arrivalReserve,
+            excluded = excluded,
+        )
 
-            val next = pickStop(candidates, kmNow, reachKm, filters, networks)?.let { candidate ->
-                val arrivalSoc = socAfter(consumption, route, vehicle, socNow, kmNow, candidate.kmFromStart)
-                val departureSoc = departureSocFor(
-                    consumption, route, vehicle, candidate.kmFromStart, totalKm, arrivalSoc, arrivalReserve,
-                )
-                val chargeMinutes = chargeMinutes(vehicle, candidate.maxPowerKw, arrivalSoc, departureSoc)
-                PlannedStop(
-                    site = candidate.site,
-                    kmFromStart = candidate.kmFromStart,
-                    arrivalSocPercent = arrivalSoc,
-                    departureSocPercent = departureSoc,
-                    chargeKwh = (departureSoc - arrivalSoc) / 100.0 * vehicle.usableBatteryKwh,
-                    chargeMinutes = chargeMinutes,
-                    etaMinutesFromStart = driveMinutesTo(route, candidate.kmFromStart) + chargeMinutesTotal + chargeMinutes,
-                    maxPowerKw = candidate.maxPowerKw,
-                )
-            }
-
-            // A stop for the last few percent costs more than the previous
-            // stop charging a little further up the slow part of the curve.
-            val previous = stops.lastOrNull()
-            val stretched = previous?.let { stretchedToFinish(consumption, route, vehicle, it, totalKm, arrivalReserve) }
-            if (previous != null && stretched != null) {
-                val extraMinutes = stretched.chargeMinutes - previous.chargeMinutes
-                // A new stop that doesn't finish the trip will cost yet another one.
-                val stretchWins = next == null ||
-                    next.departureSocPercent + SOC_EPSILON <
-                    socNeeded(consumption, route, vehicle, next.kmFromStart, totalKm) + arrivalReserve ||
-                    extraMinutes <= next.chargeMinutes + STOP_OVERHEAD_MINUTES
-                if (stretchWins) {
-                    stops[stops.lastIndex] = stretched
-                    chargeMinutesTotal += extraMinutes
-                    socNow = stretched.departureSocPercent
-                    break
-                }
-            }
-
-            next ?: return TripPlanResult.NoChargerInReach(afterKm = kmNow)
-            stops += next
-            chargeMinutesTotal += next.chargeMinutes
-            socNow = next.departureSocPercent
-            kmNow = next.kmFromStart
+        val found = when (val result = optimize()) {
+            is ChargeStopOptimizer.Result.Unreachable -> return TripPlanResult.NoChargerInReach(result.furthestKm)
+            is ChargeStopOptimizer.Result.Found -> result
         }
 
-        // Hitting MAX_STOPS without arriving means degenerate input; refuse
-        // rather than emit a 14-stop plan nobody would drive.
-        val reachesDestination =
-            totalKm <= consumption.reachKm(route, kmNow, availableKwh(vehicle, socNow, arrivalReserve)) + ARRIVAL_HEADROOM_KM
-        if (!reachesDestination) return TripPlanResult.NoChargerInReach(afterKm = kmNow)
+        val stops = mutableListOf<PlannedStop>()
+        var timeAtStopsMinutes = 0.0
+        for (choice in found.stops) {
+            val candidate = candidates[choice.nodeIndex]
+            val chargeMinutes = nodes[choice.nodeIndex].chargeTime
+                .minutesBetween(choice.arrivalSoc, choice.departureSoc)
+            timeAtStopsMinutes += chargeMinutes + STOP_OVERHEAD_MINUTES
+            val savesMinutes = when (val without = optimize(excluded = choice.nodeIndex)) {
+                is ChargeStopOptimizer.Result.Found -> minutesAtStops(nodes, without) - minutesAtStops(nodes, found)
+                is ChargeStopOptimizer.Result.Unreachable -> null
+            }
+            stops += PlannedStop(
+                site = candidate.site,
+                kmFromStart = candidate.kmFromStart,
+                arrivalSocPercent = choice.arrivalSoc,
+                departureSocPercent = choice.departureSoc,
+                chargeKwh = (choice.departureSoc - choice.arrivalSoc) / 100.0 * vehicle.usableBatteryKwh,
+                chargeMinutes = chargeMinutes,
+                etaMinutesFromStart = driveMinutesTo(route, candidate.kmFromStart) + timeAtStopsMinutes,
+                maxPowerKw = candidate.maxPowerKw,
+                stopMinutes = STOP_OVERHEAD_MINUTES,
+                savesMinutes = savesMinutes,
+            )
+        }
 
-        val arrivalSoc = socAfter(consumption, route, vehicle, socNow, kmNow, totalKm)
-
+        val lastDeparture = stops.lastOrNull()?.departureSocPercent ?: startSocPercent
+        val lastKm = stops.lastOrNull()?.kmFromStart ?: 0.0
         return TripPlanResult.Planned(
             TripPlan(
                 route = route,
                 destination = destination,
                 stops = stops,
                 driveMinutes = route.durationMinutes,
-                chargeMinutes = chargeMinutesTotal,
-                arrivalSocPercent = arrivalSoc,
+                chargeMinutes = stops.sumOf { it.chargeMinutes },
+                arrivalSocPercent = socAfter(consumption, route, vehicle, lastDeparture, lastKm, totalKm),
+                stopMinutes = stops.sumOf { it.stopMinutes },
             ),
         )
+    }
+
+    /** Time actually spent at the stops of [plan] — its cost without detour and penalties. */
+    private fun minutesAtStops(nodes: List<ChargeStopOptimizer.Node>, plan: ChargeStopOptimizer.Result.Found): Double =
+        plan.stops.sumOf { choice ->
+            nodes[choice.nodeIndex].chargeTime.minutesBetween(choice.arrivalSoc, choice.departureSoc) +
+                STOP_OVERHEAD_MINUTES
+        }
+
+    /** What a stop at [candidate] costs besides charging, in minutes. */
+    private fun fixedMinutes(candidate: Candidate, filters: ChargeFilters, networks: NetworkPreferences): Double {
+        var minutes = STOP_OVERHEAD_MINUTES + 2.0 * candidate.detourKm / DETOUR_SPEED_KMH * 60.0
+        if (!networks.allowsSite(candidate.site)) minutes += NETWORK_PENALTY_MINUTES
+        if (candidate.maxPowerKw < filters.minPowerKw) minutes += WEAK_CHARGER_PENALTY_MINUTES
+        return minutes
     }
 
     private data class Candidate(
         val site: ChargeSite,
         val kmFromStart: Double,
         val maxPowerKw: Double,
-        val operator: String?,
+        /** Straight-line distance from the route. */
+        val detourKm: Double,
     )
 
     /**
@@ -209,95 +230,12 @@ class TripPlanner(
                     site = site,
                     kmFromStart = projection.kmFromStart,
                     maxPowerKw = power,
-                    operator = site.operator,
+                    detourKm = projection.distanceKm,
                 )
             }
             startIndex = endIndex
         }
         return seen.values.sortedBy { it.kmFromStart }
-    }
-
-    /**
-     * The stop for one leg: as late as safely possible, strongest first,
-     * filters dropped only when the window would otherwise go empty.
-     */
-    private fun pickStop(
-        candidates: List<Candidate>,
-        kmNow: Double,
-        reachKm: Double,
-        filters: ChargeFilters,
-        networks: NetworkPreferences,
-    ): Candidate? {
-        // Both margins scale down with the reach: fixed ones would reject
-        // every reachable charger when little battery is left.
-        val reachAheadKm = reachKm - kmNow
-        val minAheadKm = minOf(MIN_LEG_KM, reachAheadKm * 0.2)
-        val maxAheadKm = reachAheadKm - minOf(STOP_SAFETY_KM, reachAheadKm * 0.15)
-        if (maxAheadKm <= minAheadKm) return null
-
-        val window = candidates.filter {
-            it.kmFromStart > kmNow + minAheadKm && it.kmFromStart <= kmNow + maxAheadKm
-        }
-        if (window.isEmpty()) return null
-
-        val preferred = window.filter {
-            it.maxPowerKw >= filters.minPowerKw && networks.allowsSite(it.site)
-        }
-        val pool = preferred.ifEmpty { window }
-
-        // Late beats strong, but only within the last stretch of the reach.
-        val lateStart = kmNow + maxAheadKm - LATE_WINDOW_KM
-        val late = pool.filter { it.kmFromStart >= lateStart }
-        return (late.ifEmpty { pool }).maxByOrNull { it.maxPowerKw * 1000.0 + it.kmFromStart }
-    }
-
-    /**
-     * Charge to what the rest of the trip needs plus the arrival level, and
-     * nothing more — a margin on top would put the planned arrival above the
-     * level the driver just set. Only the stop that finishes the trip may
-     * pass [TARGET_SOC_PERCENT]; capping that one would cost an extra stop.
-     * A stop that cannot reach the arrival level even at 100 % does not count
-     * as finishing: it needs another stop anyway, and lifting the cap would
-     * only buy the slowest part of the curve.
-     */
-    private fun departureSocFor(
-        consumption: ConsumptionModel,
-        route: Route,
-        vehicle: VehicleProfile,
-        stopKm: Double,
-        totalKm: Double,
-        arrivalSoc: Double,
-        arrivalReserve: Double,
-    ): Double {
-        val driveSoc = socNeeded(consumption, route, vehicle, stopKm, totalKm)
-        val finishesTheTrip = driveSoc + FINISH_MARGIN_SOC + DEFAULT_RESERVE_SOC_PERCENT <= TARGET_SOC_PERCENT &&
-            driveSoc + arrivalReserve <= FULL_SOC_PERCENT
-        val cap = if (finishesTheTrip) FULL_SOC_PERCENT else TARGET_SOC_PERCENT
-        return (driveSoc + arrivalReserve).coerceAtMost(cap).coerceAtLeast(arrivalSoc)
-    }
-
-    /**
-     * [previous] charged on until it finishes the trip, or null when that
-     * would take it past [STRETCH_LIMIT_SOC] — beyond that, the slow end of
-     * the curve is no longer a fair trade for a stop.
-     */
-    private fun stretchedToFinish(
-        consumption: ConsumptionModel,
-        route: Route,
-        vehicle: VehicleProfile,
-        previous: PlannedStop,
-        totalKm: Double,
-        arrivalReserve: Double,
-    ): PlannedStop? {
-        val departureSoc = socNeeded(consumption, route, vehicle, previous.kmFromStart, totalKm) + arrivalReserve
-        if (departureSoc > STRETCH_LIMIT_SOC || departureSoc <= previous.departureSocPercent) return null
-        val chargeMinutes = chargeMinutes(vehicle, previous.maxPowerKw, previous.arrivalSocPercent, departureSoc)
-        return previous.copy(
-            departureSocPercent = departureSoc,
-            chargeKwh = (departureSoc - previous.arrivalSocPercent) / 100.0 * vehicle.usableBatteryKwh,
-            chargeMinutes = chargeMinutes,
-            etaMinutesFromStart = previous.etaMinutesFromStart - previous.chargeMinutes + chargeMinutes,
-        )
     }
 
     private fun socNeeded(
@@ -307,13 +245,6 @@ class TripPlanner(
         fromKm: Double,
         toKm: Double,
     ): Double = consumption.energyKwh(route, fromKm, toKm) / vehicle.usableBatteryKwh * 100.0
-
-    /** Energy above [reserveSocPercent], the part that may be planned into a leg. */
-    private fun availableKwh(
-        vehicle: VehicleProfile,
-        socPercent: Double,
-        reserveSocPercent: Double = DEFAULT_RESERVE_SOC_PERCENT,
-    ): Double = vehicle.usableBatteryKwh * (socPercent - reserveSocPercent).coerceAtLeast(0.0) / 100.0
 
     /**
      * Driving time from the start to [km], on the same speed profile the energy
@@ -348,52 +279,27 @@ class TripPlanner(
     }
 
     private companion object {
-        /** Charging past 80 % is slow enough that driving on and stopping again wins. */
-        const val TARGET_SOC_PERCENT = 80.0
+        /** Charging is never planned past this; the curve prices everything below it. */
+        const val MAX_DEPARTURE_SOC = 100.0
 
-        /** Nothing charges past this, whatever the arrival level asks for. */
-        const val FULL_SOC_PERCENT = 100.0
+        // To calibrate against real stops (#72).
 
-        /**
-         * How far a stop may charge past [TARGET_SOC_PERCENT] to save the stop
-         * after it. On the generic curve 80 → 90 % takes about as long as a
-         * short stop's overhead plus its charge; past that, the stop wins.
-         */
-        const val STRETCH_LIMIT_SOC = 90.0
-
-        /**
-         * Leaving the road, parking, plugging in and back — not part of the
-         * plan's times, only of the choice whether a stop is worth it.
-         */
+        /** Leaving the road, parking, plugging in and paying — part of every stop's time. */
         const val STOP_OVERHEAD_MINUTES = 10.0
 
-        const val SOC_EPSILON = 1e-6
+        /** What a charger outside the preferred networks has to save before it is chosen. */
+        const val NETWORK_PENALTY_MINUTES = 15.0
 
-        /** Only decides whether a stop counts as trip-finishing; never added to the charge target. */
-        const val FINISH_MARGIN_SOC = 5.0
+        /** The same for a charger below the driver's minimum power. */
+        const val WEAK_CHARGER_PENALTY_MINUTES = 10.0
+
+        /** Pace of the way off the route and back, priced both ways. */
+        const val DETOUR_SPEED_KMH = 30.0
 
         /** Max straight-line distance from the route — same trade-off as PolylineArea (open item 8). */
         const val STOP_BUFFER_KM = 3.0
 
         /** Candidate-fetch chunk length — the area size the sources were built for. */
         const val SEGMENT_FETCH_KM = 80.0
-
-        /** Don't burn a stop in the first minutes of a leg. */
-        const val MIN_LEG_KM = 40.0
-
-        /** Keep this much reach unspent when picking a stop. */
-        const val STOP_SAFETY_KM = 25.0
-
-        /** "Late" preference window at the end of the reach. */
-        const val LATE_WINDOW_KM = 80.0
-
-        /**
-         * The last stop charges to exactly the arrival level, so the reach after
-         * it equals the remaining distance — without this tolerance a rounding
-         * difference would buy a whole extra stop.
-         */
-        const val ARRIVAL_HEADROOM_KM = 1.0
-
-        const val MAX_STOPS = 8
     }
 }

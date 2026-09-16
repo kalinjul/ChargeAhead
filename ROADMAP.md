@@ -135,9 +135,10 @@ Still open:
    same km-indexed shape, additive to the wire contract); temperature and wind
    land on `ConsumptionModel`. Neither needs another structural change.
 
-   Still true, and untouched by the above: the planner is greedy, and
-   `TARGET_SOC_PERCENT = 80` is now an empirical question rather than an
-   assumption, because there is a curve to answer it with.
+   Since #72 the planner is no longer greedy: stops are an exact shortest
+   path priced in minutes, so there is no 80 % target left to tune. What is
+   left to calibrate are the prices in `TripPlanner` — stop overhead, the
+   network and weak-charger penalties, the detour speed.
 
 4. **Vehicle list.** Deliberately not built in M2: the driver enters usable
    capacity and consumption themselves. That's honest — the numbers are in
