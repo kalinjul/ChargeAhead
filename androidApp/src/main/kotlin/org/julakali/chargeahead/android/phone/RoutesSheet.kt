@@ -105,6 +105,7 @@ fun RoutesSheetContent(
                     ) {
                         Column(Modifier.weight(1f).clickable { onOpen(route.destination) }) {
                             Text(route.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            route.destination.address?.let { AddressText(it) }
                             route.summary?.let {
                                 Text(it, style = MaterialTheme.typography.bodySmall.tabular, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
@@ -129,13 +130,15 @@ fun RoutesSheetContent(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 11.dp),
                     ) {
-                        Text(
-                            destination.name,
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).clickable { onOpen(destination) },
-                        )
+                        Column(Modifier.weight(1f).clickable { onOpen(destination) }) {
+                            Text(
+                                destination.name,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            destination.address?.let { AddressText(it) }
+                        }
                         GoButton(
                             icon = painterResource(if (alreadySaved) R.drawable.ic_heart_filled else R.drawable.ic_heart),
                             contentDescription = stringResource(R.string.routes_save_recent),
@@ -167,5 +170,16 @@ private fun RenameDialog(route: SavedRoute, onConfirm: (String) -> Unit, onDismi
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.routes_cancel)) }
         },
+    )
+}
+
+@Composable
+private fun AddressText(address: String) {
+    Text(
+        address,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
     )
 }

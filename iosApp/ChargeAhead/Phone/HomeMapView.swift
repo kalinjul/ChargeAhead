@@ -200,7 +200,7 @@ struct PlanSheetView: View {
             List {
                 ForEach(results, id: \.name) { place in
                     Button(place.name) {
-                        onPlan(Destination(name: place.name, position: place.position))
+                        onPlan(Destination(name: place.name, position: place.position, address: ChargeStopFormatter.shared.detailLine(place: place)))
                     }
                 }
             }

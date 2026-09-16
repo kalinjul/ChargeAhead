@@ -9,6 +9,7 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.toDestination
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -133,7 +134,7 @@ class PlanSheetViewModel(
      */
     fun onSheetOpened(destination: Destination? = null) {
         input.value = destination
-            ?.let { InputState(query = it.name, chosen = it) }
+            ?.let { InputState(query = ChargeStopFormatter.label(it), chosen = it) }
             ?: InputState()
     }
 
@@ -143,16 +144,11 @@ class PlanSheetViewModel(
     }
 
     fun onDestinationChosen(destination: Destination) {
-        choose(destination, query = destination.name)
+        choose(destination, query = ChargeStopFormatter.label(destination))
     }
 
-    /**
-     * The field shows the full address, not just the name: "Uebel und
-     * Gefährlich" alone doesn't say which city it was. The destination keeps
-     * the short name — it titles the trip and the recents list.
-     */
     fun onPlaceChosen(place: Place) {
-        choose(Destination(place.name, place.position), query = ChargeStopFormatter.label(place))
+        choose(place.toDestination(), query = ChargeStopFormatter.label(place))
     }
 
     private fun choose(destination: Destination, query: String) {

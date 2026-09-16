@@ -58,7 +58,7 @@ struct TripPlanView: View {
                 }
             }
         }
-        .navigationTitle(plan.destination.name)
+        .navigationTitle(ChargeStopFormatter.shared.label(destination: plan.destination))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

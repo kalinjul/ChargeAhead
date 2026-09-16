@@ -133,4 +133,13 @@ class GarageAndRoutesSettingsTest {
         store.removeSavedRoute("r2")
         assertEquals(listOf("r1"), store.savedRoutes.value.map { it.id })
     }
+
+    @Test
+    fun `a saved route keeps its destination address`() = runBlocking<Unit> {
+        val storage = InMemoryKeyValueStorage()
+        val route = SavedRoute("r1", "Konzert", Destination("Uebel und Gefährlich", LatLon(53.556, 9.968), "Feldstraße 66, 20359 Hamburg"))
+        PersistentSettingsStore(storage).saveRoute(route)
+
+        assertEquals(listOf(route), PersistentSettingsStore(storage).savedRoutes.value)
+    }
 }

@@ -9,4 +9,6 @@ package org.julakali.chargeahead.shared.domain
 data class Destination(
     val name: String,
     val position: LatLon,
+    /** e.g. "Feldstraße 66, 20359 Hamburg"; null for destinations stored before it was kept. */
+    val address: String? = null,
 )

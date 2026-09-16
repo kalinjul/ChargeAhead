@@ -190,7 +190,7 @@ class PhoneViewModelTest {
 
         val state = viewModel.uiState.await { it.chosen != null }
         assertEquals("Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg", state.query)
-        assertEquals(Destination("Uebel und Gefährlich", place.position), state.chosen)
+        assertEquals(Destination("Uebel und Gefährlich", place.position, "Feldstraße 66, 20359 Hamburg"), state.chosen)
     }
 
     /**

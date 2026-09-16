@@ -239,7 +239,7 @@ fun PlanSheetContent(
                             if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                             PlaceRow(
                                 title = destination.name,
-                                detail = null,
+                                detail = destination.address,
                                 distanceKm = uiState.from?.distanceKmTo(destination.position),
                                 onClick = {
                                     focusManager.clearFocus()
