@@ -108,11 +108,11 @@ platform :ios do
     # (iosApp/README.md). brew install xcodegen has to have run on the runner.
     sh("cd ../iosApp && xcodegen generate")
 
-    increment_build_number(build_number: build_number, xcodeproj: "iosApp/AutoApp.xcodeproj")
+    increment_build_number(build_number: build_number, xcodeproj: "iosApp/ChargeAhead.xcodeproj")
 
     build_app(
-      project: "iosApp/AutoApp.xcodeproj",
-      scheme: "AutoApp",
+      project: "iosApp/ChargeAhead.xcodeproj",
+      scheme: "ChargeAhead",
       export_method: "app-store",
       # The KMP framework is built by the target's own pre-build script phase
       # (project.yml), so no separate Gradle call is needed here.

@@ -31,7 +31,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "autoapp"
+rootProject.name = "ChargeAhead"
 
 include(":shared")
 include(":androidApp")

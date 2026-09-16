@@ -95,7 +95,7 @@ line contains the pattern. Kill by PID instead — or use `$D stop`.
 Check the app's log first, don't guess:
 
 ```bash
-adb -s <serial> logcat -d | grep "W autoapp "
+adb -s <serial> logcat -d | grep "W ChargeAhead "
 ```
 
 The app deliberately catches errors so it keeps running, but logs them with

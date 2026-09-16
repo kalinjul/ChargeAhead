@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Ladesäulen-Assistent</string>
+    <string name="app_name">ChargeAhead</string>
 
     <!-- Android Auto -->
     <string name="car_title_suffix_demo">%1$s · Demodaten</string>

@@ -12,7 +12,7 @@ kotlin {
     // Since AGP 9, com.android.library is incompatible with KMP; the Android
     // target is configured through the dedicated KMP library plugin inside kotlin {}.
     androidLibrary {
-        namespace = "de.autoapp.shared"
+        namespace = "org.julakali.chargeahead.shared"
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }

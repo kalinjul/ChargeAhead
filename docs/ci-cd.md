@@ -171,7 +171,7 @@ Before the first run, three things need deciding:
 2. Signing: App Store Connect API key with automatic signing, or fastlane
    `match` with a certificates repository. `match` is the better fit as soon
    as a second machine signs.
-3. Where the build number comes from — `iosApp/AutoApp/Info.plist` is
+3. Where the build number comes from — `iosApp/ChargeAhead/Info.plist` is
    hand-maintained, and `project.yml` deliberately does not regenerate it.
 
 The job for it belongs on `macos-latest` with `brew install xcodegen`, in

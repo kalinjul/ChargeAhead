@@ -1,6 +1,6 @@
 ---
 name: viewmodels
-description: The MVI-style ViewModel pattern this repository uses for UI state — shared KMP ViewModels in de.autoapp.shared.ui, one uiState StateFlow per screen, stateless Compose screens behind a Route composable. Always use this skill when writing or changing a screen, a ViewModel, a UiState, or anything that holds state for the phone UI; when state currently lives in a composable (remember, mutableStateOf, produceState, LaunchedEffect) and should move; when adding a new screen, sheet or dialog; and when wiring dependencies for a ViewModel. Also when someone asks where state belongs, why a screen loses its input on rotation, or how to test UI state.
+description: The MVI-style ViewModel pattern this repository uses for UI state — shared KMP ViewModels in org.julakali.chargeahead.shared.ui, one uiState StateFlow per screen, stateless Compose screens behind a Route composable. Always use this skill when writing or changing a screen, a ViewModel, a UiState, or anything that holds state for the phone UI; when state currently lives in a composable (remember, mutableStateOf, produceState, LaunchedEffect) and should move; when adding a new screen, sheet or dialog; and when wiring dependencies for a ViewModel. Also when someone asks where state belongs, why a screen loses its input on rotation, or how to test UI state.
 ---
 
 # ViewModels in this repository
@@ -18,14 +18,14 @@ that is the entire reason they are not in `androidApp`.
 ## Where things go
 
 ```
-shared/src/commonMain/kotlin/de/autoapp/shared/ui/<Screen>ViewModel.kt
+shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ui/<Screen>ViewModel.kt
     <Screen>UiState  + <Screen>ViewModel        no Android, no Compose imports
 
 androidApp/.../phone/<Screen>.kt
     <Screen>Route    fetches the ViewModel, collects, delegates
     <Screen>Screen   stateless: takes uiState + callbacks, holds nothing
 
-shared/src/commonMain/kotlin/de/autoapp/shared/ui/SharedUiModule.kt
+shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ui/SharedUiModule.kt
     the Koin module that declares every ViewModel (viewModelOf); the
     dependencies come from appModule in androidApp
 ```
@@ -73,8 +73,8 @@ is fine — that one is multiplatform.
 ## The template
 
 ```kotlin
-// shared/src/commonMain/kotlin/de/autoapp/shared/ui/ExampleViewModel.kt
-package de.autoapp.shared.ui
+// shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ui/ExampleViewModel.kt
+package org.julakali.chargeahead.shared.ui
 
 data class ExampleUiState(
     val items: List<Thing> = emptyList(),

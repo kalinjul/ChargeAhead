@@ -1,0 +1,48 @@
+package org.julakali.chargeahead.shared.ui
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import org.julakali.chargeahead.shared.domain.ChargeFilters
+import org.julakali.chargeahead.shared.domain.SettingsStore
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+
+/** The navigation drawer: what is set, and the filters that can be set from there. */
+data class DrawerUiState(
+    val vehicleName: String? = null,
+    /** How many networks are picked; `0` means: no network filter. */
+    val preferredNetworkCount: Int = 0,
+    val filters: ChargeFilters = ChargeFilters(),
+)
+
+/**
+ * The drawer is not a screen but it carries state of its own — and it is
+ * reachable from more than one screen, so it gets its own holder rather than
+ * borrowing one screen's.
+ */
+class DrawerViewModel(
+    private val settings: SettingsStore,
+) : ViewModel() {
+
+    val uiState: StateFlow<DrawerUiState> = combine(
+        settings.vehicle,
+        settings.networks,
+        settings.chargeFilters,
+    ) { vehicle, networks, filters ->
+        DrawerUiState(
+            vehicleName = vehicle?.displayName,
+            // Count what the picker can actually tick and the fetch actually
+            // filters by — resolved catalog networks — not the raw stored keys,
+            // which may still hold keys from an older catalog that resolve to
+            // nothing and would inflate the number.
+            preferredNetworkCount = networks.selectedNetworks().size,
+            filters = filters,
+        )
+    }.stateIn(viewModelScope, WhileUiSubscribed, DrawerUiState())
+
+    fun onFiltersChanged(filters: ChargeFilters) {
+        viewModelScope.launch { settings.setChargeFilters(filters) }
+    }
+}

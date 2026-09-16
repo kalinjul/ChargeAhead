@@ -50,10 +50,10 @@ implementation(libs.androidx.navigation3.ui)
 ### Task 2: The Page enum becomes a back stack
 
 **Files:**
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/Destinations.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (the whole navigation skeleton)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/DrawerContent.kt:46` (+4 call sites: `Page` → destination)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/PhoneViewModel.kt` (kdoc only: activity scope now blocked by the compileSdk-36 cap, not by "no per-destination store exists")
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/Destinations.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (the whole navigation skeleton)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/DrawerContent.kt:46` (+4 call sites: `Page` → destination)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/PhoneViewModel.kt` (kdoc only: activity scope now blocked by the compileSdk-36 cap, not by "no per-destination store exists")
 
 **Interfaces:**
 - Produces `PhoneDestination` (sealed, `NavKey`): `Home`, `Trip`, `StopDetail(index: Int)`, `Garage`, `AddCar`, `VehicleEdit`, `Subscriptions`, `Networks`, `CarData`. `StopDetail.index` indexes `TripUiState.Planned.plan.stops`.
@@ -61,7 +61,7 @@ implementation(libs.androidx.navigation3.ui)
 - [ ] **Step 1: Destinations.kt**
 
 ```kotlin
-package de.autoapp.android.phone
+package org.julakali.chargeahead.android.phone
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
@@ -179,10 +179,10 @@ No commit — verification only. Any mismatch with the "semantics to preserve" l
 ### Task 4: Section selection moves into TripViewModel
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/ui/TripViewModel.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/TripPlanScreen.kt:79-103,134,176-279` (remember vars out, params in)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (Trip entry call site)
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/ui/PhoneViewModelTest.kt`
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ui/TripViewModel.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/TripPlanScreen.kt:79-103,134,176-279` (remember vars out, params in)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (Trip entry call site)
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/ui/PhoneViewModelTest.kt`
 
 **Interfaces:**
 - Produces in shared/ui: `data class SectionSelection(val selecting: Boolean = false, val a: Int? = null, val b: Int? = null)`; `TripUiState.Planned.selection: SectionSelection`; `TripViewModel.onSectionSelectingToggled()`, `onSectionPointPicked(index: Int)`, `onSectionSent()`.
@@ -273,7 +273,7 @@ fun onSectionSent() { selection.value = SectionSelection() }
 ### Task 5: PlanSheets.kt splits along its three sheets
 
 **Files:**
-- Modify/split: `androidApp/src/main/kotlin/de/autoapp/android/phone/PlanSheets.kt` → `PlanSheet.kt`, `ChargeNowSheet.kt`, `RoutesSheet.kt`
+- Modify/split: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/PlanSheets.kt` → `PlanSheet.kt`, `ChargeNowSheet.kt`, `RoutesSheet.kt`
 
 - [ ] **Step 1:** Read PlanSheets.kt top-to-bottom; move `PlanSheetRoute`/`PlanSheetContent` (+their private helpers) to `PlanSheet.kt`, `ChargeNowRoute`/content to `ChargeNowSheet.kt`, `RoutesRoute`/content (+RenameDialog) to `RoutesSheet.kt`. Helpers used by more than one sheet stay in whichever file uses them most and get referenced (same package — no import churn); delete PlanSheets.kt. Pure move, zero logic edits.
 

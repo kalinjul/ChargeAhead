@@ -1,4 +1,4 @@
-# autoapp — Architecture
+# ChargeAhead — Architecture
 
 **Charging-stop assistant for Android Auto and Apple CarPlay.**
 Shows the next reachable charging stations ahead while driving, sorted by
@@ -162,7 +162,7 @@ location.
 ## 3. Module layout
 
 ```
-autoapp/
+ChargeAhead/
 ├── shared/                        Kotlin Multiplatform
 │   ├── commonMain/
 │   │   ├── domain/                Model + ports (plain Kotlin types, no frameworks)

@@ -12,5 +12,5 @@ json_key_file(ENV["PLAY_JSON_KEY_FILE"]) if ENV["PLAY_JSON_KEY_FILE"]
 for_platform :ios do
   # The bundle identifier from iosApp/project.yml. Nothing reads it yet --
   # the iOS lanes are unverified (see Fastfile).
-  app_identifier("de.autoapp.ios")
+  app_identifier("org.julakali.chargeahead")
 end

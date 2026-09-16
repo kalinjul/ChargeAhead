@@ -72,7 +72,7 @@ plugins {
 }
 
 android {
-    namespace = "de.autoapp.android"
+    namespace = "org.julakali.chargeahead.android"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {

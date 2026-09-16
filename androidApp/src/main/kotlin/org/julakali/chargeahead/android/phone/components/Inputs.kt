@@ -1,0 +1,217 @@
+package org.julakali.chargeahead.android.phone.components
+
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import org.julakali.chargeahead.android.R
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
+import org.julakali.chargeahead.android.phone.theme.tabular
+import de.charlex.compose.cache.rememberForUserInput
+import kotlin.math.roundToInt
+/**
+ * The mockup's `.searchwrap`: bordered, rounded, magnifier left, no underline.
+ *
+ * The clear button only exists while there is something to clear — an
+ * always-present (x) next to an empty field invites a tap that does nothing.
+ *
+ * The text is cached locally until the caller's state catches up: [value]
+ * comes back from a ViewModel asynchronously, and binding the field to it
+ * directly let a stale emission overwrite what was typed in the meantime —
+ * fast typing lost characters.
+ */
+@Composable
+fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
+    val (text, onTextChange) = rememberForUserInput(value = value, onValueChange = onValueChange)
+    TextField(
+        value = text,
+        onValueChange = onTextChange,
+        placeholder = { Text(placeholder, color = ChargeAheadColors.faint) },
+        leadingIcon = {
+            Icon(
+                painterResource(R.drawable.ic_search),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(17.dp),
+            )
+        },
+        trailingIcon = if (text.isEmpty()) {
+            null
+        } else {
+            {
+                IconButton(onClick = { onTextChange("") }) {
+                    Icon(
+                        painterResource(R.drawable.ic_remove),
+                        contentDescription = stringResource(R.string.phone_search_clear),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(17.dp),
+                    )
+                }
+            }
+        },
+        singleLine = true,
+        shape = MaterialTheme.shapes.small,
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surface,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.small),
+    )
+}
+
+/** The mockup's `.chip`: soft round pill with an optional blue icon. */
+@Composable
+fun AppChip(text: String, modifier: Modifier = Modifier, icon: Painter? = null) {
+    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant, modifier = modifier) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+        ) {
+            icon?.let {
+                Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(15.dp))
+            }
+            Text(text, style = MaterialTheme.typography.labelMedium.tabular)
+        }
+    }
+}
+
+/**
+ * The one slider of this app. Material 3's expressive default thumb is a
+ * 44dp-tall bar — taller than the row it sits in, and it reads as a handle
+ * for something much bigger than a consumption value. This one keeps the
+ * default track and shortens the thumb to the height of a text line.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AppSlider(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    valueRange: ClosedFloatingPointRange<Float>,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    onValueChangeFinished: (() -> Unit)? = null,
+) {
+    // The thumb slot draws its own press/hover ripple, so it needs the same
+    // interaction source the slider itself gestures on.
+    val interactionSource = remember { MutableInteractionSource() }
+    Slider(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier,
+        enabled = enabled,
+        onValueChangeFinished = onValueChangeFinished,
+        interactionSource = interactionSource,
+        thumb = {
+            SliderDefaults.Thumb(
+                interactionSource = interactionSource,
+                enabled = enabled,
+                thumbSize = DpSize(width = 4.dp, height = 22.dp),
+            )
+        },
+        valueRange = valueRange,
+    )
+}
+
+/** Where the charge slider sits while the typed value is not a usable percentage. */
+private const val DEFAULT_SOC_PERCENT = 80f
+
+/** The start levels the planner accepts — 0 % is not a trip, it is a tow. */
+val SOC_RANGE = 1f..100f
+
+/**
+ * The one charge-level editor: type the number or drag the slider, both on
+ * the same value. Used from the plan sheet, from the trip's start row and
+ * from the garage's arrival level, so that "set a charge level" looks the
+ * same wherever it is reached from — what differs is [title], and what
+ * confirming does, which is what [confirmLabel] says.
+ */
+@Composable
+fun SocEditDialog(
+    value: String,
+    title: String,
+    confirmLabel: String,
+    onValueChange: (String) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    valueRange: ClosedFloatingPointRange<Float> = SOC_RANGE,
+) {
+    val percent = value.toIntOrNull()?.takeIf { it.toFloat() in valueRange }
+    // The keyboard comes up with the dialog: it was opened to set a number,
+    // not to tap a field first. The slider is there for the driver who would
+    // rather not type at all.
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    isError = percent == null,
+                    suffix = { Text("%") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.focusRequester(focusRequester),
+                )
+                // Whole percent only, so a drag settles between steps rather
+                // than rewriting the field once per frame. While the typed
+                // value is unusable the slider parks at the default — the
+                // field stays the place that flags it.
+                AppSlider(
+                    value = (percent?.toFloat() ?: DEFAULT_SOC_PERCENT).coerceIn(valueRange),
+                    onValueChange = { onValueChange(it.roundToInt().toString()) },
+                    valueRange = valueRange,
+                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = title },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = percent != null) { Text(confirmLabel) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.soc_dialog_cancel)) }
+        },
+    )
+}

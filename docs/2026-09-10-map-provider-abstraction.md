@@ -15,7 +15,7 @@ services today:
 
 Both already sit behind the `RouteEngine` and `Geocoder` ports, but they are
 instantiated unconditionally in exactly one place
-([ChargeStopsFeatureFactory.kt:99](../shared/src/commonMain/kotlin/de/autoapp/shared/ChargeStopsFeatureFactory.kt)
+([ChargeStopsFeatureFactory.kt:99](../shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ChargeStopsFeatureFactory.kt)
 and `:114`). Switching providers is therefore a code change, not a
 configuration step.
 
@@ -55,7 +55,7 @@ first place. The pattern enforces the consistent pair.
 
 This matches the house style: `ChargeSiteSource` is already staffed according
 to key availability (`OpenChargeMapSource` vs. `DemoSiteSource`,
-[ChargeStopsFeatureFactory.kt:80](../shared/src/commonMain/kotlin/de/autoapp/shared/ChargeStopsFeatureFactory.kt)),
+[ChargeStopsFeatureFactory.kt:80](../shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ChargeStopsFeatureFactory.kt)),
 `RoutedRouteProvider` composes via `fallback`, `CombinedSoCSource` and
 `MergingSiteRepository` are composites. Nothing foreign is introduced.
 
@@ -218,10 +218,10 @@ generated `copy()` (Kotlin refuses that). As a plain class, `ref` stays inside
 
 | File | Change |
 |---|---|
-| [ChargeStopsFeature.kt:221](../shared/src/commonMain/kotlin/de/autoapp/shared/ChargeStopsFeature.kt) | `searchDestinations` → `suggestDestinations(query): List<PlaceSuggestion>`; new `resolveDestination(suggestion): Destination?` (maps `Place` → `Destination`) |
-| [PlanSheetViewModel.kt](../shared/src/commonMain/kotlin/de/autoapp/shared/ui/PlanSheetViewModel.kt) | `results: List<PlaceSuggestion>?`; new `resolving: Boolean` and `resolveFailed: Boolean`; `onSuggestionChosen(suggestion)` launches a coroutine instead of setting `chosen` right away |
-| [PlanSheet.kt:199](../androidApp/src/main/kotlin/de/autoapp/android/phone/PlanSheet.kt) | `distanceKm = suggestion.distanceKm` instead of `uiState.from?.distanceKmTo(place.position)`; `detailLine()` moves onto `PlaceSuggestion`; rows locked while `resolving`; new string for the failure case |
-| [DestinationSearchScreen.kt:99](../androidApp/src/main/kotlin/de/autoapp/android/car/DestinationSearchScreen.kt) | The click listener is synchronous: `lifecycleScope.launch { … }`, `setLoading(true)` until `resolveDestination` answers, push `RouteScreen` only on success, otherwise a `CarToast` |
+| [ChargeStopsFeature.kt:221](../shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ChargeStopsFeature.kt) | `searchDestinations` → `suggestDestinations(query): List<PlaceSuggestion>`; new `resolveDestination(suggestion): Destination?` (maps `Place` → `Destination`) |
+| [PlanSheetViewModel.kt](../shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ui/PlanSheetViewModel.kt) | `results: List<PlaceSuggestion>?`; new `resolving: Boolean` and `resolveFailed: Boolean`; `onSuggestionChosen(suggestion)` launches a coroutine instead of setting `chosen` right away |
+| [PlanSheet.kt:199](../androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/PlanSheet.kt) | `distanceKm = suggestion.distanceKm` instead of `uiState.from?.distanceKmTo(place.position)`; `detailLine()` moves onto `PlaceSuggestion`; rows locked while `resolving`; new string for the failure case |
+| [DestinationSearchScreen.kt:99](../androidApp/src/main/kotlin/org/julakali/chargeahead/android/car/DestinationSearchScreen.kt) | The click listener is synchronous: `lifecycleScope.launch { … }`, `setLoading(true)` until `resolveDestination` answers, push `RouteScreen` only on success, otherwise a `CarToast` |
 
 **A trap that needs a test:** the debounce guard
 `SearchInput(query, chosen != null)` suppresses a search as soon as a
@@ -261,7 +261,7 @@ Content-Type: application/json
   (needs parsing), `polyline.encodedPolyline`.
 - An empty `routes` array → `null`, exactly like OSRM's `code != "Ok"`. Error
   statuses still throw, because the shared client sets `expectSuccess = true`
-  ([HttpClientFactory.kt](../shared/src/commonMain/kotlin/de/autoapp/shared/data/HttpClientFactory.kt)).
+  ([HttpClientFactory.kt](../shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/HttpClientFactory.kt)).
 - The project's first POST: don't forget
   `contentType(ContentType.Application.Json)`, or `ContentNegotiation` won't
   serialize the body.
@@ -384,7 +384,7 @@ Persisted as the enum name; unknown values read back as `null`.
 ## Debug UI
 
 A new screen in the drawer's existing debug section
-([DrawerContent.kt:122](../androidApp/src/main/kotlin/de/autoapp/android/phone/DrawerContent.kt)),
+([DrawerContent.kt:122](../androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/DrawerContent.kt)),
 as a sibling of `CarData`:
 
 - `shared/.../ui/MapProviderViewModel.kt` — `MapProviderUiState(buildDefault,

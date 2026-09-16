@@ -1,6 +1,6 @@
 - [x] Use ViewModels, KMP-Compliant so they can be reused in iOS later on
       (https://kotlinlang.org/docs/multiplatform/compose-viewmodel.html) —
-      done: `shared/src/commonMain/kotlin/de/autoapp/shared/ui/`, one per
+      done: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ui/`, one per
       phone screen, in the MVI-like "Now in Android" style. Rules in the
       `viewmodels` skill, reasoning in ARCHITECTURE.md section 8.
 - [x] Use Navigation3 library for navigation — done: androidx.navigation3
