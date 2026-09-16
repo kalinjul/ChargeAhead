@@ -331,6 +331,21 @@ integrates over the SoC band rather than dividing by one average, because the
 number the driver reads is the time, and the same kilowatt-hours cost very
 different amounts of it depending on where in the battery they go.
 
+`ChargeTimeTable` holds the cumulative time F(s) from 0 % and integrates each
+straight piece of the curve in closed form, so charge times are additive:
+t(a→b) + t(b→c) = t(a→c). A curve names its bends via `breakpoints()`.
+
+### 5.1b Choosing the stops
+
+`core/ChargeStopOptimizer.kt`, #72. On the fixed route the stops are a shortest
+path over (charger, departure level), swept in route order. Departure levels
+are whole percents plus, per charger, the level that finishes the trip
+exactly; arrival levels stay continuous. Each stop costs its charge time plus
+a fixed price — overhead, the detour both ways, and penalties for a charger
+outside the preferred networks or below the minimum power. Preferences are
+prices, not filters, so a leg is never starved by one. Driving time is the
+same for every plan and is left out of the search.
+
 The accepted power is `min(sitePower, dcPeak, usableBatteryKwh × 2.5)`. The
 C-rate ceiling is there because a catalog peak is often a figure held for
 seconds on a preconditioned pack, and a small battery cannot sustain it.

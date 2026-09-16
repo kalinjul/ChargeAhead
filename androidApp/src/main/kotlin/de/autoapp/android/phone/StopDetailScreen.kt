@@ -82,7 +82,7 @@ fun StopDetailScreen(
                 ),
                 stringResource(R.string.detail_kv_arrival) to stringResource(
                     R.string.detail_kv_arrival_value,
-                    etaText(stop.etaMinutesFromStart - stop.chargeMinutes),
+                    etaText(stop.arrivalMinutesFromStart),
                     stop.arrivalSocPercent.roundToInt(),
                 ),
                 stringResource(R.string.detail_kv_energy) to

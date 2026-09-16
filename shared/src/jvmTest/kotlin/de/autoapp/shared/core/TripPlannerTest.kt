@@ -90,7 +90,8 @@ class TripPlannerTest {
         assertTrue(plan.chargeMinutes > 0.0)
         assertEquals(plan.stops.sortedBy { it.kmFromStart }, plan.stops, "stops must be in driving order")
         plan.stops.forEach { stop ->
-            assertTrue(stop.departureSocPercent <= 80.0 + 1e-9, "never plans charging past 80 %")
+            // Not a rule any more, but with fast chargers this dense the taper never pays.
+            assertTrue(stop.departureSocPercent <= 80.0 + 1e-9, "charges into the taper: $stop")
             assertTrue(stop.departureSocPercent > stop.arrivalSocPercent, "every stop actually charges")
         }
     }
@@ -252,12 +253,20 @@ class TripPlannerTest {
         ).plan
 
         val first = plan.stops.first()
-        val averageEta = first.kmFromStart * mixed.durationMinutes / mixed.distanceKm + first.chargeMinutes
+        val averageArrival = first.kmFromStart * mixed.durationMinutes / mixed.distanceKm
         assertTrue(
-            first.etaMinutesFromStart > averageEta,
-            "first stop at km ${first.kmFromStart}: ${first.etaMinutesFromStart} must be later than $averageEta",
+            first.arrivalMinutesFromStart > averageArrival,
+            "first stop at km ${first.kmFromStart}: ${first.arrivalMinutesFromStart} must be later than $averageArrival",
         )
-        assertEquals(driveMinutes(0.0, first.kmFromStart) + first.chargeMinutes, first.etaMinutesFromStart, 1e-6)
+        assertEquals(driveMinutes(0.0, first.kmFromStart), first.arrivalMinutesFromStart, 1e-6)
+        assertEquals(
+            first.arrivalMinutesFromStart + first.chargeMinutes + first.stopMinutes,
+            first.etaMinutesFromStart,
+            1e-6,
+            "departure includes the charge and the time at the stop",
+        )
+        assertTrue(first.stopMinutes > 0.0)
+        assertEquals(plan.stops.sumOf { it.stopMinutes }, plan.stopMinutes, 1e-9)
 
         val last = plan.stops.last()
         assertEquals(
@@ -387,6 +396,33 @@ class TripPlannerTest {
         assertTrue(plan.stops.first().departureSocPercent <= 80.0 + 1e-9)
     }
 
+    /** Preferences are prices since #72: a leg with only other networks still plans. */
+    @Test
+    fun `a non-preferred network is used when nothing else is in reach`() {
+        val route = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH)
+        val onlyIonity = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
+        val plan = assertIs<TripPlanResult.Planned>(
+            runBlocking {
+                planner(route, listOf(siteAt(route, 300.0)))
+                    .plan(start, destination, model3, startSocPercent = 80.0, networks = onlyIonity)
+            },
+        ).plan
+        assertEquals("Audi", plan.stops.single().site.operator)
+    }
+
+    @Test
+    fun `every chosen stop says what it saves`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val plan = assertIs<TripPlanResult.Planned>(
+            planner(route, sitesAlong(route)).plan(start, destination, id4, startSocPercent = 90.0),
+        ).plan
+        plan.stops.forEach { stop ->
+            val saves = stop.savesMinutes
+            assertTrue(saves == null || saves >= -0.1 * plan.stops.size, "km ${stop.kmFromStart} saves $saves")
+        }
+        assertTrue(plan.stops.any { it.savesMinutes != null }, "dense chargers always leave an alternative")
+    }
+
     @Test
     fun `candidates are fetched in source-sized segments, not one giant area`() = runBlocking<Unit> {
         val route = straightRoute()
@@ -431,5 +467,112 @@ class TripPlannerTest {
             capturedNetworks.all { networks -> networks.any { it.key == "ionity" } },
             "the Ionity network must be in every query",
         )
+    }
+
+    private class Scenario(
+        val name: String,
+        val route: Route,
+        val sites: List<ChargeSite>,
+        val vehicle: VehicleProfile,
+        val startSoc: Double,
+        val arrivalSoc: Double = 10.0,
+    )
+
+    private fun scenarios(): List<Scenario> {
+        val flat = straightRoute()
+        val mixed = flat.copy(
+            segments = listOf(
+                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0 / 75.0 * 60.0),
+                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 330.0 / 205.0 * 60.0),
+            ),
+        )
+        fun reference(km: Double) = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH, km = km)
+        fun twoStops(route: Route, firstKw: Double) = listOf(siteAt(route, 300.0, firstKw), siteAt(route, 600.0))
+        return buildList {
+            for (arrival in listOf(0.0, 10.0, 50.0, 70.0)) {
+                add(Scenario("660 km, arrive at $arrival %", flat, sitesAlong(flat), id4, 90.0, arrival))
+            }
+            for (speed in listOf(90.0, 150.0)) {
+                val route = straightRoute(averageSpeedKmh = speed)
+                add(Scenario("660 km at $speed km/h", route, sitesAlong(route), id4, 90.0))
+            }
+            add(Scenario("mixed segments", mixed, sitesAlong(mixed), id4, 90.0))
+            add(Scenario("nearly empty start", flat, sitesAlong(flat, everyKm = 15.0), id4, 15.0))
+            add(Scenario("sparse 150 kW chargers", flat, sitesAlong(flat, powerKw = 150.0, everyKm = 120.0), id4, 60.0))
+            for (km in listOf(660.0, 690.0, 750.0)) {
+                val route = reference(km)
+                add(Scenario("#68 at $km km", route, twoStops(route, 150.0), model3, 80.0))
+            }
+            val slowFirst = reference(690.0)
+            add(Scenario("#68 with a 50 kW first stop", slowFirst, twoStops(slowFirst, 50.0), model3, 80.0))
+        }
+    }
+
+    /**
+     * The benchmark from #72: on every scenario the optimal planner is at least
+     * as fast as the greedy one it replaced, priced the same way — the same
+     * charge-time table and the same stop overhead for both.
+     */
+    @Test
+    fun `never slower than the greedy planner`() = runBlocking<Unit> {
+        // A filter both planners satisfy everywhere, so no penalty skews the comparison.
+        val filters = ChargeFilters(minPowerKw = 50.0)
+        for (scenario in scenarios()) {
+            fun plan(result: TripPlanResult) = assertIs<TripPlanResult.Planned>(result, scenario.name).plan
+            val greedy = plan(
+                LegacyGreedyPlanner(engineReturning(scenario.route), repositoryWith(scenario.sites))
+                    .plan(start, destination, scenario.vehicle, scenario.startSoc, scenario.arrivalSoc, filters),
+            )
+            val optimal = plan(
+                planner(scenario.route, scenario.sites)
+                    .plan(start, destination, scenario.vehicle, scenario.startSoc, scenario.arrivalSoc, filters),
+            )
+
+            val greedyMinutes = greedy.driveMinutes + greedy.stops.sumOf { stop ->
+                chargeTimeTable(scenario.vehicle, stop.maxPowerKw)
+                    .minutesBetween(stop.arrivalSocPercent, stop.departureSocPercent) +
+                    LegacyGreedyPlanner.STOP_OVERHEAD_MINUTES
+            }
+            assertTrue(
+                optimal.totalMinutes <= greedyMinutes + 0.1 * greedy.stops.size + 1e-6,
+                "${scenario.name}: optimal ${optimal.totalMinutes} (${optimal.stops.size} stops) " +
+                    "vs greedy $greedyMinutes (${greedy.stops.size} stops)",
+            )
+            assertTrue(
+                optimal.arrivalSocPercent >= scenario.arrivalSoc.coerceAtLeast(10.0) - 1e-6,
+                "${scenario.name}: arrives at ${optimal.arrivalSocPercent}",
+            )
+            println(
+                "${scenario.name}: greedy ${"%.1f".format(greedyMinutes)} min / ${greedy.stops.size} stops, " +
+                    "optimal ${"%.1f".format(optimal.totalMinutes)} min / ${optimal.stops.size} stops",
+            )
+        }
+    }
+
+    @Test
+    fun `plans a 900 km route with 300 candidates in under 50 ms`() {
+        val kwhPerKm = id4.consumptionKwhPer100Km / 100.0
+        val tables = listOf(50.0, 150.0, 300.0).map { chargeTimeTable(id4, it) }
+        val nodes = List(300) { index ->
+            val km = (index + 0.5) * 3.0
+            ChargeStopOptimizer.Node(
+                km = km,
+                energyFromStartSoc = km * kwhPerKm / id4.usableBatteryKwh * 100.0,
+                fixedMinutes = 10.0 + index % 7,
+                chargeTime = tables[index % tables.size],
+            )
+        }
+        val totalEnergy = 900.0 * kwhPerKm / id4.usableBatteryKwh * 100.0
+        val optimizer = ChargeStopOptimizer()
+        fun run() = optimizer.optimize(nodes, totalEnergy, startSoc = 90.0, reserveSoc = 10.0, arrivalSoc = 20.0)
+
+        repeat(3) { run() }
+        val timings = List(5) {
+            val startedAt = System.nanoTime()
+            assertIs<ChargeStopOptimizer.Result.Found>(run())
+            (System.nanoTime() - startedAt) / 1e6
+        }.sorted()
+        println("optimizer on 300 candidates: $timings ms")
+        assertTrue(timings[2] < 50.0, "median ${timings[2]} ms, all: $timings")
     }
 }
