@@ -36,9 +36,8 @@ class TripPlannerTest {
         dcPeakPowerKw = 135.0,
     )
 
-    private fun straightRoute(pointCount: Int = 40, averageSpeedKmh: Double = 110.0): Route {
+    private fun straightRoute(pointCount: Int = 40, averageSpeedKmh: Double = 110.0, km: Double = 660.0): Route {
         val points = (0 until pointCount).map { interpolate(start, end, it / (pointCount - 1.0)) }
-        val km = 660.0
         return Route(points = points, distanceKm = km, durationMinutes = km / averageSpeedKmh * 60.0)
     }
 
@@ -64,6 +63,14 @@ class TripPlannerTest {
         }
         return sites
     }
+
+    private fun siteAt(route: Route, km: Double, powerKw: Double = 150.0) = ChargeSite(
+        id = "demo:at-${km.toInt()}",
+        name = "Ladepark km ${km.toInt()}",
+        operator = "Audi",
+        position = interpolate(route.points.first(), route.points.last(), km / route.distanceKm),
+        connectors = listOf(Connector(ConnectorType.CCS2, powerKw, 4)),
+    )
 
     private fun repositoryWith(sites: List<ChargeSite>): SiteRepository = object : SiteRepository {
         override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
@@ -318,6 +325,66 @@ class TripPlannerTest {
                 "Zwischenstopp bei km ${stop.kmFromStart} lädt auf ${stop.departureSocPercent} %",
             )
         }
+    }
+
+    private val model3 = VehicleProfile(
+        displayName = "Tesla Model 3 LR",
+        usableBatteryKwh = 75.0,
+        consumptionKwhPer100Km = 15.0,
+        acceptedConnectors = setOf(ConnectorType.CCS2),
+    )
+
+    /** At the reference speed 1 % of this battery is 5 km, which keeps the numbers below readable. */
+    private fun planWithStopsAt300And600(routeKm: Double, firstStopPowerKw: Double = 150.0): TripPlan {
+        val route = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH, km = routeKm)
+        return assertIs<TripPlanResult.Planned>(
+            runBlocking {
+                planner(route, listOf(siteAt(route, 300.0, firstStopPowerKw), siteAt(route, 600.0)))
+                    .plan(start, destination, model3, startSocPercent = 80.0, arrivalSocPercent = 10.0)
+            },
+        ).plan
+    }
+
+    /**
+     * Issue #68: from km 300 the rest needs 72 % plus the 10 % arrival level —
+     * just past the 80 % cap. The stop at km 600 would charge for two percent.
+     */
+    @Test
+    fun `charges the previous stop past 80 percent instead of adding a stop for a few percent`() {
+        val plan = planWithStopsAt300And600(routeKm = 660.0)
+
+        assertEquals(1, plan.stops.size, "stops: ${plan.stops.map { it.kmFromStart to it.chargeMinutes }}")
+        val stop = plan.stops.single()
+        assertEquals(82.0, stop.departureSocPercent, 1.0)
+        assertEquals(10.0, plan.arrivalSocPercent, 1.0)
+        assertEquals(stop.chargeMinutes, plan.chargeMinutes, 1e-9)
+        assertEquals(
+            plan.totalMinutes,
+            stop.etaMinutesFromStart + (660.0 - stop.kmFromStart) / SpeedAwareConsumption.REFERENCE_SPEED_KMH * 60.0,
+            0.5,
+            "the stretched stop's ETA must include its longer charge",
+        )
+    }
+
+    @Test
+    fun `a stop that saves a long slow charge is kept`() {
+        // From km 300 the rest now needs 100 % — far past what stretching may buy.
+        val plan = planWithStopsAt300And600(routeKm = 750.0)
+
+        assertEquals(2, plan.stops.size)
+        assertTrue(plan.stops.first().departureSocPercent <= 80.0 + 1e-9)
+        assertEquals(10.0, plan.arrivalSocPercent, 1.0)
+    }
+
+    @Test
+    fun `a slow charger is not stretched when the next stop is quicker overall`() {
+        // The rest needs 88 %: within the stretch limit, so only the time decides.
+        assertEquals(1, planWithStopsAt300And600(routeKm = 690.0, firstStopPowerKw = 150.0).stops.size)
+
+        // 80 → 88 % at 50 kW takes far longer than a short stop at 150 kW.
+        val plan = planWithStopsAt300And600(routeKm = 690.0, firstStopPowerKw = 50.0)
+        assertEquals(2, plan.stops.size)
+        assertTrue(plan.stops.first().departureSocPercent <= 80.0 + 1e-9)
     }
 
     @Test
