@@ -101,11 +101,24 @@ class ChargeTimeTable(
         }
     }
 
+    // The optimizer evaluates F at millions of off-grid levels, so each percent
+    // keeps its own straight line unless a breakpoint falls inside it.
+    private val percentStartKw = DoubleArray(100) { powerAt(it.toDouble()) }
+    private val percentSlope = DoubleArray(100) { powerAt(it + 1.0) - percentStartKw[it] }
+    private val percentIsStraight = BooleanArray(100) { percent ->
+        breakpoints.none { it > percent && it < percent + 1 }
+    }
+
     fun minutesTo(socPercent: Double): Double {
         if (peakKw <= 0.0) return 0.0
         val soc = socPercent.coerceIn(0.0, 100.0)
         val whole = soc.toInt().coerceAtMost(100)
-        return atPercent[whole] + integrate(whole.toDouble(), soc)
+        val part = soc - whole
+        if (whole == 100 || part == 0.0) return atPercent[whole]
+        if (!percentIsStraight[whole]) return atPercent[whole] + integrate(whole.toDouble(), soc)
+        val fromKw = percentStartKw[whole]
+        val toKw = fromKw + percentSlope[whole] * part
+        return atPercent[whole] + closedForm(fromKw, toKw, percentSlope[whole], part)
     }
 
     fun minutesBetween(fromSocPercent: Double, toSocPercent: Double): Double {
@@ -136,12 +149,17 @@ class ChargeTimeTable(
         val slope = (powerAt(pieceEnd) - startKw) / (pieceEnd - pieceStart)
         val fromKw = startKw + slope * (from - pieceStart)
         val toKw = startKw + slope * (to - pieceStart)
-        // 60 min/h over 100 %/battery: minutes per percent per kWh-per-kW.
+        return closedForm(fromKw, toKw, slope, to - from)
+    }
+
+    /** Minutes across [spanPercent] while the power runs linearly from [fromKw] to [toKw]. */
+    private fun closedForm(fromKw: Double, toKw: Double, slopeKwPerPercent: Double, spanPercent: Double): Double {
+        // 60 min/h over 100 %/battery.
         val scale = 0.6 * usableBatteryKwh
         return if (abs(toKw - fromKw) <= FLAT_TOLERANCE * fromKw) {
-            scale * (to - from) / ((fromKw + toKw) / 2.0)
+            scale * spanPercent / ((fromKw + toKw) / 2.0)
         } else {
-            scale / slope * ln(toKw / fromKw)
+            scale / slopeKwPerPercent * ln(toKw / fromKw)
         }
     }
 
