@@ -25,6 +25,7 @@ lifecycle = "2.10.0"
 playServicesLocation = "21.4.0"
 playServicesMaps = "20.0.0"
 mapsCompose = "6.6.0"
+composeCache = "3.0.1"
 
 chargeaheadApi = "0.7.0"
 
@@ -89,6 +90,9 @@ androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 # Google's full Material icon set (EvStation etc.) — R8 strips the unused rest.
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+# Local cache for text fields bound to a ViewModel: keeps keystrokes that the
+# asynchronous uiState round trip would otherwise overwrite.
+compose-cache = { module = "de.charlex.compose:compose-cache", version.ref = "composeCache" }
 
 # --- Map (decision 2026-09-07: Google Maps Compose; key from local.properties) ---
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }

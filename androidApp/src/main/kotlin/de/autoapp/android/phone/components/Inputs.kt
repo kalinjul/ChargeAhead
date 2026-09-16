@@ -42,18 +42,25 @@ import androidx.compose.ui.unit.dp
 import de.autoapp.android.R
 import de.autoapp.android.phone.theme.ChargeAheadColors
 import de.autoapp.android.phone.theme.tabular
+import de.charlex.compose.cache.rememberForUserInput
 import kotlin.math.roundToInt
 /**
  * The mockup's `.searchwrap`: bordered, rounded, magnifier left, no underline.
  *
  * The clear button only exists while there is something to clear — an
  * always-present (x) next to an empty field invites a tap that does nothing.
+ *
+ * The text is cached locally until the caller's state catches up: [value]
+ * comes back from a ViewModel asynchronously, and binding the field to it
+ * directly let a stale emission overwrite what was typed in the meantime —
+ * fast typing lost characters.
  */
 @Composable
 fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
+    val (text, onTextChange) = rememberForUserInput(value = value, onValueChange = onValueChange)
     TextField(
-        value = value,
-        onValueChange = onValueChange,
+        value = text,
+        onValueChange = onTextChange,
         placeholder = { Text(placeholder, color = ChargeAheadColors.faint) },
         leadingIcon = {
             Icon(
@@ -63,11 +70,11 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
                 modifier = Modifier.size(17.dp),
             )
         },
-        trailingIcon = if (value.isEmpty()) {
+        trailingIcon = if (text.isEmpty()) {
             null
         } else {
             {
-                IconButton(onClick = { onValueChange("") }) {
+                IconButton(onClick = { onTextChange("") }) {
                     Icon(
                         painterResource(R.drawable.ic_remove),
                         contentDescription = stringResource(R.string.phone_search_clear),
