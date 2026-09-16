@@ -5,10 +5,10 @@ assistant (as of M1 — see [../ARCHITECTURE.md](../ARCHITECTURE.md) and
 [../AGENTS.md](../AGENTS.md)).
 
 ```
-AutoApp/
+ChargeAhead/
 ├── AppDelegate.swift              Scene routing: phone vs. CarPlay
 ├── Info.plist                     UIApplicationSceneManifest, permission texts
-├── AutoApp.entitlements           com.apple.developer.carplay-charging
+├── ChargeAhead.entitlements       com.apple.developer.carplay-charging
 ├── de.lproj/Localizable.strings   German text for the phone UI and CarPlay
 ├── CarPlay/
 │   ├── CarPlaySceneDelegate.swift CPTemplateApplicationSceneDelegate, CPListTemplate
@@ -91,7 +91,7 @@ stays empty, and the shared module returns labeled demo data
 1. **Apply for the CarPlay entitlement from Apple**, if not already done —
    without approval of `com.apple.developer.carplay-charging`, every
    build/signing attempt fails regardless of what's locally set in
-   `AutoApp.entitlements` (see ARCHITECTURE.md, section 1.4).
+   `ChargeAhead.entitlements` (see ARCHITECTURE.md, section 1.4).
 2. **Build and embed the shared framework:**
    ```bash
    ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64   # simulator, debug

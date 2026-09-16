@@ -194,7 +194,7 @@ and duplicate none of it.
 ### Model
 
 ```kotlin
-package de.autoapp.shared.domain
+package org.julakali.chargeahead.shared.domain
 
 data class LatLon(val lat: Double, val lon: Double)
 
@@ -316,7 +316,7 @@ the same process — the Koin `appModule` (androidApp) holds the singleton.
 ### State and assembly
 
 ```kotlin
-package de.autoapp.shared
+package org.julakali.chargeahead.shared
 
 // Single source of state for both car UIs.
 class ChargeStopsFeature(locationSource, repository, ...) {
@@ -410,7 +410,7 @@ repository.
 ## Rules for the phone UI
 
 Every screen's state lives in a **ViewModel in
-`shared/src/commonMain/kotlin/de/autoapp/shared/ui/`**, publishing one
+`shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ui/`**, publishing one
 `uiState: StateFlow<XUiState>`; the Compose screen is stateless and takes
 that state plus lambdas. The pattern is the MVI-like one from "Now in
 Android"; the rules, the template and the test setup are in the

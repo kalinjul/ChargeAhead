@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Language/tests:** Kotlin. Unit/integration tests live in `shared/src/jvmTest/kotlin/de/autoapp/shared/...` and run with `./gradlew :shared:jvmTest`. Use `kotlin.test` (`assertEquals`, `assertTrue`, `assertContains`, `runTest`).
+- **Language/tests:** Kotlin. Unit/integration tests live in `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/...` and run with `./gradlew :shared:jvmTest`. Use `kotlin.test` (`assertEquals`, `assertTrue`, `assertContains`, `runTest`).
 - **Build env:** `JAVA_HOME` must point at Android Studio's JBR; run gradle via homebrew bash in sandboxed shells (see the build-env memory). Command: `JAVA_HOME=... ./gradlew :shared:jvmTest --tests '...'`.
 - **Commit style (this repo):** `type: subject` — **no ticket**, no `Co-Authored-By` trailer. Lowercase, conversational, ≤70 chars. `feat:` / `fix:` / `chore:` / `test:` / `docs:`.
 - **networkKey identity:** the catalog `key` slug (`"enbw"`, `"shell-recharge"`). Stored in `preferredOperators` and in the coverage stamp. Never the display name.
@@ -60,8 +60,8 @@ Print two things: (a) the full `(id, title)` reference list, (b) per-country `Op
 ### Task 2: `NetworkCatalog` and `Network` type
 
 **Files:**
-- Create: `shared/src/commonMain/kotlin/de/autoapp/shared/domain/NetworkCatalog.kt`
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/domain/NetworkCatalogTest.kt`
+- Create: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/domain/NetworkCatalog.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/domain/NetworkCatalogTest.kt`
 
 **Interfaces:**
 - Consumes: the approved proposal from Task 1.
@@ -73,7 +73,7 @@ Print two things: (a) the full `(id, title)` reference list, (b) per-country `Op
 - [ ] **Step 1: Write the failing tests** (`NetworkCatalogTest.kt`):
 
 ```kotlin
-package de.autoapp.shared.domain
+package org.julakali.chargeahead.shared.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -142,7 +142,7 @@ Expected: FAIL (unresolved `NetworkCatalog`).
 - [ ] **Step 3: Write `NetworkCatalog.kt`** using the VehicleCatalog pattern (a hardcoded `all` list). Fill `all` from the **approved** proposal:
 
 ```kotlin
-package de.autoapp.shared.domain
+package org.julakali.chargeahead.shared.domain
 
 data class Network(
     val key: String,
@@ -156,7 +156,7 @@ data class Network(
  * picker is populated on first launch, offline. Mirrors [VehicleCatalog]: a
  * maintained in-source list, updated by app release.
  *
- * Not the same as [de.autoapp.shared.data.OperatorCatalog], which reads
+ * Not the same as [org.julakali.chargeahead.shared.data.OperatorCatalog], which reads
  * operator names already in the local cache.
  */
 object NetworkCatalog {
@@ -197,8 +197,8 @@ Expected: PASS.
 
 - [ ] **Step 6: Commit.**
 ```bash
-git add shared/src/commonMain/kotlin/de/autoapp/shared/domain/NetworkCatalog.kt \
-        shared/src/jvmTest/kotlin/de/autoapp/shared/domain/NetworkCatalogTest.kt
+git add shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/domain/NetworkCatalog.kt \
+        shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/domain/NetworkCatalogTest.kt
 git commit -m "feat: a bundled catalog of networks, so day-one has something to tick"
 ```
 
@@ -209,10 +209,10 @@ git commit -m "feat: a bundled catalog of networks, so day-one has something to 
 ### Task 3: Deserialize and carry `operatorId`
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/domain/Model.kt` (add field to `ChargeSite`)
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/data/OpenChargeMapDto.kt` (add `OperatorID` to `OcmPoi`)
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/data/OpenChargeMapSource.kt` (`toChargeSite` maps it)
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/data/OpenChargeMapSourceTest.kt` (add a case)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/domain/Model.kt` (add field to `ChargeSite`)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapDto.kt` (add `OperatorID` to `OcmPoi`)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapSource.kt` (`toChargeSite` maps it)
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapSourceTest.kt` (add a case)
 
 **Interfaces:**
 - Produces: `ChargeSite.operatorId: Long?` (default `null`); OCM sites carry the id, others leave it null.
@@ -244,10 +244,10 @@ Expected: PASS.
 
 - [ ] **Step 5: Commit.**
 ```bash
-git add shared/src/commonMain/kotlin/de/autoapp/shared/domain/Model.kt \
-        shared/src/commonMain/kotlin/de/autoapp/shared/data/OpenChargeMapDto.kt \
-        shared/src/commonMain/kotlin/de/autoapp/shared/data/OpenChargeMapSource.kt \
-        shared/src/jvmTest/kotlin/de/autoapp/shared/data/OpenChargeMapSourceTest.kt
+git add shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/domain/Model.kt \
+        shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapDto.kt \
+        shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapSource.kt \
+        shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapSourceTest.kt
 git commit -m "feat: keep the OperatorID OCM was sending all along"
 ```
 
@@ -258,7 +258,7 @@ git commit -m "feat: keep the OperatorID OCM was sending all along"
 ### Task 4: Add a `networks` parameter to the source/repository ports
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/domain/Ports.kt`
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/domain/Ports.kt`
 - Modify implementations: `OpenChargeMapSource.kt`, `BnetzaSource.kt`, `DemoSiteSource` (wherever it lives), `TiledSiteRepository.kt`, `MergingSiteRepository.kt`, and any others implementing these interfaces.
 
 **Interfaces:**
@@ -270,7 +270,7 @@ git commit -m "feat: keep the OperatorID OCM was sending all along"
 - [ ] **Step 1: Change the interfaces** in `Ports.kt`:
 
 ```kotlin
-import de.autoapp.shared.domain.Network   // same package; no import needed if co-located
+import org.julakali.chargeahead.shared.domain.Network   // same package; no import needed if co-located
 
 interface ChargeSiteSource {
     val id: String
@@ -305,8 +305,8 @@ git commit -m "feat: give the sources a way to hear which networks the driver wa
 ### Task 5: OpenChargeMap emits `operatorid=`
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/data/OpenChargeMapSource.kt`
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/data/OpenChargeMapSourceTest.kt`
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapSource.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapSourceTest.kt`
 
 **Interfaces:**
 - Consumes: `networks: List<Network>` from Task 4.
@@ -353,8 +353,8 @@ Expected: PASS.
 
 - [ ] **Step 5: Commit.**
 ```bash
-git add shared/src/commonMain/kotlin/de/autoapp/shared/data/OpenChargeMapSource.kt \
-        shared/src/jvmTest/kotlin/de/autoapp/shared/data/OpenChargeMapSourceTest.kt
+git add shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapSource.kt \
+        shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapSourceTest.kt
 git commit -m "feat: OCM only sends back the operators you asked for"
 ```
 
@@ -363,8 +363,8 @@ git commit -m "feat: OCM only sends back the operators you asked for"
 ### Task 6: Bnetza filters by `UPPER(Betreiber) LIKE`
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/data/BnetzaSource.kt`
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/data/BnetzaSourceTest.kt` (create if absent; otherwise extend)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/BnetzaSource.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/BnetzaSourceTest.kt` (create if absent; otherwise extend)
 
 **Interfaces:**
 - Consumes: `networks: List<Network>` from Task 4.
@@ -420,8 +420,8 @@ Expected: PASS.
 
 - [ ] **Step 5: Commit.**
 ```bash
-git add shared/src/commonMain/kotlin/de/autoapp/shared/data/BnetzaSource.kt \
-        shared/src/jvmTest/kotlin/de/autoapp/shared/data/BnetzaSourceTest.kt
+git add shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/BnetzaSource.kt \
+        shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/BnetzaSourceTest.kt
 git commit -m "feat: bnetza stops shipping all of germany, filters by name at the source"
 ```
 
@@ -432,9 +432,9 @@ git commit -m "feat: bnetza stops shipping all of germany, filters by name at th
 ### Task 7: Schema v2 — entities, DAO, destructive migration
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/db/ChargeSiteDatabase.kt` (entities, DAO, `@Database version`)
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/db/DatabaseFactory.kt` (`fallbackToDestructiveMigration`)
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/db/ChargeSiteDaoTest.kt` (create if absent; jvm uses `Room.inMemoryDatabaseBuilder`)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/db/ChargeSiteDatabase.kt` (entities, DAO, `@Database version`)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/db/DatabaseFactory.kt` (`fallbackToDestructiveMigration`)
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/db/ChargeSiteDaoTest.kt` (create if absent; jvm uses `Room.inMemoryDatabaseBuilder`)
 
 **Interfaces:**
 - Produces:
@@ -504,8 +504,8 @@ git commit -m "feat: the tile cache remembers coverage per network, and per fetc
 ### Task 8: `TiledSiteRepository` — per-network coverage and incremental fetch
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/data/TiledSiteRepository.kt`
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/data/TiledSiteRepositoryTest.kt` (create if absent)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/TiledSiteRepository.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/TiledSiteRepositoryTest.kt` (create if absent)
 
 **Interfaces:**
 - Consumes: `networks` param (Task 4), per-network DAO (Task 7), `NetworkCatalog.UNFILTERED`.
@@ -628,8 +628,8 @@ git commit -m "feat: adding a network fetches only the new one, removing fetches
 ### Task 9: `MergingSiteRepository` threads the selection (verify)
 
 **Files:**
-- Modify (if not already covered by Task 4): `shared/src/commonMain/kotlin/de/autoapp/shared/data/MergingSiteRepository.kt`
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/data/MergingSiteRepositoryTest.kt` (add a case)
+- Modify (if not already covered by Task 4): `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/MergingSiteRepository.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/MergingSiteRepositoryTest.kt` (add a case)
 
 **Interfaces:**
 - Produces: `sitesIn(area, networks)` passes the same `networks` to every wrapped repository; merge behavior unchanged.
@@ -656,9 +656,9 @@ git commit -m "test: the merger hands the same networks to every source"
 ### Task 10: Startup prune
 
 **Files:**
-- Create: `shared/src/commonMain/kotlin/de/autoapp/shared/data/CachePrune.kt`
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/ChargeStopsFeatureFactory.kt`
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/data/CachePruneTest.kt`
+- Create: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/data/CachePrune.kt`
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ChargeStopsFeatureFactory.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/CachePruneTest.kt`
 
 **Interfaces:**
 - Produces: `suspend fun pruneCache(db: ChargeSiteDatabase, selectedKeys: Set<String>, now: Long, ttlMillis: Long)` — deletes stale coverage/sites (older than `now - ttlMillis`) and coverage whose `networkKey` is neither in `selectedKeys` nor the sentinel `"*"`.
@@ -714,9 +714,9 @@ git commit -m "feat: startup quietly evicts stale and deselected chargers"
 ### Task 11: Filter via `NetworkCatalog.resolve` (network keys)
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/domain/NetworkPreferences.kt` (or the planner filter call site)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/domain/NetworkPreferences.kt` (or the planner filter call site)
 - Modify: `ChargeStopPlanner` (wherever `networks.allows(site.operator)` is called) and any other `allows(...)` call sites (`TripPlanner`, `ChargeNowRanker` per the earlier survey).
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/domain/NetworkFilterTest.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/domain/NetworkFilterTest.kt`
 
 **Interfaces:**
 - Produces: a single resolution predicate used everywhere a site is filtered by network:
@@ -773,7 +773,7 @@ git commit -m "feat: a site belongs to a network by id or keyword, not a normali
 ### Task 12: Thread the selection into the live `sitesIn` call
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/ChargeStopsFeature.kt` (`recompute`)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ChargeStopsFeature.kt` (`recompute`)
 
 **Interfaces:**
 - Consumes: `networks` (the `NetworkPreferences` already collected into the feature) and `NetworkCatalog.selection`.
@@ -792,7 +792,7 @@ Expected: PASS.
 
 - [ ] **Step 3: Commit.**
 ```bash
-git add shared/src/commonMain/kotlin/de/autoapp/shared/ChargeStopsFeature.kt
+git add shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ChargeStopsFeature.kt
 git commit -m "feat: the map asks only for the networks the driver committed to"
 ```
 
@@ -805,8 +805,8 @@ git commit -m "feat: the map asks only for the networks the driver committed to"
 ### Task 13: `NetworksViewModel` reads the catalog, stages, confirms
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/ui/NetworksViewModel.kt`
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/ui/NetworksViewModelTest.kt` (create if absent; follow existing VM tests for the fake `SettingsStore`)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ui/NetworksViewModel.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/ui/NetworksViewModelTest.kt` (create if absent; follow existing VM tests for the fake `SettingsStore`)
 
 **Interfaces:**
 - Produces new `NetworksUiState` shape:
@@ -902,7 +902,7 @@ git commit -m "feat: a confirm button that means it, on the networks screen"
 ### Task 15: Live contract test for `operatorid=`
 
 **Files:**
-- Modify: `shared/src/jvmTest/kotlin/de/autoapp/shared/data/OpenChargeMapLiveContractTest.kt`
+- Modify: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapLiveContractTest.kt`
 
 **Interfaces:**
 - Consumes: the opt-in gate already there (`OCM_LIVE=1` + key from `local.properties`).
@@ -926,7 +926,7 @@ Expected: PASS (and it no-ops in normal CI runs).
 
 - [ ] **Step 3: Commit.**
 ```bash
-git add shared/src/jvmTest/kotlin/de/autoapp/shared/data/OpenChargeMapLiveContractTest.kt
+git add shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/data/OpenChargeMapLiveContractTest.kt
 git commit -m "test: assert OCM still filters operatorid server-side, opt-in"
 ```
 

@@ -1,4 +1,4 @@
-# autoapp — Roadmap
+# ChargeAhead — Roadmap
 
 What is built, what comes next, and which questions are still open.
 Design and platform constraints live in **[ARCHITECTURE.md](ARCHITECTURE.md)**;

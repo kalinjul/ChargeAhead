@@ -1,4 +1,4 @@
-# autoapp
+# ChargeAhead
 
 Charging-stop assistant for **Android Auto** and **Apple CarPlay**. Shows the
 next reachable charging stations ahead while driving — sorted by distance,

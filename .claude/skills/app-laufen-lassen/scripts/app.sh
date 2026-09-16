@@ -10,11 +10,11 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 # The application id is not the Kotlin package: the code lives under
-# de.autoapp.android, the installed app is org.julakali.chargeahead. So the
-# activity has to be named fully qualified — the "$PKG/.Foo" shorthand
+# org.julakali.chargeahead.android, the installed app is org.julakali.chargeahead.
+# So the activity has to be named fully qualified — the "$PKG/.Foo" shorthand
 # resolves against the application id and silently misses.
 PKG=org.julakali.chargeahead
-ACTIVITY="$PKG/de.autoapp.android.phone.MainActivity"
+ACTIVITY="$PKG/org.julakali.chargeahead.android.phone.MainActivity"
 AVD="${APP_AVD:-Medium_Phone_API_36.0}"
 EMULATOR_BIN="${ANDROID_EMULATOR:-$HOME/Android/Sdk/emulator/emulator}"
 
@@ -151,7 +151,7 @@ cmd_type() { adb -s "$(pick_device)" shell input text "${1// /%s}"; }
 
 cmd_log() {
     adb -s "$(pick_device)" logcat -d -t "${1:-400}" 2>/dev/null \
-        | grep "W autoapp " || echo "(no app warnings)"
+        | grep "W ChargeAhead " || echo "(no app warnings)"
 }
 
 # Copies one file out of the app's private data directory. An empty result

@@ -11,7 +11,7 @@ local.properties
 xcuserdata/
 *.xcodeproj/project.xcworkspace/
 *.xcodeproj/xcuserdata/
-iosApp/AutoApp.xcodeproj/
+iosApp/ChargeAhead.xcodeproj/
 .build/
 secrets.properties
 # Signing keys never belong in the repository (docs/ci-cd.md).

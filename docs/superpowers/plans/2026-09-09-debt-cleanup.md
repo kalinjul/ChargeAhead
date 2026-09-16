@@ -23,17 +23,17 @@
 ### Task 1: One MIN_DC_POWER_KW
 
 **Files:**
-- Create: `shared/src/commonMain/kotlin/de/autoapp/shared/core/Charging.kt`
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/core/ChargeNowRanker.kt:111` (delete private const)
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/core/TripPlanner.kt:332` (delete companion const)
+- Create: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/core/Charging.kt`
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/core/ChargeNowRanker.kt:111` (delete private const)
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/core/TripPlanner.kt:332` (delete companion const)
 
 **Interfaces:**
-- Produces: `internal const val MIN_DC_POWER_KW: Double = 50.0` in package `de.autoapp.shared.core` — unqualified references in both files keep resolving.
+- Produces: `internal const val MIN_DC_POWER_KW: Double = 50.0` in package `org.julakali.chargeahead.shared.core` — unqualified references in both files keep resolving.
 
 - [ ] **Step 1: Create the shared constant**
 
 ```kotlin
-package de.autoapp.shared.core
+package org.julakali.chargeahead.shared.core
 
 /**
  * The DC fast-charging floor shared by trip planning and "charge now":
@@ -53,17 +53,17 @@ internal const val MIN_DC_POWER_KW = 50.0
 ### Task 2: The decimal helpers move in together
 
 **Files:**
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/Formatting.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/GarageScreen.kt:212-215` (delete `oneDecimal`)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/SubscriptionsScreen.kt:90-94` (delete `twoDecimals` + its kdoc)
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/Formatting.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/GarageScreen.kt:212-215` (delete `oneDecimal`)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/SubscriptionsScreen.kt:90-94` (delete `twoDecimals` + its kdoc)
 
 **Interfaces:**
-- Produces: `internal fun Double.oneDecimal(): String`, `internal fun Double.twoDecimals(): String` in package `de.autoapp.android.phone` — all call sites (DrawerContent, GarageScreen, ChargeMap, AddCarScreen, TripPlanScreen, SubscriptionsScreen, PlanSheets) are same-package, zero import changes.
+- Produces: `internal fun Double.oneDecimal(): String`, `internal fun Double.twoDecimals(): String` in package `org.julakali.chargeahead.android.phone` — all call sites (DrawerContent, GarageScreen, ChargeMap, AddCarScreen, TripPlanScreen, SubscriptionsScreen, PlanSheets) are same-package, zero import changes.
 
 - [ ] **Step 1: Create Formatting.kt with the two implementations moved verbatim** (including the `"0.49" → "0,49"` kdoc from SubscriptionsScreen). Body of `oneDecimal` is the existing GarageScreen implementation (`roundToInt`-based); keep its `import kotlin.math.roundToInt`.
 
 ```kotlin
-package de.autoapp.android.phone
+package org.julakali.chargeahead.android.phone
 
 import kotlin.math.roundToInt
 
@@ -90,8 +90,8 @@ internal fun Double.twoDecimals(): String {
 ### Task 3: Car icon builder, written once
 
 **Files:**
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/car/CarIcons.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/car/CarHomeScreen.kt:138-139`, `ChargeNowScreen.kt:150-151`, `RouteScreen.kt:243-244` (delete the three identical private methods)
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/car/CarIcons.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/car/CarHomeScreen.kt:138-139`, `ChargeNowScreen.kt:150-151`, `RouteScreen.kt:243-244` (delete the three identical private methods)
 
 **Interfaces:**
 - Produces: `internal fun Screen.icon(resId: Int): CarIcon` — call sites keep the bare `icon(R.drawable.…)` form because the receiver is the Screen.
@@ -99,7 +99,7 @@ internal fun Double.twoDecimals(): String {
 - [ ] **Step 1: Create CarIcons.kt**
 
 ```kotlin
-package de.autoapp.android.car
+package org.julakali.chargeahead.android.car
 
 import androidx.car.app.Screen
 import androidx.car.app.model.CarIcon
@@ -120,7 +120,7 @@ internal fun Screen.icon(resId: Int): CarIcon =
 ### Task 4: Settings store drops its runCatching chorus
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/settings/PersistentSettingsStore.kt`
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/settings/PersistentSettingsStore.kt`
 - Test (existing, must stay green): `shared/src/jvmTest/.../settings/PersistentSettingsStoreTest.kt`, `GarageAndRoutesSettingsTest.kt`
 
 **Interfaces:**
@@ -178,9 +178,9 @@ The `takeIf { isNotEmpty() }` guards stay — writing null removes the key, exac
 
 **Files:**
 - Modify: `androidApp/src/main/res/values/strings.xml` (line 97 + one new string)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt:361-363` (+ call site :284)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/TripPlanScreen.kt:331`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/CorridorStopDialog.kt:68`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt:361-363` (+ call site :284)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/TripPlanScreen.kt:331`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/CorridorStopDialog.kt:68`
 
 **Interfaces:**
 - Consumes existing resources: `trip_summary_distance` (`%1$d km`), plural `trip_summary_stops` (`%1$d Stopps`).
@@ -219,9 +219,9 @@ Call site (line 284): `onToggleSave = { tripViewModel.toggleSaved(trip.plan.summ
 ### Task 6: iOS stops inventing its own number formats
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/ChargeStopFormatter.kt` (three new public label functions)
-- Test: `shared/src/commonTest/kotlin/de/autoapp/shared/ChargeStopFormatterTest.kt`
-- Modify: `iosApp/AutoApp/Phone/HomeMapView.swift:253,258`, `iosApp/AutoApp/Phone/TripPlanView.swift:46-50,55,110`
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/ChargeStopFormatter.kt` (three new public label functions)
+- Test: `shared/src/commonTest/kotlin/org/julakali/chargeahead/shared/ChargeStopFormatterTest.kt`
+- Modify: `iosApp/ChargeAhead/Phone/HomeMapView.swift:253,258`, `iosApp/ChargeAhead/Phone/TripPlanView.swift:46-50,55,110`
 
 **Interfaces:**
 - Produces on `ChargeStopFormatter`: `powerKwLabel(powerKw: Double): String` → `"150 kW"`; `pricePerKwhLabel(euroPerKwh: Double): String` → `"0,54 €/kWh"`; `minutesLabel(minutes: Double): String` → `"25 min"`. Swift reaches the object as `ChargeStopFormatter.shared` (same as the existing `MapsHandoff.shared` usage).

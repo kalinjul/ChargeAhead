@@ -17,10 +17,10 @@
 # target (iosArm64 vs. iosSimulatorArm64) can only be verified with an
 # actual Mac toolchain run (see ARCHITECTURE.md, open point 1).
 
-name: AutoApp
+name: ChargeAhead
 
 options:
-  bundleIdPrefix: de.autoapp
+  bundleIdPrefix: org.julakali
   deploymentTarget:
     iOS: "16.0"
 
@@ -40,25 +40,25 @@ configFiles:
   Release: Secrets.xcconfig
 
 targets:
-  AutoApp:
+  ChargeAhead:
     type: application
     platform: iOS
     deploymentTarget: "16.0"
     sources:
-      - path: AutoApp
+      - path: ChargeAhead
     # No `info:` block: XcodeGen would REGENERATE the plist and silently
     # drop the hand-maintained keys (CarPlay scene manifest). The existing
     # file is used as-is instead.
     entitlements:
-      path: AutoApp/AutoApp.entitlements
+      path: ChargeAhead/ChargeAhead.entitlements
       properties:
         com.apple.developer.carplay-charging: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: de.autoapp.ios
-        PRODUCT_NAME: AutoApp
+        PRODUCT_BUNDLE_IDENTIFIER: org.julakali.chargeahead
+        PRODUCT_NAME: ChargeAhead
         GENERATE_INFOPLIST_FILE: false
-        INFOPLIST_FILE: AutoApp/Info.plist
+        INFOPLIST_FILE: ChargeAhead/Info.plist
         INFOPLIST_KEY_UILaunchScreen_Generation: false # UILaunchScreen is already in Info.plist
         # Confirmed by the first Mac build (2026-09-07): the embed task writes
         # the framework to shared/build/xcode-frameworks/<Configuration>/<sdk>.

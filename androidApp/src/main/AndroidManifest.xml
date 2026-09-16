@@ -24,7 +24,7 @@
          here. Without this block, every navigation app is invisible, and the
          hand-off fails with ActivityNotFoundException — even if Google Maps
          is installed. Verified on the emulator:
-         "AppsFilter: de.autoapp.android -> com.google.android.apps.maps BLOCKED". -->
+         "AppsFilter: org.julakali.chargeahead -> com.google.android.apps.maps BLOCKED". -->
     <queries>
         <intent>
             <action android:name="android.intent.action.VIEW" />
@@ -37,7 +37,7 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:theme="@style/Theme.AutoApp">
+        android:theme="@style/Theme.ChargeAhead">
 
         <meta-data
             android:name="com.google.android.gms.car.application"
@@ -61,7 +61,7 @@
         <activity
             android:name=".phone.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.AutoApp">
+            android:theme="@style/Theme.ChargeAhead">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

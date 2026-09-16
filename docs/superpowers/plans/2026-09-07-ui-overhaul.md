@@ -29,8 +29,8 @@
 The expanded charge-now sheet ("Mehr in der Nähe") needs the candidates that didn't make top-3. Today the ranker throws them away.
 
 **Files:**
-- Modify: `shared/src/commonMain/kotlin/de/autoapp/shared/core/ChargeNowRanker.kt`
-- Test: `shared/src/jvmTest/kotlin/de/autoapp/shared/core/ChargeNowRankerTest.kt`
+- Modify: `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/core/ChargeNowRanker.kt`
+- Test: `shared/src/jvmTest/kotlin/org/julakali/chargeahead/shared/core/ChargeNowRankerTest.kt`
 
 **Interfaces:**
 - Produces: `ChargeNowResult(candidates: List<ChargeNowCandidate>, relaxed: List<RelaxedFilter>, more: List<ChargeNowCandidate> = emptyList())` — `more` = every DC-qualified candidate not in `candidates`, sorted by `distanceKm` ascending. Task 8 consumes it.
@@ -71,7 +71,7 @@ fun `more is sorted by distance, not by price`() {
 
 - [ ] **Step 2: Run tests to verify they fail**
 
-Run: `./gradlew :shared:jvmTest --tests "de.autoapp.shared.core.ChargeNowRankerTest"`
+Run: `./gradlew :shared:jvmTest --tests "org.julakali.chargeahead.shared.core.ChargeNowRankerTest"`
 Expected: FAIL — `more` unresolved.
 
 - [ ] **Step 3: Implement**
@@ -117,16 +117,16 @@ git commit -m "feat(LD-0000): charge-now ranker stops discarding the rest of the
 ### Task 2: Theme — `ChargeAheadTheme`
 
 **Files:**
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/theme/Theme.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (delete `LightMapsScheme` + `StandardTypography` at lines 113–144, use `ChargeAheadTheme` in `onCreate`)
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/theme/Theme.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (delete `LightMapsScheme` + `StandardTypography` at lines 113–144, use `ChargeAheadTheme` in `onCreate`)
 
 **Interfaces:**
-- Produces: `@Composable fun ChargeAheadTheme(content: @Composable () -> Unit)`; `object ChargeAheadColors { val faint: Color; val trafficBg: Color; val trafficText: Color }`; `val TextStyle.tabular: TextStyle` — package `de.autoapp.android.phone.theme`. Every later task consumes these.
+- Produces: `@Composable fun ChargeAheadTheme(content: @Composable () -> Unit)`; `object ChargeAheadColors { val faint: Color; val trafficBg: Color; val trafficText: Color }`; `val TextStyle.tabular: TextStyle` — package `org.julakali.chargeahead.android.phone.theme`. Every later task consumes these.
 
 - [ ] **Step 1: Write `theme/Theme.kt`**
 
 ```kotlin
-package de.autoapp.android.phone.theme
+package org.julakali.chargeahead.android.phone.theme
 
 /** Colors from the mockup that have no honest slot in the M3 scheme. */
 object ChargeAheadColors {
@@ -214,7 +214,7 @@ fun ChargeAheadTheme(content: @Composable () -> Unit) {
 
 - [ ] **Step 2: Use it in `MainActivity.onCreate`**
 
-Replace `MaterialTheme(colorScheme = LightMapsScheme, typography = StandardTypography)` with `ChargeAheadTheme` (import `de.autoapp.android.phone.theme.ChargeAheadTheme`) and delete the now-unused `LightMapsScheme` and `StandardTypography` declarations plus their imports. Keep the `Surface(modifier = Modifier.fillMaxSize())` wrapper.
+Replace `MaterialTheme(colorScheme = LightMapsScheme, typography = StandardTypography)` with `ChargeAheadTheme` (import `org.julakali.chargeahead.android.phone.theme.ChargeAheadTheme`) and delete the now-unused `LightMapsScheme` and `StandardTypography` declarations plus their imports. Keep the `Surface(modifier = Modifier.fillMaxSize())` wrapper.
 
 - [ ] **Step 3: Compile + eyeball**
 
@@ -233,17 +233,17 @@ git commit -m "feat(LD-0000): mockup palette and type scale become the one true 
 ### Task 3: Component library + icon set
 
 **Files:**
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/components/Chrome.kt`
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/components/Cards.kt`
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/components/Rows.kt`
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/components/Inputs.kt`
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/components/AppSheet.kt`
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/components/AppTopBar.kt`
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/components/Chrome.kt`
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/components/Cards.kt`
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/components/Rows.kt`
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/components/Inputs.kt`
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/components/AppSheet.kt`
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/components/AppTopBar.kt`
 - Create drawables in `androidApp/src/main/res/drawable/`: `ic_check.xml`, `ic_add.xml`, `ic_search.xml`, `ic_filter.xml`, `ic_send.xml`, `ic_car.xml`, `ic_cardpay.xml`, `ic_bolt.xml`, `ic_pen.xml`
 
 **Interfaces:**
 - Consumes: `ChargeAheadColors`, `TextStyle.tabular` (Task 2); `Double.twoDecimals()` (exists).
-- Produces (package `de.autoapp.android.phone.components`, all `@Composable` unless noted):
+- Produces (package `org.julakali.chargeahead.android.phone.components`, all `@Composable` unless noted):
   - `SectionLabel(text: String, modifier: Modifier = Modifier)`
   - `Fineprint(text: String, modifier: Modifier = Modifier)`
   - `NetworkDot(color: Color, modifier: Modifier = Modifier, size: Dp = 9.dp)`
@@ -293,7 +293,7 @@ Example file shape (`ic_check.xml`; the others follow the same skeleton):
 - [ ] **Step 2: `components/Chrome.kt`**
 
 ```kotlin
-package de.autoapp.android.phone.components
+package org.julakali.chargeahead.android.phone.components
 
 @Composable
 fun SectionLabel(text: String, modifier: Modifier = Modifier) {
@@ -652,7 +652,7 @@ git commit -m "feat(LD-0000): the mockup's css classes, reborn as composables"
 ### Task 4: MainActivity — AppTopBar, filter badge, detail subtitle
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (the `Scaffold` `topBar` block, currently lines 291–326)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (the `Scaffold` `topBar` block, currently lines 291–326)
 - Modify: `androidApp/src/main/res/values/strings.xml`
 
 **Interfaces:**
@@ -752,8 +752,8 @@ git commit -m "feat(LD-0000): topbar with subtitle, filters reachable from the t
 ### Task 5: Home screen — own file, pills, scrim, burger badge
 
 **Files:**
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/HomeScreen.kt` (move `HomeScreen` out of `MainActivity.kt` lines 514–657)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (call site gains `filtersCustomized` parameter)
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/HomeScreen.kt` (move `HomeScreen` out of `MainActivity.kt` lines 514–657)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (call site gains `filtersCustomized` parameter)
 
 **Interfaces:**
 - Consumes: `filtersCustomized` (Task 4), theme (Task 2).
@@ -888,8 +888,8 @@ git commit -m "feat(LD-0000): home pills like the mockup, burger learns the filt
 ### Task 6: Drawer — own file, mockup structure
 
 **Files:**
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/DrawerContent.kt` (move `DrawerContent` out of `MainActivity.kt` lines 659–785)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (drawer call site)
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/DrawerContent.kt` (move `DrawerContent` out of `MainActivity.kt` lines 659–785)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (drawer call site)
 - Modify: `androidApp/src/main/res/values/strings.xml`
 
 **Interfaces:**
@@ -1072,8 +1072,8 @@ git commit -m "feat(LD-0000): drawer rebuilt — sections, icons, no more defaul
 ### Task 7: Plan sheet — route card, car chip, CTA
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/PlanSheets.kt` (`PlanSheetContent`, lines 46–162)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (Sheet.PLAN uses `AppSheet`)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/PlanSheets.kt` (`PlanSheetContent`, lines 46–162)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (Sheet.PLAN uses `AppSheet`)
 - Modify: `androidApp/src/main/res/values/strings.xml`
 
 **Interfaces:**
@@ -1254,8 +1254,8 @@ git commit -m "feat(LD-0000): plan sheet gets the route card and an actual cta"
 ### Task 8: Charge-now sheet — ranked cards + "Mehr in der Nähe"
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/PlanSheets.kt` (`ChargeNowSheetContent`, lines 164–243)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (Sheet.CHARGE_NOW uses `AppSheet`)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/PlanSheets.kt` (`ChargeNowSheetContent`, lines 164–243)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (Sheet.CHARGE_NOW uses `AppSheet`)
 - Modify: `androidApp/src/main/res/values/strings.xml`
 
 **Interfaces:**
@@ -1277,8 +1277,8 @@ Keep the `loading` / `empty` / relax-notice branches (restyle the notice to `bod
 private fun ChargerRow(
     rank: Int,
     ranked: Boolean,
-    candidate: de.autoapp.shared.core.ChargeNowCandidate,
-    onNavigate: (de.autoapp.shared.core.ChargeNowCandidate) -> Unit,
+    candidate: org.julakali.chargeahead.shared.core.ChargeNowCandidate,
+    onNavigate: (org.julakali.chargeahead.shared.core.ChargeNowCandidate) -> Unit,
 ) {
     AppCard {
         Row(
@@ -1350,8 +1350,8 @@ git commit -m "feat(LD-0000): charge-now sheet as ranked cards, expands to more 
 ### Task 9: Routes sheet — cards with hearts and pencils
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/PlanSheets.kt` (`RoutesSheetContent`, lines 252–336; `RenameDialog` stays)
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (Sheet.ROUTES uses `AppSheet`)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/PlanSheets.kt` (`RoutesSheetContent`, lines 252–336; `RenameDialog` stays)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (Sheet.ROUTES uses `AppSheet`)
 
 **Interfaces:**
 - Consumes: `AppCard`, `GoButton`, `SectionLabel` (Task 3).
@@ -1451,7 +1451,7 @@ git commit -m "feat(LD-0000): routes sheet as cards with hearts where they belon
 ### Task 10: Trip plan screen
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/TripPlanScreen.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/TripPlanScreen.kt`
 - Modify: `androidApp/src/main/res/values/strings.xml`
 
 **Interfaces:**
@@ -1699,7 +1699,7 @@ git commit -m "feat(LD-0000): trip screen — summary bar, stop cards, per-stop 
 ### Task 11: Stop detail screen
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/StopDetailScreen.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/StopDetailScreen.kt`
 - Modify: `androidApp/src/main/res/values/strings.xml`
 
 **Interfaces:**
@@ -1861,8 +1861,8 @@ git commit -m "feat(LD-0000): stop detail with kv grid and the cheapest tag"
 ### Task 12: Networks + subscriptions screens
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/NetworkSettingsScreen.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/SubscriptionsScreen.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/NetworkSettingsScreen.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/SubscriptionsScreen.kt`
 
 **Interfaces:**
 - Consumes: `SearchField`, `AppCard`, `TickRow`, `Fineprint` (Task 3); `operatorColor` (exists).
@@ -1921,9 +1921,9 @@ git commit -m "feat(LD-0000): networks and subscriptions in tick rows"
 ### Task 13: Garage + add-car page
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/GarageScreen.kt` (drop `adding` state + `AddVehicleList`; restyle)
-- Create: `androidApp/src/main/kotlin/de/autoapp/android/phone/AddCarScreen.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/MainActivity.kt` (new `Page.ADD_CAR`)
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/GarageScreen.kt` (drop `adding` state + `AddVehicleList`; restyle)
+- Create: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/AddCarScreen.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/MainActivity.kt` (new `Page.ADD_CAR`)
 - Modify: `androidApp/src/main/res/values/strings.xml`
 
 **Interfaces:**
@@ -2093,10 +2093,10 @@ git commit -m "feat(LD-0000): garage in cards, add-car becomes its own page"
 ### Task 14: Light polish + dead code
 
 **Files:**
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/VehicleSettingsScreen.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/CarDataDebugScreen.kt`
-- Modify: `androidApp/src/main/kotlin/de/autoapp/android/phone/CorridorStopDialog.kt`
-- Delete: `androidApp/src/main/kotlin/de/autoapp/android/phone/DestinationScreen.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/VehicleSettingsScreen.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/CarDataDebugScreen.kt`
+- Modify: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/CorridorStopDialog.kt`
+- Delete: `androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone/DestinationScreen.kt`
 
 **Interfaces:**
 - Consumes: `SectionLabel`, `AppCard`, `Fineprint` (Task 3).
@@ -2104,7 +2104,7 @@ git commit -m "feat(LD-0000): garage in cards, add-car becomes its own page"
 
 - [ ] **Step 1: Delete `DestinationScreen.kt`**
 
-It is defined but never called (verified in the spec). `grep -rn "DestinationScreen" androidApp/src/main/kotlin/de/autoapp/android/phone` must afterwards return nothing; if that deletion orphans strings, leave them — the car package shares some.
+It is defined but never called (verified in the spec). `grep -rn "DestinationScreen" androidApp/src/main/kotlin/org/julakali/chargeahead/android/phone` must afterwards return nothing; if that deletion orphans strings, leave them — the car package shares some.
 
 - [ ] **Step 2: Light restyle, mechanical rules**
 

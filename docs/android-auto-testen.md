@@ -114,7 +114,7 @@ Even without the Android Auto app, the declaration can be checked. After
 `installDebug`:
 
 ```bash
-adb shell "dumpsys package de.autoapp.android | grep -A6 CarAppService"
+adb shell "dumpsys package org.julakali.chargeahead | grep -A6 CarAppService"
 ```
 
 Expected output — the service must appear with both action **and**
@@ -122,7 +122,7 @@ category:
 
 ```
 androidx.car.app.CarAppService:
-  de.autoapp.android/.car.ChargeCarAppService filter ...
+  org.julakali.chargeahead/org.julakali.chargeahead.android.car.ChargeCarAppService filter ...
     Action: "androidx.car.app.CarAppService"
     Category: "androidx.car.app.category.POI"
 ```
@@ -215,7 +215,7 @@ responses only appear much later.
   `UnknownHostException` on every request. Check and grant it:
 
   ```bash
-  adb shell pm grant de.autoapp.android android.permission.INTERNET
+  adb shell pm grant org.julakali.chargeahead android.permission.INTERNET
   ```
 
   On stock Android the permission is granted at install time and this line
