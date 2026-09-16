@@ -66,10 +66,6 @@ fun AddCarScreen(
             Fineprint(stringResource(R.string.garage_none_found))
             return@Column
         }
-        // The card wraps the list, not the other way round: one item per preset,
-        // so only the visible rows of the ~300-row catalog compose. With few
-        // hits the card shrinks to fit; with many it fills the page and the
-        // rows scroll inside it.
         AppCard(modifier = Modifier.weight(1f, fill = false).padding(bottom = 12.dp)) {
             LazyColumn {
                 itemsIndexed(hits, key = { _, preset -> preset.name }) { index, preset ->
