@@ -29,8 +29,10 @@ data class PlannedStop(
     /** Time at the stop that is not charging: leaving the road, plugging in, paying. */
     val stopMinutes: Double = 0.0,
     /**
-     * How much longer the best plan without this stop takes, or null when no
-     * plan works without it.
+     * How much longer the best plan without this stop takes, in real minutes
+     * (charging and stops; driving is the same either way), or null when no
+     * plan works without it. Penalties only steer the choice and are not in
+     * here, so a stop kept for a preferred network can save less than zero.
      */
     val savesMinutes: Double? = null,
 ) {
@@ -135,7 +137,7 @@ class TripPlanner(
                 .minutesBetween(choice.arrivalSoc, choice.departureSoc)
             timeAtStopsMinutes += chargeMinutes + STOP_OVERHEAD_MINUTES
             val savesMinutes = when (val without = optimize(excluded = choice.nodeIndex)) {
-                is ChargeStopOptimizer.Result.Found -> without.costMinutes - found.costMinutes
+                is ChargeStopOptimizer.Result.Found -> minutesAtStops(nodes, without) - minutesAtStops(nodes, found)
                 is ChargeStopOptimizer.Result.Unreachable -> null
             }
             stops += PlannedStop(
@@ -166,6 +168,13 @@ class TripPlanner(
             ),
         )
     }
+
+    /** Time actually spent at the stops of [plan] — its cost without detour and penalties. */
+    private fun minutesAtStops(nodes: List<ChargeStopOptimizer.Node>, plan: ChargeStopOptimizer.Result.Found): Double =
+        plan.stops.sumOf { choice ->
+            nodes[choice.nodeIndex].chargeTime.minutesBetween(choice.arrivalSoc, choice.departureSoc) +
+                STOP_OVERHEAD_MINUTES
+        }
 
     /** What a stop at [candidate] costs besides charging, in minutes. */
     private fun fixedMinutes(candidate: Candidate, filters: ChargeFilters, networks: NetworkPreferences): Double {

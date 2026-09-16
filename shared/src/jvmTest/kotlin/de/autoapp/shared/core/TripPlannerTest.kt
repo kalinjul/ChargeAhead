@@ -423,6 +423,26 @@ class TripPlannerTest {
         assertTrue(plan.stops.any { it.savesMinutes != null }, "dense chargers always leave an alternative")
     }
 
+    /** Penalties steer the choice but are not time: a preferred stop may save less than nothing. */
+    @Test
+    fun `savings are real minutes, without the network penalty`() {
+        val route = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH)
+        val ionity = siteAt(route, 300.0).copy(id = "demo:ionity", operator = "Ionity")
+        val audi = siteAt(route, 300.0, powerKw = 300.0).copy(id = "demo:audi")
+        val onlyIonity = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
+        val plan = assertIs<TripPlanResult.Planned>(
+            runBlocking {
+                planner(route, listOf(ionity, audi))
+                    .plan(start, destination, model3, startSocPercent = 80.0, networks = onlyIonity)
+            },
+        ).plan
+
+        val stop = plan.stops.single()
+        assertEquals("Ionity", stop.site.operator, "the faster Audi site saves less than its penalty")
+        val fasterCharge = chargeMinutes(model3, 300.0, stop.arrivalSocPercent, stop.departureSocPercent)
+        assertEquals(fasterCharge - stop.chargeMinutes, stop.savesMinutes!!, 1e-6)
+    }
+
     @Test
     fun `candidates are fetched in source-sized segments, not one giant area`() = runBlocking<Unit> {
         val route = straightRoute()
