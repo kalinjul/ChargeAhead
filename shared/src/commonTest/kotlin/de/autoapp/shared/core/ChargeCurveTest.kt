@@ -95,4 +95,64 @@ class ChargeCurveTest {
 
         assertTrue(minutes > 0.0 && minutes < 600.0, "unplausible Ladezeit: $minutes")
     }
+
+    /** The stop optimizer splits a charge at arbitrary levels; the pieces must add up. */
+    @Test
+    fun `charge times are additive`() {
+        val table = chargeTimeTable(id4, sitePowerKw = 300.0)
+        val levels = listOf(3.7, 22.25, 50.0, 64.1, 80.0, 93.33, 100.0)
+        for (a in levels) for (b in levels) for (c in levels) {
+            if (a > b || b > c) continue
+            assertEquals(
+                table.minutesBetween(a, c),
+                table.minutesBetween(a, b) + table.minutesBetween(b, c),
+                1e-9,
+                "$a → $b → $c",
+            )
+        }
+    }
+
+    @Test
+    fun `the closed form matches a fine numeric integration`() {
+        val table = chargeTimeTable(id4, sitePowerKw = 300.0)
+        val peakKw = 135.0
+        fun numeric(from: Double, to: Double): Double {
+            val steps = ((to - from) / 0.001).toInt()
+            val step = (to - from) / steps
+            var minutes = 0.0
+            for (n in 0 until steps) {
+                val powerKw = peakKw * GenericChargeCurve.fractionOfPeakAt(from + (n + 0.5) * step)
+                minutes += id4.usableBatteryKwh * step / 100.0 / powerKw * 60.0
+            }
+            return minutes
+        }
+        for ((from, to) in listOf(0.0 to 100.0, 12.3 to 47.9, 45.5 to 81.25, 79.9 to 99.1)) {
+            assertEquals(numeric(from, to), table.minutesBetween(from, to), 1e-3, "$from → $to")
+        }
+    }
+
+    /** What `chargeMinutes` returned before it became additive: a 1 % midpoint sum from `from`. */
+    private fun legacyChargeMinutes(peakKw: Double, from: Double, to: Double): Double {
+        var minutes = 0.0
+        var soc = from
+        while (soc < to) {
+            val step = minOf(1.0, to - soc)
+            minutes += id4.usableBatteryKwh * step / 100.0 /
+                (peakKw * GenericChargeCurve.fractionOfPeakAt(soc + step / 2.0)) * 60.0
+            soc += step
+        }
+        return minutes
+    }
+
+    @Test
+    fun `the new charge times stay within a minute of the old ones`() {
+        for ((from, to) in listOf(10.0 to 80.0, 5.5 to 62.3, 37.4 to 91.7, 60.0 to 100.0, 0.0 to 100.0)) {
+            assertEquals(
+                legacyChargeMinutes(135.0, from, to),
+                chargeMinutes(id4, sitePowerKw = 300.0, fromSocPercent = from, toSocPercent = to),
+                1.0,
+                "$from → $to",
+            )
+        }
+    }
 }

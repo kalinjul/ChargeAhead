@@ -1,11 +1,23 @@
 package de.autoapp.shared.core
 
 import de.autoapp.shared.domain.VehicleProfile
+import kotlin.math.abs
+import kotlin.math.ln
 
 /** The share of its DC peak a car still accepts at a given charge level. */
 fun interface ChargeCurve {
     fun fractionOfPeakAt(socPercent: Double): Double
+
+    /**
+     * The charge levels between which the curve is a straight line, 0 and 100
+     * included. Charge times are integrated exactly between them, so a curve
+     * that is not piecewise linear on the default 1 % grid has to say where it
+     * bends.
+     */
+    fun breakpoints(): List<Double> = ONE_PERCENT_GRID
 }
+
+private val ONE_PERCENT_GRID = (0..100).map { it.toDouble() }
 
 /**
  * One shape for every car, because per-model curves are data the app does not
@@ -28,6 +40,10 @@ object GenericChargeCurve : ChargeCurve {
         }
     }
 
+    private val BREAKPOINTS = listOf(0.0, PLATEAU_END_SOC, TAPER_KNEE_SOC, 100.0)
+
+    override fun breakpoints(): List<Double> = BREAKPOINTS
+
     private fun interpolate(at: Double, fromSoc: Double, fromValue: Double, toSoc: Double, toValue: Double): Double =
         fromValue + (toValue - fromValue) * (at - fromSoc) / (toSoc - fromSoc)
 
@@ -40,9 +56,6 @@ object GenericChargeCurve : ChargeCurve {
 /**
  * Minutes to charge [fromSocPercent] up to [toSocPercent] at a site offering
  * [sitePowerKw], integrated over the curve rather than averaged across it.
- *
- * One percent per step: the curve is piecewise linear, so a finer grid buys
- * nothing, and a hundred steps cost nothing either.
  */
 fun chargeMinutes(
     vehicle: VehicleProfile,
@@ -50,23 +63,90 @@ fun chargeMinutes(
     fromSocPercent: Double,
     toSocPercent: Double,
     curve: ChargeCurve = GenericChargeCurve,
-): Double {
-    val from = fromSocPercent.coerceIn(0.0, 100.0)
-    val to = toSocPercent.coerceIn(0.0, 100.0)
-    if (to <= from || sitePowerKw <= 0.0) return 0.0
+): Double = chargeTimeTable(vehicle, sitePowerKw, curve).minutesBetween(fromSocPercent, toSocPercent)
 
-    val peakKw = acceptedPeakKw(vehicle, sitePowerKw)
-    if (peakKw <= 0.0) return 0.0
+/** The charge-time table for [vehicle] at a site offering [sitePowerKw]. */
+internal fun chargeTimeTable(
+    vehicle: VehicleProfile,
+    sitePowerKw: Double,
+    curve: ChargeCurve = GenericChargeCurve,
+): ChargeTimeTable = ChargeTimeTable(
+    usableBatteryKwh = vehicle.usableBatteryKwh,
+    peakKw = if (sitePowerKw <= 0.0) 0.0 else acceptedPeakKw(vehicle, sitePowerKw),
+    curve = curve,
+)
 
-    var minutes = 0.0
-    var soc = from
-    while (soc < to) {
-        val step = minOf(STEP_PERCENT, to - soc)
-        val powerKw = peakKw * curve.fractionOfPeakAt(soc + step / 2.0)
-        minutes += vehicle.usableBatteryKwh * step / 100.0 / powerKw * 60.0
-        soc += step
+/**
+ * Cumulative charge time F(s): minutes from 0 % to s at an accepted peak of
+ * [peakKw]. Differences of F are additive, t(a→b) + t(b→c) = t(a→c), which the
+ * stop optimizer relies on and a stepwise sum starting at `from` is not.
+ *
+ * Between two breakpoints the power is linear in the charge level,
+ * p(s) = p₀ + m·s, so each piece integrates in closed form. Off-grid levels are
+ * evaluated exactly within their piece, never rounded to the table.
+ */
+class ChargeTimeTable(
+    private val usableBatteryKwh: Double,
+    val peakKw: Double,
+    private val curve: ChargeCurve = GenericChargeCurve,
+) {
+    private val breakpoints = (curve.breakpoints() + listOf(0.0, 100.0))
+        .filter { it in 0.0..100.0 }
+        .distinct()
+        .sorted()
+
+    private val atPercent = DoubleArray(101).also { table ->
+        for (percent in 1..100) {
+            table[percent] = table[percent - 1] + integrate((percent - 1).toDouble(), percent.toDouble())
+        }
     }
-    return minutes
+
+    fun minutesTo(socPercent: Double): Double {
+        if (peakKw <= 0.0) return 0.0
+        val soc = socPercent.coerceIn(0.0, 100.0)
+        val whole = soc.toInt().coerceAtMost(100)
+        return atPercent[whole] + integrate(whole.toDouble(), soc)
+    }
+
+    fun minutesBetween(fromSocPercent: Double, toSocPercent: Double): Double {
+        val from = fromSocPercent.coerceIn(0.0, 100.0)
+        val to = toSocPercent.coerceIn(0.0, 100.0)
+        if (to <= from || peakKw <= 0.0) return 0.0
+        return minutesTo(to) - minutesTo(from)
+    }
+
+    private fun integrate(from: Double, to: Double): Double {
+        if (to <= from || peakKw <= 0.0) return 0.0
+        var minutes = 0.0
+        var pieceIndex = breakpoints.indexOfLast { it <= from }.coerceIn(0, breakpoints.size - 2)
+        var soc = from
+        while (soc < to && pieceIndex < breakpoints.size - 1) {
+            val pieceStart = breakpoints[pieceIndex]
+            val pieceEnd = breakpoints[pieceIndex + 1]
+            val end = minOf(to, pieceEnd)
+            if (end > soc) minutes += integratePiece(pieceStart, pieceEnd, soc, end)
+            soc = end
+            pieceIndex++
+        }
+        return minutes
+    }
+
+    private fun integratePiece(pieceStart: Double, pieceEnd: Double, from: Double, to: Double): Double {
+        val startKw = powerAt(pieceStart)
+        val slope = (powerAt(pieceEnd) - startKw) / (pieceEnd - pieceStart)
+        val fromKw = startKw + slope * (from - pieceStart)
+        val toKw = startKw + slope * (to - pieceStart)
+        // 60 min/h over 100 %/battery: minutes per percent per kWh-per-kW.
+        val scale = 0.6 * usableBatteryKwh
+        return if (abs(toKw - fromKw) <= FLAT_TOLERANCE * fromKw) {
+            scale * (to - from) / ((fromKw + toKw) / 2.0)
+        } else {
+            scale / slope * ln(toKw / fromKw)
+        }
+    }
+
+    private fun powerAt(socPercent: Double): Double =
+        peakKw * curve.fractionOfPeakAt(socPercent).coerceAtLeast(MIN_FRACTION)
 }
 
 /**
@@ -77,11 +157,14 @@ fun chargeMinutes(
  * is capped at a plausible C-rate. Without that, a 54 kWh car claiming 140 kW
  * would be planned as if it held 140 kW through the whole plateau.
  */
-private fun acceptedPeakKw(vehicle: VehicleProfile, sitePowerKw: Double): Double {
+internal fun acceptedPeakKw(vehicle: VehicleProfile, sitePowerKw: Double): Double {
     val claimed = vehicle.dcPeakPowerKw ?: sitePowerKw
     return minOf(sitePowerKw, claimed, vehicle.usableBatteryKwh * MAX_C_RATE)
 }
 
-private const val STEP_PERCENT = 1.0
-
 private const val MAX_C_RATE = 2.5
+
+private const val FLAT_TOLERANCE = 1e-9
+
+/** A curve that reaches zero would make the last percent take forever. */
+private const val MIN_FRACTION = 1e-3
