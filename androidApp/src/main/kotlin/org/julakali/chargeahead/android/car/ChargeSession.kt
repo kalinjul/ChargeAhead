@@ -7,6 +7,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.shared.data.FusedLocationSource
+import org.julakali.chargeahead.shared.data.RememberingSoCSource
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.newChargeStopsFeature
@@ -31,9 +32,12 @@ class ChargeSession : Session(), KoinComponent {
         // the head unit provides one.
         val feature = getKoin().newChargeStopsFeature(
             locationSource = FusedLocationSource(carContext),
-            hardwareSoCSource = CarHardwareSoCSource(
-                energyLevels = energyLevels,
-                time = time,
+            hardwareSoCSource = RememberingSoCSource(
+                source = CarHardwareSoCSource(
+                    energyLevels = energyLevels,
+                    time = time,
+                    settingsStore = settings,
+                ),
                 settingsStore = settings,
             ),
         )
