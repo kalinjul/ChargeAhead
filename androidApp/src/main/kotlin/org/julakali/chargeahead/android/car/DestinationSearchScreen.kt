@@ -47,6 +47,14 @@ class DestinationSearchScreen(
     }
 
     override fun onGetTemplate(): Template {
+        val template = SearchTemplate.Builder(callback)
+            .setHeaderAction(Action.BACK)
+            .setSearchHint(carContext.getString(R.string.car_home_enter_destination))
+            .setShowKeyboardByDefault(true)
+
+        // SearchTemplate rejects an item list while loading (issue #81).
+        if (searching) return template.setLoading(true).build()
+
         val itemList = ItemList.Builder()
             .setNoItemsMessage(carContext.getString(R.string.car_search_empty))
 
@@ -56,13 +64,7 @@ class DestinationSearchScreen(
             results.forEach { place -> itemList.addItem(placeRow(place)) }
         }
 
-        return SearchTemplate.Builder(callback)
-            .setHeaderAction(Action.BACK)
-            .setSearchHint(carContext.getString(R.string.car_home_enter_destination))
-            .setShowKeyboardByDefault(true)
-            .setLoading(searching)
-            .setItemList(itemList.build())
-            .build()
+        return template.setItemList(itemList.build()).build()
     }
 
     // Geocoding fires on submit only, not per keystroke: Nominatim's usage
