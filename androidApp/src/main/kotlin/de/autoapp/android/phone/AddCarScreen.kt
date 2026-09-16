@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -63,25 +64,24 @@ fun AddCarScreen(
         )
         if (hits.isEmpty()) {
             Fineprint(stringResource(R.string.garage_none_found))
+            return@Column
         }
-        LazyColumn {
-            item {
-                AppCard {
-                    hits.forEachIndexed { index, preset ->
-                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-                        TickRow(
-                            label = preset.name,
-                            sublabel = stringResource(
-                                R.string.garage_preset_line,
-                                preset.usableBatteryKwh.oneDecimal(),
-                                preset.consumptionKwhPer100Km.oneDecimal(),
-                                preset.dcPeakPowerKw.roundToInt(),
-                            ),
-                            checked = false,
-                            tick = TickStyle.ADD,
-                            onClick = { onAdd(preset) },
-                        )
-                    }
+        AppCard(modifier = Modifier.weight(1f, fill = false).padding(bottom = 12.dp)) {
+            LazyColumn {
+                itemsIndexed(hits, key = { _, preset -> preset.name }) { index, preset ->
+                    if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                    TickRow(
+                        label = preset.name,
+                        sublabel = stringResource(
+                            R.string.garage_preset_line,
+                            preset.usableBatteryKwh.oneDecimal(),
+                            preset.consumptionKwhPer100Km.oneDecimal(),
+                            preset.dcPeakPowerKw.roundToInt(),
+                        ),
+                        checked = false,
+                        tick = TickStyle.ADD,
+                        onClick = { onAdd(preset) },
+                    )
                 }
             }
         }
