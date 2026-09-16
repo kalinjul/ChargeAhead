@@ -3,6 +3,7 @@ package de.autoapp.shared.ui
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.PlanningFeature
 import de.autoapp.shared.core.TripPlanner
+import de.autoapp.shared.data.SiteFetchActivity
 import de.autoapp.shared.domain.Address
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeFilters
@@ -200,7 +201,7 @@ class PhoneViewModelTest {
     @Test
     fun `changing the minimum power reloads the map markers`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
-        val viewModel = HomeViewModel(stubFeature(), planningOver(mapSites, settings), settings)
+        val viewModel = HomeViewModel(stubFeature(), planningOver(mapSites, settings), settings, SiteFetchActivity())
 
         viewModel.onViewportChanged(VIEWPORT)
         // Default minimum is 150 kW, so the 50 kW site starts out hidden.
@@ -217,7 +218,7 @@ class PhoneViewModelTest {
     @Test
     fun `picking networks reloads the map markers`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
-        val viewModel = HomeViewModel(stubFeature(), planningOver(mapSites, settings), settings)
+        val viewModel = HomeViewModel(stubFeature(), planningOver(mapSites, settings), settings, SiteFetchActivity())
 
         viewModel.onViewportChanged(VIEWPORT)
         viewModel.uiState.await { it.chargers.isNotEmpty() }
@@ -257,7 +258,7 @@ class PhoneViewModelTest {
     @Test
     fun `without a fix the location button says it is searching`() = runBlocking {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
-        val viewModel = HomeViewModel(stubFeature(), planningOver(emptyList(), settings), settings)
+        val viewModel = HomeViewModel(stubFeature(), planningOver(emptyList(), settings), settings, SiteFetchActivity())
 
         viewModel.onLocateRequested()
 
@@ -273,6 +274,7 @@ class PhoneViewModelTest {
             stubFeature(),
             planningOver(emptyList(), settings),
             settings,
+            SiteFetchActivity(),
             locationTimeoutMillis = 50L,
         )
 

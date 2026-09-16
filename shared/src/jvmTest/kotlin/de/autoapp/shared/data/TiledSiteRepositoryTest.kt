@@ -17,7 +17,10 @@ import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.destination
 import de.autoapp.shared.domain.NetworkCatalog
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
@@ -25,6 +28,7 @@ import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -353,6 +357,43 @@ class TiledSiteRepositoryTest {
         repository.sitesIn(requireNotNull(route.aheadOf(start.destination(180.0, 40.0))))
 
         assertEquals(1, source.queries)
+    }
+
+    @Test
+    fun aRunningFetch_isReportedUntilItEnds_butACacheHitIsNot() = runBlocking<Unit> {
+        val gate = CompletableDeferred<Unit>()
+        val source = object : ChargeSiteSource {
+            override val id = "test"
+            override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+                gate.await()
+                return listOf(site("a", 0.0, 10.0))
+            }
+        }
+        val activity = SiteFetchActivity()
+        val repository = TiledSiteRepository(source, database(), ControllableClock(), fetchActivity = activity)
+
+        val fetch = async { repository.sitesIn(area()) }
+        withTimeout(5_000) { activity.isFetching.first { it } }
+        gate.complete(Unit)
+        fetch.await()
+        assertFalse(activity.isFetching.first())
+
+        // Covered now: answered from the store, nothing to report.
+        val seen = mutableListOf<Boolean>()
+        val watcher = launch(start = CoroutineStart.UNDISPATCHED) { activity.isFetching.collect { seen += it } }
+        repository.sitesIn(area())
+        watcher.cancel()
+        assertEquals(listOf(false), seen)
+    }
+
+    @Test
+    fun aFailedFetch_stillClearsTheActivity() = runBlocking {
+        val source = ControllableSource().apply { broken = true }
+        val activity = SiteFetchActivity()
+        val repository = TiledSiteRepository(source, database(), ControllableClock(), fetchActivity = activity)
+
+        assertFailsWith<IllegalStateException> { repository.sitesIn(area()) }
+        assertFalse(activity.isFetching.first())
     }
 
     @Test

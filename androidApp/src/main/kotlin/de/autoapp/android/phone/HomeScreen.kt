@@ -114,6 +114,7 @@ fun HomeScreen(
                 onChargerTapped = onChargerTapped,
                 onLocate = onLocate,
                 searchingLocation = uiState.searchingLocation,
+                loadingSites = uiState.loadingSites,
                 modifier = Modifier.fillMaxSize(),
             )
         } else {

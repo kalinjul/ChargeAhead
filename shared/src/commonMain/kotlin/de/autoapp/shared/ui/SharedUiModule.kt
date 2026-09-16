@@ -15,7 +15,7 @@ fun sharedUiModule(): Module = module {
     // timeout with a default, and viewModelOf binds every parameter from the
     // container — including that Long, which nothing provides. It compiles and
     // then crashes on first composition. Leave this one explicit.
-    viewModel { HomeViewModel(get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get()) }
     viewModelOf(::TripViewModel)
     viewModelOf(::PlanSheetViewModel)
     viewModelOf(::ChargeNowViewModel)

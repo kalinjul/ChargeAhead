@@ -13,6 +13,9 @@ import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +44,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import com.google.maps.android.compose.GoogleMap
@@ -93,6 +98,7 @@ fun HomeGoogleMap(
     onChargerTapped: (de.autoapp.shared.MapCharger) -> Unit,
     onLocate: () -> Unit,
     searchingLocation: Boolean,
+    loadingSites: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val cameraPositionState = rememberCameraPositionState {
@@ -161,6 +167,8 @@ fun HomeGoogleMap(
             )
         }
     }
+
+    val loadingDescription = stringResource(R.string.map_loading_sites)
 
     Box(modifier = modifier) {
         GoogleMap(
@@ -256,6 +264,23 @@ fun HomeGoogleMap(
                     // Modifier.rotate, so reading the camera bearing invalidates
                     // the draw, not the whole composable, every pan frame.
                     modifier = Modifier.graphicsLayer { rotationZ = -cameraPositionState.position.bearing },
+                )
+            }
+            // A charger source is being asked over the network. Faded rather
+            // than inserted, so the column never jumps; centered under the
+            // compass.
+            AnimatedVisibility(
+                visible = loadingSites,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            ) {
+                CircularProgressIndicator(
+                    strokeWidth = 2.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .semantics { contentDescription = loadingDescription },
                 )
             }
         }

@@ -135,6 +135,7 @@
     <string name="home_no_position">Kein Standort — Ortung und Freigabe prüfen</string>
     <string name="map_my_location">Auf meinen Standort zentrieren</string>
     <string name="map_compass">Karte nach Norden ausrichten</string>
+    <string name="map_loading_sites">Ladestationen werden geladen</string>
     <string name="map_zoom_hint">Zum Anzeigen der Ladesäulen reinzoomen</string>
     <string name="map_applying_filters">Filter werden angewendet …</string>
 

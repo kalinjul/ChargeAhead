@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import de.autoapp.shared.ChargeStopsFeature
 import de.autoapp.shared.MapCharger
 import de.autoapp.shared.PlanningFeature
+import de.autoapp.shared.data.SiteFetchActivity
 import de.autoapp.shared.domain.BoundingBox
 import de.autoapp.shared.domain.ChargeStop
 import de.autoapp.shared.domain.LatLon
@@ -57,6 +58,8 @@ data class HomeUiState(
      * running, it just isn't getting anywhere, and saying so is the point.
      */
     val locationUnavailable: Boolean = false,
+    /** A charger source is being asked over the network — a spinner under the compass. */
+    val loadingSites: Boolean = false,
 )
 
 /**
@@ -72,6 +75,7 @@ class HomeViewModel(
     private val feature: ChargeStopsFeature,
     private val planning: PlanningFeature,
     settings: SettingsStore,
+    fetchActivity: SiteFetchActivity,
     /**
      * How long the button may spin before the map says something.
      *
@@ -96,8 +100,9 @@ class HomeViewModel(
         settings.chargeFilters,
         settings.networks,
         map,
-        attempt,
-    ) { state, filters, networks, mapState, attempt ->
+        // combine tops out at five typed flows.
+        combine(attempt, fetchActivity.isFetching, ::Pair),
+    ) { state, filters, networks, mapState, (attempt, loadingSites) ->
         HomeUiState(
             position = state.position,
             stops = state.stops,
@@ -112,6 +117,7 @@ class HomeViewModel(
             // stream — silences spinner and hint on its own.
             searchingLocation = attempt.running && state.position == null,
             locationUnavailable = attempt.timedOut && state.position == null,
+            loadingSites = loadingSites,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
 
