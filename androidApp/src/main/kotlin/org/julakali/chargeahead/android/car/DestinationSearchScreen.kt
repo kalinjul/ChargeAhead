@@ -34,6 +34,7 @@ class DestinationSearchScreen(
     private var recents: List<Destination> = emptyList()
     private var results: List<Place> = emptyList()
     private var query = ""
+    private var submittedQuery = ""
     private var searching = false
     private var searchJob: Job? = null
 
@@ -47,8 +48,23 @@ class DestinationSearchScreen(
     }
 
     override fun onGetTemplate(): Template {
+        val template = SearchTemplate.Builder(callback)
+            .setHeaderAction(Action.BACK)
+            .setSearchHint(carContext.getString(R.string.car_home_enter_destination))
+            .setShowKeyboardByDefault(true)
+
+        // SearchTemplate rejects an item list while loading (issue #81).
+        if (searching) return template.setLoading(true).build()
+
+        // Until the search is submitted, an empty list means "not searched
+        // yet", not "nothing found" — point at the keyboard's search key.
+        val emptyMessage = if (query.isNotBlank() && query != submittedQuery) {
+            R.string.car_search_submit_hint
+        } else {
+            R.string.car_search_empty
+        }
         val itemList = ItemList.Builder()
-            .setNoItemsMessage(carContext.getString(R.string.car_search_empty))
+            .setNoItemsMessage(carContext.getString(emptyMessage))
 
         if (query.isBlank()) {
             recents.forEach { destination -> itemList.addItem(recentRow(destination)) }
@@ -56,13 +72,7 @@ class DestinationSearchScreen(
             results.forEach { place -> itemList.addItem(placeRow(place)) }
         }
 
-        return SearchTemplate.Builder(callback)
-            .setHeaderAction(Action.BACK)
-            .setSearchHint(carContext.getString(R.string.car_home_enter_destination))
-            .setShowKeyboardByDefault(true)
-            .setLoading(searching)
-            .setItemList(itemList.build())
-            .build()
+        return template.setItemList(itemList.build()).build()
     }
 
     // Geocoding fires on submit only, not per keystroke: Nominatim's usage
@@ -83,6 +93,7 @@ class DestinationSearchScreen(
             query = searchText
             if (searchText.isBlank()) return
 
+            submittedQuery = searchText
             searchJob?.cancel()
             searching = true
             invalidate()

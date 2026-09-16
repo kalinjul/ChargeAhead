@@ -20,12 +20,34 @@ below.
 D=.claude/skills/dhu/scripts/dhu.sh
 
 $D status                       # already running? phone attached?
-$D start                        # over USB
+$D start                        # over USB — run in the background, see below
 $D send "keycode home"          # to the app launcher
 $D shot /tmp/car.png            # see where you are
 $D tap 633 228                  # tap what you saw
 $D stop
 ```
+
+**Always run `$D start` as a background command** (Bash tool with
+`run_in_background: true`), and on its own — never chained with `&&`/`;`
+or piped into `tail`. The DHU and its FIFO writer keep running detached,
+and a foreground call never returns. Then wait until `$D status` reports
+`DHU: running` (the start takes about 12 s) and carry on with `send`,
+`tap` and `shot` as normal foreground calls:
+
+```bash
+# Bash tool, run_in_background: true
+.claude/skills/dhu/scripts/dhu.sh start
+```
+
+```bash
+# Bash tool, foreground: wait until it is up
+D=.claude/skills/dhu/scripts/dhu.sh
+for i in $(seq 1 20); do $D status | grep -q "DHU: running" && break; timeout 3 tail -f /dev/null; done
+$D status
+```
+
+The background task's output file shows whether the connection came up
+(`DHU connected …`) or why it didn't.
 
 Take a `shot` after every `tap` and **actually look at the image**.
 Positions in the app launcher depend on how many apps are installed and which

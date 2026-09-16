@@ -14,6 +14,7 @@
     <string name="car_home_no_favorites">Noch keine Favoriten — Routen lassen sich am Telefon speichern.</string>
 
     <string name="car_search_empty">Keine Treffer. Am besten mit Ort suchen, z. B. „Hbf Kiel“.</string>
+    <string name="car_search_submit_hint">Zum Suchen unten auf der Tastatur die Lupe drücken.</string>
 
     <string name="car_route_planning">Route wird geplant …</string>
     <string name="car_route_send_all">Ganze Route an Maps senden</string>
