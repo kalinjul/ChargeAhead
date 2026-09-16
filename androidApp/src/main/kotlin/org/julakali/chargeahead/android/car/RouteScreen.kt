@@ -125,8 +125,8 @@ class RouteScreen(
 
     private fun stopRow(ordinal: Int, stop: PlannedStop): Row = Row.Builder()
         .setTitle(ChargeStopFormatter.plannedStopTitle(ordinal, stop))
-        .addText(ChargeStopFormatter.plannedStopPrimaryLine(stop))
-        .addText(ChargeStopFormatter.plannedStopSecondaryLine(stop))
+        .apply { ChargeStopFormatter.plannedStopAddressLine(stop)?.let(::addText) }
+        .addText(ChargeStopFormatter.plannedStopDetailLine(stop))
         .setOnClickListener { navigateTo(carContext, stop.site.name, stop.site.position) }
         .build()
 
