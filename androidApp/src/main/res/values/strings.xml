@@ -18,7 +18,7 @@
 
     <string name="car_route_planning">Route wird geplant …</string>
     <string name="car_route_send_all">Ganze Route an Maps senden</string>
-    <string name="car_route_open_phone">Öffne ChargeAhead auf deinem Handy. Die ganze Route geht dann automatisch an Maps.</string>
+    <string name="car_route_open_phone">Öffne ChargeAhead auf deinem Smartphone, damit die Route an Maps geschickt werden kann.</string>
     <string name="car_route_next_stop_only">Nur nächster Ladestopp</string>
     <string name="car_route_navigate">Navigation starten</string>
     <string name="car_route_no_vehicle">Kein Fahrzeugprofil. Bitte am Telefon in der Garage anlegen.</string>
