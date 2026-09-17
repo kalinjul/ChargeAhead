@@ -14,6 +14,7 @@ import org.julakali.chargeahead.shared.PlanningFeature
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.Place
+import org.julakali.chargeahead.shared.toDestination
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -107,13 +108,14 @@ class DestinationSearchScreen(
 
     private fun recentRow(destination: Destination): Row = Row.Builder()
         .setTitle(destination.name)
+        .apply { destination.address?.let(::addText) }
         .setOnClickListener { choose(destination) }
         .build()
 
     private fun placeRow(place: Place): Row = Row.Builder()
         .setTitle(place.name)
         .addText(place.description)
-        .setOnClickListener { choose(Destination(place.name, place.position)) }
+        .setOnClickListener { choose(place.toDestination()) }
         .build()
 
     private fun choose(destination: Destination) {

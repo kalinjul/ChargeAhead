@@ -149,7 +149,7 @@ class PersistentSettingsStore(
         storage.putJson(
             KEY_DESTINATIONS,
             updated.takeIf { it.isNotEmpty() }
-                ?.map { StoredDestination(it.name, it.position.lat, it.position.lon, it == destination) },
+                ?.map { StoredDestination(it.name, it.position.lat, it.position.lon, it == destination, it.address) },
         )
         mutableRecent.value = updated
         mutableDestination.value = destination
@@ -217,6 +217,7 @@ class PersistentSettingsStore(
                     lat = it.destination.position.lat,
                     lon = it.destination.position.lon,
                     summary = it.summary,
+                    destAddress = it.destination.address,
                 )
             },
         )
@@ -226,7 +227,7 @@ class PersistentSettingsStore(
     private fun readSavedRoutes(): List<SavedRoute> =
         storage.getJson<List<StoredSavedRoute>>(KEY_SAVED_ROUTES)
             .orEmpty()
-            .map { SavedRoute(it.id, it.name, Destination(it.destName, LatLon(it.lat, it.lon)), it.summary) }
+            .map { SavedRoute(it.id, it.name, Destination(it.destName, LatLon(it.lat, it.lon), it.destAddress), it.summary) }
 
     private val mutableCarData = MutableStateFlow(readCarData())
     override val carDebugData: StateFlow<List<CarDataPoint>> = mutableCarData.asStateFlow()
@@ -362,6 +363,7 @@ class PersistentSettingsStore(
         val lat: Double,
         val lon: Double,
         val summary: String? = null,
+        val destAddress: String? = null,
     )
 
     @Serializable
@@ -386,8 +388,9 @@ class PersistentSettingsStore(
         val lon: Double,
         /** Exactly one is the current destination; the rest are just history. */
         val current: Boolean = false,
+        val address: String? = null,
     ) {
-        fun toDomain() = Destination(name, LatLon(lat, lon))
+        fun toDomain() = Destination(name, LatLon(lat, lon), address)
     }
 
     private companion object {

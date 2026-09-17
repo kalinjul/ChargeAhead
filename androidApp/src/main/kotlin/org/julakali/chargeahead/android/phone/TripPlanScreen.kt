@@ -248,6 +248,7 @@ fun TripPlanScreen(
             item {
                 TerminusRow(
                     name = plan.destination.name,
+                    detail = plan.destination.address,
                     dotColor = MaterialTheme.colorScheme.error,
                     squareDot = true,
                     rightLabel = stringResource(
@@ -414,6 +415,7 @@ private fun TerminusRow(
     onClick: () -> Unit,
     trailingIcon: Painter? = null,
     trailingDescription: String? = null,
+    detail: String? = null,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -431,13 +433,23 @@ private fun TerminusRow(
             .padding(horizontal = 6.dp, vertical = 9.dp),
     ) {
         Box(Modifier.size(10.dp).background(dotColor, if (squareDot) RoundedCornerShape(2.dp) else CircleShape))
-        Text(
-            name,
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f),
-        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                name,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            detail?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         Text(
             rightLabel,
             style = MaterialTheme.typography.bodySmall.tabular,

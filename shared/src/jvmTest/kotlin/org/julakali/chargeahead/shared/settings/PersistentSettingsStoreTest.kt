@@ -206,6 +206,15 @@ class PersistentSettingsStoreTest {
         assertEquals(tricky, PersistentSettingsStore(storage).destination.value)
     }
 
+    @Test
+    fun theAddress_survivesSavingInTheHistory() = runBlocking {
+        val storage = InMemoryKeyValueStorage()
+        val club = Destination("Uebel und Gefährlich", LatLon(53.556, 9.968), "Feldstraße 66, 20359 Hamburg")
+        PersistentSettingsStore(storage).setDestination(club)
+
+        assertEquals(listOf(club), PersistentSettingsStore(storage).recentDestinations.value)
+    }
+
     // --- Network filter ---
 
     @Test

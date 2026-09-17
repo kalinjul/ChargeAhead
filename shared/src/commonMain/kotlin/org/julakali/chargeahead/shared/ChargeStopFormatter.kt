@@ -7,6 +7,7 @@ import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
+import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Reachability
 import kotlin.math.round
@@ -81,6 +82,9 @@ object ChargeStopFormatter {
 
     /** e.g. "Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg" — what a picked result leaves in the search field. */
     fun label(place: Place): String = listOfNotNull(place.name, detailLine(place)).joinToString(", ")
+
+    fun label(destination: Destination): String =
+        listOfNotNull(destination.name, destination.address).joinToString(", ")
 
     /**
      * Every connector individually, strongest first — e.g. "CCS 300 kW · 6 Ladepunkte".
@@ -226,3 +230,6 @@ object ChargeStopFormatter {
 
     private fun formatWholeNumber(value: Double): String = round(value).toLong().toString()
 }
+
+/** Keeps the address apart from the name: the name alone titles saved routes, the address tells same-name places apart. */
+fun Place.toDestination(): Destination = Destination(name, position, ChargeStopFormatter.detailLine(this))

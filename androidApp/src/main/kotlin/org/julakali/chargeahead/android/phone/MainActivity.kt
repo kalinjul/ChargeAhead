@@ -62,6 +62,7 @@ import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.components.AppSheet
 import org.julakali.chargeahead.android.phone.components.AppTopBar
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadTheme
+import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.core.TripPlan
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
@@ -294,7 +295,7 @@ private fun PhoneApp() {
                             while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
                         } else {
                             Page(
-                                title = "→ ${trip.plan.destination.name}",
+                                title = "→ ${ChargeStopFormatter.label(trip.plan.destination)}",
                                 subtitle = pluralStringResource(
                                     R.plurals.trip_topbar_sub,
                                     trip.plan.stops.size,
