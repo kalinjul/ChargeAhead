@@ -9,6 +9,7 @@ import org.koin.core.context.startKoin
 class ChargeAheadApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        PhoneUiVisibility.register(this)
         startKoin {
             androidContext(this@ChargeAheadApp)
             modules(appModule, chargeStopsModule(), sharedUiModule())

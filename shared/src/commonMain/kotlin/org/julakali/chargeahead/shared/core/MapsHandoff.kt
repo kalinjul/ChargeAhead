@@ -34,8 +34,26 @@ object MapsHandoff {
             }
         }
 
+    /**
+     * Google Maps' own navigation URI, e.g.
+     * `google.navigation:q=48.14,11.58&waypoints=51.47,6.85%7C50.1,8.6`.
+     * Unlike [directionsUrl] it starts a new navigation right away instead of
+     * editing the one Maps is already running.
+     */
+    fun navigationUri(destination: LatLon, waypoints: List<LatLon> = emptyList()): String =
+        buildString {
+            append("google.navigation:q=").append(destination.asPlainParam())
+            val capped = waypoints.take(MAX_WAYPOINTS)
+            if (capped.isNotEmpty()) {
+                append("&waypoints=")
+                append(capped.joinToString("%7C") { it.asPlainParam() })
+            }
+        }
+
     /** Straight to one place, from wherever the driver currently is. */
     fun navigateUrl(target: LatLon): String = directionsUrl(origin = null, destination = target)
 
     private fun LatLon.asParam(): String = "$lat%2C$lon"
+
+    private fun LatLon.asPlainParam(): String = "$lat,$lon"
 }
