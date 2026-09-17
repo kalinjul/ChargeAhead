@@ -15,7 +15,9 @@ import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import org.julakali.chargeahead.android.PhoneUiVisibility
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.ChargeStopsFeature
@@ -29,6 +31,7 @@ import org.julakali.chargeahead.shared.domain.Fix
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The committed route: its planned charging stops, numbered like an
@@ -139,16 +142,37 @@ class RouteScreen(
         .build()
 
     /**
-     * The whole route with every stop as a waypoint, started on the phone.
-     * The host's ACTION_NAVIGATE only takes `geo:` and drops waypoints, so
-     * this goes to Maps directly — as `google.navigation:`, which starts a
-     * fresh navigation; the directions URL added the stops to a running one.
+     * The whole route with every stop as a waypoint. The host's
+     * ACTION_NAVIGATE only takes `geo:` and drops waypoints, so the route goes
+     * to Maps on the phone as `google.navigation:`, which starts a fresh
+     * navigation (the directions URL added the stops to a running one).
      *
-     * Via the application context, not the [CarContext]: the latter is bound
-     * to the car's virtual display, and launching a phone activity there is a
-     * SecurityException ("launchDisplayId=…") — observed on the DHU.
+     * Android only allows that launch while the app is visible on the phone,
+     * so without it the driver is asked to open the app first.
      */
     private fun sendRouteToMaps(plan: TripPlan) {
+        if (PhoneUiVisibility.isVisible.value) {
+            handOffRoute(plan)
+        } else {
+            screenManager.push(
+                OpenPhoneScreen(
+                    carContext,
+                    onPhoneOpened = { handOffRoute(plan) },
+                    onNextStopOnly = { plan.stops.first().site.let { navigateTo(carContext, it.name, it.position) } },
+                ),
+            )
+        }
+    }
+
+    /**
+     * First the host's own hand-off to the first stop: only that moves Maps
+     * into the car's main pane — a launch from the phone leaves it in the
+     * narrow side panel of a split screen. Once Maps has taken over and this
+     * screen stopped, the whole route follows from the phone and replaces
+     * the single stop.
+     */
+    private fun handOffRoute(plan: TripPlan) {
+        val first = plan.stops.first().site
         val waypoints = plan.stops.map { it.site.position }
         val navigation = Intent(
             Intent.ACTION_VIEW,
@@ -159,12 +183,24 @@ class RouteScreen(
             Intent.ACTION_VIEW,
             Uri.parse(MapsHandoff.directionsUrl(origin = null, plan.destination.position, waypoints)),
         )
-        val launched = startOnPhone(navigation) || startOnPhone(directions)
-        CarToast.makeText(
-            carContext,
-            carContext.getString(if (launched) R.string.car_route_sent_to_phone else R.string.car_no_navigation_app),
-            CarToast.LENGTH_LONG,
-        ).show()
+        lifecycleScope.launch {
+            // Coming back from OpenPhoneScreen, this screen isn't started yet —
+            // it would otherwise look as if Maps had already taken over.
+            lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.STARTED) }
+            navigateTo(carContext, first.name, first.position)
+            // The phone's route must arrive after the host's single stop, or
+            // that stop would replace it.
+            withTimeoutOrNull(MAPS_TAKEOVER_TIMEOUT_MS) {
+                lifecycle.currentStateFlow.first { !it.isAtLeast(Lifecycle.State.STARTED) }
+            }
+            if (!startOnPhone(navigation) && !startOnPhone(directions)) {
+                CarToast.makeText(
+                    carContext,
+                    carContext.getString(R.string.car_no_navigation_app),
+                    CarToast.LENGTH_LONG,
+                ).show()
+            }
+        }
     }
 
     private fun startOnPhone(intent: Intent): Boolean = try {
@@ -240,3 +276,5 @@ class RouteScreen(
 }
 
 private const val GOOGLE_MAPS_PACKAGE = "com.google.android.apps.maps"
+
+private const val MAPS_TAKEOVER_TIMEOUT_MS = 3_000L
