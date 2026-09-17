@@ -26,14 +26,7 @@ import org.julakali.chargeahead.api.ConnectorTypeDto
 import org.julakali.chargeahead.api.LatLonDto
 import org.julakali.chargeahead.api.NetworkFilterDto
 
-/**
- * Charging sites from the ChargeAhead backend instead of from a provider
- * directly.
- *
- * The provider keys stay on the server, and the corridor travels as a
- * polyline: the backend covers it with circles itself, so the chain of
- * requests [OpenChargeMapSource] makes becomes a single one.
- */
+/** Charging sites from the ChargeAhead backend instead of from a provider directly. */
 class BackendChargeSiteSource(
     private val httpClient: HttpClient,
     private val baseUrl: String,
@@ -66,8 +59,7 @@ private fun SearchArea.toDto(): AreaDto = when (this) {
         halfAngleDeg = halfAngleDeg,
         radiusKm = radiusKm,
     )
-    // A shape the contract does not know is sent as the circle around it:
-    // fetching too much is recoverable, silently dropping the area is not.
+    // A shape the contract does not know is sent as the circle around it.
     else -> AreaDto.Sector(
         origin = origin.toDto(),
         bearingDeg = 0.0,
@@ -92,8 +84,6 @@ private fun ChargeSiteDto.toDomain() = ChargeSite(
     position = LatLon(position.lat, position.lon),
     connectors = connectors.map { it.toDomain() },
     address = address?.let { Address(street = it.street, postalCode = it.postalCode, town = it.town) },
-    // The backend names the upstream, which is what the app's merge and the
-    // operator catalogue key on.
     sources = sources.ifEmpty { setOf(BackendChargeSiteSource.SOURCE_ID) },
 )
 

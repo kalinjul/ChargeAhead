@@ -1,10 +1,8 @@
 import UIKit
 import CarPlay
 
-/// Selects the appropriate scene configuration based on the connecting scene
-/// session's role: phone UI (SwiftUI) or CarPlay template UI. Both roles are
-/// declared in the `UIApplicationSceneManifest` in Info.plist; this only
-/// branches between the two delegates.
+/// Selects the scene configuration for the connecting session's role: phone
+/// UI (SwiftUI) or CarPlay template UI. Both are declared in Info.plist.
 class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(

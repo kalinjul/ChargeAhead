@@ -2,10 +2,7 @@ package org.julakali.chargeahead.shared.settings
 
 import platform.Foundation.NSUserDefaults
 
-/**
- * Storage backed by NSUserDefaults. Counterpart to SharedPreferencesStorage
- * on Android; the keys are the same so both platforms describe the same profile.
- */
+/** Storage backed by NSUserDefaults. */
 class UserDefaultsStorage(
     private val defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
 ) : KeyValueStorage {

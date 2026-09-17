@@ -33,22 +33,14 @@ import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.ChargeStop
 
-/**
- * The same information as in the car, so the two UIs don't drift apart — as
- * a bottom sheet over the map. A sheet and not a dialog: the map stays
- * visible above it, so the pin the driver just tapped keeps its context, and
- * the sheet dismisses with the same downward swipe as every other sheet here.
- */
+/** Charging stop details as a bottom sheet over the map. */
 @Composable
 fun ChargeStopDetailSheet(stop: ChargeStop, onDismiss: () -> Unit) {
     val context = LocalContext.current
 
     AppSheet(onDismissRequest = onDismiss) {
         Column {
-            // The network as the headline: that is what the driver decides
-            // by. The site name is not shown at all — it is either the town
-            // again ("Kiel"), which the address line already carries, or an
-            // operator's internal id ("DE*CNT*EP00214*001").
+            // The network as the headline; the site name is not shown.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(9.dp),
@@ -119,10 +111,7 @@ fun ChargeStopDetailSheet(stop: ChargeStop, onDismiss: () -> Unit) {
     }
 }
 
-/**
- * Coordinates **and** name: the coordinates lead exactly there, the name
- * appears to the driver as the destination.
- */
+/** Navigates by coordinates, labelled with the name. */
 private fun Context.startNavigationTo(stop: ChargeStop) {
     val position = stop.site.position
     val label = Uri.encode(stop.site.name)

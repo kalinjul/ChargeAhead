@@ -21,14 +21,10 @@ data class PillKey(val speed: ChargeSpeed, val label: String?)
 
 /**
  * The charger pill drawn straight to a bitmap for use as a plain Marker icon:
- * a white chip with one-to-three bolts — count and colour carry charging speed,
- * a red/amber/green traffic light — plus the operator's short name; sites whose
- * operator isn't a known network show their bolts alone (see [OperatorShortName]).
+ * a white chip with one-to-three bolts plus the operator's short name.
  *
- * Drawn by hand rather than with MarkerComposable because that rasterizes a
- * composable *per marker* on the main thread — a few hundred at once froze the
- * UI. Here each *distinct* pill is drawn once; the caller caches by [PillKey],
- * so N markers cost N cheap adds plus one raster per appearance.
+ * Drawn by hand rather than with MarkerComposable for performance; the caller
+ * caches by [PillKey].
  */
 fun markerPillDescriptor(density: Density, key: PillKey): BitmapDescriptor = with(density) {
     val boltSize = 14.dp.toPx()

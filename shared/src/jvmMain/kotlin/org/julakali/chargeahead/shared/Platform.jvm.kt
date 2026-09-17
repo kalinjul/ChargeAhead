@@ -1,5 +1,4 @@
 package org.julakali.chargeahead.shared
 
-// The JVM target only exists so the shared logic can be tested without an
-// Android device. It is never shipped.
+// The JVM target is for tests only.
 actual fun platformName(): String = "JVM ${System.getProperty("java.version")}"

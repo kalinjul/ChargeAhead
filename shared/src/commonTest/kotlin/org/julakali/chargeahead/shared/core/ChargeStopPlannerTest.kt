@@ -61,8 +61,7 @@ class ChargeStopPlannerTest {
 
     @Test
     fun filtersOutWhatLiesOutsideTheSector() {
-        // The source returns the enclosing rectangle; anything to the side of
-        // or behind the vehicle does not belong in the list.
+        // The source returns the enclosing rectangle; the sector filter applies.
         val planned = ChargeStopPlanner.plan(
             southSector,
             listOf(
@@ -110,7 +109,7 @@ class ChargeStopPlannerTest {
         assertTrue(ChargeStopPlanner.plan(southSector, emptyList()).isEmpty())
     }
 
-    // --- from M2: vehicle profile and charge state ---
+    // --- vehicle profile and charge state ---
 
     @Test
     fun withVehicleAndChargeState_isClassifiedAndArrivalSocComputed() {
@@ -128,8 +127,7 @@ class ChargeStopPlannerTest {
 
     @Test
     fun unreachableSlidesToTheEnd_butIsNotHidden() {
-        // ARCHITECTURE.md 5.2: at low charge state the list would otherwise look
-        // groundlessly empty and the driver would lose trust in it.
+        // Unreachable sites are pushed to the end, not hidden.
         val planned = ChargeStopPlanner.plan(
             southSector,
             listOf(site("fern", 180.0, 90.0), site("nah", 180.0, 10.0)),
@@ -172,8 +170,7 @@ class ChargeStopPlannerTest {
 
     @Test
     fun stationsWithoutKnownConnectors_stayIncluded() {
-        // The source may simply not know. A station hidden from the list is
-        // worse than one that turns out unsuitable on arrival.
+        // The source may simply not know the connectors.
         val noConnectorInfo = site("unbekannt", 180.0, 20.0).copy(connectors = emptyList())
 
         val planned = ChargeStopPlanner.plan(
@@ -188,7 +185,7 @@ class ChargeStopPlannerTest {
 
     @Test
     fun withoutChargeState_staysUnknown() {
-        // A profile alone is not enough — without a charge state there is nothing to compute.
+        // Without a charge state there is nothing to compute.
         val planned = ChargeStopPlanner.plan(
             southSector,
             listOf(site("a", 180.0, 20.0)),
@@ -202,8 +199,7 @@ class ChargeStopPlannerTest {
 
     @Test
     fun atEqualPower_theConnectorTheVehicleUsesWins() {
-        // Observed at the Köschinger Forst rest stop: CCS and CHAdeMO both at
-        // 50 kW, and a CCS vehicle got "CHAdeMO 50 kW" in the headline.
+        // CCS and CHAdeMO at the same power: the vehicle's own connector wins.
         val both = site("beides", 180.0, 20.0).copy(
             connectors = listOf(
                 Connector(ConnectorType.CHADEMO, maxPowerKw = 50.0, count = 2),
@@ -254,7 +250,7 @@ class ChargeStopPlannerTest {
         assertEquals(ConnectorType.CHADEMO, planned.single().primaryConnector?.type)
     }
 
-    // --- issue #55: on a route, the list prices like the trip plan ---
+    // --- on a route, the list prices like the trip plan ---
 
     /** Straight south from [origin]; the road is 10 % longer than the line, as roads are. */
     private fun routeSouth(speedKmh: Double): Route {
@@ -306,8 +302,7 @@ class ChargeStopPlannerTest {
 
     @Test
     fun noMatchingConnector_theStrongestOneRemains() {
-        // Sites whose connectors the source doesn't know deliberately pass through
-        // the filter — they must not end up with a blank line.
+        // Sites with unknown connectors pass the filter and still get a headline.
         val chademoOnly = site("chademo", 180.0, 20.0).copy(
             connectors = listOf(Connector(ConnectorType.CHADEMO, maxPowerKw = 50.0, count = 1)),
         )

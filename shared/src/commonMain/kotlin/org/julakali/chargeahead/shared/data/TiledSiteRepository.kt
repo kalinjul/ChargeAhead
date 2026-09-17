@@ -32,22 +32,11 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * The on-disk store (M3) — replacing the in-memory circle from M1.
+ * The on-disk store of charging sites.
  *
- * The difference isn't size, it's durability: this store survives the
- * process ending. Someone who drove the same route yesterday still has the
- * list today in a tunnel. That's exactly what it's for — dead zones on the
- * highway are the normal case, not the exception (ARCHITECTURE.md 6).
- *
- * Two rules govern its behavior:
- *
- * 1. **Reads always come from the database**, even while a fetch is pending.
- *    The source only replenishes it.
- * 2. **If replenishing fails, what's already stored is still returned.** A
- *    dead zone must not empty the list; it may only prevent it from getting
- *    better. Only when there's nothing stored at all is the failure
- *    propagated — then an empty list is genuinely unsubstantiated, and the
- *    UI needs to be able to say so.
+ * 1. **Reads always come from the database**; the source only replenishes it.
+ * 2. **If replenishing fails, what's already stored is still returned.** Only
+ *    when there's nothing stored at all is the failure propagated.
  */
 class TiledSiteRepository(
     private val source: ChargeSiteSource,
@@ -60,11 +49,7 @@ class TiledSiteRepository(
 
     private val dao = database.chargeSites()
 
-    // De-duplicate fetches per request instead of serializing them globally:
-    // two identical in-flight fetches share one round-trip, but a fetch for a
-    // different area no longer waits behind an unrelated one that's stuck on a
-    // slow (up to the source timeout) network call. App-scoped singleton, so the
-    // scope lives as long as the repository and needs no cancellation.
+    // De-duplicates identical in-flight fetches.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val inFlight = mutableMapOf<String, Deferred<List<ChargeSite>>>()
     private val inFlightGuard = Mutex()
@@ -77,11 +62,7 @@ class TiledSiteRepository(
                     loadSites(area, networks)
                 } finally {
                     // Drop it before the result is delivered, so the map only
-                    // ever holds live fetches. Removing it afterwards (e.g. from
-                    // invokeOnCompletion) let a caller that asks again right
-                    // away get this finished fetch back — a stale result that
-                    // skipped the TTL check. The guard is still held by the
-                    // caller registering this fetch, so this waits until then.
+                    // ever holds live fetches.
                     val self = coroutineContext.job
                     withContext(NonCancellable) {
                         inFlightGuard.withLock { if (inFlight[key] === self) inFlight.remove(key) }
@@ -89,8 +70,7 @@ class TiledSiteRepository(
                 }
             }.also { fetch -> inFlight[key] = fetch }
         }
-        // await() outside the guard: holding it across the fetch would be the
-        // very global serialization we're removing.
+        // await() outside the guard.
         return deferred.await()
     }
 
@@ -128,9 +108,6 @@ class TiledSiteRepository(
 
     /**
      * Has the area's shape been fetched for the given network key?
-     *
-     * One read for the fresh tiles in the box, one for the corridors near a
-     * route; which of them the shape actually needs is decided in [Coverage].
      */
     private suspend fun isCovered(area: SearchArea, networkKey: String): Boolean {
         val notOlderThan = time.nowMillis() - ttlMillis
@@ -166,11 +143,8 @@ class TiledSiteRepository(
     // networks = the Network objects to query the source with (missing ones only).
     // stampKeys = the network keys to stamp on every covered tile (same as missing keys).
     private suspend fun fetchAndStore(area: SearchArea, networks: List<Network>, stampKeys: List<String>) {
-        // The shape decides what "a bit bigger" looks like — a sector grows
-        // into a full circle, a route buffer doesn't grow at all. What gets
-        // recorded is what the source was asked for: the tiles that shape
-        // fully contains, plus the route itself as a corridor. Never its box —
-        // the sources don't answer for the box (issue #69).
+        // Records what the source was asked for: the tiles the shape fully
+        // contains, plus the route itself as a corridor. Never its box.
         val fetchArea = area.prefetchArea(prefetchMarginKm)
         val sites = source.query(fetchArea, networks)
         val now = time.nowMillis()
@@ -233,18 +207,16 @@ class TiledSiteRepository(
     private suspend fun readStored(area: SearchArea): List<ChargeSite> = storedSitesIn(area.boundingBox)
 
     companion object {
-        /** OpenChargeMap changes slowly — three days, see ARCHITECTURE.md 6. */
         const val DEFAULT_TTL_MILLIS = 3L * 24 * 60 * 60 * 1000
 
-        /** 25 km is roughly a quarter hour of driving at highway speed. */
         const val DEFAULT_PREFETCH_MARGIN_KM = 25.0
     }
 }
 
 /**
- * Connectors as a `type:kW:count` list, separated by semicolons. An empty
- * count means unknown — sources often don't report it.
+ * Connectors as a `type:kW:count` list, separated by semicolons. An empty count means unknown.
  */
+// TODO use Room type converters instead (#93)
 internal fun List<Connector>.encode(): String =
     joinToString(";") { "${it.type.name}:${it.maxPowerKw}:${it.count ?: ""}" }
 
@@ -257,9 +229,7 @@ internal fun String.decodeConnectors(): List<Connector> =
             if (parts.size != 3) return@mapNotNull null
             val power = parts[1].toDoubleOrNull() ?: return@mapNotNull null
             Connector(
-                // Unknown names become UNKNOWN instead of throwing: otherwise
-                // an older app version would lose the entire store on
-                // rollback, just because a newer enum value is stored in it.
+                // Unknown names become UNKNOWN instead of throwing.
                 type = ConnectorType.entries.firstOrNull { it.name == parts[0] } ?: ConnectorType.UNKNOWN,
                 maxPowerKw = power,
                 count = parts[2].toIntOrNull(),
@@ -283,7 +253,5 @@ private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     position = LatLon(lat, lon),
     connectors = connectors.decodeConnectors(),
     address = Address(street, postalCode, town).takeIf { !it.isEmpty },
-    // Each row from the database carries exactly one source; merging happens
-    // above this, in MergingSiteRepository.
     sources = setOf(sourceId),
 )

@@ -37,22 +37,13 @@ import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.ui.HomeUiState
 import org.julakali.chargeahead.shared.ui.HomeViewModel
 
-/**
- * The map screen with its state holder attached. Everything below this
- * function is stateless and takes what it draws as parameters — that is what
- * keeps [HomeScreen] previewable and testable without a location provider.
- */
+/** The map screen with its state holder attached. */
 @Composable
 fun HomeRoute(
     hasPermission: Boolean,
     planningInProgress: Boolean,
     onRequestPermission: () -> Unit,
-    /**
-     * The location button with nothing to center on. Owned by the activity:
-     * it takes the permission and the device's location settings in order —
-     * both need an Activity to show anything — and asks for the fix once they
-     * are in place.
-     */
+    /** The location button with nothing to center on. Owned by the activity. */
     onLocate: () -> Unit,
     onMenu: () -> Unit,
     onPlan: () -> Unit,
@@ -63,8 +54,7 @@ fun HomeRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // The pipeline may only run once the permission is there; starting it
-    // twice is a no-op, so re-running this on every grant is harmless.
+    // The pipeline may only run once the permission is there.
     LaunchedEffect(hasPermission) {
         if (hasPermission) viewModel.onLocationPermissionGranted()
     }
@@ -156,17 +146,13 @@ fun HomeScreen(
         }
 
         Column(
-            // Horizontal room for the burger on the left and the two map
-            // buttons on the right: a full-width box here runs straight over
-            // them, and the longer location hint wraps rather than collide.
+            // Leaves room for the burger and the map buttons.
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
                 .padding(horizontal = 70.dp)
                 .padding(top = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            // Three of these can stand at once now (zoom hint, filter spinner,
-            // location hint); stacked flush they read as one broken box.
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (!hasGoogleMapsKey) {
@@ -189,9 +175,7 @@ fun HomeScreen(
                     )
                 }
             }
-            // Location is running and getting nowhere. The spinner on the
-            // button says "working on it"; after long enough, that alone is
-            // no longer honest and the reason belongs on screen.
+            // Location is running and getting nowhere.
             if (uiState.locationUnavailable) {
                 Surface(
                     shape = MaterialTheme.shapes.small,
@@ -227,7 +211,7 @@ fun HomeScreen(
                 }
             }
             if (uiState.isDemo) {
-                // Invented charging sites must be labeled — see AGENTS.md.
+                // Demo charging sites must be labeled.
                 Text(
                     stringResource(R.string.phone_demo_notice),
                     style = MaterialTheme.typography.bodySmall,
@@ -311,7 +295,7 @@ fun HomeScreen(
     }
 }
 
-/** The mockup's `.pill`: fully round, floating, 15sp/700. */
+/** Fully round, floating pill. */
 @Composable
 private fun HomePill(
     text: String?,

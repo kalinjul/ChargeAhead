@@ -1,14 +1,6 @@
 package org.julakali.chargeahead.shared.domain
 
-/**
- * One data point from the car hardware, for the phone's debug view.
- *
- * Same split as [SoCDiagnostics]: captured in the car session (only there is
- * a `CarContext`), persisted through the settings store, displayed on the
- * phone. Values are pre-formatted strings — this is a diagnostic surface, not
- * a data model to compute on; anything the app computes with has its own
- * typed path (EnergyState).
- */
+/** One data point from the car hardware, for the phone's debug view. */
 data class CarDataPoint(
     val kind: CarDataKind,
     val status: CarDataStatus,
@@ -33,7 +25,7 @@ enum class CarDataStatus {
     /** The car permission wasn't granted — fixable by the driver. */
     NO_PERMISSION,
 
-    /** Listener registered, but the head unit reports no value (the normal case). */
+    /** Listener registered, but the head unit reports no value. */
     NO_DATA,
 
     /** This host offers no car-hardware service at all. */

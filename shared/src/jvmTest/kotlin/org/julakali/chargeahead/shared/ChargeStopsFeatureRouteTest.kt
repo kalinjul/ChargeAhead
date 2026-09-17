@@ -127,8 +127,7 @@ class ChargeStopsFeatureRouteTest {
 
     @Test
     fun theRouteIsComputedOnlyOnce() = runBlocking {
-        // The core of the design: it's not the route that changes during the
-        // trip, but the section that still lies ahead.
+        // The route stays; only the section ahead shrinks.
         val location = ControllableLocationSource()
         val router = FixedRoute(Route(a9, 170.0, 108.0))
         val feature = feature(location, RecordingSiteRepository(), settingsStore(), routeEngine = router)
@@ -184,8 +183,7 @@ class ChargeStopsFeatureRouteTest {
 
     @Test
     fun whenRouteComputationFails_theCorridorRemains() = runBlocking {
-        // No reason to clear the list — but the driver should know they're
-        // not getting what they set.
+        // The list stays, but the status says the route is unavailable.
         val location = ControllableLocationSource()
         val repository = RecordingSiteRepository()
         val feature = feature(location, repository, settingsStore(), routeEngine = BrokenRouter())

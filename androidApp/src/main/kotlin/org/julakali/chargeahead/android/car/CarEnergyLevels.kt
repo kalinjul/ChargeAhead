@@ -17,31 +17,22 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.shareIn
 
 /**
- * The session's one subscription to the vehicle's energy level, shared by
- * everyone who reads it — the SoC source and the debug recorder.
+ * The session's one subscription to the vehicle's energy level, shared by the
+ * SoC source and the debug recorder: only the first listener of a data type
+ * gets an initial value from the host.
  *
- * Why only one: the Car App Library subscribes at the host for the *first*
- * listener of a data type only (`CarResultStub.addListener`). Later listeners
- * get no initial value, just the next change — and a head unit whose value
- * doesn't change never sends one. Two readers registering independently
- * therefore race for the first answer, and the loser stays empty. Sharing a
- * single listener and replaying its last reading removes the race; it also
- * keeps every registration on the main thread, which the library's unguarded
- * listener map expects.
- *
- * Follows [CarPermissions]: a CAR_FUEL grant mid-session registers the
- * listener right away.
+ * A CAR_FUEL grant mid-session registers the listener right away.
  */
 class CarEnergyLevels(
     private val carContext: CarContext,
     permissions: CarPermissions,
-    /** Session-lived and on the main thread — the session's lifecycleScope. */
+    /** Session-lived and on the main thread. */
     scope: CoroutineScope,
 ) {
 
     /** What the energy subscription currently yields. */
     sealed interface Reading {
-        /** No CarHardware on this host. Not an error, just no value. */
+        /** No CarHardware on this host. */
         data class NoCarHardware(val cause: String?) : Reading
 
         /** CAR_FUEL not granted (yet). */

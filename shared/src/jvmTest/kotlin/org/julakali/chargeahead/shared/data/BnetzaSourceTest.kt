@@ -21,10 +21,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Tests the mapping of the charging station register against canned responses.
- * Whether the real service actually responds this way is checked by [BnetzaLiveContractTest].
- */
+/** Tests the mapping of the charging station register against canned responses. */
 class BnetzaSourceTest {
 
     private val area = SectorArea.circle(LatLon(48.95, 11.45), radiusKm = 50.0)
@@ -75,7 +72,6 @@ class BnetzaSourceTest {
     @Test
     fun multipleConnectorsInOneField_areCounted() = runBlocking {
         // "AC Typ 2 Steckdose; AC Typ 2 Steckdose" with "22; 22" is two units.
-        // Unlike OpenChargeMap, the unit count is known here.
         val source = sourceRespondingWith(
             feature(
                 """"Ladeeinrichtungs_ID":1,"Breitengrad":48.9,"Längengrad":11.4,
@@ -128,8 +124,7 @@ class BnetzaSourceTest {
 
     @Test
     fun allSixConnectorLabelsOfTheRegister() = runBlocking {
-        // Nationwide, the service knows exactly these values — queried via
-        // returnDistinctValues, not guessed.
+        // The service's distinct connector values.
         val expected = mapOf(
             "AC Typ 2 Steckdose" to ConnectorType.TYPE2,
             "AC Typ 2 Fahrzeugkupplung" to ConnectorType.TYPE2,
@@ -152,8 +147,7 @@ class BnetzaSourceTest {
 
     @Test
     fun anErrorWithHttp200_isDetected() {
-        // ArcGIS puts errors in the response body. Left unchecked, this would
-        // look like "no charging station here".
+        // ArcGIS puts errors in the response body.
         val source = sourceRespondingWith(
             """{"error":{"code":499,"message":"Token Required"}}""",
         )
@@ -255,7 +249,7 @@ class BnetzaSourceTest {
         assertTrue(parameter["geometry"]!!.contains("\"xmin\""))
     }
 
-    /** A route within 100 m of the road runs to hundreds of points; in the URL, the service answered 404. */
+    /** A long polyline is sent as a POST body. */
     @Test
     fun aLongRouteTravelsInTheBody() = runBlocking {
         var seen: HttpRequestData? = null

@@ -1,9 +1,8 @@
 import SwiftUI
 import Shared
 
-/// The planned trip: summary, stops, hand-off to Google Maps. The numbers all
-/// come from the shared planner — this view only arranges them (AGENTS.md:
-/// platforms translate, they don't compute).
+/// The planned trip: summary, stops, hand-off to Google Maps. The numbers
+/// come from the shared planner.
 struct TripPlanView: View {
     let plan: TripPlan
     let ownPosition: LatLon?
@@ -95,7 +94,7 @@ struct StopDetailView: View {
     }
 }
 
-/// "9 h 16 min" or "42 min" — mirrors the Android helper so both phones say the same thing.
+/// "9 h 16 min" or "42 min".
 func minutesText(_ minutes: Double) -> String {
     let total = Int(minutes.rounded())
     let hours = total / 60

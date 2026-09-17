@@ -1,11 +1,8 @@
 import UIKit
 import SwiftUI
 
-/// Scene delegate for the phone UI. Hosts `ContentView` in a
-/// `UIHostingController`, since the project doesn't use the SwiftUI app
-/// lifecycle (`@main struct ... : App`), but is wired up the classic way via
-/// `AppDelegate` + `UISceneDelegate` — this keeps scene selection visible in
-/// one place, `AppDelegate.swift`.
+/// Scene delegate for the phone UI, hosting `ContentView` in a
+/// `UIHostingController`. Scene selection lives in `AppDelegate.swift`.
 class PhoneSceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?

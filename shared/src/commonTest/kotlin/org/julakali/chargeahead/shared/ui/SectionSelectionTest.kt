@@ -24,7 +24,7 @@ class SectionSelectionTest {
         val two = one.picked(2)
         assertEquals(SectionSelection(selecting = true, a = 0, b = 2), two)
 
-        // A third pick starts a fresh pair — same cycle the screen had.
+        // A third pick starts a fresh pair.
         assertEquals(SectionSelection(selecting = true, a = 1), two.picked(1))
     }
 

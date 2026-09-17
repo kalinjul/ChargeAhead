@@ -38,7 +38,6 @@ class PolylineAreaTest {
 
     @Test
     fun fartherThanTheBuffer_fallsOut() {
-        // Exactly what the sector corridor used to pick up.
         val villagePole = a9[3].destination(bearingDeg = 90.0, distanceKm = 8.0)
 
         assertFalse(villagePole in route)
@@ -46,8 +45,7 @@ class PolylineAreaTest {
 
     @Test
     fun betweenTwoWaypoints_isMeasuredCorrectly() {
-        // The point is halfway between two waypoints and therefore directly
-        // on the line — not merely far from both endpoints.
+        // Halfway between two waypoints, directly on the line.
         val midpoint = interpolate(a9[2], a9[3], 0.5)
 
         assertTrue(route.distanceKmTo(midpoint) < 0.5, "Was ${route.distanceKmTo(midpoint)} km")
@@ -89,7 +87,6 @@ class PolylineAreaTest {
 
     @Test
     fun aheadOf_shrinksTheAreaStepByStep() {
-        // The reason a route computed once can carry the whole trip.
         val atStart = assertNotNull(route.aheadOf(a9.first())).radiusKm
         val atMidpoint = assertNotNull(route.aheadOf(a9[3])).radiusKm
         val nearDestination = assertNotNull(route.aheadOf(a9[6])).radiusKm

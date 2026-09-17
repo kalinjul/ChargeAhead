@@ -125,8 +125,7 @@ class PlanningFeatureViewportTest {
 
     @Test
     fun `the cap keeps the nearest sites, dropping the far ones`() = runBlocking<Unit> {
-        // 350 sites marching away from the viewport centre; only the nearest fit,
-        // so an in-view charger is never dropped to keep a distant one.
+        // 350 sites marching away from the viewport centre; only the nearest fit.
         val centreLat = (viewport.south + viewport.north) / 2.0
         val centreLon = (viewport.west + viewport.east) / 2.0
         val many = (1..350).map { i ->

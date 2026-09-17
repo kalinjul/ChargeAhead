@@ -1,9 +1,7 @@
 import SwiftUI
 import Shared
 
-/// Phone UI, analogous to the Compose view in androidApp: a read-only
-/// overview. Actual interaction happens in CarPlay, see `phone_hint_car_ui`
-/// in Localizable.strings.
+/// Phone UI: a read-only overview. Actual interaction happens in CarPlay.
 struct ContentView: View {
 
     @StateObject private var viewModel = ChargeStopsViewModel()
@@ -21,9 +19,7 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
 
                     if viewModel.state.isDemo {
-                        // Presenting made-up charging stations as real ones
-                        // would be not just sloppy but dangerous in an app
-                        // meant for the car.
+                        // Demo charging sites must be labeled.
                         Text(NSLocalizedString("phone_demo_notice", comment: ""))
                             .font(.footnote)
                             .foregroundStyle(.red)

@@ -22,10 +22,7 @@ data class GarageUiState(
     val vehicles: List<VehicleProfile> = emptyList(),
     val selected: VehicleProfile? = null,
     val socPercent: Double? = null,
-    /**
-     * The charge level comes from the car, so the slider is locked — a
-     * value typed here would be silently overwritten on the next update.
-     */
+    /** The charge level comes from the car, so the slider is locked. */
     val socFromCar: Boolean = false,
     /** How full the battery should still be at the destination. */
     val arrivalSocPercent: Double = DEFAULT_ARRIVAL_SOC_PERCENT,
@@ -58,7 +55,7 @@ class GarageViewModel(
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, GarageUiState())
 
-    /** Selecting also stores: an edited profile is written back through the same call. */
+    /** Selecting also stores an edited profile. */
     fun onVehicleSelected(profile: VehicleProfile) {
         viewModelScope.launch { settings.setVehicle(profile) }
     }
@@ -87,10 +84,6 @@ class GarageViewModel(
         arrivalSocEditor.value = null
     }
 
-    /**
-     * Written straight through, like every other garage edit: the trip the
-     * driver plans next is the one that should honour it.
-     */
     fun onArrivalSocConfirmed() {
         val entered = arrivalSocEditor.value?.toIntOrNull()?.takeIf { it in ARRIVAL_SOC_RANGE } ?: return
         arrivalSocEditor.value = null

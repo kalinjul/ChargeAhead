@@ -3,17 +3,7 @@ package org.julakali.chargeahead.shared.data
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * The fields of the OpenChargeMap POI response that are actually needed here.
- *
- * Only a fraction of what the API returns — everything else is dropped by
- * `ignoreUnknownKeys`. The capitalization of the names is OCM's own and is
- * mapped to the naming convention used here via [SerialName].
- *
- * Almost everything is nullable because it is in the data too: OCM is
- * largely community-maintained, and a site with no power rating or no
- * operator is not unusual there.
- */
+/** The fields of the OpenChargeMap POI response that are actually needed here. */
 @Serializable
 internal data class OcmPoi(
     @SerialName("ID") val id: Long? = null,

@@ -12,13 +12,7 @@ import io.ktor.client.request.parameter
 import org.julakali.chargeahead.api.PlaceDto
 import org.julakali.chargeahead.api.PlacesResponse
 
-/**
- * Destination search through the ChargeAhead backend.
- *
- * The server answers from Photon, which [NominatimGeocoder] could not: a
- * geocoder resolves a finished address, while "Münch" is half a word. The
- * rate limit and the deduplication of doubled OSM entries sit there too.
- */
+/** Destination search through the ChargeAhead backend. */
 class BackendGeocoder(
     private val httpClient: HttpClient,
     private val baseUrl: String,

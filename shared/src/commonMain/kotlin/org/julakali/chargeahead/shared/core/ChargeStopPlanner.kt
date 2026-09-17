@@ -14,12 +14,6 @@ import org.julakali.chargeahead.shared.domain.distanceKmTo
 
 /**
  * Turns raw sites into the list that appears in the car
- * (ARCHITECTURE.md 5.3, steps 4 and 5).
- *
- * [vehicle] and [energy] are both nullable, and that's deliberate: until the
- * driver has created a profile and entered a charge level, there is nothing
- * to compute. Reachability then stays [Reachability.UNKNOWN], and the list is
- * still usable — sorted by distance as in M1.
  */
 object ChargeStopPlanner {
 
@@ -32,11 +26,6 @@ object ChargeStopPlanner {
         networks: NetworkPreferences = NetworkPreferences(),
         routeAhead: RouteProgress? = null,
     ): List<ChargeStop> {
-        // Two paths on purpose. On a route, distance is road km along it and
-        // energy follows its speed profile — the numbers TripPlanner plans
-        // with, so phone and car agree. In the corridor there is no speed to go
-        // on and the distance is itself a straight-line guess; a finer
-        // consumption model on top of that would be false precision.
         val estimate = if (routeAhead != null) AlongRoute(routeAhead) else Corridor(area)
 
         val rangeKm = if (vehicle != null && energy != null) {
@@ -72,24 +61,15 @@ object ChargeStopPlanner {
                     primaryConnector = site.primaryConnectorFor(vehicle),
                 )
             }
-            // Unreachable sites aren't hidden but pushed to the end
-            // (ARCHITECTURE.md 5.2): at low charge, the list would otherwise
-            // look emptied out for no reason and the driver would lose trust.
+            // Unreachable sites aren't hidden but pushed to the end.
+            // At low charge, the list would otherwise
+            // look emptied out for no reason
             .sortedWith(compareBy({ it.reachability.isOutOfRange() }, { it.distanceKm }))
             .toList()
     }
 
     /**
      * The strongest connector the vehicle can use.
-     *
-     * Without this selection, a tie picks the wrong one: at the Köschinger
-     * Forst service area, CCS and CHAdeMO both sit at 50 kW, and a CCS
-     * vehicle got "CHAdeMO 50 kW" in its headline. Not wrong, but misleading —
-     * the driver reads this as what they'll actually charge with.
-     *
-     * If nothing fits, power alone decides. This covers sites whose
-     * connectors the source doesn't know; they deliberately pass through the
-     * [fitsVehicle] filter.
      */
     private fun ChargeSite.primaryConnectorFor(vehicle: VehicleProfile?): Connector? {
         val usable = if (vehicle == null || vehicle.acceptedConnectors.isEmpty()) {
@@ -100,7 +80,6 @@ object ChargeStopPlanner {
         return usable.ifEmpty { connectors }.maxByOrNull { it.maxPowerKw }
     }
 
-    /** Does the site have at least one connector the vehicle accepts? */
     private fun ChargeSite.fitsVehicle(vehicle: VehicleProfile): Boolean {
         if (vehicle.acceptedConnectors.isEmpty()) return true
         // Don't filter out sites with unknown connectors: the source may

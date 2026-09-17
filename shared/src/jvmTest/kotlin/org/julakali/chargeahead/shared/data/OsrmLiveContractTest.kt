@@ -10,13 +10,11 @@ import kotlin.test.assertTrue
 
 /**
  * Checks the assumptions about OSRM against the real service. **Does not run
- * by default** — see [OpenChargeMapLiveContractTest]:
+ * by default**:
  *
  * ```bash
  * OCM_LIVE=1 ./gradlew :shared:jvmTest --tests '*OsrmLiveContractTest'
  * ```
- *
- * It also checks that the full geometry, once simplified, stays small.
  */
 class OsrmLiveContractTest {
 
@@ -46,7 +44,7 @@ class OsrmLiveContractTest {
 
         val route = assertNotNull(runBlocking { engine().route(nuremberg, munich) })
 
-        // Unsimplified, this trip is about 2,000 points; at 100 m about 100 (#57).
+        // Simplified to 100 m, about 100 points.
         assertTrue(route.points.size in 2..400, "Was ${route.points.size} waypoints")
     }
 

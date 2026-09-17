@@ -50,8 +50,7 @@ class SectorAreaTest {
 
     @Test
     fun contains_theOriginItself_liesInTheSector() {
-        // No bearing is defined from the origin to itself; a charging station
-        // right under the vehicle must not disappear because of that.
+        // No bearing is defined from the origin to itself.
         assertTrue(origin in sectorFacingSouth())
     }
 
@@ -78,7 +77,6 @@ class SectorAreaTest {
 
     @Test
     fun boundingBox_isSignificantlySmallerThanThatOfTheFullCircle() {
-        // The point of sampling an arc: less query load on each source.
         val sector = sectorFacingSouth()
         val fullCircle = SectorArea(origin, bearingDeg = 180.0, halfAngleDeg = 180.0, radiusKm = 100.0)
 

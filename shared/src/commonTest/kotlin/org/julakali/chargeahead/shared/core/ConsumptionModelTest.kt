@@ -22,11 +22,7 @@ class ConsumptionModelTest {
     private fun segment(fromKm: Double, distanceKm: Double, speedKmh: Double) =
         RouteSegment(fromKm, distanceKm, distanceKm / speedKmh * 60.0)
 
-    /**
-     * The calibration guard. The driver's number is an input, not a starting
-     * guess: at the reference speed the model has to hand it back untouched, or
-     * it has silently reinterpreted a value they set themselves.
-     */
+    /** At the reference speed the model hands the driver's number back untouched. */
     @Test
     fun `at the reference speed the configured value comes back unchanged`() {
         val route = route(distanceKm = 200.0, averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH)
@@ -103,10 +99,7 @@ class ConsumptionModelTest {
         assertEquals(260.0, model.reachKm(mixed, 20.0, budget), 1e-6)
     }
 
-    /**
-     * Past the end of the route there is nothing left to price, and a reach
-     * that stopped there would make every trip look like it just barely fits.
-     */
+    /** Past the end of the route there is nothing left to price. */
     @Test
     fun `reach runs past the end of the route`() {
         val short = route(distanceKm = 50.0, averageSpeedKmh = 100.0)

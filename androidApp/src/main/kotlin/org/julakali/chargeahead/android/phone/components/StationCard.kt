@@ -17,11 +17,7 @@ import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.theme.tabular
 
-/**
- * The one charging-station card — "charge now" and the trip review share it.
- * Headline is always the network; the trip review adds [extraLine] and makes
- * the card itself tappable for the section picker.
- */
+/** The charging-station card, shared by "charge now" and the trip review. */
 @Composable
 fun StationCard(
     rank: Int,
@@ -58,8 +54,6 @@ fun StationCard(
                         it,
                         style = MaterialTheme.typography.bodySmall.tabular,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        // Two lines, not one: town and postal code are the
-                        // point of this line, and they sit at the end.
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 2.dp),
@@ -69,8 +63,7 @@ fun StationCard(
             }
             onSend?.let {
                 GoButton(
-                    // The destination flag, not an arrow: every hand-off to
-                    // Maps in this app carries the same icon.
+                    // Every hand-off to Maps carries this icon.
                     icon = painterResource(R.drawable.ic_destination),
                     contentDescription = sendContentDescription,
                     onClick = it,

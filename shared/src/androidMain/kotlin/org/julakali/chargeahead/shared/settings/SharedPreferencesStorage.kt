@@ -5,11 +5,7 @@ import android.content.Context
 /**
  * Storage backed by SharedPreferences.
  *
- * Deliberately not DataStore: that would add another dependency for a
- * handful of strings that are written rarely and read once at startup.
- * Uses `commit()` instead of `apply()` so a value the driver just set is
- * guaranteed to be on disk even if the process is killed right after —
- * which happens in Android Auto when the connection is disconnected.
+ * `commit()` instead of `apply()`, since the process may be killed right after.
  */
 class SharedPreferencesStorage(context: Context) : KeyValueStorage {
 

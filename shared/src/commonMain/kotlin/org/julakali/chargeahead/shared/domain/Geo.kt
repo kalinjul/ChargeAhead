@@ -16,11 +16,7 @@ private const val EARTH_RADIUS_KM = 6371.0088
 /** Length of one degree of latitude in kilometers (EARTH_RADIUS_KM * PI / 180). */
 private const val KM_PER_DEGREE_LATITUDE = 111.19492664455873
 
-/**
- * Detour factor from straight-line to road distance for trunk roads, used
- * until a real route is available (empirical, see ARCHITECTURE.md section
- * 5.2). Replaced by `RoutedRouteProvider` from M5 onward.
- */
+/** Empirical detour factor from straight-line to road distance, used without a real route. */
 const val ROUTE_DETOUR_FACTOR = 1.25
 
 /** Great-circle distance between two points (Haversine), in kilometers. */
@@ -35,11 +31,7 @@ fun LatLon.distanceKmTo(other: LatLon): Double {
     return EARTH_RADIUS_KM * c
 }
 
-/**
- * Initial bearing from this point to the other, in degrees within [0, 360).
- * The bearing changes along a great circle — irrelevant for the ±35°
- * corridor width over at most 150 km used here.
- */
+/** Initial bearing from this point to the other, in degrees within [0, 360). */
 fun LatLon.bearingDegTo(other: LatLon): Double {
     val lat1Rad = lat.toRadians()
     val lat2Rad = other.lat.toRadians()
@@ -67,11 +59,7 @@ fun LatLon.destination(bearingDeg: Double, distanceKm: Double): LatLon {
     return LatLon(lat2Rad.toDegrees(), normalizeLon(lon2Rad.toDegrees()))
 }
 
-/**
- * Smallest angle between two bearings, in degrees within [0, 180].
- * This makes the comparison "more than 45° of heading change" independent of
- * whether the trip happens to cross the 0° mark (359° and 1° are 2° apart).
- */
+/** Smallest angle between two bearings, in degrees within [0, 180]. */
 fun angularDifferenceDeg(fromDeg: Double, toDeg: Double): Double {
     val diff = abs(normalizeDeg(fromDeg) - normalizeDeg(toDeg))
     return if (diff > 180.0) 360.0 - diff else diff
@@ -94,13 +82,10 @@ private fun Double.toRadians(): Double = this * PI / 180.0
 private fun Double.toDegrees(): Double = this * 180.0 / PI
 
 /**
- * Axis-aligned rectangle in degrees — the query format every charging-site
- * source understands (see ARCHITECTURE.md section 5.3, step 3).
+ * Axis-aligned rectangle in degrees.
  *
- * Deliberately unaware of antimeridian crossing: when it would wrap, the box
- * is widened to the full longitude range instead. That over-fetches rather
- * than querying the wrong half — the failure mode is a slower query, not an
- * empty list.
+ * Unaware of antimeridian crossing: when it would wrap, the box is widened to
+ * the full longitude range instead.
  */
 data class BoundingBox(
     val south: Double,
@@ -111,7 +96,7 @@ data class BoundingBox(
     operator fun contains(point: LatLon): Boolean =
         point.lat in south..north && point.lon in west..east
 
-    /** Does this box fully contain the other? Basis of the cache-hit decision. */
+    /** Does this box fully contain the other? */
     fun contains(other: BoundingBox): Boolean =
         other.south >= south && other.north <= north &&
             other.west >= west && other.east <= east
@@ -119,8 +104,7 @@ data class BoundingBox(
     /** Grow the box by [marginKm] in every direction. */
     fun expandedBy(marginKm: Double): BoundingBox {
         val latMargin = marginKm / KM_PER_DEGREE_LATITUDE
-        // Compute using the widest edge, so the box has at least the
-        // required margin at both corners.
+        // Widest edge, so the box has at least the margin at both corners.
         val widestLat = max(abs(south), abs(north))
         val lonMargin = marginKm / kmPerDegreeLongitudeAt(widestLat)
         return of(
@@ -156,25 +140,16 @@ data class BoundingBox(
     }
 }
 
-/**
- * Length of one degree of longitude at latitude [latitudeDeg], in kilometers.
- * Clamped to a minimum near the poles, so the division doesn't blow the box
- * up toward infinity.
- */
+/** Length of one degree of longitude at latitude [latitudeDeg], in kilometers, clamped near the poles. */
 private fun kmPerDegreeLongitudeAt(latitudeDeg: Double): Double =
     max(KM_PER_DEGREE_LATITUDE * cos(latitudeDeg.toRadians()), 0.1)
 
 /**
- * Shortest distance to the segment from [start] to [end], in kilometers.
- *
- * Computed with a local flat-plane approximation rather than on the great
- * circle: over the length of a route segment — on the order of ten
- * kilometers — the error is far below GPS accuracy, and the formula stays
- * readable without a trigonometric iteration.
+ * Shortest distance to the segment from [start] to [end], in kilometers,
+ * using a local flat-plane approximation.
  */
 fun LatLon.distanceKmToSegment(start: LatLon, end: LatLon): Double {
-    // Reference latitude at the segment's midpoint, so longitude is
-    // compressed equally on both sides.
+    // Reference latitude at the segment's midpoint.
     val referenceLatRad = ((start.lat + end.lat) / 2.0).toRadians()
     val lonScale = cos(referenceLatRad)
 
@@ -190,8 +165,7 @@ fun LatLon.distanceKmToSegment(start: LatLon, end: LatLon): Double {
     // Degenerate segment (duplicate waypoint): distance to a single point.
     if (segmentLengthSquared < 1e-12) return distanceKmTo(start)
 
-    // Foot of the perpendicular, clamped to the segment — otherwise the
-    // distance would be measured to an extension of the route that doesn't exist.
+    // Foot of the perpendicular, clamped to the segment.
     val t = ((pointX * endX + pointY * endY) / segmentLengthSquared).coerceIn(0.0, 1.0)
     val dx = pointX - t * endX
     val dy = pointY - t * endY

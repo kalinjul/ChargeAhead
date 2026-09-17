@@ -4,15 +4,7 @@ package org.julakali.chargeahead.shared.domain
  * A [bufferKm]-wide tube around a route's path — the search area used once a
  * destination is set.
  *
- * The counterpart to [SectorArea]: instead of a fan that mostly picks up
- * charging sites off to the sides of the direction of travel, this is exactly
- * the strip along the route. For the same Nuremberg-Munich trip, that cuts
- * 33,508 officially reported charging facilities down to 769
- * (ARCHITECTURE.md section 1.1).
- *
- * The buffer is **straight-line distance, not detour distance**. A site 1 km
- * off the highway can cost far more once you factor in reaching it via the
- * next-but-one exit. This is known and tracked as open item 6.
+ * The buffer is **straight-line distance, not detour distance**.
  */
 data class PolylineArea(
     val points: List<LatLon>,
@@ -28,11 +20,8 @@ data class PolylineArea(
     override val origin: LatLon = points.first()
 
     /**
-     * Greatest distance from [origin] that's still part of the area.
-     *
-     * For a route, that's roughly its length — a very wide field for sources
-     * that query radially. Querying with this fetches too much; sources with
-     * line support use [points] and [bufferKm] instead.
+     * Greatest distance from [origin] that's still part of the area — roughly
+     * the route's length.
      */
     override val radiusKm: Double =
         points.maxOf { origin.distanceKmTo(it) } + bufferKm
@@ -42,15 +31,7 @@ data class PolylineArea(
 
     override fun contains(point: LatLon): Boolean = distanceKmTo(point) <= bufferKm
 
-    /**
-     * Unchanged — and that's the whole point.
-     *
-     * The buffer already covers the entire route to the destination; while
-     * driving, it only shrinks ([aheadOf]). Widening it on top of that would
-     * undo exactly what it's for: widened by 25 km, the Nuremberg-Munich trip
-     * would go back up to 7,855 officially reported charging facilities
-     * instead of 1,584.
-     */
+    /** Unchanged: the buffer already covers the entire route. */
     override fun prefetchArea(marginKm: Double): SearchArea = this
 
     /** Shortest distance from the point to the route, in kilometers. */
@@ -62,15 +43,9 @@ data class PolylineArea(
         get() = points.zipWithNext().sumOf { (start, end) -> start.distanceKmTo(end) }
 
     /**
-     * The route from the point level with [position] onward — everything
-     * already passed is dropped.
+     * The route from the point level with [position] onward.
      *
-     * This is why a route computed once is enough for the whole trip: it's
-     * not the route that changes, only the section still ahead. No further
-     * routing call is needed, and the search area shrinks on its own.
-     *
-     * Returns `null` when only a single point would remain — at that point
-     * the destination is effectively reached.
+     * Returns `null` when the destination is effectively reached.
      */
     fun aheadOf(position: LatLon): PolylineArea? {
         var bestSegment = 0
@@ -86,31 +61,22 @@ data class PolylineArea(
             }
         }
 
-        // The perpendicular foot itself becomes the new start, so the route
-        // doesn't jump back by up to one waypoint's worth of distance.
+        // The perpendicular foot itself becomes the new start.
         val entryPoint = interpolate(points[bestSegment], points[bestSegment + 1], bestFraction)
         val remaining = listOf(entryPoint) + points.drop(bestSegment + 1)
         if (remaining.size < 2) return null
 
         val rest = PolylineArea(remaining, bufferKm)
-        // On the last segment, the destination point remains duplicated: the
-        // point count alone isn't enough as a cutoff, but remaining length is.
+        // On the last segment, the destination point remains duplicated.
         return if (rest.lengthKm < MINIMUM_REMAINING_KM) null else rest
     }
 
     /**
-     * The strip as a chain of overlapping circles.
+     * The strip as a chain of overlapping circles, for sources without line
+     * support.
      *
-     * For sources without line support: OpenChargeMap only knows rectangle
-     * or radius. A route's bounding rectangle would be uselessly large — for
-     * a diagonal across Germany, half the country — and a single circle
-     * around the start would be just as bad. A handful of circles along the
-     * route, on the other hand, is a good fit.
-     *
-     * Each circle fully encloses its segment: the farthest point of a
-     * straight segment from the circle's center is always a waypoint, and
-     * the radius is determined from those. Consecutive segments share a
-     * waypoint, so no gap is left uncovered.
+     * Each circle fully encloses its segment; consecutive segments share a
+     * waypoint.
      */
     fun radialCover(segmentLengthKm: Double = DEFAULT_SEGMENT_KM): List<SectorArea> {
         require(segmentLengthKm > 0.0) { "Segment length must be positive" }
@@ -124,8 +90,7 @@ data class PolylineArea(
             current += end
             if (accumulated >= segmentLengthKm) {
                 chunks += current
-                // Overlap by one waypoint: otherwise a strip right in
-                // between would be left unsearched.
+                // Overlap by one waypoint.
                 current = mutableListOf(end)
                 accumulated = 0.0
             }
@@ -140,15 +105,10 @@ data class PolylineArea(
     }
 
     companion object {
-        /** Below this, the destination is reached — nothing left to look ahead to. */
+        /** Below this, the destination is reached. */
         private const val MINIMUM_REMAINING_KM = 0.05
 
-        /**
-         * Segment length for [radialCover]. 40 km produces circles of a good
-         * 20 km radius: small enough that a source's result cap doesn't kick
-         * in, large enough that a highway trip is covered with a handful of
-         * queries.
-         */
+        /** Segment length for [radialCover]; small enough that a source's result cap doesn't kick in. */
         const val DEFAULT_SEGMENT_KM = 40.0
     }
 }

@@ -7,21 +7,14 @@ data class Place(
     /** Full description to distinguish places with the same name. */
     val description: String,
     val position: LatLon,
-    /** Broken-down address where the source knows one — same-name towns need it. */
+    /** Broken-down address where the source knows one. */
     val address: Address? = null,
 )
 
-/**
- * Resolves typed-in destinations to coordinates.
- *
- * Its own port because route calculation only works between coordinates, and
- * the driver doesn't enter those. Nominatim by default; later the same
- * interface against a self-hosted instance (ARCHITECTURE.md, open item 5).
- */
+/** Resolves typed-in destinations to coordinates. */
 interface Geocoder {
     /**
-     * @param near biases toward nearby results — otherwise "Hauptbahnhof" is
-     *   ambiguous. Not a hard filter: a destination may lie arbitrarily far away.
+     * @param near biases toward nearby results. Not a hard filter.
      */
     suspend fun search(query: String, near: LatLon? = null, limit: Int = DEFAULT_LIMIT): List<Place>
 

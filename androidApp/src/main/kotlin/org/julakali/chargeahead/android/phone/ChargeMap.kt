@@ -63,20 +63,14 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.OperatorShortName
 
 /**
- * The real map (decision 2026-09-07: Google Maps Compose — the key was
- * available and the hand-off targets Google Maps anyway). Everything the
- * placeholder showed, now on tiles: charging stops as markers, the planned
- * route as a line, the own position via the Maps location layer.
- *
- * Without a `googleMapsApiKey` in `local.properties` the Maps SDK renders a
- * blank grey nothing — worse than honest. The callers therefore fall back to
- * [MapCanvas] via [hasGoogleMapsKey], same philosophy as the demo data.
+ * The Google map. Without a `googleMapsApiKey` in `local.properties` the
+ * callers fall back to [MapCanvas].
  */
 val hasGoogleMapsKey: Boolean get() = BuildConfig.HAS_GOOGLE_MAPS_KEY
 
 private fun LatLon.toLatLng() = LatLng(lat, lon)
 
-/** A charger prepared for the map: its icon and position resolved off the recomposition path. */
+/** A charger with its icon and position resolved. */
 private class ChargerMarker(
     val charger: org.julakali.chargeahead.shared.MapCharger,
     val position: LatLng,
@@ -85,9 +79,7 @@ private class ChargerMarker(
 
 /**
  * Home map: viewport-driven. The map reports every settled camera position
- * upward (`null` below [MIN_CHARGER_ZOOM]); the caller loads the chargers for
- * it and passes them back down. No coupling to the car's corridor feature —
- * the map shows what the camera looks at, not what lies in driving direction.
+ * upward (`null` below [MIN_CHARGER_ZOOM]); the caller passes the chargers back down.
  */
 @Composable
 fun HomeGoogleMap(
@@ -108,8 +100,7 @@ fun HomeGoogleMap(
         )
     }
 
-    // Debounced camera-idle: load once the camera settles, not per frame of
-    // a fling. Also fires for the initial position.
+    // Load once the camera settles. Also fires for the initial position.
     LaunchedEffect(cameraPositionState.isMoving) {
         if (cameraPositionState.isMoving) return@LaunchedEffect
         kotlinx.coroutines.delay(350)
@@ -128,10 +119,7 @@ fun HomeGoogleMap(
         )
     }
 
-    // Follow the first fix, then leave the camera to the user — a map that
-    // keeps snapping back is unusable for looking around. Saved across
-    // navigation: coming back from a full-screen page must not re-snap to the
-    // fix and yank the camera away from where the driver left it.
+    // Follow the first fix, then leave the camera to the user.
     var followedFirstFix by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(position != null) {
         val target = position ?: return@LaunchedEffect
@@ -145,15 +133,11 @@ fun HomeGoogleMap(
 
     val scope = rememberCoroutineScope()
 
-    // Each distinct pill (speed + operator label) is rasterized once into a
-    // BitmapDescriptor and reused as a plain Marker icon — so a few hundred
-    // markers cost a handful of rasters, not one per marker (which froze the UI).
+    // Each distinct pill (speed + operator label) is rasterized once and reused.
     val density = LocalDensity.current
     val iconCache = remember { mutableMapOf<PillKey, BitmapDescriptor>() }
 
-    // Build each marker's key, icon and LatLng once per charger-list change, not
-    // once per recomposition of the map content (that ran ChargeSpeed/operator
-    // lookups for a few hundred markers every frame the map redrew).
+    // Built once per charger-list change, not per recomposition.
     val markers = remember(chargers, density) {
         chargers.map { charger ->
             val pillKey = PillKey(
@@ -174,9 +158,7 @@ fun HomeGoogleMap(
         GoogleMap(
             cameraPositionState = cameraPositionState,
             properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
-            // The SDK's own buttons render at the map's top edge — on a
-            // fullscreen map that's inside the status bar, unreachable. Our
-            // replacements sit below, top right.
+            // The SDK's own buttons would sit inside the status bar; ours replace them.
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
                 myLocationButtonEnabled = false,
@@ -205,9 +187,7 @@ fun HomeGoogleMap(
                 .padding(12.dp),
         ) {
             SmallFloatingActionButton(
-                // With a position, center on it. Without one, the button used
-                // to do nothing at all — no request, no feedback, which is
-                // exactly what issue #36 reported. Now it asks for a fix.
+                // With a position, center on it; otherwise ask for a fix.
                 onClick = {
                     val target = position
                     if (target == null) {
@@ -222,10 +202,7 @@ fun HomeGoogleMap(
                 },
                 containerColor = MaterialTheme.colorScheme.surface,
             ) {
-                // Spinning crosshair while location is running but has nothing
-                // yet — the difference between "working on it" and "idle" was
-                // invisible before (issue #36). Same footprint as the icon, so
-                // the button doesn't resize under the finger.
+                // Spinning crosshair while location is running but has nothing yet.
                 if (searchingLocation) {
                     CircularProgressIndicator(
                         strokeWidth = 2.dp,
@@ -259,16 +236,11 @@ fun HomeGoogleMap(
                     imageVector = Icons.Filled.Navigation,
                     contentDescription = stringResource(R.string.map_compass),
                     tint = Color(0xFFD93025),
-                    // Counter-rotated like a real compass needle: it points
-                    // north however the map is turned. In graphicsLayer, not
-                    // Modifier.rotate, so reading the camera bearing invalidates
-                    // the draw, not the whole composable, every pan frame.
+                    // Counter-rotated to point north. graphicsLayer, so only the draw is invalidated.
                     modifier = Modifier.graphicsLayer { rotationZ = -cameraPositionState.position.bearing },
                 )
             }
-            // A charger source is being asked over the network. Faded rather
-            // than inserted, so the column never jumps; centered under the
-            // compass.
+            // A charger source is being asked over the network.
             AnimatedVisibility(
                 visible = loadingSites,
                 enter = fadeIn(),
@@ -312,8 +284,7 @@ fun TripGoogleMap(
 ) {
     val cameraPositionState = rememberCameraPositionState()
 
-    // Convert the (potentially long) route once per route change, not on every
-    // recomposition of the map content.
+    // Converted once per route change.
     val routeLatLngs = remember(routePoints) { routePoints.map { it.toLatLng() } }
 
     LaunchedEffect(routeLatLngs) {
@@ -358,11 +329,11 @@ fun TripGoogleMap(
     }
 }
 
-/** Frankfurt — dead center of the target market, only shown before the first fix. */
+/** Frankfurt, shown before the first fix. */
 private val FALLBACK_CENTER = LatLon(50.11, 8.68)
 private const val HOME_ZOOM = 11f
 
-/** Below this, no chargers load and none show — the map stays clean and cheap. */
+/** Below this, no chargers load. */
 const val MIN_CHARGER_ZOOM = 10f
 private const val BOUNDS_PADDING_PX = 120
 

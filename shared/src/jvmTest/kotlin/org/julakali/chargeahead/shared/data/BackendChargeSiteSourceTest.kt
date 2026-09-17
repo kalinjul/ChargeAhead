@@ -20,11 +20,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Checks the mapping against canned responses of the shape the contract
- * module defines. That the deployed backend actually answers this way is a
- * separate question — see [BackendChargeSiteLiveContractTest].
- */
+/** Checks the mapping against canned responses of the shape the contract module defines. */
 class BackendChargeSiteSourceTest {
 
     private val area = SectorArea.circle(LatLon(48.9331, 11.4779), radiusKm = 150.0)
@@ -99,7 +95,7 @@ class BackendChargeSiteSourceTest {
         assertTrue(sites.isEmpty())
     }
 
-    /** The corridor goes as one polyline; splitting it into circles is the server's job now. */
+    /** The corridor goes as one polyline. */
     @Test
     fun aCorridorTravelsAsAPolyline() = runBlocking {
         var sent = ""

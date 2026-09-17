@@ -1,13 +1,8 @@
 package org.julakali.chargeahead.shared.domain
 
 /**
- * Common EV models as presets for the garage.
- *
- * ROADMAP open item 4 names the trade-off: every facelift makes an entry
- * stale, and a wrong preset is worse than none because nobody double-checks
- * it. The presets are therefore only a starting point — battery and
- * consumption land in an editable [VehicleProfile], and consumption in
- * particular is meant to be adjusted per driver (nobody drives the WLTP value).
+ * Common EV models as presets for the garage. Only a starting point: the
+ * values land in an editable [VehicleProfile].
  */
 data class VehiclePreset(
     val name: String,
@@ -19,8 +14,7 @@ data class VehiclePreset(
         displayName = name,
         usableBatteryKwh = usableBatteryKwh,
         consumptionKwhPer100Km = consumptionKwhPer100Km,
-        // CCS is the fast-charging standard in Europe; presets that need
-        // something else (older Leaf: CHAdeMO) don't belong in this list.
+        // Presets are CCS-only.
         acceptedConnectors = setOf(ConnectorType.CCS2),
         dcPeakPowerKw = dcPeakPowerKw,
     )

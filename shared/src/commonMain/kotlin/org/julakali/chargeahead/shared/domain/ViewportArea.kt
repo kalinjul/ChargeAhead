@@ -1,12 +1,6 @@
 package org.julakali.chargeahead.shared.domain
 
-/**
- * What a map currently shows — the search area for viewport-driven loading.
- *
- * Unlike [SectorArea] and [PolylineArea], this one has no relation to driving:
- * the user aimed the camera at it, that's the whole semantic. The phone map
- * queries with this on camera idle; the car never does.
- */
+/** What a map currently shows — the search area for viewport-driven loading. */
 data class ViewportArea(
     override val boundingBox: BoundingBox,
 ) : SearchArea {

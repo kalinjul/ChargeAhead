@@ -6,16 +6,12 @@ import org.julakali.chargeahead.shared.domain.bearingDegTo
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 
 /**
- * Fills in missing or unusable course data (ARCHITECTURE.md 5.3, step 1).
+ * Fills in missing or unusable course data.
  *
- * While stationary, GPS receivers either report no course at all, or one that
- * is purely measurement noise and jumps by 180° within seconds. Either would
- * make the corridor swing around wildly. So the receiver's course is trusted
- * only above a minimum speed; below that it is derived from the distance
- * traveled, and otherwise the last known course is kept.
+ * The receiver's course is trusted only above a minimum speed; below that it
+ * is derived from the distance traveled, otherwise the last known course is kept.
  *
- * Not thread-safe — one instance per feature instance, used only from within
- * its own collect loop.
+ * Not thread-safe.
  */
 class CourseTracker(
     private val minSpeedMps: Double = MIN_TRUSTED_SPEED_MPS,

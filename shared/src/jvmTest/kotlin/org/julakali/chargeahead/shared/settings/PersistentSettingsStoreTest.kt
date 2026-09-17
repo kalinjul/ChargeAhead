@@ -71,8 +71,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aHalfProfileInStorage_countsAsNone() {
-        // A vehicle with a battery but no consumption figure breaks the
-        // range formula — better no profile at all than that.
+        // A partial profile is treated as no profile.
         val batteryOnly = InMemoryKeyValueStorage(
             mapOf("vehicle.usableBatteryKwh" to "77.0", "vehicle.displayName" to "Halb"),
         )
@@ -101,8 +100,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun anUnknownConnectorTypeInStorage_doesNotCostTheWholeProfile() = runBlocking {
-        // Otherwise an older app version would lose the whole profile on a
-        // rollback just because it contains a single new enum value.
+        // Unknown connector names are skipped.
         val storage = InMemoryKeyValueStorage(
             mapOf(
                 "vehicle.usableBatteryKwh" to "77.0",
@@ -162,7 +160,6 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun deletingADestination_keepsTheHistory() = runBlocking {
-        // Otherwise the driver would have to retype it after every trip.
         val store = PersistentSettingsStore(InMemoryKeyValueStorage())
         store.setDestination(munich)
 
@@ -197,8 +194,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aNameWithSpecialCharacters_survivesSaving() = runBlocking {
-        // Place names contain commas, quotes, and line breaks — hence JSON
-        // instead of a hand-rolled delimiter.
+        // Place names may contain commas, quotes, and line breaks.
         val storage = InMemoryKeyValueStorage()
         val tricky = Destination("St. Peter-Ording, \"Nord\"; Zeile\nZwei", LatLon(54.3, 8.6))
         PersistentSettingsStore(storage).setDestination(tricky)
@@ -219,8 +215,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aNewStore_hasTheNetworkFilterSwitchedOn() {
-        // Default on, so a first selection takes effect immediately — without
-        // a selection isActive stays false and nothing is filtered anyway.
+        // Default on, so a first selection takes effect immediately.
         val store = PersistentSettingsStore(InMemoryKeyValueStorage())
 
         assertTrue(store.networks.value.onlyPreferred)

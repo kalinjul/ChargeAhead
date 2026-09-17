@@ -23,12 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/**
- * The mockup's `.sheet`: opens half-height, drags up to fullscreen. The
- * expansion is native ModalBottomSheet behavior — content taller than half
- * the screen starts partially expanded; below-the-fold sections are the
- * mockup's `.fullonly`.
- */
+/** Bottom sheet: opens half-height, drags up to fullscreen. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSheet(onDismissRequest: () -> Unit, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
@@ -44,20 +39,14 @@ fun AppSheet(onDismissRequest: () -> Unit, modifier: Modifier = Modifier, conten
                     .background(MaterialTheme.colorScheme.outlineVariant, CircleShape),
             )
         },
-        // Top inset only: the default also padded the bottom, doubling our own
-        // navigationBarsPadding into a white bar under the list. The status bar
-        // must be handled HERE and not via Modifier.statusBarsPadding — a
-        // displaced surface breaks the sheet's internal offset math, which
-        // shows up as a white band at the bottom while dragging.
+        // Top inset only, and here rather than via Modifier.statusBarsPadding,
+        // which breaks the sheet's offset math.
         contentWindowInsets = { WindowInsets.statusBars },
         modifier = modifier,
     ) {
         Column(
             verticalArrangement = Arrangement.spacedBy(14.dp),
-            // No bottom padding here: it would end the scroll viewport 48dp
-            // above the sheet's edge — a dead white strip under every list.
-            // Lists bring their own inset via [sheetListPadding]; static
-            // endings pad themselves.
+            // No bottom padding: lists bring their own via [sheetListPadding].
             modifier = Modifier
                 .padding(horizontal = 18.dp)
                 .imePadding(),

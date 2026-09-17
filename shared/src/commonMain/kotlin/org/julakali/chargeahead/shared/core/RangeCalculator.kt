@@ -4,7 +4,7 @@ import org.julakali.chargeahead.shared.domain.DEFAULT_RESERVE_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 
 /**
- * Remaining range and arrival charge level (ARCHITECTURE.md section 5.1).
+ * Remaining range and arrival charge level.
  *
  * ```
  * available_kWh = usableBatteryKwh × (soc − reserveSoc) / 100
@@ -14,11 +14,7 @@ import org.julakali.chargeahead.shared.domain.VehicleProfile
 object RangeCalculator {
 
     /**
-     * Drivable distance down to the reserve, in kilometers.
-     *
-     * Never negative: below the reserve, range is zero, not "minus 40 km". A
-     * negative value would propagate through reachability classification and
-     * into the list.
+     * Drivable distance down to the reserve, in kilometers. Never negative.
      */
     fun rangeKm(
         vehicle: VehicleProfile,
@@ -33,9 +29,8 @@ object RangeCalculator {
     /**
      * Charge level on arrival, in percent.
      *
-     * Relative to the full battery, not to the portion above the reserve —
-     * the driver reads off the same number their car's own display shows. It
-     * may therefore drop below the reserve; it may not drop below zero.
+     * Relative to the full battery, not to the portion above the reserve, so
+     * it may drop below the reserve, but not below zero.
      */
     fun socOnArrivalPercent(
         vehicle: VehicleProfile,

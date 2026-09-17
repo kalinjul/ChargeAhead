@@ -8,9 +8,7 @@ data class Network(
 )
 
 /**
- * The curated, shipped list of selectable charging networks — bundled so the
- * picker is populated on first launch, offline. Mirrors [VehicleCatalog]: a
- * maintained in-source list, updated by app release.
+ * The curated, shipped list of selectable charging networks.
  *
  * Not the same as [org.julakali.chargeahead.shared.data.OperatorCatalog], which reads
  * operator names already in the local cache.
@@ -1006,7 +1004,7 @@ object NetworkCatalog {
             setOf("timeparkno")),
 
         // --- Bnetza-only operators (>=50 stations, no OCM id), matched by
-        // free-text Betreiber keyword; see GitHub issue #31. ---
+        // free-text Betreiber keyword. ---
         Network("wirelane-public-1", "Wirelane Public 1",
             setOf(),
             setOf("wirelane public 1")),
@@ -1501,13 +1499,7 @@ object NetworkCatalog {
 
     fun byKey(key: String): Network? = byKeyMap[key]
 
-    /**
-     * Keys this catalog used to give a network, mapped to the current one.
-     * A stored selection is read through [currentKey]: a key that no longer
-     * names anything is silently dropped from the picker, so renaming one
-     * without this would take the network out of every install that had it
-     * ticked.
-     */
+    /** Keys this catalog used to give a network, mapped to the current one (see [currentKey]). */
     private val renamedKeys: Map<String, String> = mapOf("ewe" to "ewe-go", "blink-charging-uk" to "blink-charging")
 
     fun currentKey(storedKey: String): String = renamedKeys[storedKey] ?: storedKey

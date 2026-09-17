@@ -14,8 +14,7 @@ class DemoSiteSourceTest {
 
     @Test
     fun returnsSitesRelativeToTheAreaOrigin() = runBlocking {
-        // Fixed coordinates would only be visible in one spot on Earth, and
-        // empty of all places on the test rig.
+        // Sites are placed relative to the queried area.
         val nurembergArea = SectorArea.circle(LatLon(49.2, 11.2), radiusKm = 150.0)
         val berlinArea = SectorArea.circle(LatLon(52.5, 13.4), radiusKm = 150.0)
 

@@ -22,28 +22,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-/**
- * Location source for Android via Google Play Services.
- *
- * Permission is not requested here — only the UI layer can do that, and in
- * Android Auto it goes through `CarContext.requestPermissions`. If it's
- * missing, the call throws a `SecurityException`; the flow then terminates
- * and the feature reports `LOCATION_UNAVAILABLE`. A silently empty flow would
- * be worse: it would look like "no location yet" and wait forever.
- *
- * Nor are the device's location *settings* checked here — that needs an
- * Activity to show the resolution dialog, so it lives in the phone UI
- * (`LocationSettings`) and is built from [locationRequest], the same request
- * this source subscribes with.
- */
 class FusedLocationSource(
     context: Context,
     private val intervalMillis: Long = DEFAULT_INTERVAL_MILLIS,
     private val minDistanceMeters: Float = DEFAULT_MIN_DISTANCE_METERS,
 ) : LocationSource {
 
-    // Application context, because the flow can outlive the lifetime of a
-    // screen or an Activity.
     private val client = LocationServices.getFusedLocationProviderClient(context.applicationContext)
 
     @SuppressLint("MissingPermission")
@@ -59,9 +43,7 @@ class FusedLocationSource(
         try {
             // Seed from what the platform already knows, before subscribing.
             // Without it the map shows nothing at all until the first streamed
-            // fix — and with Google Location Accuracy off and no sky in view,
-            // that can be never (issue #36). A stale fix beats an empty map;
-            // the stream corrects it as soon as it has something better.
+            // fix
             client.lastLocation.awaitOrNull()?.let { trySend(it.toFix()) }
 
             client.requestLocationUpdates(request, callback, Looper.getMainLooper())
@@ -75,10 +57,6 @@ class FusedLocationSource(
 
     /**
      * The cached fix if there is one, otherwise a freshly computed one.
-     *
-     * `getCurrentLocation` is the one call that actively powers up the
-     * hardware for a single answer — that is what makes the location button
-     * do something on a device that has no fix yet.
      */
     @SuppressLint("MissingPermission")
     override suspend fun currentFix(): Fix? {
@@ -110,10 +88,7 @@ class FusedLocationSource(
     )
 
     companion object {
-        /**
-         * 5 s at highway speed is roughly 180 m. Finer resolution wouldn't
-         * help: recalculation only kicks in after 2 km or 60 s anyway.
-         */
+        // TODO use Duration
         const val DEFAULT_INTERVAL_MILLIS = 5_000L
 
         /** Below 50 m, movement can't be distinguished from location inaccuracy. */
@@ -122,11 +97,6 @@ class FusedLocationSource(
         /** Anything older than this is not worth waiting out a fresh fix for. */
         private const val MAX_CACHED_AGE_MILLIS = 60_000L
 
-        /**
-         * The request this source subscribes with. Public because the phone's
-         * location-settings check has to ask about *this* request — asking
-         * about a different one would either miss a problem or invent one.
-         */
         fun locationRequest(
             intervalMillis: Long = DEFAULT_INTERVAL_MILLIS,
             minDistanceMeters: Float = DEFAULT_MIN_DISTANCE_METERS,
@@ -139,12 +109,9 @@ class FusedLocationSource(
 
 /**
  * Awaits a Play Services task, `null` on failure.
- *
- * Play Services ships its own `Task`; awaiting it without
- * kotlinx-coroutines-play-services is a listener pair, and that's cheaper
- * than pulling in the dependency for two call sites. A failed location task
- * is not exceptional — it means "no location", and every caller here treats
+ *A failed location task is not exceptional — it means "no location", and every caller here treats
  * it that way.
+ * // TODO use kotlinx-coroutines-play-services instead
  */
 internal suspend fun <T> Task<T>.awaitOrNull(): T? = suspendCancellableCoroutine { continuation ->
     addOnSuccessListener { result -> continuation.resume(result) }

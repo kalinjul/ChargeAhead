@@ -8,11 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /**
- * Whether one of the app's activities is visible on the phone.
- *
- * The car UI needs to know: Android only lets the app open another app on
- * the phone while it is visible there. A car session alone doesn't count,
- * and a blocked launch fails silently.
+ * Whether one of the app's activities is visible on the phone. Android only
+ * lets the app open another app while it is visible there.
  */
 object PhoneUiVisibility : Application.ActivityLifecycleCallbacks {
 

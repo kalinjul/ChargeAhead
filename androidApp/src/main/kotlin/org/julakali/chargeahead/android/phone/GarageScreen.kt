@@ -40,9 +40,7 @@ import kotlin.math.roundToInt
 
 /**
  * The garage: pick, add, remove vehicles; adjust consumption and charge level
- * for the selected one. Presets come from [VehicleCatalog]; consumption is a
- * slider because the spec-sheet value is a starting point, not the truth —
- * every driver is different.
+ * for the selected one.
  */
 @Composable
 fun GarageRoute(
@@ -85,8 +83,7 @@ fun GarageScreen(
     val selected = uiState.selected
     var deleteMode by remember { mutableStateOf(false) }
 
-    // The same editor the plan sheet and the trip's start row open, on the
-    // level that has to be left over instead of the one to start from.
+    // Arrival level editor.
     uiState.arrivalSocInput?.let { input ->
         SocEditDialog(
             value = input,
@@ -182,8 +179,7 @@ private fun SelectedVehiclePanel(
             ),
         )
 
-        // Each slider keeps its drag state inside its own card, so dragging one
-        // doesn't recompose the specs grid (and re-scan the catalog) every frame.
+        // Each slider keeps its drag state inside its own card.
         ConsumptionCard(vehicle = vehicle, onSelect = onSelect)
         SocCard(socPercent = socPercent, socFromCar = socFromCar, onSocChange = onSocChange)
         ArrivalSocCard(percent = arrivalSocPercent, onEdit = onArrivalSocEdit)
@@ -196,8 +192,7 @@ private fun SelectedVehiclePanel(
 
 @Composable
 private fun ConsumptionCard(vehicle: VehicleProfile, onSelect: (VehicleProfile) -> Unit) {
-    // Slider commits on release, not on every pixel: each commit rewrites the
-    // garage entry and would otherwise spam the settings store.
+    // Slider commits on release.
     var consumption by remember(vehicle.displayName) {
         mutableStateOf(vehicle.consumptionKwhPer100Km.toFloat())
     }
@@ -209,9 +204,7 @@ private fun ConsumptionCard(vehicle: VehicleProfile, onSelect: (VehicleProfile) 
                 style = MaterialTheme.typography.titleSmall.tabular,
             )
             AppSlider(
-                // Snap to half a kWh: nobody tunes their consumption to the
-                // third decimal, and a clean value keeps the advanced screen's
-                // field from showing 17.834.
+                // Snap to half a kWh.
                 value = consumption,
                 onValueChange = { consumption = (it * 2).roundToInt() / 2f },
                 onValueChangeFinished = {
@@ -250,11 +243,7 @@ private fun SocCard(socPercent: Double?, socFromCar: Boolean, onSocChange: (Doub
     }
 }
 
-/**
- * How full the battery should still be at the destination — a preference, not
- * a per-trip entry, so it lives with the car rather than in the plan sheet.
- * Tapping opens the shared charge-level dialog.
- */
+/** How full the battery should still be at the destination. Tapping opens the charge-level dialog. */
 @Composable
 private fun ArrivalSocCard(percent: Double, onEdit: () -> Unit) {
     AppCard(onClick = onEdit) {

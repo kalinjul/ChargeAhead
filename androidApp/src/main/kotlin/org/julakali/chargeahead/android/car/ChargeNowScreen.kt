@@ -33,8 +33,7 @@ class ChargeNowScreen(
     private val planning: PlanningFeature,
 ) : Screen(carContext) {
 
-    // onGetTemplate() is synchronous and therefore only reads the last
-    // remembered state; changes are picked up via invalidate().
+    // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var result: ChargeNowResult? = null
 
     init {
@@ -60,14 +59,13 @@ class ChargeNowScreen(
                 .build()
         }
 
-        // The row count is dictated by the host, not the app (AGENTS.md).
+        // The row count is dictated by the host.
         val contentLimit = carContext
             .getCarService(ConstraintManager::class.java)
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
 
         val itemList = ItemList.Builder()
-        // The relax notice costs one of the precious rows — deliberately: a
-        // list that silently ignores the driver's filters would be worse.
+        // The relax notice costs one of the rows.
         val relaxedRow = relaxedRow(current)
         val roomForCandidates = if (relaxedRow == null) contentLimit else contentLimit - 1
         candidates.take(roomForCandidates).forEach { itemList.addItem(candidateRow(it)) }
@@ -95,8 +93,7 @@ class ChargeNowScreen(
         .setTitle(candidate.site.name)
         .addText(ChargeStopFormatter.chargeNowPrimaryLine(candidate))
         .addText(ChargeStopFormatter.chargeNowSecondaryLine(candidate))
-        // IMAGE_TYPE_ICON: only icons declared tintable get recolored by the
-        // host — untinted ones stay black on a dark theme.
+        // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
         .setImage(icon(R.drawable.ic_charge_pin), Row.IMAGE_TYPE_ICON)
         .setOnClickListener { navigateTo(carContext, candidate.site.name, candidate.site.position) }
         .build()

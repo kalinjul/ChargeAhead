@@ -15,10 +15,8 @@ import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 
 /**
- * One session per connection to the car host. The feature is created here and
- * shared by all screens: they plan on demand against the same location, charge
- * state, and settings, and it dies with the session. Everything beneath it —
- * repository, database, HTTP client — is the app graph's, shared with the phone.
+ * One session per connection to the car host. The feature is created here,
+ * shared by all screens, and dies with the session.
  */
 class ChargeSession : Session(), KoinComponent {
 
@@ -28,8 +26,7 @@ class ChargeSession : Session(), KoinComponent {
         val permissions = CarPermissions(carContext)
         val energyLevels = CarEnergyLevels(carContext, permissions, lifecycleScope)
 
-        // The car's own feature: additionally the vehicle's charge state, if
-        // the head unit provides one.
+        // The car's own feature, with the vehicle's charge state.
         val feature = getKoin().newChargeStopsFeature(
             locationSource = FusedLocationSource(carContext),
             hardwareSoCSource = RememberingSoCSource(
@@ -42,8 +39,7 @@ class ChargeSession : Session(), KoinComponent {
             ),
         )
 
-        // Side channel for the phone's debug view: record whatever this head
-        // unit delivers, for as long as the session lives.
+        // For the phone's debug view.
         val recorder = CarHardwareDebugRecorder(
             carContext = carContext,
             time = time,
@@ -54,8 +50,7 @@ class ChargeSession : Session(), KoinComponent {
         recorder.start()
         lifecycle.addObserver(object : DefaultLifecycleObserver {
             override fun onStart(owner: LifecycleOwner) {
-                // Permissions may have changed in the phone's settings while
-                // the car app was in the background.
+                // Permissions may have changed while in the background.
                 permissions.refresh()
             }
 

@@ -47,8 +47,6 @@ class RangeCalculatorTest {
 
     @Test
     fun range_belowTheReserve_isZeroNotNegative() {
-        // A negative range would otherwise propagate through the classification
-        // and into the list.
         assertEquals(0.0, RangeCalculator.rangeKm(vehicle, socPercent = 3.0))
     }
 
@@ -76,8 +74,7 @@ class RangeCalculatorTest {
 
     @Test
     fun arrivalSoc_mayFallBelowTheReserve() {
-        // The reserve limits the range, not the display: this is the number
-        // the driver reads, matching what their car itself shows.
+        // The reserve limits the range, not the display.
         val soc = RangeCalculator.socOnArrivalPercent(vehicle, socPercent = 20.0, distanceKm = 60.0)
 
         assertTrue(soc < 10.0 && soc > 0.0, "Was $soc")

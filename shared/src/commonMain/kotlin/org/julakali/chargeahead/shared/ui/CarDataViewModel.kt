@@ -11,10 +11,7 @@ import kotlinx.coroutines.flow.stateIn
 /** Everything the car hardware last delivered, one entry per data point. */
 data class CarDataUiState(val points: List<CarDataPoint> = emptyList())
 
-/**
- * The car-data debug view: written by the Android Auto session, read here at
- * the desk afterwards. Read-only — this screen changes nothing.
- */
+/** The read-only car-data debug view. */
 class CarDataViewModel(
     settings: SettingsStore,
 ) : ViewModel() {

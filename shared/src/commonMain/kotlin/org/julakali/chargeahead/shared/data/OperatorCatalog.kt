@@ -14,8 +14,7 @@ class OperatorCatalog(database: ChargeSiteDatabase) {
 
     suspend fun options(): List<OperatorOption> =
         OperatorOptions.fromCounts(
-            // The query filters IS NOT NULL, but Room can't see that through
-            // the projection — hence the mapNotNull instead of a map.
+            // The query filters IS NOT NULL, but Room can't see that.
             dao.operatorCounts().mapNotNull { row -> row.operator?.let { it to row.sites.toInt() } },
         )
 }

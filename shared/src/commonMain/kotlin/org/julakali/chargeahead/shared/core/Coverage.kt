@@ -15,12 +15,7 @@ import kotlin.math.max
 /**
  * Which part of the map a fetch actually answered for.
  *
- * The sources return the *shape* they were asked for — a circle, a route
- * buffer — never its bounding box. Recording the box claimed areas as
- * checked that nobody had queried, and later queries there were served an
- * incomplete store: after planning a diagonal route, ~85 % of its box counted
- * as checked. So the rule is the conservative one — recording too little
- * costs a refetch, recording too much hides chargers:
+ * Sources return the shape they were asked for, not its bounding box, so:
  *
  * - A fetch records only the tiles its shape **fully contains** ([tilesToRecord]).
  * - A query needs every tile its shape **touches** ([isCovered]).
@@ -40,16 +35,13 @@ object Coverage {
                 Tiles.boundsOf(tile).corners().all { fetched.origin.distanceKmTo(it) <= fetched.radiusKm }
             }
         } else {
-            // Fetches are full circles (SectorArea.prefetchArea); recording
-            // nothing for a partial sector is merely conservative.
             emptyList()
         }
 
         is ViewportArea -> Tiles.covering(fetched.boundingBox).filter { fetched.boundingBox.contains(Tiles.boundsOf(it)) }
 
         // The buffer around one segment is convex, so a tile counts if all its
-        // corners lie within the buffer of the same segment. Below half a tile
-        // height no tile can fit — the usual 2–3 km route buffer skips the loop.
+        // corners lie within the buffer of the same segment.
         is PolylineArea -> if (2.0 * fetched.bufferKm < TILE_HEIGHT_KM) {
             emptyList()
         } else {
@@ -81,8 +73,6 @@ object Coverage {
 
     private fun tilesTouchedBy(sector: SectorArea): List<Tiles.Tile> {
         val tiles = Tiles.covering(sector.boundingBox)
-        // A partial sector's box is spanned over its arc — close enough, and
-        // requiring more tiles than necessary is the safe direction.
         if (sector.halfAngleDeg < 180.0) return tiles
         return tiles.filter { tile ->
             val bounds = Tiles.boundsOf(tile)
@@ -114,16 +104,13 @@ object Coverage {
             }
         }
         if (inCorridor) return true
-        // The box around the piece's buffer — more tiles than the buffer
-        // touches, never fewer.
         val box = BoundingBox.enclosing(listOf(start, end)).expandedBy(bufferKm)
         return Tiles.covering(box).all { it in freshTiles }
     }
 
     /**
      * The route in pieces of at most [PIECE_KM], so a route stitched together
-     * from several fetches — the planner fetches in chunks — still counts as
-     * covered.
+     * from several fetches still counts as covered.
      */
     private fun PolylineArea.pieces(): List<Pair<LatLon, LatLon>> =
         points.zipWithNext().flatMap { (start, end) ->
@@ -146,17 +133,9 @@ object Coverage {
     /** Short enough that a gap between two fetches is never bridged by a piece. */
     private const val PIECE_KM = 1.0
 
-    /**
-     * The nearest point of a tile is taken on the degree grid, not the great
-     * circle. Half a kilometre more makes up for that and only ever asks for
-     * an extra tile.
-     */
+    /** Makes up for taking the nearest tile point on the degree grid, not the great circle. */
     private const val TOUCH_SLACK_KM = 0.5
 
-    /**
-     * Rounding room for a route checked against itself: [PolylineArea.aheadOf]
-     * starts at an interpolated point that sits on the stored segment only up
-     * to floating-point error. Ten metres is far below any buffer.
-     */
+    /** Rounding room for a route checked against itself (see [PolylineArea.aheadOf]). */
     private const val SAME_LINE_TOLERANCE_KM = 0.01
 }

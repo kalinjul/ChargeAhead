@@ -13,18 +13,12 @@ import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Reachability
 import kotlin.math.round
 
-/**
- * Formats numbers so that Android Auto and CarPlay are guaranteed to show the
- * same lines (see AGENTS.md). Avoids java.lang.String.format so the code also
- * compiles for Kotlin/Native (iOS).
- */
+/** Shared display strings, so Android Auto and CarPlay show the same lines. */
 object ChargeStopFormatter {
 
     /** e.g. "8.4 km · CCS 150 kW" or "12 km · CCS 150 kW". */
     fun primaryLine(stop: ChargeStop): String {
         val distancePart = formatDistanceKm(stop.distanceKm)
-        // The planner already picked the connector this vehicle can use.
-        // Without a profile there is no such choice, so power wins instead.
         val connector = stop.primaryConnector ?: strongestConnector(stop.site.connectors)
         return if (connector != null) {
             "$distancePart · ${connectorTypeLabel(connector.type)} ${formatPowerKw(connector.maxPowerKw)} kW"
@@ -43,18 +37,12 @@ object ChargeStopFormatter {
                 Reachability.REACHABLE -> "Erreichbar"
                 Reachability.MARGINAL -> "Knapp"
                 Reachability.UNREACHABLE -> "Nicht erreichbar"
-                // Without a vehicle profile there is nothing to classify. Rather
-                // than assert a classification, fall back to the one number that
-                // actually is known: how many charge points are there.
                 Reachability.UNKNOWN -> connectorSummary(stop)
             }
         }
     }
 
-    /**
-     * Never empty: this line has a fixed slot in both car UIs, and an empty
-     * line reads as an app bug.
-     */
+    /** Never empty: this line has a fixed slot in both car UIs. */
     private fun connectorSummary(stop: ChargeStop): String =
         chargePointSummary(stop.site) ?: "Ladepunkte unbekannt"
 
@@ -73,15 +61,12 @@ object ChargeStopFormatter {
             .takeIf { it.isNotBlank() }
     }
 
-    /**
-     * The structured address when it says more than the name again — otherwise
-     * the description chain, which is what tells two same-name towns apart.
-     */
+    /** The structured address when it says more than the name, otherwise the description chain. */
     fun detailLine(place: Place): String? =
         place.address?.takeIf { it.street != null || it.postalCode != null }?.let(::addressLine)
             ?: place.description.removePrefix("${place.name}, ").takeIf { it != place.name }
 
-    /** e.g. "Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg" — what a picked result leaves in the search field. */
+    /** e.g. "Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg". */
     fun label(place: Place): String = listOfNotNull(place.name, detailLine(place)).joinToString(", ")
 
     fun label(destination: Destination): String =
@@ -89,9 +74,6 @@ object ChargeStopFormatter {
 
     /**
      * Every connector individually, strongest first — e.g. "CCS 300 kW · 6 Ladepunkte".
-     *
-     * For the detail view. The list line shows only the strongest usable
-     * connector; whoever lands here wants to know what else is available.
      */
     fun connectorLines(stop: ChargeStop): List<String> =
         stop.site.connectors
@@ -111,9 +93,6 @@ object ChargeStopFormatter {
 
     /**
      * Where the data came from — e.g. "Bundesnetzagentur · OpenChargeMap".
-     *
-     * Belongs in the detail view because it signals reliability: officially
-     * reported data is not the same as community-maintained data.
      */
     fun sourceLine(stop: ChargeStop): String? =
         stop.site.sources
@@ -130,10 +109,7 @@ object ChargeStopFormatter {
 
     // --- Car rows: planned trip stops ---
 
-    /**
-     * e.g. "1. EnBW" — the operator, because the site name is often just the
-     * town and says nothing about where the driver can charge.
-     */
+    /** e.g. "1. EnBW" — the operator, because the site name is often just the town. */
     fun plannedStopTitle(ordinal: Int, stop: PlannedStop): String {
         val site = stop.site
         return "$ordinal. ${OperatorShortName.of(site.operator) ?: site.operator ?: site.name}"
@@ -146,7 +122,7 @@ object ChargeStopFormatter {
     fun plannedStopAddressLine(stop: PlannedStop): String? =
         addressLine(stop.site) ?: stop.site.name.takeIf { stop.site.operator != null }
 
-    /** e.g. "Nach 142 km · 150 kW · 18 → 80 % in 25 min" — short enough for an 800 px head unit. */
+    /** e.g. "Nach 142 km · 150 kW · 18 → 80 % in 25 min". */
     fun plannedStopDetailLine(stop: PlannedStop): String =
         "Nach ${formatDistanceKm(stop.kmFromStart)} · ${formatPowerKw(stop.maxPowerKw)} kW · " +
             "${formatWholeNumber(stop.arrivalSocPercent)} → ${formatWholeNumber(stop.departureSocPercent)} % " +
@@ -155,8 +131,7 @@ object ChargeStopFormatter {
     /** A bare distance for message texts, same rules as the row lines. */
     fun distanceLabel(distanceKm: Double): String = formatDistanceKm(distanceKm)
 
-    // Labels for lines a platform composes itself (the iOS phone rows) — so
-    // both phones show the digits and the comma the car rows already use.
+    // Labels for lines a platform composes itself.
 
     /** e.g. "150 kW". */
     fun powerKwLabel(powerKw: Double): String = "${formatPowerKw(powerKw)} kW"
@@ -185,9 +160,7 @@ object ChargeStopFormatter {
         ).joinToString(" · ")
 
     /**
-     * Total installed charge points — `null` when any connector lacks a count
-     * (OCM omits it for about half the sites); the row then simply drops the
-     * segment instead of showing a guessed sum.
+     * Total installed charge points — `null` when any connector lacks a count.
      */
     private fun chargePointSummary(site: ChargeSite): String? {
         val counts = site.connectors.map { it.count }
@@ -197,7 +170,7 @@ object ChargeStopFormatter {
         return if (total == 1) "1 Ladepunkt" else "$total Ladepunkte"
     }
 
-    // Rounded to 10 m — GPS isn't better, and "347 m" would suggest it is.
+    // Rounded to 10 m.
     private fun formatShortDistance(distanceKm: Double): String =
         if (distanceKm < 1.0) {
             "${round(distanceKm * 100.0).toLong() * 10} m"
@@ -205,11 +178,7 @@ object ChargeStopFormatter {
             formatDistanceKm(distanceKm)
         }
 
-    /**
-     * Display name of a connector type, also used by settings screens. Public
-     * so Android and iOS show the same labels as the in-car list — maintaining
-     * "CCS" and "Typ 2" twice would drift.
-     */
+    /** Display name of a connector type. */
     fun connectorLabel(type: ConnectorType): String = connectorTypeLabel(type)
 
     private fun connectorTypeLabel(type: ConnectorType): String = when (type) {
@@ -221,8 +190,7 @@ object ChargeStopFormatter {
         ConnectorType.UNKNOWN -> "Unbekannt"
     }
 
-    // One decimal below 10 km (otherwise the driver sees "0 km" right before the
-    // exit), whole numbers above — German decimal comma, without JVM formatting.
+    // One decimal below 10 km, whole numbers above — German decimal comma.
     private fun formatDistanceKm(distanceKm: Double): String {
         return if (distanceKm < 10.0) {
             val tenths = round(distanceKm * 10.0).toLong()
@@ -239,5 +207,5 @@ object ChargeStopFormatter {
     private fun formatWholeNumber(value: Double): String = round(value).toLong().toString()
 }
 
-/** Keeps the address apart from the name: the name alone titles saved routes, the address tells same-name places apart. */
+/** Keeps the address apart from the name. */
 fun Place.toDestination(): Destination = Destination(name, position, ChargeStopFormatter.detailLine(this))

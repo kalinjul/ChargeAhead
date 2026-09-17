@@ -21,16 +21,8 @@ import platform.darwin.NSObject
 /**
  * Location source for iOS via CoreLocation.
  *
- * NOT COMPILED AND NOT VERIFIED. On the development machine (Linux), the iOS
- * target isn't even configured (see shared/build.gradle.kts); this code has
- * never seen a compiler. On the first Mac build, check the cinterop
- * signatures in particular: how `CLLocationCoordinate2D` is read out as a
- * `CValue`, and what the delegate methods are actually named in the
- * generated Kotlin binding.
- *
- * `flowOn(Dispatchers.Main)` is not incidental: `CLLocationManager` only
- * delivers its callbacks to a thread with a running run loop. Without it the
- * flow would stay silent forever, with no error raised anywhere.
+ * `flowOn(Dispatchers.Main)`: `CLLocationManager` only delivers its callbacks
+ * to a thread with a running run loop.
  */
 class CoreLocationSource : LocationSource {
 
@@ -38,9 +30,7 @@ class CoreLocationSource : LocationSource {
     override val updates: Flow<Fix> = callbackFlow {
         val manager = CLLocationManager()
 
-        // CLLocationManager only holds its delegate weakly. The local
-        // reference must therefore stay alive until the end — it's touched
-        // again below in awaitClose for exactly that reason.
+        // CLLocationManager holds its delegate weakly; awaitClose keeps it alive.
         val delegate = object : NSObject(), CLLocationManagerDelegateProtocol {
 
             override fun locationManager(manager: CLLocationManager, didUpdateLocations: List<*>) {
@@ -49,8 +39,7 @@ class CoreLocationSource : LocationSource {
             }
 
             override fun locationManager(manager: CLLocationManager, didFailWithError: NSError) {
-                // Permission denial also arrives here. The flow terminates,
-                // the feature reports LOCATION_UNAVAILABLE.
+                // Permission denial also arrives here.
                 close(IllegalStateException(didFailWithError.localizedDescription))
             }
         }
@@ -72,8 +61,7 @@ class CoreLocationSource : LocationSource {
         val position = coordinate.useContents { LatLon(latitude, longitude) }
         return Fix(
             position = position,
-            // CoreLocation signals invalidity via negative values, not a
-            // dedicated flag — 0 is a valid value (north, or standing still).
+            // CoreLocation signals invalidity via negative values.
             bearingDeg = course.takeIf { it >= 0.0 },
             speedMps = speed.takeIf { it >= 0.0 },
             timestampMillis = (timestamp.timeIntervalSince1970 * 1000.0).toLong(),

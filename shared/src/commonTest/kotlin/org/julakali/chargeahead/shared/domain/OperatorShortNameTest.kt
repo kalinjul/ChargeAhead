@@ -8,7 +8,6 @@ class OperatorShortNameTest {
 
     @Test
     fun realWorldSpellingsAreShortened() {
-        // All observed in OpenChargeMap and the register, see OperatorKey.
         assertEquals("Ionity", OperatorShortName.of("IONITY GmbH"))
         assertEquals("EnBW", OperatorShortName.of("EnBW (D)"))
         assertEquals("Shell", OperatorShortName.of("Shell Recharge Solutions (DE)"))
@@ -20,7 +19,7 @@ class OperatorShortNameTest {
 
     @Test
     fun unknownNetworksStayUnlabeled() {
-        // A guessed abbreviation would be worse than the bolts alone.
+        // Unknown networks get no short name.
         assertNull(OperatorShortName.of("Stadtwerke Musterstadt"))
         assertNull(OperatorShortName.of(null))
         assertNull(OperatorShortName.of(""))

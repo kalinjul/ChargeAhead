@@ -55,14 +55,11 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import kotlin.math.roundToInt
 
 /**
- * The planned trip: placeholder map on top, summary, then the stops as a
- * list with the send actions at its end — scrolling to them is deliberate,
- * the route itself is the content.
+ * The planned trip: map on top, summary, then the stops as a list with the
+ * send actions at its end.
  *
  * Section selection works on the point sequence start → stops → destination:
- * tap two of them and exactly that section goes to Maps. Everything the
- * driver sees here was computed by the shared planner; this screen only
- * arranges it.
+ * tap two of them and exactly that section goes to Maps.
  */
 @Composable
 fun TripPlanScreen(
@@ -71,9 +68,7 @@ fun TripPlanScreen(
     startSocPercent: Double?,
     isSaved: Boolean,
     hasLocationPermission: Boolean,
-    // Selectable points along the trip: 0 = start, 1..n = stops, n+1 =
-    // destination. The selection lives in TripViewModel; this screen only
-    // renders it and reports taps.
+    // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
     selection: SectionSelection,
     // The quick charge-level entry on the start row: `null` while closed.
     socInput: String?,
@@ -110,9 +105,7 @@ fun TripPlanScreen(
 
     val startName = stringResource(R.string.trip_start)
 
-    // The quick charge-level entry behind the start row. Confirming it
-    // re-plans: every stop after it depends on the level, so there is nothing
-    // to patch in place — which is what the confirm button says.
+    // The quick charge-level entry behind the start row. Confirming it re-plans.
     socInput?.let { input ->
         SocEditDialog(
             value = input,
@@ -124,8 +117,7 @@ fun TripPlanScreen(
         )
     }
 
-    // The level to arrive with, edited where it is read: on the destination
-    // row. Confirming re-plans for the same reason the start level does.
+    // The level to arrive with, edited on the destination row. Confirming re-plans.
     arrivalSocInput?.let { input ->
         SocEditDialog(
             value = input,
@@ -151,8 +143,7 @@ fun TripPlanScreen(
                 modifier = Modifier.fillMaxWidth().height(220.dp),
             )
         } else {
-            // Only the placeholder map needs the pin list — don't build it at all
-            // when Google Maps is drawing, and don't rebuild it every recomposition.
+            // Only the placeholder map needs the pin list.
             val pins = remember(plan, startPosition) {
                 plan.stops.mapIndexed { index, stop ->
                     MapPin(stop.site.position, operatorColor(stop.site.operator), label = "${index + 1}")
@@ -215,8 +206,6 @@ fun TripPlanScreen(
                         stringResource(R.string.trip_dep_now, it.roundToInt())
                     } ?: stringResource(R.string.trip_dep_now_unknown),
                     selected = selecting && selection.includes(0),
-                    // Outside selection mode the start row is the shortest way
-                    // to correct the charge level this plan was made from.
                     onClick = { if (selecting) onPickPoint(0) else onEditStartSoc() },
                     trailingIcon = if (selecting) null else painterResource(R.drawable.ic_pen),
                     trailingDescription = stringResource(R.string.trip_soc_edit),
@@ -239,8 +228,7 @@ fun TripPlanScreen(
                     ),
                     selected = selecting && selection.includes(index + 1),
                     onClick = { if (selecting) onPickPoint(index + 1) else onOpenStop(stop) },
-                    // Section-select mode repurposes the card tap; hide the send
-                    // button so the two tap targets can't be confused.
+                    // Section-select mode repurposes the card tap; hide the send button.
                     onSend = if (selecting) null else ({ onSendToMaps(MapsHandoff.navigateUrl(stop.site.position)) }),
                     sendContentDescription = stringResource(R.string.trip_send_stop, stop.site.name),
                 )
@@ -257,8 +245,6 @@ fun TripPlanScreen(
                         plan.arrivalSocPercent.roundToInt(),
                     ),
                     selected = selecting && selection.includes(pointCount - 1),
-                    // Same deal as the start row: outside selection mode the
-                    // destination row is where the arrival level is set.
                     onClick = { if (selecting) onPickPoint(pointCount - 1) else onEditArrivalSoc() },
                     trailingIcon = if (selecting) null else painterResource(R.drawable.ic_pen),
                     trailingDescription = stringResource(R.string.trip_arrival_soc_edit),
@@ -277,12 +263,8 @@ fun TripPlanScreen(
                             val useSelection = selecting && selectionA != null && selectionB != null
                             val fromIndex = if (useSelection) lo else 0
                             val toIndex = if (useSelection) hi else pointCount - 1
-                            // The origin stays "my location" even for a section
-                            // that starts further along: Google Maps only
-                            // navigates from where the driver actually is, and
-                            // a fixed origin turns the hand-off into a route
-                            // preview it refuses to start. The section's own
-                            // first point becomes the first waypoint instead.
+                            // The origin stays "my location": with a fixed origin, Maps
+                            // only previews. The section's first point becomes a waypoint.
                             val url = MapsHandoff.directionsUrl(
                                 origin = null,
                                 destination = pointPosition(toIndex) ?: plan.destination.position,
@@ -379,9 +361,7 @@ private fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
                 )
             }
             Spacer(Modifier.weight(1f))
-            // Same destination, fresh start: the plan sheet reopens with it
-            // already picked, so only the charge level and the filters are
-            // left to change.
+            // The plan sheet reopens with the same destination picked.
             Surface(
                 onClick = onReplan,
                 shape = MaterialTheme.shapes.small,

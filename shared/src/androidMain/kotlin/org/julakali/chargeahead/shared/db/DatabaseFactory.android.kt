@@ -5,12 +5,11 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
+// TODO no factory needed, use koin DBModule
 actual class DatabaseFactory(private val context: Context) {
     actual fun builder(): RoomDatabase.Builder<ChargeSiteDatabase> {
         val app = context.applicationContext
-        // The SQLDelight-era file — Room can't adopt it, so don't leave a
-        // multi-MB corpse in every updated install. deleteDatabase, not
-        // delete(): the journal sidecars have to go too.
+        // Remove the old SQLDelight file, including journal sidecars.
         SQLiteDatabase.deleteDatabase(app.getDatabasePath("charge_sites.db"))
         return Room.databaseBuilder<ChargeSiteDatabase>(
             context = app,

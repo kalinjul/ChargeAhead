@@ -33,7 +33,7 @@ import org.julakali.chargeahead.android.phone.theme.tabular
 
 enum class TickStyle { CHECK, ADD, DELETE }
 
-/** The mockup's `.netrow`: label, optional dot and sublabel, trailing tick circle. */
+/** Label, optional dot and sublabel, trailing tick circle. */
 @Composable
 fun TickRow(
     label: String,
@@ -95,7 +95,6 @@ fun SwitchRow(
         horizontalArrangement = Arrangement.spacedBy(11.dp),
         modifier = modifier.fillMaxWidth()
             .toggleable(value = checked, onValueChange = onCheckedChange, role = Role.Switch)
-            // A second line needs room to breathe; one line sits tight on purpose.
             .padding(horizontal = 14.dp, vertical = if (sublabel == null) 6.dp else 11.dp),
     ) {
         Column(Modifier.weight(1f)) {
@@ -104,13 +103,12 @@ fun SwitchRow(
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
-        // null: the row above carries the click and the semantics, so the
-        // switch must not announce itself as a second target.
+        // null: the row carries the click and the semantics.
         Switch(checked = checked, onCheckedChange = null)
     }
 }
 
-/** The mockup's `.prefrow`: drawer entries with icon, summary and chevron. */
+/** Drawer entry with icon, summary and chevron. */
 @Composable
 fun PrefRow(icon: Painter, label: String, onClick: () -> Unit, modifier: Modifier = Modifier, sublabel: String? = null) {
     Row(
@@ -129,7 +127,7 @@ fun PrefRow(icon: Painter, label: String, onClick: () -> Unit, modifier: Modifie
     }
 }
 
-/** The mockup's `.gobtn`/`.sendone`: the small square action at a row's end. */
+/** The small square action at a row's end. */
 @Composable
 fun GoButton(
     icon: Painter,

@@ -17,13 +17,8 @@ import kotlin.math.abs
 import kotlin.math.round
 
 /**
- * The free-form vehicle entry, field by field.
- *
- * The text is state, not just display: "17," is a legitimate intermediate
- * step towards "17,8" that parses to nothing. Keeping the raw text here is
- * what lets the driver type it — deriving the fields from the stored profile
- * instead would clear the form on that comma, because an unparseable form
- * stores no profile.
+ * The free-form vehicle entry, field by field. Keeps the raw text, so
+ * intermediate input like "17," survives.
  */
 data class VehicleSettingsUiState(
     val name: String = "",
@@ -41,20 +36,14 @@ data class VehicleSettingsUiState(
 
 /**
  * The advanced vehicle screen: capacity, consumption, connectors, charge
- * level — deliberately without a vehicle list (ARCHITECTURE.md, open point 4).
- *
- * Every valid change is written through immediately, not on a "Save" button.
- * A charge level the driver typed and that failed to land because of a
- * forgotten tap would be the worst possible way for the reachability
- * calculation to go wrong.
+ * level. Every valid change is written through immediately.
  */
 class VehicleSettingsViewModel(
     private val settings: SettingsStore,
     feature: ChargeStopsFeature,
 ) : ViewModel() {
 
-    // null = the driver has not touched the form yet, so it still mirrors
-    // what is stored. From the first keystroke on, the form is the truth.
+    // null = untouched, the form mirrors what is stored.
     private val form = MutableStateFlow<Form?>(null)
 
     val uiState: StateFlow<VehicleSettingsUiState> = combine(
@@ -105,8 +94,7 @@ class VehicleSettingsViewModel(
 
     private fun edit(change: (Form) -> Form) {
         val updated = editForm(change)
-        // Incomplete input stores no profile: a half-typed capacity must not
-        // silently become the number every range calculation runs on.
+        // Incomplete input stores no profile.
         val battery = updated.battery.toPositiveDoubleOrNull()
         val consumption = updated.consumption.toPositiveDoubleOrNull()
         viewModelScope.launch {
@@ -121,8 +109,6 @@ class VehicleSettingsViewModel(
     }
 
     private fun editForm(change: (Form) -> Form): Form {
-        // The first edit continues from what the screen was showing, which is
-        // the stored profile; every later one from the form itself.
         val updated = change(form.value ?: currentFromStore())
         form.value = updated
         return updated
@@ -141,18 +127,14 @@ class VehicleSettingsViewModel(
     )
 }
 
-/** Accepts the German decimal comma — otherwise entering "17,8" would fail. */
+/** Accepts the German decimal comma. */
 internal fun String.toPositiveDoubleOrNull(): Double? =
     replace(',', '.').trim().toDoubleOrNull()?.takeIf { it > 0.0 }
 
 internal fun String.toPercentOrNull(): Double? =
     replace(',', '.').trim().toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
 
-/**
- * One decimal at most, whole numbers without the ".0" — 77 instead of 77.0,
- * 17.8 instead of a slider's 17.83400000001. A garage slider can store an
- * ugly float; the field must not echo it back.
- */
+/** One decimal at most, whole numbers without the ".0". */
 internal fun Double.asInput(): String {
     val oneDecimal = round(this * 10) / 10
     val whole = round(oneDecimal)

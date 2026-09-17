@@ -3,22 +3,18 @@ import Shared
 
 /// Bridge to the shared framework for CarPlay and the phone UI.
 ///
-/// Unlike in M0, state is no longer just polled on demand: since the list is
-/// derived from location and network data, it changes on its own while
-/// driving. `ChargeStopsWatcher` (see IosEntryPoints.kt) turns the Kotlin
-/// `StateFlow` into a plain callback; SKIE would later turn this into real
-/// `AsyncSequence` collection without changing this interface.
+/// `ChargeStopsWatcher` (see IosEntryPoints.kt) turns the Kotlin `StateFlow`
+/// into a plain callback.
 final class ChargeStopsViewModel: ObservableObject {
 
     /// Current state: list *and* location. Always reported on the main thread.
     @Published private(set) var state: ChargeStopsState
 
-    /// For callers without SwiftUI — CarPlay templates aren't redrawn via
-    /// `ObservableObject`, they're swapped out manually.
+    /// For callers without SwiftUI: CarPlay templates are swapped out manually.
     var onStateChange: ((ChargeStopsState) -> Void)?
 
-    /// One settings store for the whole process — the feature reads the same
-    /// flows the settings UI writes (see AGENTS.md, "One SettingsStore instance").
+    /// One settings store for the whole process, so the feature reads the
+    /// same flows the settings UI writes.
     static let settingsStore: SettingsStore = IosEntryPointsKt.createSettingsStore()
 
     let feature: ChargeStopsFeature
@@ -54,17 +50,14 @@ final class ChargeStopsViewModel: ObservableObject {
         feature.refresh()
     }
 
-    /// The key does not belong in the repository (ARCHITECTURE.md section 6).
-    /// It's injected into Info.plist via a build setting; when absent, the
-    /// shared module returns demo data and sets `state.isDemo`.
+    /// Injected into Info.plist via a build setting; when absent, the shared
+    /// module returns demo data and sets `state.isDemo`.
     private static func apiKeyFromBundle() -> String? {
         guard let raw = Bundle.main.object(forInfoDictionaryKey: "OpenChargeMapApiKey") as? String
         else {
             return nil
         }
-        // Trimmed: a trailing space in the .xcconfig otherwise gets
-        // URL-encoded into the request, and OCM responds with
-        // "Invalid API key" without saying why.
+        // A trailing space in the .xcconfig would be URL-encoded into the request.
         let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         return key.isEmpty ? nil : key
     }
@@ -74,12 +67,8 @@ extension ChargeStopsViewModel {
 
     /// What to show when there's nothing in the list.
     ///
-    /// An empty list without explanation looks like an app bug, even when
-    /// it's just that the location hasn't been determined yet.
-    ///
-    /// No `switch`: Kotlin enums appear in the generated header as
-    /// Objective-C classes, not as Swift `enum`s. They can be compared for
-    /// equality but not used in pattern matching.
+    /// No `switch`: Kotlin enums arrive as Objective-C classes, which can be
+    /// compared for equality but not pattern-matched.
     var statusKey: String {
         if state.isDemo {
             return "status_demo"

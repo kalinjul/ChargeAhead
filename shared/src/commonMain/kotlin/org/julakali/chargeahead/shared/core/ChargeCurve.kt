@@ -20,13 +20,7 @@ fun interface ChargeCurve {
 private val ONE_PERCENT_GRID = (0..100).map { it.toDouble() }
 
 /**
- * One shape for every car, because per-model curves are data the app does not
- * have. A DC session holds close to its peak while the battery is empty and
- * tapers hard once it is not — flat to [PLATEAU_END_SOC], then falling in two
- * straight pieces. That is the behaviour a flat average factor cannot
- * reproduce: it charges the taper far too fast and a near-empty arrival too
- * slowly.
- *
+ * One shape for every car.
  * Per-model curves can replace this later without any caller changing.
  */
 object GenericChargeCurve : ChargeCurve {
@@ -55,7 +49,7 @@ object GenericChargeCurve : ChargeCurve {
 
 /**
  * Minutes to charge [fromSocPercent] up to [toSocPercent] at a site offering
- * [sitePowerKw], integrated over the curve rather than averaged across it.
+ * [sitePowerKw], integrated over the curve.
  */
 fun chargeMinutes(
     vehicle: VehicleProfile,
@@ -79,11 +73,10 @@ internal fun chargeTimeTable(
 /**
  * Cumulative charge time F(s): minutes from 0 % to s at an accepted peak of
  * [peakKw]. Differences of F are additive, t(a→b) + t(b→c) = t(a→c), which the
- * stop optimizer relies on and a stepwise sum starting at `from` is not.
+ * stop optimizer relies on.
  *
  * Between two breakpoints the power is linear in the charge level,
- * p(s) = p₀ + m·s, so each piece integrates in closed form. Off-grid levels are
- * evaluated exactly within their piece, never rounded to the table.
+ * p(s) = p₀ + m·s, so each piece integrates in closed form.
  */
 class ChargeTimeTable(
     private val usableBatteryKwh: Double,
@@ -169,11 +162,6 @@ class ChargeTimeTable(
 
 /**
  * What the car can actually pull at the top of the curve.
- *
- * The catalog's peak is often a figure held for seconds on a preconditioned
- * pack; a small battery cannot sustain it whatever the spec sheet says, so it
- * is capped at a plausible C-rate. Without that, a 54 kWh car claiming 140 kW
- * would be planned as if it held 140 kW through the whole plateau.
  */
 internal fun acceptedPeakKw(vehicle: VehicleProfile, sitePowerKw: Double): Double {
     val claimed = vehicle.dcPeakPowerKw ?: sitePowerKw

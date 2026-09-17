@@ -64,8 +64,6 @@ class TilesTest {
 
     @Test
     fun aCorridorProducesSeveralThousandTiles() {
-        // This order of magnitude is intentional: they get written in a single
-        // transaction, not queried one at a time.
         val box = BoundingBox.of(south = 47.376, west = 9.053, north = 50.523, east = 13.846)
 
         val count = Tiles.covering(box).size

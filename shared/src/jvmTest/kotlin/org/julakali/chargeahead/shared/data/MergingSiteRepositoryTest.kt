@@ -88,8 +88,7 @@ class MergingSiteRepositoryTest {
 
     @Test
     fun ifOneSourceFails_theOthersStillCount() = runBlocking {
-        // The register going down must not empty the list when OpenChargeMap
-        // still responds.
+        // One failing source must not empty the list.
         val sites = MergingSiteRepository(
             listOf(FixedSiteRepository(listOf(site("ocm:1"))), BrokenSiteRepository()),
         ).sitesIn(area)

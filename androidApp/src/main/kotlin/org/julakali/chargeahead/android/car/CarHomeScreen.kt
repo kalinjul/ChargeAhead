@@ -21,12 +21,7 @@ import org.julakali.chargeahead.shared.domain.SettingsStore
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-/**
- * The car's start screen: enter a destination, charge right now, or pick a
- * favorite route. Deliberately no map and no live list — the app is an
- * addition beside the host's map, designed for the narrow panel, and
- * everything heavy happens only once the driver asks for it.
- */
+/** The car's start screen: enter a destination, charge right now, or pick a favorite route. */
 class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
@@ -35,14 +30,12 @@ class CarHomeScreen(
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
-    // onGetTemplate() is synchronous and therefore only reads the last
-    // remembered state; changes are picked up via invalidate().
+    // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var favorites: List<SavedRoute> = emptyList()
     private val fineLocation = permissions.granted(Manifest.permission.ACCESS_FINE_LOCATION)
     private val coarseLocation = permissions.granted(Manifest.permission.ACCESS_COARSE_LOCATION)
 
-    // Seeded synchronously so the first template doesn't flash the
-    // permission message while the collector below starts up.
+    // Seeded synchronously so the first template doesn't flash the permission message.
     private var hasLocationPermission = fineLocation.value || coarseLocation.value
     private var permissionRequestPending = false
 
@@ -57,8 +50,7 @@ class CarHomeScreen(
             combine(fineLocation, coarseLocation) { fine, coarse -> fine || coarse }
                 .collect { granted ->
                     hasLocationPermission = granted
-                    // Starting twice is a no-op, so this covers both the
-                    // session start and a grant later on.
+                    // Starting twice is a no-op.
                     if (granted) feature.startSensors()
                     invalidate()
                 }
@@ -86,8 +78,6 @@ class CarHomeScreen(
             favorites.take(contentLimit - 2).forEach { itemList.addItem(favoriteRow(it)) }
         }
 
-        // Deliberately no map template: the map is Google Maps' territory —
-        // this app is the text panel beside it and hands every drive off.
         return ListTemplate.Builder()
             .setSingleList(itemList.build())
             .setHeader(header())
@@ -97,9 +87,7 @@ class CarHomeScreen(
     private fun header(): Header = Header.Builder()
         .setTitle(title())
         .setStartHeaderAction(Action.APP_ICON)
-        // The state of charge is the value that changes while driving — it
-        // stays within reach as the manual fallback for cars that don't
-        // report their battery.
+        // Manual state of charge, for cars that don't report their battery.
         .addEndHeaderAction(
             Action.Builder()
                 .setIcon(icon(R.drawable.ic_battery))
@@ -117,8 +105,7 @@ class CarHomeScreen(
         }
     }
 
-    // IMAGE_TYPE_ICON, not the SMALL default: only icons declared tintable
-    // get recolored by the host — untinted ones stay black on a dark theme.
+    // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
     private fun searchRow(): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_home_enter_destination))
         .setImage(icon(R.drawable.ic_search), Row.IMAGE_TYPE_ICON)
@@ -145,17 +132,12 @@ class CarHomeScreen(
         return row.build()
     }
 
-    /**
-     * In projection, the head unit can't show the permission dialog itself —
-     * the host instructs the driver to confirm it on the phone. That's why
-     * the request sits behind a button instead of firing unprompted on open.
-     */
+    /** In projection, the driver confirms the permission on the phone, so it sits behind a button. */
     private fun requestLocationPermission() {
         if (permissionRequestPending) return
         permissionRequestPending = true
 
-        // A grant arrives through the location collector in init, which also
-        // starts the sensors.
+        // A grant arrives through the location collector in init.
         permissions.request(
             listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
         ) {

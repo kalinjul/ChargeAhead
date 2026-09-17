@@ -134,8 +134,7 @@ class ChargeNowRankerTest {
 
     @Test
     fun `a generous distance filter must not crowd out the station next door`() {
-        // The reported bug: max distance opened wide, and the 1.4 km station
-        // matching every filter vanished behind chargers half an hour out.
+        // With a wide max distance, the near station matching every filter must stay on top.
         val result = rank(
             listOf(
                 site("next-door", "Vattenfall", 150.0, 1.4),

@@ -186,11 +186,7 @@ class TripPlannerTest {
         }
     }
 
-    /**
-     * The point of the speed profile. The same road at motorway pace costs
-     * enough more energy to change the plan, and a planner that cannot see that
-     * promises a trip the car does not make.
-     */
+    /** The same road at motorway pace costs enough more energy to change the plan. */
     @Test
     fun `a faster route needs at least as many stops as a slow one`() = runBlocking<Unit> {
         fun stopsAt(speedKmh: Double): Int {
@@ -277,11 +273,7 @@ class TripPlannerTest {
         )
     }
 
-    /**
-     * A route the service gave no breakdown for still has to plan. The average
-     * speed is then all there is, and the result must stay in the same
-     * ballpark as before the profile existed.
-     */
+    /** A route without a speed breakdown still plans, on the average speed. */
     @Test
     fun `a route without segments still plans`() = runBlocking<Unit> {
         val route = straightRoute()
@@ -315,11 +307,7 @@ class TripPlannerTest {
         }
     }
 
-    /**
-     * Charging past 80 % buys the slowest part of the curve. A stop may only do
-     * it when that actually delivers the arrival level the driver asked for —
-     * otherwise it charges slowly *and* another stop follows anyway.
-     */
+    /** A stop may only charge past 80 % when that delivers the arrival level. */
     @Test
     fun `a stop that cannot reach the arrival level anyway stays under the cap`() = runBlocking<Unit> {
         val route = straightRoute()

@@ -3,8 +3,7 @@ package org.julakali.chargeahead.shared.core
 import org.julakali.chargeahead.shared.domain.Reachability
 
 /**
- * Classifies a distance against the remaining range
- * (ARCHITECTURE.md section 5.2).
+ * Classifies a distance against the remaining range.
  *
  * | Classification | Condition |
  * |---|---|
@@ -12,10 +11,8 @@ import org.julakali.chargeahead.shared.domain.Reachability
  * | `MARGINAL` | `distance ≤ range` |
  * | `UNREACHABLE` | otherwise |
  *
- * The 15% gap between "reachable" and "marginal" is not a safety margin on
- * top of the reserve — that's already baked into the range. It absorbs the
- * inherent imprecision of the estimate itself: the detour factor, the
- * constant consumption rate, the manually entered charge level.
+ * The 15% gap absorbs the imprecision of the estimate itself; the reserve is
+ * already part of the range.
  */
 object ReachabilityClassifier {
 

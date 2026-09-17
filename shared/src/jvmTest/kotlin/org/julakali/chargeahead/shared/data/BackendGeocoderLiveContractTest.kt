@@ -32,7 +32,7 @@ class BackendGeocoderLiveContractTest {
         token = requireNotNull(token),
     )
 
-    /** The reason for the switch: a geocoder answers this with a street of that name. */
+    /** A partial word finds the place. */
     @Test
     fun aHalfTypedCityIsFound() {
         if (skip()) return
@@ -62,7 +62,7 @@ class BackendGeocoderLiveContractTest {
         )
     }
 
-    /** Nearby first, or "Hauptbahnhof" is a lottery. */
+    /** Nearby results first. */
     @Test
     fun theOriginBiasesTheResult() {
         if (skip()) return

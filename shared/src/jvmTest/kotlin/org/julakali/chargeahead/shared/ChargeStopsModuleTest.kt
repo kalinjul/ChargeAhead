@@ -72,9 +72,7 @@ class ChargeStopsModuleTest {
 
     @Test
     fun aTrailingSpaceDoesNotMakeTheKeyUnusable() {
-        // The classic mistake in local.properties and .xcconfig. Left untrimmed,
-        // the space gets URL-encoded into the request and OCM responds with
-        // "Invalid API key" without saying why.
+        // A trailing space in local.properties must be trimmed.
         assertFalse(isDemo("00000000-0000-0000-0000-000000000000 "))
     }
 

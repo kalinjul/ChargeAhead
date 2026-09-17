@@ -8,8 +8,7 @@ fun List<LatLon>.simplified(toleranceKm: Double): List<LatLon> {
     keep[0] = true
     keep[lastIndex] = true
 
-    // A stack rather than recursion: a full geometry runs to tens of thousands
-    // of points, and a winding one recurses about as deep.
+    // A stack rather than recursion, to avoid deep recursion on long geometries.
     val pending = ArrayDeque<Pair<Int, Int>>()
     pending.addLast(0 to lastIndex)
     while (pending.isNotEmpty()) {

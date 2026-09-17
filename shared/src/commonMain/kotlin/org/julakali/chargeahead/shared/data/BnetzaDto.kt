@@ -3,11 +3,7 @@ package org.julakali.chargeahead.shared.data
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * The ArcGIS response from the charging register.
- *
- * Field names with umlauts are the service's own and not negotiable.
- */
+/** The ArcGIS response from the charging register. */
 @Serializable
 internal data class ArcGisResponse(
     val features: List<ArcGisFeature> = emptyList(),
@@ -26,11 +22,10 @@ internal data class ArcGisError(
 internal data class ArcGisFeature(val attributes: BnetzaAttributes)
 
 /**
- * Only the fields that are actually needed — the service has 48.
+ * Only the fields that are actually needed.
  *
- * Connector data comes in six side-by-side pairs instead of a list; each
- * field can also contain multiple connectors separated by "; ", and
- * `Nennleistung_Stecker{i}` carries the corresponding powers in the same order.
+ * Connector data comes in six side-by-side pairs; each field can contain
+ * multiple connectors separated by "; ", with powers in the same order.
  */
 @Serializable
 internal data class BnetzaAttributes(

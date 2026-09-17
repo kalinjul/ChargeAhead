@@ -27,28 +27,21 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Vehicle profile and charge level, stored persistently.
+ * The driver's settings, stored persistently.
  *
  * Read once on creation, then kept in memory and written through on every
- * change. That's enough, because the values are written rarely but read on
- * every range recalculation.
- *
- * A profile stored incompletely or corrupted is treated as "no profile"
- * rather than partially loaded: a vehicle with a battery but no consumption
- * value would break the range formula.
+ * change. A corrupt profile is treated as "no profile".
  */
 class PersistentSettingsStore(
     private val storage: KeyValueStorage,
-    // Where the blocking SharedPreferences writes run. Off Main in production;
-    // tests pass an unconfined one so a write completes synchronously.
+    // Where the blocking writes run.
     private val writeDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : SettingsStore {
 
     private val mutableVehicle = MutableStateFlow(readVehicle())
     override val vehicle: StateFlow<VehicleProfile?> = mutableVehicle.asStateFlow()
 
-    // A pre-garage install has its one vehicle only in the legacy keys;
-    // adopting it here keeps that vehicle visible in the new garage list.
+    // Adopts a vehicle that exists only in the legacy keys.
     private val mutableVehicles = MutableStateFlow(
         readGarage().ifEmpty { listOfNotNull(readVehicle()) },
     )
@@ -60,22 +53,17 @@ class PersistentSettingsStore(
     private val mutableArrivalSoc = MutableStateFlow(readArrivalSoc())
     override val arrivalSocPercent: StateFlow<Double> = mutableArrivalSoc.asStateFlow()
 
-    // Every write goes through here: off the main thread (SharedPreferences'
-    // commit() is a blocking disk write + JSON encode) AND serialized, because
-    // several of these do read-modify-write on an in-memory list and the
-    // Default pool is multi-threaded — two concurrent edits would otherwise
-    // race and one could vanish.
+    // Every write goes through here: off the main thread and serialized,
+    // because several writes do read-modify-write.
     private val writeMutex = Mutex()
 
     private suspend fun write(block: () -> Unit) = withContext(writeDispatcher) { writeMutex.withLock(action = block) }
 
     override suspend fun setVehicle(profile: VehicleProfile?) = write { writeVehicle(profile) }
 
-    // The un-locked core, so [removeVehicle] can reuse it while already holding
-    // the write lock (Mutex is not reentrant).
+    // The un-locked core, for callers already holding the write lock.
     private fun writeVehicle(profile: VehicleProfile?) {
-        // The selected vehicle stays on the legacy keys so the car UIs and
-        // older installs read it unchanged; the garage is bookkeeping on top.
+        // The selected vehicle stays on the legacy keys.
         storage.putString(KEY_NAME, profile?.displayName)
         storage.putString(KEY_BATTERY_KWH, profile?.usableBatteryKwh?.toString())
         storage.putString(KEY_CONSUMPTION, profile?.consumptionKwhPer100Km?.toString())
@@ -86,8 +74,6 @@ class PersistentSettingsStore(
         if (profile != null) {
             val current = mutableVehicles.value
             // A known car is updated in its slot; only a new one is appended.
-            // Re-selecting used to drop the car and re-add it at the end, which
-            // shuffled the list under the driver on every pick.
             val updated = if (current.any { it.displayName == profile.displayName }) {
                 current.map { if (it.displayName == profile.displayName) profile else it }
             } else {
@@ -126,8 +112,6 @@ class PersistentSettingsStore(
             .orEmpty()
             .mapNotNull { it.toProfileOrNull() }
 
-    // Parsed once, not twice: both the current-destination and the recents flow
-    // are derived from the same read.
     private val storedDestinations = readDestinations()
     private val mutableDestination = MutableStateFlow(storedDestinations.firstOrNull { it.current }?.toDomain())
     override val destination: StateFlow<Destination?> = mutableDestination.asStateFlow()
@@ -140,8 +124,7 @@ class PersistentSettingsStore(
         val updated = if (destination == null) {
             previous
         } else {
-            // Newest first, duplicates removed, length capped: the history is
-            // a usability aid for the car, not an archive.
+            // Newest first, duplicates removed, length capped.
             (listOf(destination) + previous.filterNot { it.position == destination.position })
                 .take(MAX_RECENT_DESTINATIONS)
         }
@@ -268,8 +251,7 @@ class PersistentSettingsStore(
 
     private fun readDiagnostics(): SoCDiagnostics? {
         val stored = storage.getJson<StoredDiagnostics>(KEY_SOC_DIAGNOSTICS) ?: return null
-        // An unrecognized outcome means it was written by a newer version.
-        // Better to show nothing than something wrong.
+        // An unrecognized outcome was written by a newer version.
         val outcome = SoCDiagnostics.Outcome.entries.firstOrNull { it.name == stored.outcome } ?: return null
         return SoCDiagnostics(stored.checkedAtMillis, outcome, stored.detail)
     }
@@ -300,11 +282,7 @@ class PersistentSettingsStore(
         )
     }
 
-    /**
-     * Unknown connector names are skipped rather than thrown on — otherwise
-     * an older app version would lose the entire profile on rollback, just
-     * because a single new enum value is stored in it.
-     */
+    /** Unknown connector names are skipped rather than thrown on. */
     private fun readConnectors(): Set<ConnectorType> =
         storage.getStringOrNull(KEY_CONNECTORS)
             ?.split(",")
@@ -312,10 +290,6 @@ class PersistentSettingsStore(
             ?.toSet()
             .orEmpty()
 
-    /**
-     * Destinations as JSON rather than hand-rolled: a place name may contain
-     * any character, including whatever would have been chosen as a delimiter.
-     */
     private fun readDestinations(): List<StoredDestination> =
         storage.getJson<List<StoredDestination>>(KEY_DESTINATIONS).orEmpty()
 
@@ -334,7 +308,7 @@ class PersistentSettingsStore(
         val connectors: List<String> = emptyList(),
         val dcPeakKw: Double? = null,
     ) {
-        /** Same forgiveness as the legacy keys: broken numbers cost the entry, not the garage. */
+        /** Broken numbers cost the entry, not the garage. */
         fun toProfileOrNull(): VehicleProfile? {
             if (batteryKwh <= 0.0 || consumption <= 0.0) return null
             return VehicleProfile(

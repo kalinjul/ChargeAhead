@@ -3,11 +3,7 @@ package org.julakali.chargeahead.android.phone
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable
 
-/**
- * The phone's destinations. StopDetail carries an index into the current
- * plan's stops: the plan lives in TripViewModel, and an index survives
- * process death where a PlannedStop object would not.
- */
+/** The phone's destinations. StopDetail carries an index into the current plan's stops. */
 internal sealed interface PhoneDestination : NavKey
 
 @Serializable

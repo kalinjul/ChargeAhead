@@ -28,7 +28,7 @@ import kotlin.math.roundToInt
 /** Entering a destination and the charge level to start from. */
 data class PlanSheetUiState(
     val query: String = "",
-    /** `null` means the search itself failed — that is not the same as "nothing found". */
+    /** `null` means the search itself failed. */
     val results: List<Place>? = emptyList(),
     val searching: Boolean = false,
     /** Picked from the results or the history; only then can planning start. */
@@ -45,7 +45,7 @@ data class PlanSheetUiState(
 
     val canPlan: Boolean get() = chosen != null && socPercent != null && vehicleName != null
 
-    /** Too short to search on: the sheet offers the recent destinations instead. */
+    /** Too short to search on. */
     val isQueryTooShort: Boolean get() = query.trim().length < MIN_QUERY_LENGTH
 
     companion object {
@@ -53,7 +53,7 @@ data class PlanSheetUiState(
     }
 }
 
-/** The charge levels the planner accepts — 0 % is not a trip, it is a tow. */
+/** The charge levels the planner accepts. */
 internal val SOC_PERCENT_RANGE = 1..100
 
 /** The sheet always shows a charge level: the stored one, or the assumption. */
@@ -61,11 +61,8 @@ private fun Double?.asSocInput(): String =
     (this ?: PlanningFeature.DEFAULT_ASSUMED_SOC_PERCENT).roundToInt().toString()
 
 /**
- * The destination search behind the plan sheet.
- *
- * The debounce is not a nicety: Nominatim allows one request per second
- * (ROADMAP, open point 6), and a request per keystroke blows through that
- * inside a single word.
+ * The destination search behind the plan sheet. Debounced, since Nominatim
+ * allows one request per second.
  */
 @OptIn(FlowPreview::class)
 class PlanSheetViewModel(
@@ -97,14 +94,11 @@ class PlanSheetViewModel(
 
     init {
         input
-            // The pick travels with the query: choosing a destination writes
-            // its name into the field, and that must not start a search for
-            // what the driver just selected.
+            // Choosing a destination writes its name into the field without searching.
             .map { SearchInput(it.query.trim(), it.chosen != null) }
             .distinctUntilChanged()
             .onEach { search ->
-                // Set before the debounce, so the spinner appears while
-                // typing rather than only once the request goes out.
+                // Set before the debounce, so the spinner appears while typing.
                 input.update { it.copy(searching = search.isSearchable) }
             }
             .debounce(SEARCH_DEBOUNCE_MILLIS)
@@ -115,8 +109,7 @@ class PlanSheetViewModel(
                     }
                     return@onEach
                 }
-                // null result = the search failed; the sheet says that
-                // instead of pretending nothing matched.
+                // null result = the search failed.
                 val results = runCatching { feature.searchDestinations(search.query) }.getOrNull()
                 input.update { it.copy(results = results, searching = false) }
             }
@@ -124,13 +117,8 @@ class PlanSheetViewModel(
     }
 
     /**
-     * The sheet was opened. Resets the entry — a destination typed two drives
-     * ago must not sit in the field with the plan button already enabled.
-     *
-     * [destination] pre-fills it instead, which is what re-planning an open
-     * trip needs: same target, different charge level or different filters.
-     * It arrives as a pick rather than as typed text, so no search fires for
-     * a destination that is already decided.
+     * The sheet was opened. Resets the entry, or pre-fills it with
+     * [destination] as a pick.
      */
     fun onSheetOpened(destination: Destination? = null) {
         input.value = destination
@@ -139,7 +127,7 @@ class PlanSheetViewModel(
     }
 
     fun onQueryChanged(query: String) {
-        // Typing again discards the pick: the text no longer describes it.
+        // Typing again discards the pick.
         input.update { it.copy(query = query, chosen = null) }
     }
 
@@ -155,10 +143,7 @@ class PlanSheetViewModel(
         input.update { it.copy(chosen = destination, query = query, results = emptyList(), searching = false) }
     }
 
-    /**
-     * Opens the charge-level dialog on what the sheet currently shows — the
-     * level entered for this trip, or the stored one it falls back to.
-     */
+    /** Opens the charge-level dialog on what the sheet currently shows. */
     fun onSocEditRequested() {
         viewModelScope.launch {
             val current = input.value.socInput ?: settings.manualSocPercent.first().asSocInput()

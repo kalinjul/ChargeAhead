@@ -11,8 +11,7 @@ import kotlin.math.roundToInt
 
 /**
  * Keeps the car's last measured charge level as the stored one, so the phone
- * plans with it after the car disconnects instead of with an old typed-in
- * value. The phone has no car source of its own; the stored level is all it reads.
+ * plans with it after the car disconnects.
  */
 class RememberingSoCSource(
     private val source: SoCSource,
@@ -23,8 +22,7 @@ class RememberingSoCSource(
 
     override val energy: Flow<EnergyState?> = source.energy.onEach { state ->
         if (state == null) return@onEach
-        // Whole percent is what the driver sees and types; finer changes
-        // would only mean a disk write per reading.
+        // Only write on whole-percent changes.
         val stored = settingsStore.manualSocPercent.first()
         if (stored?.roundToInt() != state.socPercent.roundToInt()) {
             settingsStore.setManualSocPercent(state.socPercent)

@@ -9,18 +9,10 @@ import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.destination
 
 /**
- * Fallback source with no network and no key.
+ * Fallback source with no network and no key. The UI must make this state
+ * visible (`ChargeStopsState.isDemo`).
  *
- * It kicks in when no OpenChargeMap key is configured, keeping the door open
- * to check the car surface in the Desktop Head Unit (see
- * docs/android-auto-testen.md). The UI must make this state visible —
- * `ChargeStopsState.isDemo` carries it all the way up. Presenting fabricated
- * charging sites as real ones would be more than just sloppy in an app meant
- * for the car; it would be dangerous.
- *
- * The sites are positioned relative to the center of the queried area, not at
- * fixed coordinates. Otherwise the demo would only be visible at a single
- * spot on Earth, and empty of all places on the test rig.
+ * The sites are positioned relative to the center of the queried area.
  */
 class DemoSiteSource : ChargeSiteSource {
 
@@ -50,12 +42,7 @@ class DemoSiteSource : ChargeSiteSource {
     )
 
     private companion object {
-        /**
-         * Charging parks along the A9 between Nürnberg and München — names
-         * and connector equipment are realistic, position is relative. The
-         * bearings all lie within the ±35° corridor, so the chain still
-         * appears complete once a heading is known.
-         */
+        /** Realistic names and connectors; bearings lie within the ±35° corridor. */
         val TEMPLATES = listOf(
             Template(
                 id = "enbw-jura-west", name = "EnBW Schnellladepark Jura-West", operator = "EnBW",

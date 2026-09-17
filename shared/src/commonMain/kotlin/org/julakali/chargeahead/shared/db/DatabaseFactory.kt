@@ -5,11 +5,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 
-/**
- * Room builds per platform: Android needs a `Context` for the database
- * path, iOS and JVM don't. The bundled driver keeps the SQLite version
- * identical on every platform.
- */
+/** Room builds per platform: Android needs a `Context` for the database path. */
 expect class DatabaseFactory {
     fun builder(): RoomDatabase.Builder<ChargeSiteDatabase>
 }
@@ -21,8 +17,5 @@ fun createChargeSiteDatabase(factory: DatabaseFactory): ChargeSiteDatabase =
         .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
 
-/**
- * Database file name. The same on every platform; `.room.` in it because
- * Room cannot adopt the SQLDelight file this store replaces.
- */
+/** Database file name, the same on every platform. */
 const val CHARGE_SITE_DATABASE_NAME = "charge_sites.room.db"

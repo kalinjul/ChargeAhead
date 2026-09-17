@@ -19,29 +19,12 @@ import io.ktor.http.parameters
 
 /**
  * The Bundesnetzagentur's charging register — officially reported data for
- * Germany (ARCHITECTURE.md section 6).
+ * Germany, served by the ArcGIS FeatureServer behind the Bundesnetzagentur's
+ * own charging-station map.
  *
- * No key needed, but it's an ArcGIS FeatureServer rather than a dedicated
- * API. Verified against the live service (2026-09-04).
- *
- * **Not the endpoint documented at `ladestationen.api.bund.dev`.** That one
- * (`services6.arcgis.com/…/Ladesaeulenregister/FeatureServer/7`) now responds
- * with `Token Required`; its documentation is outdated. This uses the service
- * behind the Bundesnetzagentur's own charging-station map.
- *
- * Three quirks that shape this adapter:
- *
- * 1. **Rectangle instead of radius.** ArcGIS has no distance-based sorting.
- *    So the queried area must stay small enough for the response to be
- *    complete — measured, the full 175 km corridor holds 33,508 charging
- *    facilities, a 50 km radius holds 3,312. This is not bounded here but
- *    by the caller (`TiledSiteRepository.maxRadiusKm`), so the cache only
- *    marks as covered the area that was actually fetched.
- * 2. **Errors arrive with HTTP 200.** ArcGIS puts them in an `error` object in
- *    the body. Without the check below, a server error would look like "no
- *    charge site here."
- * 3. **A row is a charging facility, not a site.** A service area has several.
- *    Merging them is handled by the dedup stage.
+ * - ArcGIS has no distance-based sorting, so the caller must keep the area small.
+ * - Errors arrive with HTTP 200, in an `error` object in the body.
+ * - A row is a charging facility, not a site.
  */
 class BnetzaSource(
     private val httpClient: HttpClient,
@@ -78,21 +61,16 @@ class BnetzaSource(
     }
 
     private suspend fun fetchPage(area: SearchArea, offset: Int, networks: List<Network>): ArcGisResponse {
-        // POST, not GET: a route's polyline outgrows the URL — at 3.5 kB the
-        // service answered 404.
+        // POST, not GET: a route's polyline outgrows the URL.
         val form = parameters {
             append("f", "json")
             applyGeometry(area)
             append("inSR", "4326")
             append("spatialRel", "esriSpatialRelIntersects")
-            // A charging facility under maintenance is not a viable charging stop.
-            // The service only knows these two values — verified nationwide.
-            // Networks non-empty: LIKE prefilter so Germany doesn't ship in its entirety;
-            // on-device resolve() applies word-boundary correctness downstream.
+            // With networks, a LIKE prefilter; resolve() refines on-device.
             append("where", whereClause(networks))
             append("outFields", REQUESTED_FIELDS)
-            // Coordinates already come back as fields; the geometry would just
-            // be the same information a second time.
+            // Coordinates already come back as fields.
             append("returnGeometry", "false")
             append("resultRecordCount", pageSize.toString())
             append("resultOffset", offset.toString())
@@ -103,13 +81,8 @@ class BnetzaSource(
     }
 
     /**
-     * The search area as ArcGIS geometry.
-     *
-     * For a route, the **polyline with buffer** is passed, not its bounding
-     * rectangle: the service then clips server-side, which is exactly where
-     * the volume reduction comes from. For the same Nuremberg-Munich trip,
-     * that's 769 charging facilities instead of 33,508 — a rectangle around
-     * the route would fall in between and buy nothing.
+     * The search area as ArcGIS geometry. For a route, the polyline with
+     * buffer, so the service clips server-side.
      */
     private fun ParametersBuilder.applyGeometry(area: SearchArea) {
         when (area) {
@@ -117,9 +90,6 @@ class BnetzaSource(
                 val path = area.points.joinToString(",") { "[${it.lon},${it.lat}]" }
                 append("geometryType", "esriGeometryPolyline")
                 append("geometry", """{"paths":[[$path]],"spatialReference":{"wkid":4326}}""")
-                // ArcGIS does its own buffering; meters, because the service
-                // otherwise works in degrees, and a degree value would mean
-                // something different depending on latitude.
                 append("distance", (area.bufferKm * 1000.0).toString())
                 append("units", "esriSRUnit_Meter")
             }
@@ -171,10 +141,8 @@ class BnetzaSource(
     /**
      * The six connector slots, turned into connectors.
      *
-     * Each entry within a field is one individual charging point: a field
-     * holding `"AC Typ 2 Steckdose; AC Typ 2 Steckdose"` with `"22; 22"` means
-     * two units at 22 kW each. Matching type/power pairs are therefore
-     * counted — unlike OpenChargeMap, the unit count is actually known here.
+     * Each entry within a field is one charging point, so matching
+     * type/power pairs are counted.
      */
     private fun BnetzaAttributes.toConnectors(): List<Connector> {
         val counted = LinkedHashMap<Pair<ConnectorType, Double>, Int>()
@@ -184,8 +152,7 @@ class BnetzaSource(
             val powerList = powers.orEmpty().split(";").map { it.trim() }
 
             typeList.forEachIndexed { index, typeName ->
-                // If the source lists only one power value for several connectors,
-                // it applies to all of them — observed as "175; 175", but not guaranteed.
+                // A single power value applies to all connectors.
                 val powerText = powerList.getOrNull(index) ?: powerList.firstOrNull()
                 val powerKw = powerText?.replace(',', '.')?.toDoubleOrNull() ?: return@forEachIndexed
                 if (powerKw <= 0.0) return@forEachIndexed
@@ -200,12 +167,6 @@ class BnetzaSource(
 
     /**
      * The register's connector labels.
-     *
-     * Exhaustive: nationwide, the service knows exactly these six values,
-     * confirmed via `returnDistinctValues` rather than guessed.
-     *
-     * `AC CEE 3-polig` stays [ConnectorType.UNKNOWN] — there's no enum value
-     * for it here, just as with the CEE variants from OpenChargeMap.
      */
     private fun connectorTypeOf(name: String): ConnectorType = when (name) {
         "AC Typ 2 Steckdose", "AC Typ 2 Fahrzeugkupplung" -> ConnectorType.TYPE2
@@ -218,25 +179,15 @@ class BnetzaSource(
     companion object {
         const val SOURCE_ID = "bnetza"
 
-        /**
-         * The service behind the Bundesnetzagentur's charging-station map.
-         *
-         * The layer name carries the data snapshot date (`Ladesäulen_072026`),
-         * but the layer number stays stable. That's why it's addressed by the
-         * 0 and never by name.
-         */
+        /** Addressed by layer number, which stays stable; the layer name carries the snapshot date. */
         const val DEFAULT_BASE_URL =
             "https://services2.arcgis.com/jUpNdisbWqRpMo35/arcgis/rest/services/" +
                 "Ladesaeulen_in_Deutschland/FeatureServer/0/query"
 
-        /** The service's per-request cap; it never returns more than this anyway. */
+        /** The service's per-request cap. */
         const val DEFAULT_PAGE_SIZE = 2000
 
-        /**
-         * Safety brake against endless paging. At 2000 per page that's 20,000
-         * charging facilities — well more than a reasonably bounded area
-         * contains, and far below the 33,508 of the full corridor.
-         */
+        /** Safety brake against endless paging. */
         const val DEFAULT_MAX_PAGES = 10
 
         private const val REQUESTED_FIELDS =

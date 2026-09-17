@@ -74,11 +74,7 @@ fun ChargeNowSheetContent(
             )
 
             ChargeNowUiState.Loading -> {
-                // The whole sheet as a skeleton — the "Mehr in der Nähe" section
-                // and its cards too, not only the top three. Mirroring the full
-                // layout means the sheet is already at its final size, so nothing
-                // grows or scrolls itself out from under the driver when the real
-                // list lands.
+                // The whole sheet as a skeleton, so it is already at its final size.
                 val shimmer = rememberShimmerBrush()
                 SkeletonBar(shimmer, Modifier.fillMaxWidth(0.5f).height(12.dp))
                 Column(
@@ -154,8 +150,6 @@ private fun ChargeNowCard(
     StationCard(
         rank = rank,
         badgeColor = operatorColor(candidate.site.operator),
-        // The network decides where the tap goes — the site name is
-        // usually just the town again, the address line covers it.
         title = candidate.site.operator ?: candidate.site.name,
         metaLine = stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
         address = ChargeStopFormatter.addressLine(candidate.site),
@@ -195,11 +189,7 @@ private fun SkeletonBar(shimmer: Brush, modifier: Modifier = Modifier, shape: Sh
     Box(modifier.background(shimmer, shape))
 }
 
-/**
- * A light band sweeping left-to-right across the placeholders — the Instagram-
- * style loading shimmer. One brush drives every bar, so they all glint in step
- * instead of each running its own out-of-phase pulse.
- */
+/** A light band sweeping left-to-right across the placeholders; one brush drives every bar. */
 @Composable
 private fun rememberShimmerBrush(): Brush {
     val base = MaterialTheme.colorScheme.surfaceVariant
@@ -217,5 +207,5 @@ private fun rememberShimmerBrush(): Brush {
     )
 }
 
-/** Sweep-band width in px; wide enough to read as a glint, not a hard edge. */
+/** Sweep-band width in px. */
 private const val SHIMMER_WIDTH = 280f

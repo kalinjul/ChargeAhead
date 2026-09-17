@@ -16,16 +16,8 @@ import kotlinx.serialization.Serializable
 /**
  * Destination search via Nominatim.
  *
- * Chosen because it's the easiest to swap for a self-hosted instance: a
- * self-run Nominatim exposes the same API as the public one, so switching is
- * a one-line change to [baseUrl]. Photon would be better for autocomplete,
- * but self-hosting it would require a Nominatim import first anyway.
- *
- * **Mind the public instance's usage policy.** It requires a recognizable
- * User-Agent and at most one request per second, and it rules out bulk use.
- * That's respected here because the search only runs on destination entry —
- * once per trip, not once per location update. Anyone changing that needs to
- * move to a self-hosted instance first.
+ * **Mind the public instance's usage policy**: recognizable User-Agent, at
+ * most one request per second, no bulk use.
  *
  * Data comes from OpenStreetMap (ODbL) and must be attributed accordingly.
  */
@@ -44,8 +36,7 @@ class NominatimGeocoder(
             parameter("limit", limit)
             parameter("addressdetails", 1)
             near?.let {
-                // viewbox biases toward nearby results without forcing them:
-                // without bounded=1, distant destinations stay findable.
+                // Biases toward nearby results; without bounded=1 it doesn't restrict them.
                 val box = VIEWBOX_DEGREES
                 parameter(
                     "viewbox",
@@ -55,19 +46,14 @@ class NominatimGeocoder(
         }.body()
 
         return response.mapNotNull(NominatimPlace::toPlace)
-            // Same place only once: OSM often carries a place twice, as a
-            // boundary relation and as a place node, and Nominatim returns
-            // both. Searching "Münster" from Kiel returned "Munster,
-            // Heidekreis, Niedersachsen, 29633, Deutschland" twice in the
-            // same response. Nobody can tell apart two rows with identical
-            // labels — the second one is just confusion.
+            // OSM often carries a place twice (boundary relation and place node).
             .distinctBy { it.description }
     }
 
     companion object {
         const val DEFAULT_BASE_URL = "https://nominatim.openstreetmap.org"
 
-        /** About 110 km wide — the surrounding area a destination is likely to be in. */
+        /** About 110 km wide. */
         private const val VIEWBOX_DEGREES = 1.0
     }
 }
@@ -86,8 +72,7 @@ internal data class NominatimPlace(
         val longitude = lon?.toDoubleOrNull() ?: return null
         val full = displayName?.takeIf { it.isNotBlank() }
 
-        // Without a short name, take the first part of the description —
-        // "München Hauptbahnhof" instead of the full chain down to "Deutschland".
+        // Without a short name, take the first part of the description.
         val short = name?.takeIf { it.isNotBlank() }
             ?: full?.substringBefore(",")?.trim()
             ?: return null
@@ -115,8 +100,7 @@ internal data class NominatimAddress(
     fun toAddress(): Address? = Address(
         street = listOfNotNull(road, houseNumber).joinToString(" ").takeIf { it.isNotBlank() },
         postalCode = postcode,
-        // Nominatim files the town under whichever size class it has — only
-        // one of these is ever set.
+        // Only one of these is ever set.
         town = city ?: town ?: village ?: municipality ?: hamlet,
     ).takeIf { !it.isEmpty }
 }

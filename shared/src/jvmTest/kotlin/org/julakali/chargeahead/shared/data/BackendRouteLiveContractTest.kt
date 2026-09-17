@@ -10,11 +10,7 @@ import kotlin.test.assertTrue
 
 /**
  * Checks route calculation against the deployed backend.
- *
- * The 204 case is not in here. It cannot be provoked: OSRM snaps a
- * coordinate to the nearest road at any distance and then routes from there
- * — Barbados to Ingolstadt comes back as a 2700 km route starting in
- * Portugal. [BackendRouteEngineTest] covers 204 against a canned response.
+ * The 204 case is covered by [BackendRouteEngineTest].
  *
  * **Does not run by default:**
  *

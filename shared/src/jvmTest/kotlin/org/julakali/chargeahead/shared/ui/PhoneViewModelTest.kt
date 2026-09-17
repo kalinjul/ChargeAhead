@@ -41,19 +41,11 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * The ViewModels are plain Kotlin: no Android, no Compose, no test rule —
- * a store on in-memory storage and a feature on stub ports is the whole
- * setup.
+ * `Dispatchers.setMain(Unconfined)` provides the Main dispatcher
+ * `viewModelScope` needs and keeps writes in order.
  *
- * The one thing they do need is a Main dispatcher: `viewModelScope` runs on
- * it, and a plain test JVM has none. `Dispatchers.setMain(Unconfined)` gives
- * it one that also keeps writes in the order they were issued, so the
- * assertions stay deterministic.
- *
- * `uiState` is shared with `WhileUiSubscribed`, so it only produces while
- * someone collects. [await] is that collector: it subscribes, waits for the
- * first state that matches, and gives up rather than hanging forever if it
- * never comes.
+ * `uiState` only produces while someone collects; [await] subscribes and
+ * waits for the first matching state.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class PhoneViewModelTest {
@@ -68,13 +60,7 @@ class PhoneViewModelTest {
         Dispatchers.resetMain()
     }
 
-    /**
-     * The regression this pattern exists for. The old screen derived its
-     * fields from the stored profile, so typing the comma in "17,8" wrote
-     * 17.0, which came straight back as "17" and swallowed the comma — the
-     * decimal was unreachable. The form is state now, and keeps what was
-     * typed.
-     */
+    /** Typing the comma in "17,8" must not be swallowed by the stored profile. */
     @Test
     fun `the form keeps what was typed while the store takes what parses`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
@@ -87,8 +73,7 @@ class PhoneViewModelTest {
         val state = viewModel.uiState.await { it.name == "Testwagen" }
         assertEquals("77", state.battery)
         assertEquals("17,", state.consumption, "the comma must survive being written through")
-        // The profile is written from a coroutine, so wait for it rather than
-        // sampling the store and hoping the write already landed.
+        // The profile is written from a coroutine.
         assertEquals(17.0, settings.vehicle.awaitValue { it != null }?.consumptionKwhPer100Km)
 
         viewModel.onConsumptionChanged("17,8")
@@ -99,10 +84,7 @@ class PhoneViewModelTest {
         )
     }
 
-    /**
-     * Half a capacity must never become the number the range calculation
-     * runs on — without a usable one, no profile is stored at all.
-     */
+    /** Without a usable capacity, no profile is stored at all. */
     @Test
     fun `an unparseable capacity stores no profile`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
@@ -132,11 +114,7 @@ class PhoneViewModelTest {
         assertTrue(addCar.uiState.await { preset !in it.matches }.matches.none { it.name == preset.name })
     }
 
-    /**
-     * The regression behind the "mark all stations" fix: the screen used to
-     * compare against `a` and `b` alone, so the stops travelling as waypoints
-     * between them looked unselected while going to Maps all the same.
-     */
+    /** The stops between `a` and `b` travel as waypoints and must look selected. */
     @Test
     fun `a picked section covers every point between its ends`() {
         val section = SectionSelection(selecting = true).picked(3).picked(1)
@@ -154,11 +132,7 @@ class PhoneViewModelTest {
         assertTrue(!SectionSelection(selecting = true).includes(0), "nothing is selected before the first tap")
     }
 
-    /**
-     * Re-planning opens the sheet on the destination it already has. It has
-     * to arrive as a pick, not as typed text: only then is the plan button
-     * live and no search fires for a destination that is already decided.
-     */
+    /** Re-planning opens the sheet on the destination as a pick, not as typed text. */
     @Test
     fun `the plan sheet opens pre-filled with a destination`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
@@ -193,11 +167,7 @@ class PhoneViewModelTest {
         assertEquals(Destination("Uebel und Gefährlich", place.position, "Feldstraße 66, 20359 Hamburg"), state.chosen)
     }
 
-    /**
-     * The bug behind issue #17: the marker query reads the filters, but only
-     * ever ran on a viewport change — so a raised minimum power kept showing
-     * the weaker sites until the driver panned the map by hand.
-     */
+    /** Issue #17: a filter change must re-run the marker query, not only a viewport change. */
     @Test
     fun `changing the minimum power reloads the map markers`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
@@ -240,10 +210,7 @@ class PhoneViewModelTest {
         connectors = listOf(Connector(ConnectorType.CCS2, powerKw, 2)),
     )
 
-    /**
-     * On the *same* store the ViewModel gets — the point of these two tests is
-     * that a write there reaches the query.
-     */
+    /** On the *same* store the ViewModel gets. */
     private fun planningOver(sites: List<ChargeSite>, settings: PersistentSettingsStore): PlanningFeature {
         val repository = object : SiteRepository {
             override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
