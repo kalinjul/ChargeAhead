@@ -96,4 +96,37 @@ class SoCSourceTest {
 
         assertNull(combined.energy.first())
     }
+
+    @Test
+    fun aCarReading_isStoredForAfterTheDisconnect() = runBlocking {
+        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        store.setManualSocPercent(90.0)
+        val car = FixedSource(SoCSourceKind.CAR_HARDWARE, fromTheCar(42.4))
+
+        RememberingSoCSource(car, store).energy.first()
+
+        assertEquals(42.4, store.manualSocPercent.value)
+    }
+
+    @Test
+    fun noCarReading_keepsTheStoredLevel() = runBlocking {
+        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        store.setManualSocPercent(90.0)
+        val car = FixedSource(SoCSourceKind.CAR_HARDWARE, null)
+
+        RememberingSoCSource(car, store).energy.first()
+
+        assertEquals(90.0, store.manualSocPercent.value)
+    }
+
+    @Test
+    fun aReadingWithinTheSamePercent_isNotRewritten() = runBlocking {
+        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        store.setManualSocPercent(42.0)
+        val car = FixedSource(SoCSourceKind.CAR_HARDWARE, fromTheCar(42.3))
+
+        RememberingSoCSource(car, store).energy.first()
+
+        assertEquals(42.0, store.manualSocPercent.value)
+    }
 }

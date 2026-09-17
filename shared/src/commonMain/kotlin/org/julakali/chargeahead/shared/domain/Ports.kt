@@ -112,6 +112,7 @@ interface SettingsStore {
      */
     val vehicles: Flow<List<VehicleProfile>>
 
+    /** Typed in by the driver, or the last level the car reported (see RememberingSoCSource). */
     val manualSocPercent: Flow<Double?>
 
     /**
