@@ -75,12 +75,32 @@ from the same developer menu. It stops on every disconnect and must be
 restarted before every attempt. The script checks this beforehand and says
 so, instead of failing with a confusing abort.
 
+With **several phones attached**, the DHU connects to whichever answers
+first — possibly not the one you mean. The script refuses to start then;
+pick one with `ANDROID_SERIAL=<serial> $D start`.
+
+## Screen layouts
+
+The default is a small 800×480 screen, where apps always run full screen.
+Real cars with a wide display show a **split screen**: the app on one side,
+Maps in a narrow panel beside it. To check anything about that layout, start
+with a config from the DHU's `config/` folder:
+
+```bash
+# Bash tool, run_in_background: true
+.claude/skills/dhu/scripts/dhu.sh start --config default_wide   # 1280×720, split screen
+```
+
+Other configs: `default_720p`, `default_1080p`, or a path to your own
+`.ini`. Screenshots and `tap` coordinates then use that resolution
+(1280×720 for `default_wide`, with the usable area between the dashed lines).
+
 ## DHU console commands
 
 | Command | Effect |
 |---|---|
 | `keycode home` | go to the app launcher |
-| `tap <x> <y>` | tap, (0,0) top left, resolution matches the screenshot (default 800×480) |
+| `tap <x> <y>` | tap, (0,0) top left, resolution matches the screenshot (800×480 unless started with `--config`) |
 | `screenshot <file>` | take a screenshot — `$D shot` does exactly that |
 | `location <lat> <lon> [accuracy] [altitude] [speed] [bearing]` | fake a location |
 | `compass <bearing>` | set the heading |

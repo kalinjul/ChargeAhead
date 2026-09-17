@@ -18,8 +18,14 @@ usage() {
     cat <<'USAGE'
 dhu.sh <command>
 
-  start [--adb]   Start the DHU. Without an argument, over USB (AOAP); with
-                  --adb, over the forwarded port 5277.
+  start [--adb] [--config <name>]
+                  Start the DHU. Without --adb, over USB (AOAP); with
+                  --adb, over the forwarded port 5277. --config picks a
+                  screen layout from the DHU's config/ folder (e.g.
+                  default_wide, default_720p, default_1080p) or an .ini path;
+                  default is 800x480.
+                  With several phones attached, set ANDROID_SERIAL to pick
+                  one — the DHU otherwise takes whichever answers first.
   send "<text>"   Send an arbitrary console command, e.g. "keycode home".
   tap <x> <y>     Tap. Coordinates in DHU resolution, (0,0) top left.
   shot <file>     Write a DHU screenshot to the file.
@@ -39,6 +45,26 @@ cmd_start() {
     if running; then echo "DHU is already running (PID $(cat "$PIDFILE"))."; return 0; fi
     [[ -x "$DHU_BIN" ]] || { echo "DHU not found: $DHU_BIN" >&2; exit 1; }
 
+    local mode="--usb${ANDROID_SERIAL:+=$ANDROID_SERIAL}" config=""
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --adb) mode="" ;;
+            --config)
+                config="${2:?--config needs a name or file}"; shift
+                [[ -f "$config" ]] || config="$(dirname "$DHU_BIN")/config/${config%.ini}.ini"
+                [[ -f "$config" ]] || { echo "No such DHU config: $config" >&2; exit 1; }
+                config="--config=$(realpath "$config")"
+                ;;
+            *) echo "Unknown start option: $1" >&2; exit 1 ;;
+        esac
+        shift
+    done
+
+    if [[ -n "$mode" && -z "${ANDROID_SERIAL:-}" ]] && (( $(adb devices | grep -c $'\tdevice$') > 1 )); then
+        echo "Several phones attached; set ANDROID_SERIAL to choose one." >&2
+        exit 1
+    fi
+
     mkdir -p "$RUN_DIR"; rm -f "$FIFO"; mkfifo "$FIFO"; : > "$LOG"
 
     # Permanent writer: keeps the FIFO open so the DHU never sees EOF.
@@ -46,8 +72,6 @@ cmd_start() {
     echo $! > "$RUN_DIR/writer.pid"
     sleep 1
 
-    local mode="--usb"
-    [[ "${1:-}" == "--adb" ]] && mode=""
     if [[ -z "$mode" ]]; then
         adb forward tcp:5277 tcp:5277 >/dev/null
         # Only the listener ON THE PHONE counts: adb forward accepts the
@@ -63,7 +87,7 @@ cmd_start() {
     fi
 
     ( cd "$(dirname "$DHU_BIN")" \
-      && setsid nohup sh -c "exec stdbuf -o0 -e0 '$DHU_BIN' $mode < '$FIFO'" >> "$LOG" 2>&1 &
+      && setsid nohup sh -c "exec stdbuf -o0 -e0 '$DHU_BIN' $mode $config < '$FIFO'" >> "$LOG" 2>&1 &
       echo $! > "$PIDFILE" )
     sleep 12
 
@@ -101,7 +125,7 @@ cmd_stop() {
 }
 
 case "${1:-}" in
-    start)  shift; cmd_start "${1:-}" ;;
+    start)  shift; cmd_start "$@" ;;
     send)   shift; cmd_send "${1:?missing command}" ;;
     tap)    shift; cmd_send "tap ${1:?missing x} ${2:?missing y}" ;;
     shot)   shift; cmd_shot "${1:-}" ;;
