@@ -8,6 +8,7 @@ import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Reachability
 import kotlin.math.round
@@ -129,20 +130,27 @@ object ChargeStopFormatter {
 
     // --- Car rows: planned trip stops ---
 
-    /** e.g. "1. Testladepark" — numbered so the car list reads as an itinerary. */
-    fun plannedStopTitle(ordinal: Int, stop: PlannedStop): String = "$ordinal. ${stop.site.name}"
+    /**
+     * e.g. "1. EnBW" — the operator, because the site name is often just the
+     * town and says nothing about where the driver can charge.
+     */
+    fun plannedStopTitle(ordinal: Int, stop: PlannedStop): String {
+        val site = stop.site
+        return "$ordinal. ${OperatorShortName.of(site.operator) ?: site.operator ?: site.name}"
+    }
 
-    /** e.g. "Nach 142 km · Ankunft ca. 18 %". */
-    fun plannedStopPrimaryLine(stop: PlannedStop): String =
-        "Nach ${formatDistanceKm(stop.kmFromStart)} · Ankunft ca. ${formatWholeNumber(stop.arrivalSocPercent)} %"
+    /**
+     * e.g. "Hauptstr. 5, 85095 Denkendorf". Falls back to the site name when
+     * the title already took the operator; `null` when that would only repeat the title.
+     */
+    fun plannedStopAddressLine(stop: PlannedStop): String? =
+        addressLine(stop.site) ?: stop.site.name.takeIf { stop.site.operator != null }
 
-    /** e.g. "150 kW · 6 Ladepunkte · ca. 25 min laden bis 69 %". */
-    fun plannedStopSecondaryLine(stop: PlannedStop): String =
-        listOfNotNull(
-            "${formatPowerKw(stop.maxPowerKw)} kW",
-            chargePointSummary(stop.site),
-            "ca. ${chargeToLabel(stop)}",
-        ).joinToString(" · ")
+    /** e.g. "Nach 142 km · 150 kW · 18 → 80 % in 25 min" — short enough for an 800 px head unit. */
+    fun plannedStopDetailLine(stop: PlannedStop): String =
+        "Nach ${formatDistanceKm(stop.kmFromStart)} · ${formatPowerKw(stop.maxPowerKw)} kW · " +
+            "${formatWholeNumber(stop.arrivalSocPercent)} → ${formatWholeNumber(stop.departureSocPercent)} % " +
+            "in ${minutesLabel(stop.chargeMinutes)}"
 
     /** A bare distance for message texts, same rules as the row lines. */
     fun distanceLabel(distanceKm: Double): String = formatDistanceKm(distanceKm)

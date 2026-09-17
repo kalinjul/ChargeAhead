@@ -249,36 +249,38 @@ class ChargeStopFormatterTest {
     )
 
     @Test
-    fun plannedStopTitle_numbersTheStop() {
-        assertEquals("1. Testladepark", ChargeStopFormatter.plannedStopTitle(1, plannedStop()))
+    fun plannedStopTitle_numbersTheOperator() {
+        assertEquals("1. TestNetz", ChargeStopFormatter.plannedStopTitle(1, plannedStop()))
     }
 
     @Test
-    fun plannedStopPrimaryLine_showsProgressAndArrival() {
-        assertEquals("Nach 142 km · Ankunft ca. 18 %", ChargeStopFormatter.plannedStopPrimaryLine(plannedStop()))
+    fun plannedStopTitle_shortensAKnownNetwork() {
+        val enbw = site.copy(operator = "EnBW mobility+ AG und Co.KG")
+        assertEquals("2. EnBW", ChargeStopFormatter.plannedStopTitle(2, plannedStop(enbw)))
     }
 
     @Test
-    fun plannedStopSecondaryLine_showsPowerCountAndChargeTime() {
+    fun plannedStopTitle_withoutOperator_usesTheSiteName() {
+        assertEquals("1. Testladepark", ChargeStopFormatter.plannedStopTitle(1, plannedStop(site.copy(operator = null))))
+    }
+
+    @Test
+    fun plannedStopAddressLine_showsTheAddress() {
+        val withAddress = site.copy(address = Address(street = "Hauptstr. 5", postalCode = "85095", town = "Denkendorf"))
+        assertEquals("Hauptstr. 5, 85095 Denkendorf", ChargeStopFormatter.plannedStopAddressLine(plannedStop(withAddress)))
+    }
+
+    @Test
+    fun plannedStopAddressLine_withoutAddress_fallsBackToTheNameUnlessItIsTheTitle() {
+        assertEquals("Testladepark", ChargeStopFormatter.plannedStopAddressLine(plannedStop()))
+        assertNull(ChargeStopFormatter.plannedStopAddressLine(plannedStop(site.copy(operator = null))))
+    }
+
+    @Test
+    fun plannedStopDetailLine_showsProgressArrivalPowerAndChargeTime() {
         assertEquals(
-            "150 kW · 6 Ladepunkte · ca. 25 min laden bis 80 %",
-            ChargeStopFormatter.plannedStopSecondaryLine(plannedStop()),
-        )
-    }
-
-    @Test
-    fun plannedStopSecondaryLine_withMissingCount_skipsTheCount() {
-        // A sum of guessed ones would be worse than leaving the count out.
-        val partiallyCounted = site.copy(
-            connectors = listOf(
-                Connector(ConnectorType.CCS2, maxPowerKw = 150.0, count = 4),
-                Connector(ConnectorType.TYPE2, maxPowerKw = 22.0, count = null),
-            ),
-        )
-
-        assertEquals(
-            "150 kW · ca. 25 min laden bis 80 %",
-            ChargeStopFormatter.plannedStopSecondaryLine(plannedStop(partiallyCounted)),
+            "Nach 142 km · 150 kW · 18 → 80 % in 25 min",
+            ChargeStopFormatter.plannedStopDetailLine(plannedStop()),
         )
     }
 
