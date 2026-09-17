@@ -44,6 +44,39 @@ Dependency direction: `androidApp`/`iosApp` → `shared`. Never the reverse.
   about half the sites") or restate what a property's name and type already
   say; do note the one field or branch that's a genuine special case (e.g.
   `Fix.bearingDeg` is `null` while stationary, and is never guessed).
+
+  **Keep them short, and leave these out** — the codebase was combed through
+  once to remove them, so don't write them back in:
+
+  - **Length.** One or two sentences. A doc comment that needs several
+    paragraphs is describing a design, and a design belongs in an issue.
+  - **No rejected alternatives.** What was considered and not done, and why
+    some other library or approach would be worse, is not the reader's
+    problem. `// Deliberately not DataStore: that would add a dependency for
+    a handful of strings` → drop it.
+  - **No document cross-references.** Not `ARCHITECTURE.md`, `ROADMAP`,
+    `AGENTS.md`, `docs/mockup`, and no milestone numbers (M1, M5, "open item
+    8"). They rot as soon as those files move. If a rule matters at the call
+    site, state the rule.
+  - **No evidence or anecdotes.** No measurement dumps, counts, or the
+    charging park where it was first noticed: `// 294 pairs out of 98 entries
+    sat within 25 m of each other, "mblty Denkendorf" seven times at the same
+    coordinate` → `// Several rows can describe the same site`.
+  - **No bug history.** "used to", "before the fix", "that's what issue #36
+    reported" — the reason the code is the way it is, not the story of how it
+    got there. Git and the issue keep the story.
+  - **No praise or dramatics.** Not "and that's the whole point", "the core of
+    the design", "deliberately", "would be dangerous".
+
+  Pending work is a `TODO`, one line, with the issue where one exists:
+  `// TODO use Room type converters instead (#93)`. If you catch yourself
+  justifying an architecture decision in a comment, that's the signal to ask
+  whether the decision should change and open an issue — not to write the
+  justification down.
+
+  Test comments follow the same rules: state the rule the test pins down
+  ("Unrecognised sites are hidden when a filter is active"), not the
+  regression narrative. An issue number as the KDoc of a test is fine.
 - **User-visible text: German**, and exclusively from resources
   (`strings.xml`, `Localizable.strings`) — never as a literal in code. This
   is a deliberate product decision for the German market; it does not extend
