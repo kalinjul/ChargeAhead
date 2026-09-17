@@ -139,43 +139,42 @@ class RouteScreen(
         .build()
 
     /**
-     * The whole route with every stop as a waypoint. `geo:`/ACTION_NAVIGATE
-     * can't carry waypoints, so this opens the Maps directions URL on the
-     * phone — once the driver starts it there, Maps takes the car screen.
+     * The whole route with every stop as a waypoint, started on the phone.
+     * The host's ACTION_NAVIGATE only takes `geo:` and drops waypoints, so
+     * this goes to Maps directly — as `google.navigation:`, which starts a
+     * fresh navigation; the directions URL added the stops to a running one.
      *
      * Via the application context, not the [CarContext]: the latter is bound
      * to the car's virtual display, and launching a phone activity there is a
      * SecurityException ("launchDisplayId=…") — observed on the DHU.
      */
     private fun sendRouteToMaps(plan: TripPlan) {
-        val url = MapsHandoff.directionsUrl(
-            origin = null,
-            destination = plan.destination.position,
-            waypoints = plan.stops.map { it.site.position },
+        val waypoints = plan.stops.map { it.site.position }
+        val navigation = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse(MapsHandoff.navigationUri(plan.destination.position, waypoints)),
+        ).setPackage(GOOGLE_MAPS_PACKAGE)
+        // Without Google Maps, any app that handles the directions URL.
+        val directions = Intent(
+            Intent.ACTION_VIEW,
+            Uri.parse(MapsHandoff.directionsUrl(origin = null, plan.destination.position, waypoints)),
         )
-        try {
-            carContext.applicationContext.startActivity(
-                Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-            CarToast.makeText(
-                carContext,
-                carContext.getString(R.string.car_route_sent_to_phone),
-                CarToast.LENGTH_LONG,
-            ).show()
-        } catch (notFound: ActivityNotFoundException) {
-            CarToast.makeText(
-                carContext,
-                carContext.getString(R.string.car_no_navigation_app),
-                CarToast.LENGTH_LONG,
-            ).show()
-        } catch (denied: SecurityException) {
-            // Never let a blocked launch crash the car UI again.
-            CarToast.makeText(
-                carContext,
-                carContext.getString(R.string.car_no_navigation_app),
-                CarToast.LENGTH_LONG,
-            ).show()
-        }
+        val launched = startOnPhone(navigation) || startOnPhone(directions)
+        CarToast.makeText(
+            carContext,
+            carContext.getString(if (launched) R.string.car_route_sent_to_phone else R.string.car_no_navigation_app),
+            CarToast.LENGTH_LONG,
+        ).show()
+    }
+
+    private fun startOnPhone(intent: Intent): Boolean = try {
+        carContext.applicationContext.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (notFound: ActivityNotFoundException) {
+        false
+    } catch (denied: SecurityException) {
+        // Never let a blocked launch crash the car UI again.
+        false
     }
 
     /** Floating "charge now" button — hosts render FABs icon-only, so the bolt has to say it. */
@@ -239,3 +238,5 @@ class RouteScreen(
         }
     }
 }
+
+private const val GOOGLE_MAPS_PACKAGE = "com.google.android.apps.maps"

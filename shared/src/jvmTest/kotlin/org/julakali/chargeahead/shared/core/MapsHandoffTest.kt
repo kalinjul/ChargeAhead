@@ -34,4 +34,18 @@ class MapsHandoffTest {
         val encoded = url.substringAfter("waypoints=")
         assertEquals(MapsHandoff.MAX_WAYPOINTS, encoded.split("%7C").size)
     }
+
+    @Test
+    fun `navigation uri carries destination and waypoints`() {
+        val uri = MapsHandoff.navigationUri(
+            destination = LatLon(48.14, 11.58),
+            waypoints = listOf(LatLon(51.47, 6.85), LatLon(50.1, 8.6)),
+        )
+        assertEquals("google.navigation:q=48.14,11.58&waypoints=51.47,6.85%7C50.1,8.6", uri)
+    }
+
+    @Test
+    fun `navigation uri without stops has no waypoints`() {
+        assertEquals("google.navigation:q=48.14,11.58", MapsHandoff.navigationUri(LatLon(48.14, 11.58)))
+    }
 }
