@@ -29,12 +29,8 @@ import org.julakali.chargeahead.shared.ui.VehicleSettingsUiState
 import org.julakali.chargeahead.shared.ui.VehicleSettingsViewModel
 
 /**
- * Free-form entry of battery capacity and consumption — deliberately no
- * vehicle list (ARCHITECTURE.md, open point 4).
- *
- * Written immediately on every valid change, not only on "Save". A state of
- * charge the driver types in that fails to land because of a forgotten tap
- * would be the worst way for the reachability calculation to go wrong.
+ * Free-form entry of battery capacity and consumption. Written immediately on
+ * every valid change.
  */
 @Composable
 fun VehicleSettingsRoute(
@@ -104,8 +100,6 @@ fun VehicleSettingsScreen(
         Fineprint(
             text = stringResource(R.string.phone_connectors_hint),
         )
-        // UNKNOWN doesn't appear: "my car accepts unknown connectors" makes
-        // no sense, and the planner treats unknown connectors leniently anyway.
         ConnectorType.entries.filter { it != ConnectorType.UNKNOWN }.forEach { type ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -166,7 +160,6 @@ private fun NumberField(
             singleLine = true,
             enabled = enabled,
             isError = isError,
-            // Decimal, not integer: consumption values like 17.8 are the norm.
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
         )

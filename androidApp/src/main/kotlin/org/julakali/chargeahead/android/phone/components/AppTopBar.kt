@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.theme.tabular
 
-/** The mockup's `.topbar`: centered title with optional sub-line, hairline below. */
+/** Centered title with optional sub-line, hairline below. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppTopBar(
@@ -62,7 +62,7 @@ fun AppTopBar(
     }
 }
 
-/** The mockup's `.iconbtn`: 38dp soft square, with the blue filter-active dot on demand. */
+/** 38dp soft square icon button, with an optional filter-active dot. */
 @Composable
 fun TopBarIcon(icon: Painter, contentDescription: String?, onClick: () -> Unit, badge: Boolean = false) {
     Box(Modifier.padding(horizontal = 8.dp)) {

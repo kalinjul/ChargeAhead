@@ -1,10 +1,8 @@
 import SwiftUI
 import Shared
 
-/// The phone home from the design mockup (docs/mockup): the map is the
-/// screen, actions float on top. The map itself is a placeholder drawing —
-/// the map SDK decision (MapKit vs. MapLibre) is still open in the ROADMAP,
-/// and the flows shouldn't wait for it.
+/// The phone home: the map is the screen, actions float on top.
+/// TODO the map is still a placeholder drawing; pick a map SDK
 struct HomeMapView: View {
 
     @StateObject private var viewModel = ChargeStopsViewModel()
@@ -33,7 +31,7 @@ struct HomeMapView: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                         if viewModel.state.isDemo {
-                            // Invented charging sites must say so — AGENTS.md.
+                            // Demo charging sites must be labeled.
                             Text(NSLocalizedString("phone_demo_notice_short", comment: ""))
                                 .font(.caption2)
                                 .foregroundStyle(.red)
@@ -138,8 +136,7 @@ struct HomeMapView: View {
     }
 }
 
-/// Same stand-in as MapCanvas on Android: light ground, faint grid, pins,
-/// own position. Honest about being a placeholder, useful for judging flows.
+/// Placeholder map: light ground, faint grid, pins, own position.
 struct MapPlaceholderView: View {
     let position: LatLon?
     let stops: [ChargeStop]
@@ -209,8 +206,7 @@ struct PlanSheetView: View {
                 searchTask?.cancel()
                 let trimmed = changed.trimmingCharacters(in: .whitespaces)
                 guard trimmed.count >= 3 else { return }
-                // Debounced for the same reason as on Android: Nominatim
-                // allows one request per second.
+                // Debounced: Nominatim allows one request per second.
                 searchTask = Task {
                     try? await Task.sleep(for: .milliseconds(600))
                     guard !Task.isCancelled else { return }
@@ -224,7 +220,7 @@ struct PlanSheetView: View {
     }
 }
 
-/// The best chargers nearby — list form of the Android sheet, same shared ranking.
+/// The best chargers nearby, on the shared ranking.
 struct ChargeNowView: View {
     let bridge: PlanningBridge
     let position: LatLon?

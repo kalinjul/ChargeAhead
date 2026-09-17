@@ -60,7 +60,7 @@ class SoCSourceTest {
 
     @Test
     fun theCarBeatsTheInput() = runBlocking {
-        // ARCHITECTURE.md 1.2: liefert das Fahrzeug einen Wert, gewinnt er.
+        // A value from the vehicle wins.
         val store = PersistentSettingsStore(InMemoryKeyValueStorage())
         store.setManualSocPercent(50.0)
         val carSource = FixedSource(SoCSourceKind.CAR_HARDWARE, fromTheCar(73.0))
@@ -74,7 +74,7 @@ class SoCSourceTest {
 
     @Test
     fun ifTheCarIsSilent_theInputAppliesAgain() = runBlocking {
-        // Der Normalfall in der Projektion: das Head-Unit liefert nichts.
+        // The head unit delivers nothing.
         val store = PersistentSettingsStore(InMemoryKeyValueStorage())
         store.setManualSocPercent(50.0)
         val carSource = FixedSource(SoCSourceKind.CAR_HARDWARE, value = null)

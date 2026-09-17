@@ -14,16 +14,8 @@ import kotlinx.coroutines.coroutineScope
 /**
  * Layers several stocks on top of each other and merges them.
  *
- * Each source gets its own [TiledSiteRepository] and thus its own tile
- * coverage — the database tracks coverage per source anyway. This is
- * necessary because the sources reach different distances: the German
- * charging-station register only covers Germany, OpenChargeMap the whole
- * world. Shared coverage would claim territory beyond the border had been
- * checked too.
- *
- * Queried concurrently. **If one source fails, the rest still count** — a
- * failure of the register must not empty the list when OpenChargeMap
- * responds. Only when all of them fail is the error passed through.
+ * Queried concurrently. **If one source fails, the rest still count**; only
+ * when all of them fail is the error passed through.
  */
 class MergingSiteRepository(
     private val repositories: List<SiteRepository>,

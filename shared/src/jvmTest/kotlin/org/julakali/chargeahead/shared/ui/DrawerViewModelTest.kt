@@ -34,8 +34,7 @@ class DrawerViewModelTest {
     fun `the count ignores stored keys that no longer name a network`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
         val real = NetworkCatalog.all.first().key
-        // A key from an older catalog that no longer resolves — it can never
-        // tick a pill, so it must not be counted either.
+        // A key that no longer resolves must not be counted.
         settings.setNetworks(
             NetworkPreferences(
                 onlyPreferred = true,

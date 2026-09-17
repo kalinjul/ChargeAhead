@@ -2,13 +2,9 @@ package org.julakali.chargeahead.shared.settings
 
 /**
  * Lowest common denominator of the platform stores: SharedPreferences on
- * Android, NSUserDefaults on iOS.
- *
- * Deliberately strings only. This project's settings are a handful of
- * numbers and a connector list — pulling in a database or a serialization
- * library for that would be effort without payoff. What goes in here is
- * formatted by [PersistentSettingsStore].
+ * Android, NSUserDefaults on iOS. Strings only.
  */
+// TODO use androidx datastore instead (#82)
 interface KeyValueStorage {
     fun getStringOrNull(key: String): String?
 
@@ -16,7 +12,7 @@ interface KeyValueStorage {
     fun putString(key: String, value: String?)
 }
 
-/** Storage without storage — for tests and for the JVM target, which is never shipped. */
+/** For tests and the JVM target. */
 class InMemoryKeyValueStorage(
     initial: Map<String, String> = emptyMap(),
 ) : KeyValueStorage {

@@ -42,7 +42,7 @@ fun AddCarRoute(
     )
 }
 
-/** The mockup's add-car screen: search the catalog, tap the +. */
+/** The add-car screen: search the catalog, tap the +. */
 @Composable
 fun AddCarScreen(
     uiState: AddCarUiState,

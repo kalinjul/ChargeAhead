@@ -13,10 +13,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
- * Asks the driver to open the app on the phone, which the whole-route
- * hand-off needs. It goes ahead by itself the moment the app is visible, so
- * the driver doesn't have to tap again. The next stop alone works without the
- * phone and is offered as the alternative.
+ * Asks the driver to open the app on the phone for the whole-route hand-off,
+ * and goes ahead by itself once it is visible. The next stop alone is offered
+ * as the alternative.
  */
 class OpenPhoneScreen(
     carContext: CarContext,

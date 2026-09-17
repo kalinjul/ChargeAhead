@@ -39,15 +39,14 @@ class AddCarViewModel(
                 it.name !in ownedNames && it.name.contains(needle, ignoreCase = true)
             },
         )
-        // Off the main thread: filtering the ~300-row catalog per keystroke was
-        // synchronous UI-thread work while the driver typed.
+        // Off the main thread.
     }.flowOn(Dispatchers.Default).stateIn(viewModelScope, WhileUiSubscribed, AddCarUiState())
 
     fun onQueryChanged(query: String) {
         this.query.value = query
     }
 
-    /** Adds the preset and selects it — a car added is the car being driven. */
+    /** Adds the preset and selects it. */
     fun onPresetAdded(preset: VehiclePreset) {
         viewModelScope.launch { settings.setVehicle(preset.toProfile()) }
     }

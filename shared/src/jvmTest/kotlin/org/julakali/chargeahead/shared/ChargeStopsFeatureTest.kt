@@ -37,10 +37,8 @@ import kotlin.test.assertTrue
 /**
  * Tests the chain location -> corridor -> source -> list as a whole.
  *
- * [Dispatchers.Unconfined] instead of a test dispatcher: this makes every
- * emission run to completion before `emit` returns, so the test doesn't need
- * kotlinx-coroutines-test. This requires that the source used doesn't actually
- * suspend — none here does.
+ * [Dispatchers.Unconfined] makes every emission run to completion before
+ * `emit` returns, as long as the sources don't suspend.
  */
 class ChargeStopsFeatureTest {
 
@@ -177,7 +175,7 @@ class ChargeStopsFeatureTest {
 
     @Test
     fun repositoryFailure_leavesTheOldListStanding() = runBlocking {
-        // When out of signal range, the last known list is worth more than an empty one.
+        // The last known list stays when the source fails.
         val location = ControllableLocationSource()
         var broken = false
         val repository = object : SiteRepository {
@@ -286,7 +284,7 @@ class ChargeStopsFeatureTest {
         feature.close()
     }
 
-    // --- from M2: vehicle profile and charge state ---
+    // --- vehicle profile and charge state ---
 
     @Test
     fun withoutProfile_reachabilityStaysUnknown() = runBlocking {
@@ -325,8 +323,7 @@ class ChargeStopsFeatureTest {
 
     @Test
     fun aChangeInStateOfCharge_recomputesImmediately() = runBlocking {
-        // It changes range, classification, and corridor size. Waiting for the
-        // next location fix would mean up to two more kilometers of driving.
+        // Must take effect without waiting for the next location fix.
         val location = ControllableLocationSource()
         val settingsStore = settingsStore()
         settingsStore.setVehicle(vehicle)
@@ -373,8 +370,7 @@ class ChargeStopsFeatureTest {
 
     @Test
     fun emptyBattery_doesNotMakeTheListDisappear() = runBlocking {
-        // The corridor would otherwise be zero kilometers wide — exactly when
-        // the driver needs the list the most.
+        // The minimum search radius applies below the reserve.
         val location = ControllableLocationSource()
         val settingsStore = settingsStore()
         settingsStore.setVehicle(vehicle)
@@ -396,9 +392,7 @@ class ChargeStopsFeatureTest {
 
     @Test
     fun justUnreachableStaysVisible_farAwayDoesNot() {
-        // The 1.2x margin on the search radius exists exactly for this: a band
-        // just beyond range is still fetched and flagged (ARCHITECTURE.md 5.2),
-        // while anything far beyond that would just be noise.
+        // The 1.2x margin: a band just beyond range is still fetched and flagged.
         runBlocking {
             val location = ControllableLocationSource()
             val settingsStore = settingsStore()
@@ -486,9 +480,7 @@ class ChargeStopsFeatureTest {
         )
         feature.start()
 
-        // Room queries run on their own context, so the seed lands
-        // asynchronously even under Unconfined — await it instead of
-        // reading the snapshot right after start().
+        // Room queries run on their own context, so await the seed.
         val seeded = withTimeout(5_000) {
             feature.state.first { it.availableOperators.isNotEmpty() }
         }

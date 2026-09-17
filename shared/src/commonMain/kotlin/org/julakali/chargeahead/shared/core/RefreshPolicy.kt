@@ -6,12 +6,8 @@ import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlin.math.abs
 
 /**
- * Decides when the list is recomputed (ARCHITECTURE.md 5.4).
- *
- * A fixed interval would be wrong at both extremes: pointless recomputation
- * in traffic jams, too infrequent at highway speed. Hence distance *or*
- * time — and a clear course change overrides both, because after leaving the
- * highway the entire previous corridor is obsolete.
+ * Decides when the list is recomputed: after a distance *or* a time, or on a
+ * clear course change.
  */
 class RefreshPolicy(
     private val minDistanceKm: Double = MIN_DISTANCE_KM,
@@ -32,9 +28,7 @@ class RefreshPolicy(
 
         if (previous.position.distanceKmTo(current.position) > minDistanceKm) return true
 
-        // Absolute value, because fixes can arrive late or with a corrected
-        // clock; a timestamp running backward must not block the refresh
-        // indefinitely.
+        // Absolute value: a timestamp running backward must not block the refresh.
         return abs(current.timestampMillis - previous.timestampMillis) > minIntervalMillis
     }
 

@@ -23,10 +23,7 @@ import kotlinx.coroutines.launch
 
 /** Choosing charging networks. */
 data class NetworksUiState(
-    /**
-     * The catalog rows to show; filtered by [search] when non-empty, full
-     * list — the driver's own networks first — otherwise.
-     */
+    /** The catalog rows to show, filtered by [search]. */
     val networks: List<Network> = emptyList(),
     /** The ticked networks (catalog keys), edits included. */
     val selected: Set<String> = emptySet(),
@@ -36,12 +33,8 @@ data class NetworksUiState(
 )
 
 /**
- * The network picker — catalog-backed, written back when the screen is left.
- *
- * Edits are staged rather than persisted per tap: every write re-runs the
- * planning and the map query, and ticking half a dozen networks in a row
- * would do that half a dozen times. [onLeave] is the commit; the back
- * gesture is the confirmation.
+ * The network picker. Edits are staged and committed after a pause or on
+ * [onLeave], since every write re-runs planning and the map query.
  */
 class NetworksViewModel(
     private val settings: SettingsStore,
@@ -53,29 +46,21 @@ class NetworksViewModel(
     private val staged = MutableStateFlow<NetworkPreferences?>(null)
 
     /**
-     * The order to draw the pills in, frozen while the list is being read.
-     * Ticking a network lifts it to the top only once the list is rebuilt
-     * anyway — clearing the search field, or the next visit — so a tap doesn't
-     * yank the pill out from under the finger. `null` until [onEnter]
-     * snapshots it; the ordering falls back to committed-first.
+     * The order to draw the pills in, frozen so a tap doesn't move the pill.
+     * `null` until [onEnter] snapshots it.
      */
     private val displayOrder = MutableStateFlow<List<String>?>(null)
 
     /** The pending debounced commit, restarted on every edit. */
     private var commitJob: Job? = null
 
-    // Each catalog name folded once, up front — the search used to fold all ~200
-    // rows (five string allocations each) on the main thread on every keystroke.
+    // Each catalog name folded once, up front.
     private val foldedCatalog: List<Pair<Network, String>> =
         NetworkCatalog.all.map { it to OperatorKey.folded(it.name) }
     private val foldedByKey: Map<String, String> =
         foldedCatalog.associate { (network, folded) -> network.key to folded }
 
-    /**
-     * The catalog rows that survive the search, in catalog order. Filtered off
-     * the main thread and only when the query itself changes — ticking a network
-     * changes [staged], not this, so it no longer re-sweeps the whole catalog.
-     */
+    /** The catalog rows that survive the search, in catalog order. */
     private val matches: Flow<List<Network>> = search
         .map { it.trim() }
         .distinctUntilChanged()
@@ -98,8 +83,6 @@ class NetworksViewModel(
     ) { matches, stored, staged, search, order ->
         val edited = staged ?: stored
         NetworksUiState(
-            // Selection follows the staged edit — a tick colours in at once —
-            // but the order follows the frozen snapshot, so the pill stays put.
             networks = order.orderFor(matches) ?: matches.committedFirst(stored),
             selected = edited.preferredOperators,
             onlyPreferred = edited.onlyPreferred,
@@ -110,9 +93,7 @@ class NetworksViewModel(
     fun onSearchChanged(query: String) {
         val cleared = search.value.isNotBlank() && query.isBlank()
         search.value = query
-        // Clearing the field rebuilds the list from the whole catalog anyway,
-        // so re-sorting here yanks no pill out from under the finger — and the
-        // networks just ticked while searching are where they belong: on top.
+        // Clearing the field rebuilds the list anyway, so re-sort here.
         if (cleared) refreshOrder()
     }
 
@@ -125,10 +106,7 @@ class NetworksViewModel(
 
     fun onOnlyPreferredChanged(enabled: Boolean) = edit { it.copy(onlyPreferred = enabled) }
 
-    /**
-     * The screen was opened — snapshot the order from what is committed, so the
-     * driver's picks sit on top now and stay put until they leave and return.
-     */
+    /** The screen was opened: snapshot the order from what is committed. */
     fun onEnter() {
         displayOrder.value = null
         refreshOrder()
@@ -141,11 +119,7 @@ class NetworksViewModel(
         }
     }
 
-    /**
-     * The screen is being left — commit at once, cancelling any pending
-     * debounce. This covers the back arrow, the system back gesture and the
-     * drawer alike.
-     */
+    /** The screen is being left: commit at once. */
     fun onLeave() {
         commitJob?.cancel()
         viewModelScope.launch { commit() }
@@ -158,11 +132,6 @@ class NetworksViewModel(
         }
     }
 
-    /**
-     * The map query and replan are expensive, so ticking a row only stages —
-     * the fetch waits for a [COMMIT_DEBOUNCE_MS] pause in selecting, or for
-     * the screen to be left. Selection itself stays instant either way.
-     */
     private fun scheduleCommit() {
         commitJob?.cancel()
         commitJob = viewModelScope.launch {
@@ -172,12 +141,10 @@ class NetworksViewModel(
     }
 
     private suspend fun commit() {
-        // Reading [staged] inside the coroutine, not before it: [edit] queues
-        // on the same scope, so the last tick before a commit is in by now.
+        // Read inside the coroutine, so the last queued edit is in.
         val edited = staged.value ?: return
         settings.setNetworks(edited)
-        // Back to "unchanged": the ViewModel is activity-scoped and outlives
-        // the screen, so the next visit starts from what was just stored.
+        // The ViewModel outlives the screen.
         staged.value = null
     }
 
@@ -188,7 +155,7 @@ class NetworksViewModel(
         return matches.sortedBy { index[it.key] ?: Int.MAX_VALUE }
     }
 
-    /** Committed picks first, then alphabetical — the order a fresh visit sees. */
+    /** Committed picks first, then alphabetical. */
     private fun List<Network>.committedFirst(committed: NetworkPreferences): List<Network> =
         sortedWith(
             compareByDescending<Network> { it.key in committed.preferredOperators }

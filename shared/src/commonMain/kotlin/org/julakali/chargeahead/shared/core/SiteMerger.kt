@@ -6,20 +6,11 @@ import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlin.math.roundToInt
 
 /**
- * Merges the same site reported by multiple sources into one
- * (ARCHITECTURE.md section 5.5).
+ * Merges the same site reported by multiple sources (or several times by the
+ * same source) into one, based on **spatial proximity and overlapping
+ * connector signature**.
  *
- * Merging happens on **spatial proximity and overlapping connector
- * signature**. The second condition is the more important one: two charge
- * points can share a parking lot and still be different devices.
- *
- * This isn't only about comparing across sources. The official charging
- * register reports per *charging facility*, not per site — on the A9, 294
- * pairs out of 98 entries were within 25 m of each other, with "mblty
- * Denkendorf" appearing seven times at the same coordinate. Without merging,
- * the same charging park would show up seven times in the list.
- *
- * Field-by-field priority per ARCHITECTURE.md:
+ * Field-by-field priority:
  *
  * | Field | Priority |
  * |---|---|
@@ -28,7 +19,6 @@ import kotlin.math.roundToInt
  */
 object SiteMerger {
 
-    /** Spatial threshold. See ARCHITECTURE.md section 5.5. */
     const val DEFAULT_MAX_DISTANCE_METERS = 25.0
 
     /**
@@ -43,9 +33,7 @@ object SiteMerger {
     ): List<ChargeSite> {
         if (sites.size < 2) return sites
 
-        // Sorted by id so the same input always produces the same output —
-        // otherwise the list would depend on the response order of two
-        // independent network requests.
+        // Sorted by id so the same input always produces the same output.
         val ordered = sites.sortedBy { it.id }
         val grid = SpatialGrid(maxDistanceMeters)
         val clusters = mutableListOf<MutableList<ChargeSite>>()
@@ -73,10 +61,7 @@ object SiteMerger {
 
     /**
      * Do the connector types overlap?
-     *
-     * If either side doesn't know its connectors, the condition counts as
-     * satisfied: a missing value is no evidence of difference, and spatial
-     * distance alone then carries the decision.
+     * If either side doesn't know its connectors, the condition counts as satisfied.
      */
     private fun ChargeSite.sharesConnectorSignature(other: ChargeSite): Boolean {
         if (connectors.isEmpty() || other.connectors.isEmpty()) return true
@@ -92,17 +77,11 @@ object SiteMerger {
 
         return ChargeSite(
             id = leading.id,
-            // Name from OpenChargeMap, because that's where people name what
-            // they actually found; the register carries administrative labels.
             name = cluster.preferredName() ?: leading.name,
             operator = leading.operator ?: cluster.firstNotNullOfOrNull { it.operator },
             position = leading.position,
-            // Sum connectors only from the leading source: OCM and the
-            // register describe the same devices, so adding both would double
-            // the charging park's apparent number of charge points.
+            // Sum connectors only from the leading source: the sources describe the same devices.
             connectors = sameSource.flatMap { it.connectors }.mergeConnectors(),
-            // Address follows position and operator: officially reported
-            // beats manually entered.
             address = leading.address ?: cluster.firstNotNullOfOrNull { it.address },
             sources = cluster.flatMapTo(mutableSetOf()) { it.sources },
         )
@@ -121,9 +100,7 @@ object SiteMerger {
 
     /**
      * Group identical connectors and sum their counts.
-     *
-     * If even one count is unknown, the sum stays unknown — reporting a
-     * partial sum as the total would be worse than "unknown".
+     * If even one count is unknown, the sum stays unknown.
      */
     private fun List<Connector>.mergeConnectors(): List<Connector> =
         groupBy { it.type to it.maxPowerKw }
@@ -137,16 +114,9 @@ object SiteMerger {
             }
             .sortedByDescending { it.maxPowerKw }
 
-    /**
-     * Grid index over the sites so not every site is compared against every
-     * other one. With several thousand entries per query that would be
-     * quadratic; with cells sized to the threshold, the nine-cell neighborhood
-     * suffices.
-     */
+    /** Grid index with cells sized to the threshold, so the nine-cell neighborhood suffices. */
     private class SpatialGrid(maxDistanceMeters: Double) {
-        // Cell edge in degrees, computed generously: one arcminute of latitude
-        // is about 1852 m, less in longitude within Germany — the cell may
-        // safely be too large; too small would be a bug.
+        // Cell edge in degrees, generously: too large is safe, too small would be a bug.
         private val cellDegrees = maxDistanceMeters / 111_000.0
         private val cells = mutableMapOf<Pair<Int, Int>, MutableSet<Int>>()
 

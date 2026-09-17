@@ -42,16 +42,8 @@ import org.julakali.chargeahead.shared.ui.NetworksUiState
 import org.julakali.chargeahead.shared.ui.NetworksViewModel
 
 /**
- * Selecting charging networks.
- *
- * The list comes from the shipped catalog, not from chargers in the current
- * surroundings. Search is still useful: the catalog runs to dozens of entries,
- * and "ionity" in the search field isolates every variant without touching the
- * rest.
- *
- * There is no confirm button: leaving the screen applies the edits. The
- * ViewModel stages them until then, so a handful of ticks costs one replan
- * instead of one per tick.
+ * Selecting charging networks from the shipped catalog. Leaving the screen
+ * applies the edits.
  */
 @Composable
 fun NetworksRoute(
@@ -60,9 +52,7 @@ fun NetworksRoute(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Entering freezes the pill order for the visit; leaving the composition is
-    // the commit — the latter covers the back arrow, the system back gesture
-    // and the drawer alike, which a callback on the back arrow alone would not.
+    // Entering freezes the pill order; leaving the composition commits.
     DisposableEffect(viewModel) {
         viewModel.onEnter()
         onDispose { viewModel.onLeave() }
@@ -87,9 +77,7 @@ fun NetworkSettingsScreen(
 ) {
     Column(modifier = modifier.padding(horizontal = 18.dp)) {
         AppCard(modifier = Modifier.padding(top = 16.dp)) {
-            // The switch reads the other way round from the setting it writes:
-            // browsing is the state without a filter, so it is on exactly when
-            // onlyPreferred is off.
+            // On exactly when onlyPreferred is off.
             SwitchRow(
                 label = stringResource(R.string.phone_networks_browse),
                 sublabel = stringResource(R.string.phone_networks_browse_hint),
@@ -118,13 +106,10 @@ fun NetworkSettingsScreen(
                     modifier = Modifier.padding(top = 16.dp),
                 )
             } else {
-                // Chunked once per list change, not per recomposition — this
-                // screen recomposes on every keystroke and every pill toggle.
+                // Chunked once per list change, not per recomposition.
                 val chunks = remember(uiState.networks) { uiState.networks.chunked(PILLS_PER_CHUNK) }
                 AppCard(modifier = Modifier.fillMaxSize().padding(vertical = 8.dp)) {
-                    // Lazy so opening doesn't compose all ~500 pills up front: a
-                    // LazyColumn of chunks, each a FlowRow that wraps its pills.
-                    // Only the visible chunks compose.
+                    // A LazyColumn of chunks, each a FlowRow, so only visible chunks compose.
                     LazyColumn(
                         verticalArrangement = Arrangement.spacedBy(9.dp),
                         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp),
@@ -135,8 +120,7 @@ fun NetworkSettingsScreen(
                                 verticalArrangement = Arrangement.spacedBy(9.dp),
                             ) {
                                 chunk.forEach { network ->
-                                    // Keyed so its colour/scale state stays with
-                                    // this pill as the list reorders.
+                                    // Keyed so its animation state stays with the pill.
                                     key(network.key) {
                                         OperatorPill(
                                             name = network.name,
@@ -155,11 +139,7 @@ fun NetworkSettingsScreen(
     }
 }
 
-/**
- * A charging network as a pill. Since there are no colour dots any more,
- * selection carries the colour: a selected pill fills with [fill] — the
- * operator's own colour where we know it, plain app-blue otherwise.
- */
+/** A charging network as a pill; a selected pill fills with [fill]. */
 @Composable
 private fun OperatorPill(
     name: String,
@@ -168,9 +148,7 @@ private fun OperatorPill(
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
-    // Plain Compose colour crossfades — fill and ink change together, in step,
-    // so there is no half-transparent frame where white text sits on a not-yet
-    // filled pill (the "ghost" the hand-rolled bloom produced).
+    // Fill and ink crossfade together.
     val container by animateColorAsState(
         targetValue = if (selected) fill else scheme.surfaceVariant,
         animationSpec = tween(durationMillis = 200),
@@ -181,9 +159,7 @@ private fun OperatorPill(
         animationSpec = tween(durationMillis = 200),
         label = "pillContent",
     )
-    // The one custom touch: a tap dents the pill in and springs it back past its
-    // size. Driven off the click, not the press state — a quick tap barely moved
-    // the press scale before release, so the bounce never showed.
+    // A tap dents the pill in and springs it back. Driven off the click, not the press state.
     val scope = rememberCoroutineScope()
     val scale = remember { Animatable(1f) }
     Surface(
@@ -207,18 +183,14 @@ private fun OperatorPill(
     }
 }
 
-/** Dark ink on a light fill, white on a dark one — so a brand pill stays legible. */
+/** Dark ink on a light fill, white on a dark one. */
 private fun Color.readableInk(): Color =
     if (luminance() > 0.55f) Color(0xFF202124) else Color.White
 
-/** Pills per lazy row-chunk — a chunk is one FlowRow, so only visible ones compose. */
+/** Pills per lazy row-chunk. */
 private const val PILLS_PER_CHUNK = 30
 
-/**
- * Brand colours for the networks we recognise, keyed by catalog key. Everything
- * not in here falls back to app-blue. Kept in the UI layer: these are Android
- * [Color]s and only the pills use them.
- */
+/** Brand colours for the networks we recognise, keyed by catalog key. */
 private val brandColors: Map<String, Color> = mapOf(
     "ionity" to Color(0xFF00C389),
     "tesla" to Color(0xFFE82127),

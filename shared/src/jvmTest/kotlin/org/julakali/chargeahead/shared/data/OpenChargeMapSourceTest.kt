@@ -19,15 +19,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * Checks the mapping of the OCM response onto the domain model against canned
- * responses. What this does *not* check: whether the real interface actually
- * responds this way. See the warning on [OpenChargeMapSource].
- *
- * `runBlocking` instead of `runTest`, so the tests need no extra dependency
- * (kotlinx-coroutines-test); that's why they live in the jvmTest source set
- * rather than commonTest.
- */
+/** Checks the mapping of the OCM response onto the domain model against canned responses. */
 class OpenChargeMapSourceTest {
 
     private val area = SectorArea.circle(LatLon(48.9331, 11.4779), radiusKm = 150.0)
@@ -80,8 +72,7 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun skipsSitesWithoutCoordinates() {
-        // A site without a position can neither be ranked nor navigated to —
-        // it must not fill the list with a row that has no distance.
+        // A site without a position is dropped.
         val source = sourceRespondingWith(
             """
             [
@@ -116,7 +107,7 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun discardsConnectorsWithoutPowerRating() = runBlocking {
-        // Showing "0 kW" in the car would be worse than omitting the connector entirely.
+        // A connector without power is dropped.
         val source = sourceRespondingWith(
             """
             [{
@@ -151,8 +142,7 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun missingQuantity_staysUnknown() = runBlocking {
-        // Don't default to 1: OCM is missing this count for a good half of
-        // connectors, and a fabricated number doesn't belong in the car.
+        // Missing count stays unknown, not 1.
         val source = sourceRespondingWith(
             """
             [{
@@ -168,7 +158,6 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun quantityZero_countsAsUnknown() = runBlocking {
-        // 22 of 307 connectors in the sample carried a 0.
         val source = sourceRespondingWith(
             """
             [{
@@ -199,9 +188,7 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun placeholderOperators_areDiscarded() = runBlocking {
-        // OCM lists three placeholders as regular operators. In the sample,
-        // 38 of 123 sites carried one; unfiltered, the car would show
-        // "Ladepark X · (Business Owner at Location)".
+        // OCM lists placeholders as regular operators.
         val placeholders = listOf(
             "(Business Owner at Location)",
             "(Private Residence/Individual)",
@@ -225,8 +212,7 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun realOperatorNamesWithParentheses_arePreserved() = runBlocking {
-        // Of 997 operators in the reference data, exactly the three
-        // placeholders start with "(". These here are real.
+        // Real operators with parentheses, not at the front.
         val real = listOf("EnBW (D)", "Shell Recharge Solutions (DE)", "Tesla (including non-tesla)")
 
         real.forEach { title ->
@@ -246,7 +232,7 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun unknownFieldsInTheResponse_doNotInterfere() = runBlocking {
-        // OCM returns dozens of fields per site and keeps adding new ones.
+        // Unknown fields are ignored.
         val source = sourceRespondingWith(
             """
             [{
@@ -276,9 +262,7 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun queriesRadiallyNotRectangularly() = runBlocking {
-        // A rectangular query gets an unsorted response from OCM that's
-        // truncated at maxresults — cutting out exactly the nearest charging
-        // stations. See the reasoning in OpenChargeMapSource.query.
+        // A rectangular query would get an unsorted, truncated response.
         var capturedRequest: HttpRequestData? = null
         val source = sourceRespondingWith("[]") { capturedRequest = it }
 
@@ -294,8 +278,7 @@ class OpenChargeMapSourceTest {
 
     @Test
     fun anInterfaceErrorIsPropagated() {
-        // Without a key, OCM responds with 403. That must not be read as "no
-        // charging station ahead" — it has to surface as an error further up.
+        // A 403 must surface as an error, not an empty list.
         val engine = MockEngine { respondError(HttpStatusCode.Forbidden) }
         val source = OpenChargeMapSource(createHttpClient(engine), apiKey = "falsch")
 

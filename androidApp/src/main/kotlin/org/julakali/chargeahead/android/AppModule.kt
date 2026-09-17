@@ -13,14 +13,11 @@ import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 /**
- * What only Android can supply to `chargeStopsModule`: context-bound
- * location and database, the settings storage, and the build's config.
- * One SettingsStore per process — in Android Auto the phone and car UI share
- * this process, and two stores would be blind to each other's writes
- * (ARCHITECTURE.md §8).
+ * What only Android can supply to `chargeStopsModule`. One SettingsStore per
+ * process, shared by the phone and car UI.
  */
 val appModule = module {
-    // IO, not the store's Default: SharedPreferences commit() is a blocking disk write.
+    // IO: SharedPreferences commit() is a blocking disk write.
     single<SettingsStore> { PersistentSettingsStore(SharedPreferencesStorage(androidContext()), Dispatchers.IO) }
 
     // The phone's location; a car session passes its own.

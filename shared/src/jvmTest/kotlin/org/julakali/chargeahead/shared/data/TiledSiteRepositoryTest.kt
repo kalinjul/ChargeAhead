@@ -91,7 +91,6 @@ class TiledSiteRepositoryTest {
 
     @Test
     fun theLocalStoreSurvivesTheProcess() = runBlocking {
-        // The actual advantage over an in-memory circle.
         val db = database()
         val firstSource = ControllableSource(listOf(site("a", 0.0, 10.0)))
         TiledSiteRepository(firstSource, db, ControllableClock()).sitesIn(area())
@@ -120,8 +119,7 @@ class TiledSiteRepositoryTest {
 
     @Test
     fun withNoStoreAndNoNetwork_theErrorIsReported() {
-        // An empty list would be a lie here: it isn't known whether there's
-        // no charging station there, or nobody has checked.
+        // Nothing stored and no network: the failure must surface.
         val source = ControllableSource().apply { broken = true }
         val repository = TiledSiteRepository(source, database(), ControllableClock())
 
@@ -233,7 +231,7 @@ class TiledSiteRepositoryTest {
 
     @Test
     fun anUnknownConnectorTypeFromTheDatabase_doesNotCostTheWholeStore() {
-        // Otherwise an older app version would lose everything on a rollback.
+        // Unknown enum names must not throw.
         val decoded = "STECKER_AUS_DER_ZUKUNFT:150.0:2".decodeConnectors()
 
         assertEquals(1, decoded.size)
@@ -260,8 +258,7 @@ class TiledSiteRepositoryTest {
 
     @Test
     fun forACorridor_aFullCircleIsFetched() = runBlocking {
-        // The heading turns while driving; a sector that rotated with it would
-        // land partly outside the already-fetched area after every curve.
+        // Sectors are fetched as full circles.
         val source = ControllableSource()
         val corridor = SectorArea(start, bearingDeg = 180.0, halfAngleDeg = 35.0, radiusKm = 40.0)
 
@@ -326,9 +323,7 @@ class TiledSiteRepositoryTest {
 
     @Test
     fun forARoute_theRouteBufferStaysUnchanged() = runBlocking {
-        // The core point of the switch. If this got inflated into a circle
-        // around the route's start, the whole route advantage would be gone:
-        // a route's radiusKm is roughly its length.
+        // A route must not be inflated into a circle around its start.
         val source = ControllableSource()
         val route = PolylineArea(
             listOf(start, start.destination(180.0, 80.0), start.destination(180.0, 170.0)),
@@ -398,8 +393,7 @@ class TiledSiteRepositoryTest {
 
     @Test
     fun aStalledFetch_doesNotBlockFetchesForOtherAreas() = runBlocking<Unit> {
-        // Area A's fetch hangs on the network; a fetch for area B must still
-        // complete instead of waiting behind it — the old global lock did wait.
+        // Area A's fetch hangs; a fetch for area B must still complete.
         val gate = CompletableDeferred<Unit>()
         val source = object : ChargeSiteSource {
             override val id = "test"
@@ -449,11 +443,7 @@ class TiledSiteRepositoryTest {
         assertEquals(1, source.queries, "the identical concurrent fetch was de-duplicated")
     }
 
-    /**
-     * Answers like the real sources do: only what lies inside the requested
-     * shape. BNetzA buffers the polyline server-side, OCM and the backend
-     * query a chain of circles — none of them returns the bounding box.
-     */
+    /** Answers like the real sources do: only what lies inside the requested shape. */
     private class ShapeClippingSource(private val sites: List<ChargeSite>) : ChargeSiteSource {
         override val id = "test"
         var queries = 0

@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.julakali.chargeahead.android.phone.theme.tabular
 
-/** The mockup's `.card`: white, hairline border, 14dp corners, whisper of a shadow. */
+/** White card with hairline border, 14dp corners and a slight shadow. */
 @Composable
 fun AppCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
     val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -36,7 +36,7 @@ fun AppCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, conten
     }
 }
 
-/** The mockup's `.kv`: a two-column spec grid with uppercase keys. */
+/** A two-column spec grid with uppercase keys. */
 @Composable
 fun KeyValueGrid(entries: List<Pair<String, String>>, modifier: Modifier = Modifier) {
     AppCard(modifier) {

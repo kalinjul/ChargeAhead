@@ -19,9 +19,7 @@ import org.julakali.chargeahead.api.RouteResponse
 /**
  * Route calculation through the ChargeAhead backend.
  *
- * Which engine answers is the server's decision, so switching to Google
- * needs no app release. POST rather than GET because the coordinates are
- * where the driver is going and would otherwise land in access logs.
+ * POST rather than GET to keep the coordinates out of access logs.
  */
 class BackendRouteEngine(
     private val httpClient: HttpClient,
@@ -36,16 +34,13 @@ class BackendRouteEngine(
             setBody(RouteRequest(from = from.toDto(), to = to.toDto()))
         }
 
-        // 204 is the answer "there is no road connection" and carries no
-        // body. Reading one would throw where nothing is wrong.
+        // 204: no road connection.
         if (response.status == HttpStatusCode.NoContent) return null
 
         val route: RouteResponse = response.body()
-        // `points` strays up to a kilometre from the road; a server older than
-        // the encoded line sends nothing better, so it stays the fallback.
+        // `points` is the fallback for servers without the encoded line.
         val points = route.encodedPolyline?.let(::decodePolyline)?.takeIf { it.size >= 2 }
             ?: route.points.map { LatLon(it.lat, it.lon) }
-        // A route of one point is not a route; the domain type rejects it.
         if (points.size < 2) return null
 
         return Route(

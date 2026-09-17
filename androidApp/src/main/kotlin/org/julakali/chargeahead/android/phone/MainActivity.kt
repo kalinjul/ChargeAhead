@@ -77,21 +77,14 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * The phone app: map-first, the flows from the design mockup (docs/mockup) —
- * plan a route with charging stops, "charge now", garage,
- * filters, saved routes.
- *
- * State lives in the shared ViewModels (`org.julakali.chargeahead.shared.ui`); what stays
- * here is what is genuinely the app shell's: the Navigation3 back stack,
- * which sheet is open, and the Android-only permission handshake.
+ * The phone app shell: the Navigation3 back stack, which sheet is open, and
+ * the Android-only permission handshake.
  */
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // The app is light-only, but enableEdgeToEdge() reads the SYSTEM theme:
-        // in system dark mode the status-bar icons went white and vanished over
-        // the light map. Pin the light style so they stay dark.
+        // The app is light-only; pin the light system bar style.
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
@@ -113,12 +106,8 @@ private enum class Sheet { NONE, PLAN, CHARGE_NOW, ROUTES }
 private fun PhoneApp() {
     val context = LocalContext.current
 
-    // The chrome's own state holders. Every screen below fetches its own —
-    // these three are here because the app bar, the drawer and the sheets
-    // read them, not one screen.
+    // State holders read by the chrome (app bar, drawer, sheets).
     val drawerViewModel: DrawerViewModel = phoneViewModel()
-    // Same activity-scoped instance the map uses; the drawer reads its
-    // applyingFilters to show a spinner while a filter toggle refetches.
     val homeViewModel: HomeViewModel = phoneViewModel()
     val tripViewModel: TripViewModel = phoneViewModel()
     val planSheetViewModel: PlanSheetViewModel = phoneViewModel()
@@ -139,23 +128,18 @@ private fun PhoneApp() {
         if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
     }
 
-    // Drawer targets never stack on each other: back from any of them goes
-    // home, exactly as the enum navigation behaved.
+    // Drawer targets never stack on each other.
     fun openFromRoot(target: PhoneDestination) {
         while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
         if (target != Home) backStack.add(target)
     }
 
-    // The device-settings half of the location handshake — the dialog that
-    // turns on "Improve Location Accuracy". Once the settings can serve us,
-    // the fix is asked for right away.
+    // The device-settings half of the location handshake.
     val checkLocationSettings = rememberLocationSettingsCheck {
         homeViewModel.onLocateRequested()
     }
 
-    // Set when the location button had to ask for the permission first, so
-    // the grant carries on into the settings check instead of stopping there
-    // and making the driver tap a second time.
+    // Set when the location button had to ask for the permission first.
     var locateAfterPermission by remember { mutableStateOf(false) }
 
     var hasPermission by remember { mutableStateOf(context.hasLocationPermission()) }
@@ -167,10 +151,7 @@ private fun PhoneApp() {
         locateAfterPermission = false
     }
 
-    // Re-read on every resume, not only once. The grant can happen outside
-    // this launcher — in the system settings, or through the car surface's own
-    // request — and the map would otherwise keep the permission card up over a
-    // permission it already holds (issue #36).
+    // Re-read on every resume: the grant can happen outside this launcher.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         hasPermission = context.hasLocationPermission()
     }
@@ -205,9 +186,7 @@ private fun PhoneApp() {
         }
     }
 
-    // Outcomes of planning and saving, once each. The snackbar runs in the
-    // remembered scope rather than in this effect: consuming the event
-    // changes the key, and that would cancel the effect mid-message.
+    // Outcomes of planning and saving, once each.
     LaunchedEffect(tripEvent) {
         when (val event = tripEvent) {
             null -> return@LaunchedEffect
@@ -227,8 +206,7 @@ private fun PhoneApp() {
 
     ModalNavigationDrawer(
         drawerState = drawerState,
-        // Open only via the burger: the edge swipe fights the map's pan
-        // gesture and wins far too often.
+        // Open only via the burger: the edge swipe fights the map's pan gesture.
         gesturesEnabled = drawerState.isOpen,
         drawerContent = {
             ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
@@ -236,8 +214,7 @@ private fun PhoneApp() {
                 DrawerContent(
                     uiState = drawerUi,
                     applyingFilters = applyingFilters,
-                    // The drawer stays open: the page slides in over it from the
-                    // right, and back slides it away to reveal the drawer again.
+                    // The drawer stays open underneath the page.
                     onOpen = { target -> openFromRoot(target) },
                     onFilters = drawerViewModel::onFiltersChanged,
                 )
@@ -245,16 +222,12 @@ private fun PhoneApp() {
         },
     ) {
         Scaffold(
-            // The snackbar is the only chrome left out here. Every page brings
-            // its own top bar from inside NavDisplay, so the insets are zero
-            // and the host has to keep clear of the navigation bar itself.
+            // Every page brings its own top bar, so keep clear of the navigation bar here.
             snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
             contentWindowInsets = WindowInsets(0),
         ) { padding ->
-            // Just the map. Full-screen pages are a separate layer above the
-            // drawer (below), so they slide in over the still-open drawer. The
-            // map is built once here and kept — rebuilding the GoogleMap on
-            // every back press is what stalled the UI thread (fix/menu-back-lag).
+            // Just the map, built once and kept. Full-screen pages are a
+            // separate layer above the drawer (below).
             HomeRoute(
                 hasPermission = hasPermission,
                 planningInProgress = tripUi is TripUiState.Planning,
@@ -264,8 +237,7 @@ private fun PhoneApp() {
                 onPlan = { sheet = Sheet.PLAN; planSheetViewModel.onSheetOpened() },
                 onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
                 onRoutes = { sheet = Sheet.ROUTES },
-                // No scaffold padding: the map draws under the (dark-iconed)
-                // status bar, like every maps app.
+                // No scaffold padding: the map draws under the status bar.
                 modifier = Modifier
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background),
@@ -273,9 +245,8 @@ private fun PhoneApp() {
         }
     }
 
-    // Full-screen pages: a layer ABOVE the drawer that slides in from the right
-    // and slides back out to reveal the still-open drawer. Predictive back drags
-    // it rightward. The empty Home slot lets the map + drawer show through.
+    // Full-screen pages: a layer ABOVE the drawer. The empty Home slot lets
+    // the map + drawer show through.
     NavDisplay(
         backStack = backStack,
         onBack = { pop() },
@@ -286,7 +257,6 @@ private fun PhoneApp() {
             fadeIn(tween(300)) togetherWith slideOutHorizontally(tween(300)) { it }
         },
         entryProvider = entryProvider {
-            // Home is the map + drawer below; its slot is empty.
             entry<Home> { }
 
                     entry<Trip> {
@@ -427,8 +397,7 @@ private fun PhoneApp() {
 
         Sheet.ROUTES -> AppSheet(onDismissRequest = { sheet = Sheet.NONE }) {
             RoutesRoute(
-                // Reopening a route from the list keeps the stored charge
-                // level; adjusting it is what the plan sheet is for.
+                // Reopening a route keeps the stored charge level.
                 onOpen = { destination ->
                     sheet = Sheet.NONE
                     tripViewModel.plan(destination)
@@ -437,9 +406,7 @@ private fun PhoneApp() {
         }
     }
 
-    // A sheet, or the drawer once no page is over it, closes on back. While a
-    // page IS open the drawer stays open underneath, so back must pop the page
-    // (NavDisplay's job) — hence the size check keeps this handler out of the way.
+    // A sheet, or the drawer once no page is over it, closes on back.
     BackHandler(enabled = sheet != Sheet.NONE || (drawerState.isOpen && backStack.size == 1)) {
         when {
             sheet != Sheet.NONE -> sheet = Sheet.NONE
@@ -450,13 +417,7 @@ private fun PhoneApp() {
 
 /**
  * One page of the back stack: a full-screen, opaque Scaffold with its own top
- * bar.
- *
- * The bar belongs in here rather than in an outer Scaffold. Predictive back
- * scales down the whole NavDisplay entry, so anything hoisted above it stays
- * behind, hanging over a page that shrinks away — and an entry that paints no
- * background of its own is see-through while it does, showing the page
- * underneath straight through the shrinking one.
+ * bar, so predictive back scales the whole page.
  */
 @Composable
 private fun Page(
@@ -474,15 +435,12 @@ private fun Page(
     )
 }
 
-/** Shown under a saved route's name — built from the same resources the trip header uses. */
+/** Shown under a saved route's name. */
 private fun TripPlan.summaryLine(context: Context): String =
     context.getString(R.string.trip_summary_distance, route.distanceKm.roundToInt()) + " · " +
         context.resources.getQuantityString(R.plurals.trip_summary_stops, stops.size, stops.size)
 
-/**
- * Shows [message] in a scope that outlives the effect that triggered it —
- * a snackbar must not die because the state that caused it was consumed.
- */
+/** Shows [message] in a scope that outlives the effect that triggered it. */
 private fun SnackbarHostState.show(scope: CoroutineScope, message: String) {
     scope.launch { showSnackbar(message) }
 }

@@ -9,12 +9,8 @@ import org.julakali.chargeahead.shared.domain.projectionOnSegment
 /**
  * Positions along a [Route], in kilometres from its start.
  *
- * [cumulativeKm] is scaled so its last entry is the route's own length.
- * [Route.points] is the simplified path, so summing it cuts every corner and
- * lands short — on a long route by kilometres. Everything that prices a stretch
- * measures in `route.distanceKm`: the reach, the destination check, and the
- * segments of the speed profile. Without the scaling, a site's km-from-start
- * would be read in one frame and spent in another.
+ * [cumulativeKm] is scaled so its last entry is `route.distanceKm`: summing the
+ * simplified [Route.points] cuts corners and lands short.
  */
 class RouteMeasure(val route: Route) {
 
@@ -33,8 +29,7 @@ class RouteMeasure(val route: Route) {
 
     /**
      * Projects [position] onto the segments `[fromIndex, toIndex)`, returning
-     * km-from-start and perpendicular distance in a single pass. Sweeping the
-     * whole route per site dominated long-trip planning, hence the range.
+     * km-from-start and perpendicular distance in a single pass.
      */
     fun project(position: LatLon, fromIndex: Int = 0, toIndex: Int = route.points.size - 1): Projection {
         val points = route.points

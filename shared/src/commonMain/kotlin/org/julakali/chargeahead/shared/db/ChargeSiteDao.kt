@@ -37,8 +37,7 @@ interface ChargeSiteDao {
         markCorridorsFetched(corridors)
     }
 
-    // Fresh tiles within a tile range. Listed rather than counted: which
-    // tiles a query needs depends on its shape, not just on its box.
+    // Fresh tiles within a tile range.
     @Query(
         "SELECT tileLat, tileLon FROM tileCoverage WHERE sourceId = :sourceId " +
             "AND networkKey = :networkKey " +
@@ -116,8 +115,6 @@ interface ChargeSiteDao {
     @Query("DELETE FROM chargeSite")
     suspend fun clearAll()
 
-    // The networks picker wants its list before the first live fetch: what
-    // the store already knows is good enough to seed it.
     @Query("SELECT operator, COUNT(*) AS sites FROM chargeSite WHERE operator IS NOT NULL GROUP BY operator")
     suspend fun operatorCounts(): List<OperatorCount>
 }

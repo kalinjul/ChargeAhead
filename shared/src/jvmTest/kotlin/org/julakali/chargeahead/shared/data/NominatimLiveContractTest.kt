@@ -13,8 +13,7 @@ import kotlin.test.assertTrue
  * OCM_LIVE=1 ./gradlew :shared:jvmTest --tests '*NominatimLiveContractTest'
  * ```
  *
- * Deliberately kept minimal — the public instance allows one request per
- * second, and this test should not push that limit.
+ * Kept minimal: the public instance allows one request per second.
  */
 class NominatimLiveContractTest {
 

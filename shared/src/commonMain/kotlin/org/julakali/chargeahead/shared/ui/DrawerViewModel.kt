@@ -17,11 +17,7 @@ data class DrawerUiState(
     val filters: ChargeFilters = ChargeFilters(),
 )
 
-/**
- * The drawer is not a screen but it carries state of its own — and it is
- * reachable from more than one screen, so it gets its own holder rather than
- * borrowing one screen's.
- */
+/** The navigation drawer's own state holder, since it is reachable from several screens. */
 class DrawerViewModel(
     private val settings: SettingsStore,
 ) : ViewModel() {
@@ -33,10 +29,7 @@ class DrawerViewModel(
     ) { vehicle, networks, filters ->
         DrawerUiState(
             vehicleName = vehicle?.displayName,
-            // Count what the picker can actually tick and the fetch actually
-            // filters by — resolved catalog networks — not the raw stored keys,
-            // which may still hold keys from an older catalog that resolve to
-            // nothing and would inflate the number.
+            // Count resolved catalog networks, not the raw stored keys.
             preferredNetworkCount = networks.selectedNetworks().size,
             filters = filters,
         )

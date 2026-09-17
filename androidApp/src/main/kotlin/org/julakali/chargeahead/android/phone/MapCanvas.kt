@@ -19,22 +19,16 @@ import kotlin.math.min
 data class MapPin(
     val position: LatLon,
     val color: Color,
-    /** Short label drawn into the pin — a stop number or nothing. */
+    /** Short label drawn into the pin. */
     val label: String? = null,
     val emphasized: Boolean = false,
 )
 
 /**
- * Map stand-in until the map SDK is chosen (ROADMAP section 2 leaves
- * Google Maps Compose vs. MapLibre deliberately open). Draws a light,
- * maps-like ground with a faint grid, the route, the pins, and the own
- * position — enough to judge the layout and flows, honest enough not to
- * pretend to be a real map: the screen carries a "Kartenplatzhalter" notice.
- *
- * Projection is a local flat plane around the view center — the same
- * approximation the domain uses for segment distances, fine at city and
- * route scale, wrong for continents. Good enough for a placeholder.
+ * Map placeholder without a Google Maps key: a faint grid, the route, the
+ * pins, and the own position, projected onto a local flat plane.
  */
+// TODO remove the placeholder map (#94)
 @Composable
 fun MapCanvas(
     center: LatLon?,
@@ -83,7 +77,7 @@ object MapColors {
     val position = Color(0xFF1A73E8)
 }
 
-/** Faint street-like grid so the surface reads as "map", not as empty state. */
+/** Faint street-like grid. */
 private fun DrawScope.drawGrid() {
     val step = 140f
     var x = step / 2
@@ -127,7 +121,7 @@ private fun frameFor(
         val kmPerDegLon = 111.19 * cos(mid.lat * Math.PI / 180.0)
         val extentKmX = (box.east - box.west) * kmPerDegLon
         val extentKmY = (box.north - box.south) * 111.19
-        // 15 % margin so start and destination pins don't sit on the edge.
+        // 15 % margin.
         val extent = max(max(extentKmX, extentKmY), 1.0) * 1.15
         return MapFrame(mid, (min(widthPx, heightPx) / extent).toFloat(), widthPx, heightPx)
     }
@@ -141,7 +135,7 @@ private val OPERATOR_PALETTE = listOf(
     Color(0xFFE8710A), Color(0xFF7CB342),
 )
 
-/** Stable, friendly color per operator, so pins are tellable apart without a legend. */
+/** Stable color per operator. */
 fun operatorColor(operator: String?): Color {
     if (operator == null) return Color(0xFF5F6368)
     return OPERATOR_PALETTE[(operator.hashCode() and Int.MAX_VALUE) % OPERATOR_PALETTE.size]

@@ -62,7 +62,7 @@ internal fun DrawerContent(
             .padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // The mockup's drawer-head: bolt + wordmark over a hairline.
+        // Drawer head: bolt + wordmark over a hairline.
         Column {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -108,8 +108,7 @@ internal fun DrawerContent(
                 onToggle = { onFilters(filters.copy(slowMode = it)) },
                 modifier = Modifier.padding(top = 8.dp),
             )
-            // Always laid out, only faded in: popping the spinner in and out
-            // shoved the whole drawer down on every filter tap.
+            // Always laid out, only faded in, so the drawer doesn't jump.
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -149,10 +148,7 @@ internal fun DrawerContent(
     }
 }
 
-/**
- * "Alle Netze" or the number of picked ones — the same line in the drawer and
- * in the network screen's top bar, so it lives in one place.
- */
+/** "Alle Netze" or the number of picked ones. */
 @Composable
 internal fun networksSummary(preferredCount: Int): String =
     if (preferredCount > 0) {
@@ -164,9 +160,7 @@ internal fun networksSummary(preferredCount: Int): String =
 /** The one lit-up control in the drawer: a card that tints when AC mode is on. */
 @Composable
 private fun AcModeToggle(active: Boolean, onToggle: (Boolean) -> Unit, modifier: Modifier = Modifier) {
-    // Optimistic: the switch flips on tap right away instead of waiting for the
-    // filter to round-trip through the ViewModel and start the map fetch. It
-    // reconciles with [active] if the state is changed from elsewhere.
+    // Optimistic: flips on tap, reconciles with [active].
     var shown by remember { mutableStateOf(active) }
     LaunchedEffect(active) { shown = active }
 
@@ -214,7 +208,7 @@ private fun AcModeToggle(active: Boolean, onToggle: (Boolean) -> Unit, modifier:
     }
 }
 
-/** The mockup's `.seg`: soft track, white active segment with blue text. */
+/** Segmented control: soft track, white active segment with blue text. */
 @Composable
 private fun PowerSegments(filters: ChargeFilters, onFilters: (ChargeFilters) -> Unit) {
     val steps = listOf(50.0, 150.0, 300.0)

@@ -12,17 +12,11 @@ import kotlin.test.assertTrue
 /**
  * Checks the assumptions about the charging station register against the real service.
  *
- * **Does not run by default** — like [OpenChargeMapLiveContractTest]. It needs
- * network access, and a test that goes red just because of a dead connection
- * says nothing about the code. Unlike OpenChargeMap, it needs no key:
+ * **Does not run by default**; needs network access:
  *
  * ```bash
  * OCM_LIVE=1 ./gradlew :shared:jvmTest --tests '*BnetzaLiveContractTest'
  * ```
- *
- * What it's good for: [BnetzaSourceTest] checks against canned responses and
- * won't notice if the service changes. And it has changed before — the endpoint
- * documented at `ladestationen.api.bund.dev` now requires a token.
  */
 class BnetzaLiveContractTest {
 
@@ -31,10 +25,7 @@ class BnetzaLiveContractTest {
     /** On the A9 between Nürnberg and Ingolstadt. */
     private val location = LatLon(48.95, 11.45)
 
-    /**
-     * 25 km. Deliberately small: ArcGIS doesn't sort by distance, and the full
-     * corridor contains 33,508 charging devices.
-     */
+    /** Small, since ArcGIS doesn't sort by distance. */
     private val area = SectorArea.circle(location, radiusKm = 25.0)
 
     private fun source() = BnetzaSource(createHttpClient())
@@ -68,8 +59,7 @@ class BnetzaLiveContractTest {
         val connectors = runBlocking { source().query(area) }.flatMap { it.connectors }
         val recognized = connectors.count { it.type != ConnectorType.UNKNOWN }
 
-        // Only "AC CEE 3-polig" stays unrecognized, and that's rare. If the
-        // ratio drops well below this, the register has changed its labels.
+        // If the ratio drops well below this, the register has changed its labels.
         assertTrue(
             recognized > connectors.size * 0.9,
             "Only $recognized of ${connectors.size} connector types recognized",
@@ -80,8 +70,6 @@ class BnetzaLiveContractTest {
     fun theUnitCountIsKnown() {
         if (skip()) return
 
-        // The actual advantage over OpenChargeMap, where this field is missing
-        // in about half the cases.
         val connectors = runBlocking { source().query(area) }.flatMap { it.connectors }
 
         assertTrue(connectors.isNotEmpty())
@@ -93,8 +81,7 @@ class BnetzaLiveContractTest {
     fun theDocumentedEndpointIsStillDead() {
         if (skip()) return
 
-        // If it starts responding without a token again, check the reasoning in
-        // BnetzaSource — that's where it explains why a different one is used.
+        // The documented endpoint requires a token.
         val deprecatedSource = BnetzaSource(
             createHttpClient(),
             baseUrl = "https://services6.arcgis.com/6jU7RmJig2Wwo1b0/ArcGIS/rest/services/" +
@@ -120,17 +107,13 @@ class BnetzaLiveContractTest {
         val corridor = PolylineArea(route.points, bufferKm = 2.0)
         val alongRoute = runBlocking { source().query(corridor) }
 
-        // This is the number the whole switch-over is based on: the sector
-        // corridor over the same route contains about 33,000 charging devices
-        // (ARCHITECTURE.md section 1.1).
         assertTrue(
             alongRoute.size in 200..3000,
             "Along the route there were ${alongRoute.size} charging devices",
         )
 
-        // And they really are along the route, not just in the bounding box around
-        // it. ArcGIS buffers server-side; the generous tolerance accounts for the
-        // planar approximation and the fact that the service buffers geodetically.
+        // Along the route, not just in its bounding box; generous tolerance for
+        // the planar approximation.
         val outliers = alongRoute.filter { corridor.distanceKmTo(it.position) > 3.0 }
         assertTrue(outliers.isEmpty(), "${outliers.size} results were more than 3 km off the route")
     }

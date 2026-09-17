@@ -13,9 +13,8 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Checks the deployed backend against the same assumptions
- * [OpenChargeMapLiveContractTest] checks the provider against — the app must
- * not lose anything by going through the server.
+ * Checks the deployed backend against the same assumptions as
+ * [OpenChargeMapLiveContractTest].
  *
  * **Does not run by default.** Needs network access and a token:
  *
@@ -30,7 +29,7 @@ class BackendChargeSiteLiveContractTest {
     private val enabled: Boolean =
         System.getenv("CHARGEAHEAD_LIVE") == "1" && baseUrl != null && token != null
 
-    /** On the A9 between Nürnberg and Ingolstadt — densely populated, many sources. */
+    /** On the A9 between Nürnberg and Ingolstadt. */
     private val location = LatLon(48.95, 11.45)
     private val area = SectorArea.circle(location, radiusKm = 175.0)
 
@@ -51,7 +50,7 @@ class BackendChargeSiteLiveContractTest {
         assertTrue(sites.all { it.position in area }, "Site outside the requested area")
     }
 
-    /** The reason the area travels as a shape rather than a rectangle. */
+    /** Nearest sites come first. */
     @Test
     fun theNearestChargingStationsAreNotMissing() {
         if (skip()) return
@@ -62,7 +61,7 @@ class BackendChargeSiteLiveContractTest {
         assertTrue(nearest < 10.0, "Nearest charging station only at ${nearest.toInt()} km")
     }
 
-    /** One request for the whole corridor, where the app used to make a chain of them. */
+    /** One request for the whole corridor. */
     @Test
     fun aCorridorIsAnsweredInOneRequest() {
         if (skip()) return

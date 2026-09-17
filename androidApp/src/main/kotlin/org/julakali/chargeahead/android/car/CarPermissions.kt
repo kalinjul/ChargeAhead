@@ -8,14 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * The car session's single place for runtime permissions: asks for them and
- * publishes whether each one is granted.
- *
- * Android has no callback for "a permission was just granted" — only the
- * `requestPermissions` caller learns about it. A one-off `checkSelfPermission`
- * therefore goes stale the moment the driver confirms the dialog on the phone:
- * the screen redraws, but a hardware listener that was skipped at session
- * start stays unregistered until the next connection. Observing [granted]
- * instead keeps screens and data sources in step with every request.
+ * publishes whether each one is granted, since Android has no grant callback.
  *
  * One instance per [ChargeSession].
  */
@@ -28,11 +21,7 @@ class CarPermissions(private val carContext: CarContext) {
         states.getOrPut(permission) { MutableStateFlow(isGranted(permission)) }
     }.asStateFlow()
 
-    /**
-     * In projection the head unit can't show the dialog itself; the host
-     * tells the driver to confirm it on the phone. [onFinished] runs once the
-     * driver has answered, after [granted] reflects the answer.
-     */
+    /** [onFinished] runs once the driver has answered, after [granted] reflects the answer. */
     fun request(permissions: List<String>, onFinished: () -> Unit = {}) {
         carContext.requestPermissions(permissions) { _, _ ->
             refresh()
@@ -40,11 +29,7 @@ class CarPermissions(private val carContext: CarContext) {
         }
     }
 
-    /**
-     * Re-reads every observed permission. Covers changes made outside a
-     * request, e.g. in the phone's app settings while the session was in
-     * the background.
-     */
+    /** Re-reads every observed permission, for changes made outside a request. */
     fun refresh() {
         synchronized(states) {
             states.forEach { (permission, state) -> state.value = isGranted(permission) }

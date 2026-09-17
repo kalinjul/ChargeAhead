@@ -1,12 +1,8 @@
 import CarPlay
 import Shared
 
-/// CarPlay scene delegate.
-///
-/// Translation only — no computation or formatting happens here. Every
-/// number shown here comes from `ChargeStopFormatter` (see AGENTS.md rules
-/// for the car UI). New compared to M0: the list is refreshed on every state
-/// change, since it changes continuously while driving.
+/// CarPlay scene delegate. Every number shown here comes from
+/// `ChargeStopFormatter`; the list is refreshed on every state change.
 class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
 
     private var interfaceController: CPInterfaceController?
@@ -23,9 +19,7 @@ class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
         self.listTemplate = template
         interfaceController.setRootTemplate(template, animated: false, completion: nil)
 
-        // Only the sections are swapped, not the root template: creating a
-        // new template on every location update would reset the driver's
-        // scroll position.
+        // Only the sections are swapped, so the scroll position survives.
         viewModel.onStateChange = { [weak self] _ in
             self?.applyState()
         }
@@ -58,9 +52,7 @@ class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
     }
 
     private func makeSection() -> CPListSection {
-        // CarPlay has no runtime query for a row limit like Android Auto's
-        // ConstraintManager. Apple's guidelines recommend short, scannable
-        // lists; 12 rows is the fixed cap.
+        // CarPlay has no runtime row limit like Android Auto's ConstraintManager.
         let maxRows = 12
         let stops = Array(viewModel.stops.prefix(maxRows))
 
@@ -72,8 +64,7 @@ class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
             let secondaryLine = ChargeStopFormatter.shared.secondaryLine(stop: stop)
 
             let item = CPListItem(text: title, detailText: primaryLine)
-            // CPListItem has no third text field like Android Auto's Row.
-            // Both lines therefore go into detailText separated by a line break.
+            // CPListItem has no third text field, so both lines go into detailText.
             item.setDetailText("\(primaryLine)\n\(secondaryLine)")
             return item
         }

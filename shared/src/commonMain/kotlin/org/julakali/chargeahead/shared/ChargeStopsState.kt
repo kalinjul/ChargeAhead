@@ -8,18 +8,9 @@ import org.julakali.chargeahead.shared.domain.SoCSourceKind
 /**
  * What the car UI should currently display — list *and* status.
  *
- * A flat type instead of a sealed hierarchy because it crosses into Swift via
- * the Objective-C header: sealed classes arrive there as a loose collection of
- * subclasses whose exhaustiveness the compiler can no longer check. A data
- * class with an enum carries across without loss.
+ * A flat type instead of a sealed hierarchy because it crosses into Swift.
  *
- * [stops] is deliberately kept populated during [Phase.LOADING] and
- * [Phase.FAILED]: the last known list is worth more than an empty one in a
- * dead zone. The UI keeps showing it and labels the state alongside it.
- *
- * No text here: [Phase] and [FailureReason] are states, not messages. The
- * actual copy lives in `strings.xml` / `Localizable.strings` — each platform
- * localizes on its own (AGENTS.md, language rule).
+ * [stops] stays populated during [Phase.LOADING] and [Phase.FAILED].
  */
 data class ChargeStopsState(
     val stops: List<ChargeStop> = emptyList(),
@@ -27,27 +18,16 @@ data class ChargeStopsState(
     val failure: FailureReason? = null,
     /** The list came from [org.julakali.chargeahead.shared.data.DemoSiteSource], not real data. */
     val isDemo: Boolean = false,
-    /**
-     * Where the charge level in use came from, or `null` if there is none.
-     *
-     * The UI needs this: if the vehicle supplies the value, the manual-entry
-     * field must be locked — otherwise the driver types in a number that gets
-     * silently overwritten.
-     */
+    /** Where the charge level in use came from, or `null` if there is none. */
     val socSource: SoCSourceKind? = null,
     /** The set destination, or `null` if searching along the direction of travel. */
     val destination: Destination? = null,
     val routeStatus: RouteStatus = RouteStatus.NONE,
-    /**
-     * The charging networks in the current area, **before** the filter.
-     *
-     * This way the choices offered in settings come from the data itself, not
-     * from a maintained list — which would be incomplete with every new provider.
-     */
+    /** The charging networks in the current area, **before** the filter. */
     val availableOperators: List<OperatorOption> = emptyList(),
-    /** The charging-network filter is currently active. Explains a short or empty list. */
+    /** The charging-network filter is currently active. */
     val networkFilterActive: Boolean = false,
-    /** Last computed position — what the phone map centers on. `null` before the first fix. */
+    /** Last computed position. `null` before the first fix. */
     val position: org.julakali.chargeahead.shared.domain.LatLon? = null,
 ) {
     enum class RouteStatus {
@@ -60,17 +40,12 @@ data class ChargeStopsState(
         /** The search runs along the route. */
         ACTIVE,
 
-        /**
-         * Destination set, but no route could be obtained — the search falls
-         * back to the direction of travel. Not an error that empties the
-         * list, but the driver should know they're not getting what they
-         * configured.
-         */
+        /** Destination set, but no route could be obtained; the search falls back to the direction of travel. */
         UNAVAILABLE,
     }
 
     enum class Phase {
-        /** No location yet — neither denied nor failed, just not here yet. */
+        /** No location yet. */
         WAITING_FOR_LOCATION,
 
         /** Search area is set, the source is still responding. */

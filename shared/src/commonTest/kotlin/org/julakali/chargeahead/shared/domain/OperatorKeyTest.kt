@@ -46,9 +46,7 @@ class OperatorKeyTest {
 
     @Test
     fun similarButDistinctCompanies_staySeparate() {
-        // "E.ON Drive" and "E.ON Drive Infrastructure" could be different
-        // companies, and the sources don't clarify that. Better two entries
-        // than one wrongly merged.
+        // "E.ON Drive" and "E.ON Drive Infrastructure" stay apart.
         val drive = OperatorKey.of("E.ON Drive GmbH")
         val infra = OperatorKey.of("E.ON Drive Infrastructure GmbH")
 
@@ -90,8 +88,7 @@ class OperatorKeyTest {
 
     @Test
     fun foldedName_makesUmlautsSearchable() {
-        // Someone typing "okostrom" means "Ökostrom" — on a car keyboard the
-        // umlaut is two taps away.
+        // Someone typing "okostrom" means "Ökostrom".
         assertTrue(OperatorKey.folded("Ökostrom Süd").contains(OperatorKey.folded("okostrom sud")))
         assertTrue(OperatorKey.folded("Straßenstrom").contains("strassen"))
     }

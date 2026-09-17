@@ -7,7 +7,7 @@ data class BackendConfig(
 ) {
     companion object {
 
-        /** `null` unless both are actually configured — a half-configured backend is no backend. */
+        /** `null` unless both are configured. */
         fun of(baseUrl: String?, token: String?): BackendConfig? {
             val url = baseUrl?.trim()?.takeIf { it.isNotEmpty() } ?: return null
             val bearer = token?.trim()?.takeIf { it.isNotEmpty() } ?: return null

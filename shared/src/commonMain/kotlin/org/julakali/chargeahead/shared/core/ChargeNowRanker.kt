@@ -7,14 +7,12 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 
-/** One "charge now" suggestion: a site, how far away, and how fast. */
 data class ChargeNowCandidate(
     val site: ChargeSite,
     val distanceKm: Double,
     val maxPowerKw: Double,
 )
 
-/** Which filter had to give way so the list didn't starve. Order = relax order. */
 enum class RelaxedFilter { MIN_POWER, NETWORKS, MAX_DISTANCE }
 
 data class ChargeNowResult(
@@ -26,16 +24,6 @@ data class ChargeNowResult(
 
 /**
  * The best charging sites around the current position, nearest first.
- *
- * When the filters starve the list below [MIN_RESULTS], they are relaxed in a
- * fixed order until it recovers: minimum power first (a slower charger beats
- * none), then networks, then — last, because driving across town defeats the
- * point — distance. The result says which filters gave way, so the UI can
- * tell the driver instead of silently ignoring their settings.
- * A user-customizable relax order is on the roadmap.
- *
- * Availability is not part of this: no connected source has live occupancy.
- * Once one exists, "occupied" excludes a site outright and is never relaxed.
  */
 object ChargeNowRanker {
 

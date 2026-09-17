@@ -125,18 +125,15 @@ class GeoTest {
         val point = LatLon(48.5, 11.5)
         val box = BoundingBox.enclosing(listOf(point)).expandedBy(50.0)
 
-        // The north and east edges must be about 50 km away — otherwise the
-        // prefetch query would be smaller than promised. Eastward it falls short
-        // by about 16 cm: expandedBy computes with the arc length along the
-        // parallel, while what's measured is the shorter great-circle chord.
-        // At 50 km that's three parts per million, so it doesn't matter.
+        // The north and east edges must be about 50 km away; the tolerance covers
+        // the difference between arc length and chord.
         assertTrue(point.distanceKmTo(LatLon(box.north, point.lon)) >= 49.99)
         assertTrue(point.distanceKmTo(LatLon(point.lat, box.east)) >= 49.99)
     }
 
     @Test
     fun boundingBox_acrossTheDateLine_expandsToFullWidth() {
-        // Better to over-query than to query the wrong half, see BoundingBox.
+        // A wrapping box widens to the full longitude range.
         val box = BoundingBox.enclosing(listOf(LatLon(0.0, 179.9))).expandedBy(100.0)
 
         assertEquals(-180.0, box.west)

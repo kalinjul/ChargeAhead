@@ -33,11 +33,7 @@ class ChargeCurveTest {
         }
     }
 
-    /**
-     * The whole reason a flat average factor had to go: the same twenty points
-     * of charge cost far more time at the top of the battery than at the
-     * bottom, and a plan that says otherwise sends the driver off too early.
-     */
+    /** The same twenty points of charge cost more time at the top of the battery. */
     @Test
     fun `the same band costs more time higher up the battery`() {
         val low = chargeMinutes(id4, sitePowerKw = 300.0, fromSocPercent = 10.0, toSocPercent = 30.0)
@@ -57,10 +53,7 @@ class ChargeCurveTest {
         assertEquals(135.0 / 50.0, slow / fast, 1e-6)
     }
 
-    /**
-     * A catalogue peak is often a figure held for seconds on a preconditioned
-     * pack. A small battery cannot sustain it whatever the spec sheet claims.
-     */
+    /** A small battery cannot sustain the catalogue peak. */
     @Test
     fun `a small battery cannot hold a big claimed peak`() {
         val optimistic = id4.copy(displayName = "Klein", usableBatteryKwh = 40.0, dcPeakPowerKw = 150.0)

@@ -41,8 +41,7 @@ class NetworkFilterTest {
 
     @Test
     fun filterEnabledWithoutSelection_hidesNothing() {
-        // Interpreting an empty selection as "show nothing" would be the least
-        // friendly reading imaginable.
+        // An empty selection shows everything.
         val planned = ChargeStopPlanner.plan(
             area,
             sites,
@@ -68,11 +67,7 @@ class NetworkFilterTest {
 
     @Test
     fun sitesWithoutOperator_areHiddenWhenFilterIsActive() {
-        // Previously these slipped through ("unknown → pass"). Now catalog
-        // resolution returns null for an unrecognised site, and null is not in
-        // any operator set — so it is hidden when a filter is active.
-        // That is intentional: the network filter now gives a strict inclusion
-        // list, not a "hide the ones I definitely don't want" list.
+        // Unrecognised sites are hidden when a filter is active.
         val onlyEnbw = NetworkPreferences(
             onlyPreferred = true,
             preferredOperators = setOf("enbw"),
@@ -96,8 +91,7 @@ class NetworkFilterTest {
 
     @Test
     fun aNetworkWithNoMatches_yieldsEmptyList() {
-        // The driver's explicit choice of a network with zero local sites
-        // produces an empty list — the UI has to explain why.
+        // A network with zero local sites produces an empty list.
         val unknownNetwork = NetworkPreferences(
             onlyPreferred = true,
             preferredOperators = setOf("gibt-es-hier-nicht"),

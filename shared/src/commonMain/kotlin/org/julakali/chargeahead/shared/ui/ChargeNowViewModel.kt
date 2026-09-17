@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 /** The best chargers around the current position, ranked. */
 sealed interface ChargeNowUiState {
 
-    /** No location yet — nothing to rank against. */
+    /** No location yet. */
     data object NoPosition : ChargeNowUiState
 
     data object Loading : ChargeNowUiState
@@ -23,11 +23,8 @@ sealed interface ChargeNowUiState {
 }
 
 /**
- * "Charge now": ranks what is nearby against the driver's filters, relaxing
- * them step by step until something remains (see [PlanningFeature.chargeNow]).
- *
- * Runs on demand rather than continuously — the ranking is only interesting
- * while the sheet is open, and it costs a database sweep and price quotes.
+ * "Charge now": ranks what is nearby against the driver's filters (see
+ * [PlanningFeature.chargeNow]). Runs on demand.
  */
 class ChargeNowViewModel(
     private val feature: ChargeStopsFeature,

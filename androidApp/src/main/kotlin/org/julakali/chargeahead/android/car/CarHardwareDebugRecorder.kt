@@ -25,22 +25,12 @@ import kotlinx.coroutines.launch
 import java.util.concurrent.Executor
 import kotlin.math.roundToInt
 
-/**
- * Captures everything the car hardware offers and persists it for the
- * phone's debug view — the generalization of what [CarHardwareSoCSource]
- * does for the charge level alone.
- *
- * Same expectations apply: most head units deliver `STATUS_UNIMPLEMENTED`
- * for most of this, and that is exactly what the debug view is for — seeing
- * per data point what this particular car actually provides. Verifiable only
- * with real hardware (ROADMAP open item 1); on the DHU everything reads
- * NO_DATA at best.
- */
+/** Captures everything the car hardware offers and persists it for the phone's debug view. */
 class CarHardwareDebugRecorder(
     private val carContext: CarContext,
     private val time: TimeProvider,
     private val permissions: CarPermissions,
-    /** Shared with the SoC source — a second energy listener would miss the host's answer. */
+    /** Shared with the SoC source. */
     private val energyLevels: CarEnergyLevels,
     private val settingsStore: SettingsStore,
 ) {
@@ -74,9 +64,7 @@ class CarHardwareDebugRecorder(
             energyLevels.readings.collect(::recordEnergy)
         }
 
-        // The driver can grant car permissions mid-session; re-register on
-        // every change so the debug view doesn't keep reporting NO_PERMISSION
-        // until the next connection.
+        // Re-register on every permission change.
         newScope.launch(Dispatchers.Main) {
             combine(permissions.granted(PERMISSION_SPEED), permissions.granted(PERMISSION_MILEAGE)) { _, _ -> }
                 .collect { registerListeners(info, executor) }
@@ -95,9 +83,7 @@ class CarHardwareDebugRecorder(
             // Already recorded for every kind in start().
             is CarEnergyLevels.Reading.NoCarHardware -> Unit
 
-            // Every data point this subscription feeds — marking only one of
-            // them would send whoever reads the debug view hunting for a data
-            // problem that is a permission problem.
+            // Every data point this subscription feeds.
             is CarEnergyLevels.Reading.NoPermission -> kinds.forEach { record(it, CarDataStatus.NO_PERMISSION) }
 
             is CarEnergyLevels.Reading.Level -> {
@@ -187,8 +173,7 @@ class CarHardwareDebugRecorder(
     }
 
     /**
-     * Only `STATUS_SUCCESS` with a value counts as measured — everything else
-     * is a polite "I don't know" (see CarHardwareSoCSource). The kind on the
+     * Only `STATUS_SUCCESS` with a value counts as measured. The kind on the
      * returned point is a placeholder; [record] stamps the real one.
      */
     private fun <T : Any> CarValue<T>.toPoint(format: (T) -> String): CarDataPoint {
@@ -205,8 +190,7 @@ class CarHardwareDebugRecorder(
     }
 
     private fun record(kind: CarDataKind, point: CarDataPoint) {
-        // Fire-and-forget off the host's main-thread callback; the store
-        // serializes the write, so streamed values (SPEED) can't race.
+        // The store serializes the write.
         scope?.launch { settingsStore.recordCarDataPoint(point.copy(kind = kind)) }
     }
 

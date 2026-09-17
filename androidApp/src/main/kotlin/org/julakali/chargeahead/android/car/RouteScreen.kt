@@ -35,14 +35,9 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The committed route: its planned charging stops, numbered like an
- * itinerary. Tapping a stop hands it straight to the navigation app — while
- * driving there is no time for a detour through a detail view.
+ * itinerary. Tapping a stop hands it straight to the navigation app.
  *
- * Deliberately no map template: the map is Google Maps' territory — this app
- * is the text panel beside it and hands every drive off.
- *
- * Plans with the live charge state: when the car reports its battery, that
- * value wins and the driver never has to type a percentage.
+ * Plans with the live charge state.
  */
 class RouteScreen(
     carContext: CarContext,
@@ -52,14 +47,12 @@ class RouteScreen(
     private val title: String = destination.name,
 ) : Screen(carContext) {
 
-    // onGetTemplate() is synchronous and therefore only reads the last
-    // remembered state; changes are picked up via invalidate().
+    // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var result: TripPlanResult? = null
 
     init {
         lifecycleScope.launch {
-            // Remembered as the app-wide destination: the phone follows along,
-            // and the recents list learns what the driver actually goes to.
+            // Remembered as the app-wide destination.
             feature.setDestination(destination)
             plan(feature.currentFix.filterNotNull().first())
         }
@@ -108,7 +101,7 @@ class RouteScreen(
     }
 
     private fun stopsTemplate(plan: TripPlan): Template {
-        // The row count is dictated by the host, not the app (AGENTS.md).
+        // The row count is dictated by the host.
         val contentLimit = carContext
             .getCarService(ConstraintManager::class.java)
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
@@ -135,20 +128,16 @@ class RouteScreen(
 
     private fun sendAllRow(plan: TripPlan): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_route_send_all))
-        // IMAGE_TYPE_ICON: only icons declared tintable get recolored by the
-        // host — untinted ones stay black on a dark theme.
+        // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
         .setImage(icon(R.drawable.ic_destination), Row.IMAGE_TYPE_ICON)
         .setOnClickListener { sendRouteToMaps(plan) }
         .build()
 
     /**
-     * The whole route with every stop as a waypoint. The host's
-     * ACTION_NAVIGATE only takes `geo:` and drops waypoints, so the route goes
-     * to Maps on the phone as `google.navigation:`, which starts a fresh
-     * navigation (the directions URL added the stops to a running one).
+     * The whole route with every stop as a waypoint, sent to Maps on the phone
+     * as `google.navigation:` (the host's ACTION_NAVIGATE drops waypoints).
      *
-     * Android only allows that launch while the app is visible on the phone,
-     * so without it the driver is asked to open the app first.
+     * Android only allows that launch while the app is visible on the phone.
      */
     private fun sendRouteToMaps(plan: TripPlan) {
         if (PhoneUiVisibility.isVisible.value) {
@@ -165,11 +154,9 @@ class RouteScreen(
     }
 
     /**
-     * First the host's own hand-off to the first stop: only that moves Maps
-     * into the car's main pane — a launch from the phone leaves it in the
-     * narrow side panel of a split screen. Once Maps has taken over and this
-     * screen stopped, the whole route follows from the phone and replaces
-     * the single stop.
+     * First the host's own hand-off to the first stop, which moves Maps into
+     * the car's main pane. Once Maps has taken over, the whole route follows
+     * from the phone and replaces the single stop.
      */
     private fun handOffRoute(plan: TripPlan) {
         val first = plan.stops.first().site
@@ -184,12 +171,10 @@ class RouteScreen(
             Uri.parse(MapsHandoff.directionsUrl(origin = null, plan.destination.position, waypoints)),
         )
         lifecycleScope.launch {
-            // Coming back from OpenPhoneScreen, this screen isn't started yet —
-            // it would otherwise look as if Maps had already taken over.
+            // Coming back from OpenPhoneScreen, this screen isn't started yet.
             lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.STARTED) }
             navigateTo(carContext, first.name, first.position)
-            // The phone's route must arrive after the host's single stop, or
-            // that stop would replace it.
+            // The phone's route must arrive after the host's single stop.
             withTimeoutOrNull(MAPS_TAKEOVER_TIMEOUT_MS) {
                 lifecycle.currentStateFlow.first { !it.isAtLeast(Lifecycle.State.STARTED) }
             }
@@ -209,11 +194,11 @@ class RouteScreen(
     } catch (notFound: ActivityNotFoundException) {
         false
     } catch (denied: SecurityException) {
-        // Never let a blocked launch crash the car UI again.
+        // A blocked launch must not crash the car UI.
         false
     }
 
-    /** Floating "charge now" button — hosts render FABs icon-only, so the bolt has to say it. */
+    /** Floating "charge now" button; hosts render FABs icon-only. */
     private fun chargeNowFab(): Action = Action.Builder()
         .setIcon(icon(R.drawable.ic_bolt))
         .setBackgroundColor(CarColor.PRIMARY)
@@ -251,8 +236,7 @@ class RouteScreen(
             .setStartHeaderAction(Action.BACK)
 
         if (withRefresh) {
-            // Re-plans with the freshest position and charge state — the plan
-            // ages while the car drives and charges.
+            // Re-plans with the freshest position and charge state.
             builder.addEndHeaderAction(
                 Action.Builder()
                     .setIcon(icon(R.drawable.ic_refresh))

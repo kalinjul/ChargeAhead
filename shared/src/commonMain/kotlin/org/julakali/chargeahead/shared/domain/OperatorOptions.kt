@@ -4,10 +4,7 @@ package org.julakali.chargeahead.shared.domain
  * Groups the raw operator names of known sites into countable options —
  * the operators actually present in the data, as opposed to the shipped
  * [NetworkCatalog] the picker selects from.
- *
- * Alphabetical, because the reader is looking for a name they already know —
- * "where's Ionity?" is answered by order, not frequency; the count still
- * shows on each line.
+ * Sorted alphabetically.
  */
 object OperatorOptions {
 

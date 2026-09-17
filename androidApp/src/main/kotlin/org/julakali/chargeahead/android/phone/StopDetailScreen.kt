@@ -41,10 +41,7 @@ fun StopDetailScreen(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // The mockup's det-head, with the network as the headline: the site
-        // name is either the town again ("Kiel"), which the address line
-        // below already carries, or an operator's internal id
-        // ("DE*CNT*EP00214*001"), so it isn't shown at all.
+        // The network as the headline; the site name is not shown.
         Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 NetworkDot(operatorColor(stop.site.operator))

@@ -61,7 +61,7 @@ class OsrmRouteEngineTest {
         assertEquals(listOf(LatLon(49.0, 11.0), LatLon(49.1, 11.0)), route.points)
     }
 
-    /** The speed profile comes from the backend only (#56); steps aren't even asked for. */
+    /** The speed profile comes from the backend only; steps aren't asked for. */
     @Test
     fun carriesNoSpeedProfile() = runBlocking {
         var request: HttpRequestData? = null
@@ -75,8 +75,7 @@ class OsrmRouteEngineTest {
 
     @Test
     fun geoJsonIsLongitudeBeforeLatitude() = runBlocking {
-        // The single most common source of coordinate bugs. Swapped, the
-        // route would land in the Indian Ocean instead of Bavaria.
+        // GeoJSON is [longitude, latitude].
         val route = assertNotNull(engineRespondingWith(validResponse).route(nuernberg, muenchen))
 
         assertEquals(49.4521, route.points.first().lat)
@@ -86,7 +85,7 @@ class OsrmRouteEngineTest {
 
     @Test
     fun withoutARoadConnection_returnsNullNotAnError() = runBlocking {
-        // "NoRoute" is a response, not an error — retrying won't help.
+        // "NoRoute" is a response, not an error.
         assertNull(engineRespondingWith("""{"code":"NoRoute","routes":[]}""").route(nuernberg, muenchen))
     }
 

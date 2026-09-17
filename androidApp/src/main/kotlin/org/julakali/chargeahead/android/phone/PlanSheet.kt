@@ -51,11 +51,7 @@ import org.julakali.chargeahead.shared.ui.PlanSheetUiState
 import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
 import kotlin.math.roundToInt
 
-/**
- * Destination entry for planning: search via the shared geocoder, recents
- * below — the same data the car uses, presented for thumbs instead of a
- * rotary controller.
- */
+/** Destination entry for planning: search via the shared geocoder, recents below. */
 @Composable
 fun PlanSheetRoute(
     onPlan: (Destination, Double) -> Unit,
@@ -92,8 +88,7 @@ fun PlanSheetContent(
 ) {
     val vehicleName = uiState.vehicleName
     val socPercent = uiState.socPercent
-    // A picked destination ends the typing: the cursor and keyboard would
-    // otherwise stay on a field that has nothing left to ask.
+    // A picked destination clears focus.
     val focusManager = LocalFocusManager.current
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -107,7 +102,7 @@ fun PlanSheetContent(
             )
         }
 
-        // The mockup's routecard: From is fixed, To is the live search field.
+        // From is fixed, To is the live search field.
         AppCard {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -154,9 +149,7 @@ fun PlanSheetContent(
         vehicleName?.let { name ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AppChip(text = name, icon = painterResource(R.drawable.ic_car))
-                // The level is set in the shared dialog, the same one the trip
-                // screen's start row opens — typing and dragging live there,
-                // this pill only shows what came out of it.
+                // Shows the level; editing happens in the shared dialog.
                 Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant) {
                     Text(
                         stringResource(R.string.plan_soc_value, uiState.socInput),
@@ -206,7 +199,7 @@ fun PlanSheetContent(
             Text(stringResource(R.string.plan_cta), style = MaterialTheme.typography.labelLarge.copy(fontSize = 16.sp))
         }
 
-        // Results while typing; recents when idle — the expanded sheet's "fullonly".
+        // Results while typing; recents when idle.
         LazyColumn(
             verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = sheetListPadding(),
@@ -254,7 +247,7 @@ fun PlanSheetContent(
     }
 }
 
-/** A destination row: name, where it is, how far away — the standard list look. */
+/** A destination row: name, where it is, how far away. */
 @Composable
 private fun PlaceRow(title: String, detail: String?, distanceKm: Double?, onClick: () -> Unit) {
     Row(
@@ -285,6 +278,6 @@ private fun PlaceRow(title: String, detail: String?, distanceKm: Double?, onClic
     }
 }
 
-/** Below 10 km the decimal matters; above it, it's noise. */
+/** One decimal below 10 km. */
 private fun Double.asKmLabel(): String =
     if (this >= 10) roundToInt().toString() else oneDecimal()

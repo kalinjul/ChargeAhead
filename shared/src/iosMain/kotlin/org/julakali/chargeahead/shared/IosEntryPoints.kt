@@ -16,24 +16,16 @@ import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 
 /**
- * The entry point for Swift. Two things that would otherwise be awkward from Swift:
- *
- * 1. Kotlin's default arguments don't appear in the generated Objective-C
- *    header, and Koin's reified `get()` doesn't cross at all — these
- *    functions resolve from the graph on Swift's behalf.
- * 2. A `StateFlow` can't be subscribed to as an `AsyncSequence` or Combine
- *    publisher without SKIE. [ChargeStopsWatcher] turns it into a plain callback.
- *
- * Only compiled on macOS — unverified on this Linux machine.
+ * The entry points for Swift: they resolve from the Koin graph on Swift's
+ * behalf, and [ChargeStopsWatcher] turns a `StateFlow` into a plain callback.
  */
 fun createSettingsStore(): SettingsStore =
     PersistentSettingsStore(UserDefaultsStorage())
 
 /**
- * The process-wide graph, built on the first [createChargeStopsFeature] call.
- * Interim: Swift still hands over key and store per call, so the first call's
- * values win — they are process constants on the Swift side anyway. Issue #39
- * replaces this with an explicit Koin start from Swift.
+ * The process-wide graph, built on the first [createChargeStopsFeature] call;
+ * the first call's values win.
+ * TODO start Koin explicitly from Swift (#39)
  */
 private var graph: Koin? = null
 
@@ -50,24 +42,15 @@ private fun graph(openChargeMapKey: String?, settingsStore: SettingsStore): Koin
         )
     }.koin.also { graph = it }
 
-/**
- * @param settingsStore the same instance that also backs the settings view —
- *   otherwise the feature would never see changes the driver makes.
- */
+/** @param settingsStore the same instance that also backs the settings view. */
 fun createChargeStopsFeature(
     openChargeMapKey: String?,
     settingsStore: SettingsStore,
 ): ChargeStopsFeature =
-    // Each caller owns its feature, as before; the data graph beneath is shared.
-    // No vehicle-data API on iOS (ARCHITECTURE.md 1.2).
+    // Each caller owns its feature; the data graph beneath is shared.
     graph(openChargeMapKey, settingsStore).newChargeStopsFeature(locationSource = CoreLocationSource())
 
-/**
- * Reports every state change to Swift.
- *
- * Runs on [Dispatchers.Main] so the callback arrives on the main thread
- * without further effort — CarPlay and SwiftUI updates are required to happen there.
- */
+/** Reports every state change to Swift, on the main thread. */
 class ChargeStopsWatcher(private val feature: ChargeStopsFeature) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -81,12 +64,7 @@ class ChargeStopsWatcher(private val feature: ChargeStopsFeature) {
     }
 }
 
-/**
- * Trip planning outcome, flattened for Swift — the sealed
- * [org.julakali.chargeahead.shared.core.TripPlanResult] would arrive in the Objective-C
- * header as unrelated classes whose exhaustiveness Swift can't check
- * (same reasoning as [ChargeStopsState]).
- */
+/** [org.julakali.chargeahead.shared.core.TripPlanResult], flattened for Swift. */
 data class TripPlanOutcome(
     val plan: org.julakali.chargeahead.shared.core.TripPlan?,
     val failure: TripPlanFailure?,
@@ -95,13 +73,9 @@ data class TripPlanOutcome(
 }
 
 /**
- * The phone planning flows as plain callbacks on the main thread — the same
- * bridge pattern as [ChargeStopsWatcher], for the same reason: Kotlin
- * `suspend` crosses to Swift as a completion handler with awkward types and
- * without default arguments.
+ * The phone planning flows as plain callbacks on the main thread.
  *
- * @param feature unused beyond proving [createChargeStopsFeature] ran and the
- *   graph exists; kept so the Swift call site stays unchanged until #39.
+ * @param feature unused; kept for the Swift call site until #39.
  */
 class PlanningBridge(@Suppress("UNUSED_PARAMETER") feature: ChargeStopsFeature) {
 

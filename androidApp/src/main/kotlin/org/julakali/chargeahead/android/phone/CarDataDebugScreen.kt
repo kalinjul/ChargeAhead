@@ -26,12 +26,8 @@ import org.julakali.chargeahead.shared.domain.CarDataStatus
 import org.julakali.chargeahead.shared.ui.CarDataViewModel
 
 /**
- * Everything the car hardware last delivered, one row per data point —
- * recorded by [org.julakali.chargeahead.android.car.CarHardwareDebugRecorder] during an
- * Android Auto session, readable here at the desk afterwards.
- *
- * Rows without a recording say so instead of hiding: seeing "noch nie
- * empfangen" per data point is the entire purpose of a debug view.
+ * Everything the car hardware last delivered, one row per data point, as
+ * recorded by [org.julakali.chargeahead.android.car.CarHardwareDebugRecorder].
  */
 @Composable
 fun CarDataDebugRoute(

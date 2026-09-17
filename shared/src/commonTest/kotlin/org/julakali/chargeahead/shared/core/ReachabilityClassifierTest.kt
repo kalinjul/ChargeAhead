@@ -35,8 +35,7 @@ class ReachabilityClassifierTest {
 
     @Test
     fun withoutRange_nothingIsReachable() {
-        // Below the reserve, range is zero — then everything but the vehicle's
-        // own location is unreachable.
+        // With zero range, everything is unreachable.
         assertEquals(Reachability.UNREACHABLE, ReachabilityClassifier.classify(1.0, 0.0))
         assertEquals(Reachability.REACHABLE, ReachabilityClassifier.classify(0.0, 0.0))
     }

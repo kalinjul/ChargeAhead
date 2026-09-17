@@ -27,8 +27,7 @@ class CorridorRouteProviderTest {
 
     @Test
     fun withoutABearing_searchesAllAround() {
-        // When starting off, the car is stationary: a sector around a guessed course
-        // could easily point backward, leaving the list groundlessly empty.
+        // Without a course, the area is the full circle.
         val area = assertIs<SectorArea>(provider.searchArea(fix(null), rangeKm = 100.0))
 
         assertEquals(180.0, area.halfAngleDeg)

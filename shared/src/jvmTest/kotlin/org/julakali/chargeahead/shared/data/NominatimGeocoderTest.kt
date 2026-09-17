@@ -45,8 +45,7 @@ class NominatimGeocoderTest {
 
     @Test
     fun coordinatesArriveAsStringsAndAreConverted() = runBlocking {
-        // Nominatim returns lat/lon as strings. Left unchecked, this would be a
-        // runtime deserialization error instead of one caught at compile time.
+        // Nominatim returns lat/lon as strings.
         val place = geocoderRespondingWith(hauptbahnhof).search("x").single()
 
         assertTrue(place.position.lat > 48.0 && place.position.lat < 49.0)
@@ -75,10 +74,7 @@ class NominatimGeocoderTest {
 
     @Test
     fun theSamePlaceTwice_appearsOnlyOnce() = runBlocking {
-        // A real response to "Münster" from Kiel: OSM carries the place both as
-        // a boundary relation and as a point, and Nominatim returns both. Two
-        // identically labeled rows are indistinguishable to the driver — and
-        // once crashed the app while rendering.
+        // OSM carries the place both as a boundary relation and as a point.
         val body = """
             [{"name":"Munster","display_name":"Munster, Heidekreis, Niedersachsen, 29633, Deutschland",
               "lat":"52.9895","lon":"10.0885"},
@@ -107,8 +103,7 @@ class NominatimGeocoderTest {
 
     @Test
     fun mapsTheBrokenDownAddress() = runBlocking {
-        // Two towns of the same name are only distinguishable by their
-        // address — the destination list shows it next to each result.
+        // Same-name towns are distinguished by their address.
         val body = """
             [{"name":"München Hauptbahnhof",
               "display_name":"München Hauptbahnhof, Klinikviertel, München, Bayern, 80335, Deutschland",

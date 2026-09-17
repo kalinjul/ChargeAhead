@@ -14,29 +14,16 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 
 /**
- * State of charge from the vehicle — the opportunistic upgrade over manual
- * input (ARCHITECTURE.md 1.2).
+ * State of charge from the vehicle.
  *
- * **Expect it to deliver nothing.** In projection, very few head units
- * populate this data; `STATUS_UNIMPLEMENTED` is the normal case, not the
- * exception. Also required is the `com.google.android.gms.permission.CAR_FUEL`
- * permission, which the driver can deny — or grant later, mid-session.
- *
- * Lives in `androidApp` rather than `shared/androidMain`, even though
- * ARCHITECTURE.md section 3 places it there: the data comes from a
- * `CarContext`, which only exists within a `Session`. The shared module
- * couldn't get at one anyway and would have to have it passed in — so the
- * class might as well live right where the context is created, and `shared`
- * stays free of the Car App Library.
+ * **Expect it to deliver nothing**: in projection, very few head units
+ * populate this data. Requires the `CAR_FUEL` permission.
  */
 class CarHardwareSoCSource(
-    /** The session's shared subscription — see [CarEnergyLevels] for why it's shared. */
+    /** The session's shared subscription. */
     private val energyLevels: CarEnergyLevels,
     private val time: TimeProvider,
-    /**
-     * Where the result is written so the phone UI can display it — it has
-     * no `CarContext` there and thus no way to look it up itself.
-     */
+    /** Where the result is written for the phone UI. */
     private val settingsStore: SettingsStore? = null,
 ) : SoCSource {
 
@@ -48,11 +35,7 @@ class CarHardwareSoCSource(
             settingsStore?.recordSoCDiagnostics(diagnostics)
             state
         }
-        // FIRST null, and unconditionally so: CombinedSoCSource combines this
-        // flow via combine(), and combine waits until EVERY source has
-        // delivered once. Without this initial null, the driver's manual
-        // state of charge would go unused until the host answers — or forever
-        // if it doesn't.
+        // Initial null, since combine() in CombinedSoCSource waits for every source.
         .onStart { emit(null) }
         .conflate()
 
@@ -79,7 +62,7 @@ class CarHardwareSoCSource(
         }
     }
 
-    /** Status code as a word — "STATUS_UNIMPLEMENTED" says more than "2". */
+    /** Status code as a word. */
     private fun statusName(status: Int): String = when (status) {
         CarValue.STATUS_SUCCESS -> "STATUS_SUCCESS"
         CarValue.STATUS_UNIMPLEMENTED -> "STATUS_UNIMPLEMENTED"
@@ -88,11 +71,7 @@ class CarHardwareSoCSource(
         else -> "Status $status"
     }
 
-    /**
-     * Every value arrives as a [CarValue] with a status code. Only
-     * `STATUS_SUCCESS` means something was actually measured — everything
-     * else is a polite "I don't know" and must not pass as 0%.
-     */
+    /** Only `STATUS_SUCCESS` means something was actually measured. */
     private fun EnergyLevel.toEnergyStateOrNull(): EnergyState? {
         val percent = batteryPercent
         if (percent.status != CarValue.STATUS_SUCCESS) return null

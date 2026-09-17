@@ -26,8 +26,7 @@ import kotlin.test.assertNull
 
 /**
  * The sensors-only mode for the car UI: location and charge state are
- * tracked, but no charging stops are computed — the car screens plan on
- * demand instead of following a corridor list nobody displays.
+ * tracked, but no charging stops are computed.
  */
 class ChargeStopsFeatureSensorsTest {
 

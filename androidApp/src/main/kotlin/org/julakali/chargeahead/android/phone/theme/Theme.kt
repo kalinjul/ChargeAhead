@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Colors from the mockup that have no honest slot in the M3 scheme. */
+/** Colors that have no slot in the M3 scheme. */
 object ChargeAheadColors {
     val faint = Color(0xFF80868B)
     // Reserved for the trip summary's delay badge once traffic data exists.
@@ -21,10 +21,9 @@ object ChargeAheadColors {
     val trafficText = Color(0xFFB06000)
 }
 
-/** The mockup's `.num`: times and distances that don't wobble. */
+/** Tabular figures for times and distances. */
 val TextStyle.tabular: TextStyle get() = copy(fontFeatureSettings = "tnum")
 
-// docs/mockup/index.html :root — the palette, translated slot by slot.
 private val MockupScheme = lightColorScheme(
     primary = Color(0xFF1A73E8),
     onPrimary = Color.White,
@@ -50,8 +49,7 @@ private val MockupScheme = lightColorScheme(
     onSurfaceVariant = Color(0xFF5F6368),
     outline = Color(0xFFDADCE0),
     outlineVariant = Color(0xFFDADCE0),
-    // M3 components pick container tones on their own (sheets, drawers,
-    // dialogs, cards) — the mockup knows only white surfaces.
+    // White container surfaces throughout.
     surfaceContainerLowest = Color(0xFFFFFFFF),
     surfaceContainerLow = Color(0xFFFFFFFF),
     surfaceContainer = Color(0xFFFFFFFF),
@@ -61,7 +59,7 @@ private val MockupScheme = lightColorScheme(
 
 private val Sans = FontFamily.SansSerif
 
-// The mockup's voice: bold and tight for titles, small and quiet for meta.
+// Bold and tight for titles, small and quiet for meta.
 private val MockupTypography = Typography().run {
     copy(
         displayLarge = displayLarge.copy(fontFamily = Sans),

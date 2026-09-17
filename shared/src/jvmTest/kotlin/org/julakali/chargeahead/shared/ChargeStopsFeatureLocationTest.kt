@@ -17,11 +17,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * What issue #36 was about: the phone map kept reporting "no location" on a
- * device that had one. Three separate causes, one test each.
+ * Issue #36: the phone map kept reporting "no location" on a device that had one.
  *
- * [Dispatchers.Unconfined] for the same reason as in [ChargeStopsFeatureTest]:
- * every emission runs to completion before `emit` returns.
+ * [Dispatchers.Unconfined] as in [ChargeStopsFeatureTest].
  */
 class ChargeStopsFeatureLocationTest {
 
@@ -55,9 +53,7 @@ class ChargeStopsFeatureLocationTest {
 
     @Test
     fun failingSiteQuery_stillPublishesThePosition() = runBlocking {
-        // The position used to be written only by a successful recompute, so a
-        // backend hiccup on the very first fix left the map — and its location
-        // button — without a location the device demonstrably had.
+        // The position is published even when the recompute fails.
         val location = ControllableLocationSource()
         val feature = feature(location, CountingSiteRepository(fail = true))
         feature.start()
@@ -73,17 +69,14 @@ class ChargeStopsFeatureLocationTest {
 
     @Test
     fun start_upgradesARunningSensorsOnlySession() = runBlocking {
-        // Phone and car share one app-scoped instance. Whichever came second
-        // used to be a silent no-op — with the car first, the phone's pipeline
-        // never ran at all.
+        // Car first, then phone: the phone's pipeline must still run.
         val location = ControllableLocationSource()
         val repository = CountingSiteRepository()
         val feature = feature(location, repository)
 
         feature.startSensors()
         location.fixes.emit(fix(timestampMillis = 0L))
-        // Sensors-only queries nothing, but it does publish the position —
-        // the car surface needs it too.
+        // Sensors-only queries nothing, but publishes the position.
         assertEquals(0, repository.queries)
         assertEquals(start, feature.state.value.position)
 
@@ -114,8 +107,7 @@ class ChargeStopsFeatureLocationTest {
 
     @Test
     fun locate_takesTheOneShotFixInsteadOfWaitingForTheStream() = runBlocking {
-        // What the map's location button needs: the stream here never emits,
-        // exactly like a device with no sky in view and network location off.
+        // The stream never emits; the one-shot fix must still arrive.
         val location = ControllableLocationSource(oneShot = fix())
         val repository = CountingSiteRepository()
         val feature = feature(location, repository)

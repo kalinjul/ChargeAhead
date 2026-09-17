@@ -12,15 +12,7 @@ import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.currentTimeMillis
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 
-/**
- * Shows whether the state of charge comes from the vehicle.
- *
- * This can only be checked *in* the car — that's where a `CarContext`
- * exists, not on the phone. The car session therefore persists its result,
- * and this shows what came out last time. Without this display, it would
- * stay unexplained to the driver why their manual input sometimes takes
- * effect and sometimes doesn't.
- */
+/** Shows whether the state of charge came from the vehicle in the last car session. */
 @Composable
 fun CarHardwareStatus(
     diagnostics: SoCDiagnostics?,
@@ -76,10 +68,7 @@ fun CarHardwareStatus(
     }
 }
 
-/**
- * Coarse time indication. It doesn't need to be more precise than "3 hours
- * ago" — the question is only whether the reading is from today or from last month.
- */
+/** Coarse time indication, e.g. "3 hours ago". */
 @Composable
 private fun ago(millis: Long): String {
     val minutes = ((currentTimeMillis() - millis) / 60_000L).coerceAtLeast(0L)

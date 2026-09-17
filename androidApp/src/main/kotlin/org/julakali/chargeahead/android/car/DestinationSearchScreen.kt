@@ -20,8 +20,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Type a destination in the car. While driving, the host disables the
- * keyboard on its own — then the recent destinations below the search box
- * remain, which is exactly the list a driver can still use safely.
+ * keyboard and the recent destinations remain.
  */
 class DestinationSearchScreen(
     carContext: CarContext,
@@ -30,8 +29,7 @@ class DestinationSearchScreen(
     private val settings: SettingsStore,
 ) : Screen(carContext) {
 
-    // onGetTemplate() is synchronous and therefore only reads the last
-    // remembered state; changes are picked up via invalidate().
+    // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var recents: List<Destination> = emptyList()
     private var results: List<Place> = emptyList()
     private var query = ""
@@ -57,8 +55,7 @@ class DestinationSearchScreen(
         // SearchTemplate rejects an item list while loading (issue #81).
         if (searching) return template.setLoading(true).build()
 
-        // Until the search is submitted, an empty list means "not searched
-        // yet", not "nothing found" — point at the keyboard's search key.
+        // Until the search is submitted, an empty list means "not searched yet".
         val emptyMessage = if (query.isNotBlank() && query != submittedQuery) {
             R.string.car_search_submit_hint
         } else {
@@ -76,9 +73,7 @@ class DestinationSearchScreen(
         return template.setItemList(itemList.build()).build()
     }
 
-    // Geocoding fires on submit only, not per keystroke: Nominatim's usage
-    // policy caps at one request per second, and a car keyboard produces
-    // characters slower than that limit forgives mistakes.
+    // Geocoding fires on submit only, not per keystroke.
     private val callback = object : SearchTemplate.SearchCallback {
         override fun onSearchTextChanged(searchText: String) {
             query = searchText
@@ -119,8 +114,7 @@ class DestinationSearchScreen(
         .build()
 
     private fun choose(destination: Destination) {
-        // The search screen replaces itself with the route: back from the
-        // planned stops should land on the start screen, not in the keyboard.
+        // The search screen replaces itself with the route.
         screenManager.pop()
         screenManager.push(RouteScreen(carContext, feature, planning, destination))
     }

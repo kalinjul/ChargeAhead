@@ -51,17 +51,16 @@ data class TripPlan(
     val totalMinutes: Double get() = driveMinutes + chargeMinutes + stopMinutes
 }
 
-/** Why no plan came out. The distinction matters to the UI: one asks for patience, the other for a different car. */
+/** Result of planning, including why no plan came out. */
 sealed interface TripPlanResult {
     data class Planned(val plan: TripPlan) : TripPlanResult
 
-    /** Planning without a vehicle profile would be guesswork — same rule as reachability. */
     data object NoVehicle : TripPlanResult
 
     /** No road connection, or the route service failed. */
     data object NoRoute : TripPlanResult
 
-    /** A leg has no reachable fast charger — no plan is honest, a pretend plan is not. */
+    /** A leg has no reachable fast charger. */
     data class NoChargerInReach(val afterKm: Double) : TripPlanResult
 }
 
@@ -192,11 +191,7 @@ class TripPlanner(
         val detourKm: Double,
     )
 
-    /**
-     * Fetched in chunks, not as one polyline: the sources query radially with
-     * a result cap, so a single query over a long route returns an arbitrary
-     * subset of a huge circle, of which the route buffer keeps almost nothing.
-     */
+    /** Fetched in chunks, not as one polyline: the sources query radially with a result cap. */
     private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
         val measure = RouteMeasure(route)
         val cumulative = measure.cumulativeKm
@@ -296,10 +291,10 @@ class TripPlanner(
         /** Pace of the way off the route and back, priced both ways. */
         const val DETOUR_SPEED_KMH = 30.0
 
-        /** Max straight-line distance from the route — same trade-off as PolylineArea (open item 8). */
+        /** Max straight-line distance from the route. */
         const val STOP_BUFFER_KM = 3.0
 
-        /** Candidate-fetch chunk length — the area size the sources were built for. */
+        /** Candidate-fetch chunk length. */
         const val SEGMENT_FETCH_KM = 80.0
     }
 }

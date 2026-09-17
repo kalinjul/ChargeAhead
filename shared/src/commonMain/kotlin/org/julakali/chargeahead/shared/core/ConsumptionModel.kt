@@ -6,9 +6,7 @@ import org.julakali.chargeahead.shared.domain.Route
  * How much energy a stretch of a route costs.
  *
  * Everything is expressed against distance from the route's start, the same
- * frame [TripPlanner] plans in. Implementations must tolerate a route without
- * segments — that is the normal state when the route service gave no
- * breakdown, not an error.
+ * frame [TripPlanner] plans in.
  */
 interface ConsumptionModel {
 
@@ -32,17 +30,6 @@ class ConstantConsumption(private val kwhPer100Km: Double) : ConsumptionModel {
 /**
  * Scales the driver's consumption with the speed each stretch of the route
  * implies.
- *
- * Energy per kilometre is roughly `rolling + drag·v² + auxiliary/v`. Absolute
- * coefficients would need the drag area and mass of the specific car, which the
- * app does not have and cannot ask for. What it can do is fix the *shares*
- * those three terms hold at one reference speed and normalise around it, so the
- * model reproduces the configured value exactly at [referenceSpeedKmh] and only
- * bends away from it as the speed departs from that.
- *
- * That makes [referenceSpeedKmh] a claim about what the driver's number means,
- * which is why the garage says so next to the slider. Changing it silently would
- * reinterpret a value the driver already set.
  */
 class SpeedAwareConsumption(
     private val kwhPer100Km: Double,
@@ -132,11 +119,7 @@ class SpeedAwareConsumption(
         else route.distanceKm / route.durationMinutes * 60.0
 
     companion object {
-        /**
-         * What a configured consumption figure is taken to mean. Roughly the
-         * speed at which the catalog's WLTP numbers and a driver's own
-         * everyday figure come closest to agreeing.
-         */
+
         const val REFERENCE_SPEED_KMH = 100.0
 
         /**

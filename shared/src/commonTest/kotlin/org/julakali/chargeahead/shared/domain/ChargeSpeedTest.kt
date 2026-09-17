@@ -13,8 +13,7 @@ class ChargeSpeedTest {
 
     @Test
     fun theGapBelowFiftyStaysSlow() {
-        // No class exists between the AC ceiling and the 50 kW step; a 43 kW
-        // site is closer to slow than to a DC charger and must not look green.
+        // Everything below the 50 kW step is slow.
         assertEquals(ChargeSpeed.SLOW, ChargeSpeed.of(43.0))
     }
 

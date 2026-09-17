@@ -8,10 +8,6 @@ import kotlin.math.min
 
 /**
  * Corridor search (M1): a sector ahead, built from position and course.
- *
- * This stands in for the fact that neither platform exposes the active
- * navigation route (ARCHITECTURE.md section 1.1). From M5 on,
- * `RoutedRouteProvider` sits alongside it — same interface, a real polyline.
  */
 class CorridorRouteProvider(
     private val halfAngleDeg: Double = DEFAULT_HALF_ANGLE_DEG,
@@ -23,10 +19,7 @@ class CorridorRouteProvider(
         val radiusKm = min(rangeKm * rangeMarginFactor, maxRadiusKm)
         val bearingDeg = fix.bearingDeg
 
-        // Without a course, search all around instead of not at all. When
-        // starting off, the car is stationary, and a sector around a guessed
-        // course would likely point backward — an empty list at start is the
-        // surest way to lose the driver's trust immediately.
+        // Without a course, search all around instead of not at all.
         return if (bearingDeg == null) {
             SectorArea(fix.position, bearingDeg = 0.0, halfAngleDeg = 180.0, radiusKm = radiusKm)
         } else {
@@ -35,7 +28,7 @@ class CorridorRouteProvider(
     }
 
     companion object {
-        /** ±35° around the course, see ARCHITECTURE.md section 5.3. */
+        /** ±35° around the course. */
         const val DEFAULT_HALF_ANGLE_DEG = 35.0
 
         /** Upper bound on the search radius, independent of range. */

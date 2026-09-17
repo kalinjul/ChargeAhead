@@ -36,40 +36,29 @@ import org.koin.core.module.dsl.withOptions
 import org.koin.dsl.module
 
 /**
- * What the platform knows and the graph doesn't: the OpenChargeMap key and
- * the backend.
+ * Platform-provided configuration: the OpenChargeMap key and the backend.
  *
- * @param openChargeMapKey `null` or empty if none is configured. Trimmed, not
- *   just checked for emptiness: a trailing space from local.properties or an
- *   .xcconfig would otherwise travel URL-encoded into the request, and OCM
- *   would respond with "Invalid API key".
- * @param backend set, it replaces the direct provider sources and the key is
- *   not needed; `null` keeps the app talking to the providers itself.
+ * @param openChargeMapKey `null` or empty if none is configured.
+ * @param backend if set, replaces the direct provider sources and the key is
+ *   not needed.
  */
 class ChargeStopsConfig(openChargeMapKey: String?, val backend: BackendConfig?) {
     val openChargeMapKey: String? = openChargeMapKey?.trim()?.takeIf { it.isNotEmpty() }
 
-    /** Neither backend nor key: [DemoSiteSource] stands in, and the UI must say so. */
+    /** Neither backend nor key: [DemoSiteSource] stands in. */
     val isDemo: Boolean get() = backend == null && openChargeMapKey == null
 }
 
 /**
- * The data graph behind both features, declared once for both platforms so
- * Android and iOS don't decide separately what happens without an API key —
- * otherwise one would show demo data and the other an empty list.
+ * The data graph behind both features, declared once for both platforms.
  *
- * The platform module supplies only what it must: [LocationSource] (the
- * phone's), [org.julakali.chargeahead.shared.db.DatabaseFactory], [SettingsStore] and
- * [ChargeStopsConfig]. Everything here is one instance per process, so the
- * phone and a car session share one connection pool, one database and one
- * repository — two SQLite connections on the same file would race.
+ * The platform module supplies [LocationSource] (the phone's),
+ * [org.julakali.chargeahead.shared.db.DatabaseFactory], [SettingsStore] and
+ * [ChargeStopsConfig]. Everything here is one instance per process.
  */
 fun chargeStopsModule(): Module = module {
     single<TimeProvider> { TimeProvider { currentTimeMillis() } }
 
-    // One for everything: charge sites, routes, and geocoding share the
-    // connection pool. Created even without an OCM key, because routing and
-    // geocoding don't need one.
     single<HttpClient> { createHttpClient() } withOptions { onClose { it?.close() } }
     single<ChargeSiteDatabase> { createChargeSiteDatabase(get()) }
 
@@ -87,14 +76,9 @@ fun chargeStopsModule(): Module = module {
         }
         val sources = buildList {
             add(primary)
-            // On demo data, adding the official register alongside it would
-            // undermine that labeling.
             if (!config.isDemo) add(BnetzaSource(get()))
         }
-        // Each source gets its own store and thus its own tile coverage: the
-        // official register covers only Germany, OpenChargeMap the whole
-        // world. A shared coverage record would falsely claim that a tile
-        // beyond the border had been checked.
+        // Each source gets its own store and thus its own tile coverage.
         MergingSiteRepository(
             sources.map { source ->
                 TiledSiteRepository(
@@ -125,19 +109,15 @@ fun chargeStopsModule(): Module = module {
     single { TripPlanner(get(), get()) }
     single { PlanningFeature(tripPlanner = get(), repository = get(), settings = get()) }
 
-    // The phone's feature: no vehicle access, just location and manual input.
-    // Never closed — its lifetime is the process.
+    // The phone's feature. Never closed.
     single<ChargeStopsFeature> { getKoin().newChargeStopsFeature(locationSource = get()) }
 }
 
 /**
- * A feature on the graph's shared singletons, owned by the caller: the phone's
- * is the [chargeStopsModule] single, a car session builds its own with the
- * car's location and battery and closes it with the session.
+ * A feature on the graph's shared singletons, owned by the caller.
  *
- * @param hardwareSoCSource optional upgrade from the vehicle. If it supplies a
- *   value, it wins over the driver's manual entry; on iOS there is none, and
- *   in Android Auto projection only rarely.
+ * @param hardwareSoCSource optional charge level from the vehicle; wins over
+ *   the driver's manual entry.
  */
 fun Koin.newChargeStopsFeature(
     locationSource: LocationSource,
@@ -158,7 +138,6 @@ fun Koin.newChargeStopsFeature(
         routeEngine = get(),
         geocoder = get(),
         isDemo = get<ChargeStopsConfig>().isDemo,
-        // Prune stale cache on the feature's own scope, not a detached one.
         onStart = {
             runCatching {
                 val keys = settingsStore.networks.first().preferredOperators

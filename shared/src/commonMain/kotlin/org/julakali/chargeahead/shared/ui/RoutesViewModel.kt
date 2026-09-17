@@ -36,7 +36,7 @@ class RoutesViewModel(
         viewModelScope.launch { settings.removeSavedRoute(route.id) }
     }
 
-    /** Turns a recent destination into a favourite. Without a summary — there is no plan yet. */
+    /** Turns a recent destination into a favourite, without a summary. */
     fun onFavourited(destination: Destination) {
         viewModelScope.launch {
             settings.saveRoute(

@@ -45,15 +45,10 @@ import org.julakali.chargeahead.android.phone.theme.tabular
 import de.charlex.compose.cache.rememberForUserInput
 import kotlin.math.roundToInt
 /**
- * The mockup's `.searchwrap`: bordered, rounded, magnifier left, no underline.
+ * Search field: bordered, rounded, magnifier left, no underline.
  *
- * The clear button only exists while there is something to clear — an
- * always-present (x) next to an empty field invites a tap that does nothing.
- *
- * The text is cached locally until the caller's state catches up: [value]
- * comes back from a ViewModel asynchronously, and binding the field to it
- * directly let a stale emission overwrite what was typed in the meantime —
- * fast typing lost characters.
+ * The text is cached locally until the caller's state catches up, so a stale
+ * emission can't overwrite what was typed.
  */
 @Composable
 fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
@@ -98,7 +93,7 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
     )
 }
 
-/** The mockup's `.chip`: soft round pill with an optional blue icon. */
+/** Soft round pill with an optional blue icon. */
 @Composable
 fun AppChip(text: String, modifier: Modifier = Modifier, icon: Painter? = null) {
     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant, modifier = modifier) {
@@ -115,12 +110,7 @@ fun AppChip(text: String, modifier: Modifier = Modifier, icon: Painter? = null) 
     }
 }
 
-/**
- * The one slider of this app. Material 3's expressive default thumb is a
- * 44dp-tall bar — taller than the row it sits in, and it reads as a handle
- * for something much bigger than a consumption value. This one keeps the
- * default track and shortens the thumb to the height of a text line.
- */
+/** The app's slider: the default track with a shorter thumb. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppSlider(
@@ -131,8 +121,7 @@ fun AppSlider(
     enabled: Boolean = true,
     onValueChangeFinished: (() -> Unit)? = null,
 ) {
-    // The thumb slot draws its own press/hover ripple, so it needs the same
-    // interaction source the slider itself gestures on.
+    // Shared with the thumb, which draws its own ripple.
     val interactionSource = remember { MutableInteractionSource() }
     Slider(
         value = value,
@@ -155,16 +144,10 @@ fun AppSlider(
 /** Where the charge slider sits while the typed value is not a usable percentage. */
 private const val DEFAULT_SOC_PERCENT = 80f
 
-/** The start levels the planner accepts — 0 % is not a trip, it is a tow. */
+/** The start levels the planner accepts. */
 val SOC_RANGE = 1f..100f
 
-/**
- * The one charge-level editor: type the number or drag the slider, both on
- * the same value. Used from the plan sheet, from the trip's start row and
- * from the garage's arrival level, so that "set a charge level" looks the
- * same wherever it is reached from — what differs is [title], and what
- * confirming does, which is what [confirmLabel] says.
- */
+/** The charge-level editor: type the number or drag the slider, both on the same value. */
 @Composable
 fun SocEditDialog(
     value: String,
@@ -176,9 +159,7 @@ fun SocEditDialog(
     valueRange: ClosedFloatingPointRange<Float> = SOC_RANGE,
 ) {
     val percent = value.toIntOrNull()?.takeIf { it.toFloat() in valueRange }
-    // The keyboard comes up with the dialog: it was opened to set a number,
-    // not to tap a field first. The slider is there for the driver who would
-    // rather not type at all.
+    // The keyboard comes up with the dialog.
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
     AlertDialog(
@@ -195,10 +176,7 @@ fun SocEditDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.focusRequester(focusRequester),
                 )
-                // Whole percent only, so a drag settles between steps rather
-                // than rewriting the field once per frame. While the typed
-                // value is unusable the slider parks at the default — the
-                // field stays the place that flags it.
+                // Whole percent only. While the typed value is unusable, the slider parks at the default.
                 AppSlider(
                     value = (percent?.toFloat() ?: DEFAULT_SOC_PERCENT).coerceIn(valueRange),
                     onValueChange = { onValueChange(it.roundToInt().toString()) },

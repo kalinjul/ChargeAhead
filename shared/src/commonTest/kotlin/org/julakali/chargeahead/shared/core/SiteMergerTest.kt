@@ -62,7 +62,7 @@ class SiteMergerTest {
 
     @Test
     fun withoutOverlappingConnectors_remainsSeparate() {
-        // Two devices can share a parking lot and still be different charging stations.
+        // Same spot, no shared connector type: different stations.
         val acOnly = site("bnetza:2", connectors = listOf(Connector(ConnectorType.TYPE2, 22.0, 2)))
 
         assertEquals(2, SiteMerger.merge(listOf(site("ocm:1"), acOnly)).size)
@@ -93,8 +93,6 @@ class SiteMergerTest {
 
     @Test
     fun theNameComesFromOpenChargeMap() {
-        // There, people name what they found on site; the register uses
-        // administrative designations.
         val merged = SiteMerger.merge(
             listOf(
                 site("ocm:1", name = "Raststätte Köschinger Forst West"),
@@ -126,8 +124,7 @@ class SiteMergerTest {
 
     @Test
     fun chargingPointsFromDifferentSourcesAreNotAdded() {
-        // OCM and the register describe the same devices. Adding both would
-        // suddenly double the site's reported charging points.
+        // The sources describe the same devices; connectors must not be doubled.
         val merged = SiteMerger.merge(
             listOf(
                 site("ocm:1", connectors = listOf(Connector(ConnectorType.CCS2, 150.0, 4))),
@@ -194,8 +191,7 @@ class SiteMergerTest {
 
     @Test
     fun manySites_areMergedInReasonableTime() {
-        // A route buffer brings back a few thousand entries per query.
-        // Without a grid index this would be quadratic.
+        // A few thousand entries per query must not be compared quadratically.
         val many = (0 until 4000).map {
             site("ocm:$it", position = location.destination(90.0, it * 0.05))
         }

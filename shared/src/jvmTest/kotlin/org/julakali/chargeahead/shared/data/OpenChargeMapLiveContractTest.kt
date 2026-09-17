@@ -14,24 +14,18 @@ import kotlin.test.assertTrue
 /**
  * Checks the assumptions about OpenChargeMap against the real service.
  *
- * **Does not run by default.** It needs network access and a valid key, and
- * neither belongs in an ordinary test run — a test that goes red just because
- * of a dead connection or an expired key says nothing about the code. It is
- * enabled explicitly:
+ * **Does not run by default**; needs network access and a valid key:
  *
  * ```bash
  * OCM_LIVE=1 ./gradlew :shared:jvmTest --tests '*OpenChargeMapLiveContractTest'
  * ```
- *
- * What it's good for then: [OpenChargeMapSourceTest] checks the mapping against
- * canned responses and wouldn't notice if OCM changes its response. This one does.
  */
 class OpenChargeMapLiveContractTest {
 
     private val apiKey: String? = readApiKey()
     private val enabled: Boolean = System.getenv("OCM_LIVE") == "1" && apiKey != null
 
-    /** On the A9 between Nürnberg and Ingolstadt — densely populated, many sources. */
+    /** On the A9 between Nürnberg and Ingolstadt. */
     private val location = LatLon(48.95, 11.45)
     private val area = SectorArea.circle(location, radiusKm = 175.0)
 
@@ -56,10 +50,7 @@ class OpenChargeMapLiveContractTest {
         val sites = runBlocking { source().query(area) }
         val nearest = sites.minOf { location.distanceKmTo(it.position) }
 
-        // The actual point of the radial search. With a rectangular query, the
-        // nearest hit here came back at 70 km, because OCM responds unsorted
-        // and truncates at maxresults — the app was missing exactly the
-        // charging stations it exists to find.
+        // The radial search returns the nearest sites first.
         assertTrue(nearest < 10.0, "Nearest charging station only at ${nearest.toInt()} km")
     }
 
@@ -80,9 +71,7 @@ class OpenChargeMapLiveContractTest {
         val connectors = runBlocking { source().query(area) }.flatMap { it.connectors }
         val recognized = connectors.count { it.type != ConnectorType.UNKNOWN }
 
-        // No claim to completeness: CEE and Type 1 variants are deliberately
-        // left unmapped (see OpenChargeMapSource.connectorTypeOf). If the ratio
-        // drops well below this, OCM has changed its numbering.
+        // If the ratio drops well below this, OCM has changed its numbering.
         assertTrue(
             recognized > connectors.size * 0.8,
             "Only $recognized of ${connectors.size} connector types recognized",
@@ -95,8 +84,7 @@ class OpenChargeMapLiveContractTest {
 
         val connectors = runBlocking { source().query(area) }.flatMap { it.connectors }
 
-        // Connectors without a power rating are dropped by the source — what
-        // remains must have one, or the car UI would show "0 kW".
+        // Connectors without a power rating are dropped by the source.
         assertTrue(connectors.all { it.maxPowerKw > 0.0 })
         assertTrue(connectors.isNotEmpty())
     }
@@ -120,8 +108,7 @@ class OpenChargeMapLiveContractTest {
     }
 
     private fun readApiKey(): String? {
-        // The test run's working directory is shared/; local.properties lives
-        // at the repo root. Search upward instead of hardcoding the path.
+        // local.properties lives at the repo root; search upward.
         var directory: File? = File(".").absoluteFile
         while (directory != null) {
             val candidate = File(directory, "local.properties")

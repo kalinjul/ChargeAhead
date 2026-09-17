@@ -43,16 +43,12 @@ import org.julakali.chargeahead.shared.ChargeStopsState.RouteStatus
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * Single source of state for both car UIs (see AGENTS.md).
+ * Single source of state for both car UIs.
  *
- * The pipeline is the same as ARCHITECTURE.md section 5.3: location -> course
- * -> corridor -> source -> sector filter -> sorted by distance. Android and
- * iOS only plug in the platform-specific parts — [LocationSource] and the
- * concrete source behind [SiteRepository]; everything in between is shared.
+ * Pipeline: location -> course -> corridor -> source -> sector filter ->
+ * sorted by distance.
  *
- * Lifecycle: [start] begins listening, [close] ends it for good. The instance
- * is owned by whichever UI created it — the `Screen` in Android Auto, the
- * scene delegate in CarPlay.
+ * Lifecycle: [start] begins listening, [close] ends it for good.
  */
 class ChargeStopsFeature(
     private val locationSource: LocationSource,
@@ -68,13 +64,9 @@ class ChargeStopsFeature(
     private val reserveSocPercent: Double = DEFAULT_RESERVE_SOC_PERCENT,
     private val isDemo: Boolean = false,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
-    /** Called by [close] — this is where the creator releases its own resources. */
+    /** Called by [close]. */
     private val onClose: () -> Unit = {},
-    /**
-     * A one-shot task run on the feature's own scope at creation — cache
-     * pruning uses it, so a slow prune is cancelled with the feature instead
-     * of lingering on a detached scope nobody owns.
-     */
+    /** A one-shot task run on the feature's own scope at creation. */
     private val onStart: (suspend () -> Unit)? = null,
 ) {
 
@@ -85,18 +77,13 @@ class ChargeStopsFeature(
     }
     private val courseTracker = CourseTracker()
 
-    // Prevents the location loop and an externally triggered refresh() from
-    // computing concurrently and racing each other when publishing.
+    // Prevents the location loop and refresh() from computing concurrently.
     private val recomputeMutex = Mutex()
 
-    // The stream collects on one coroutine, but locate() delivers its one-shot
-    // fix from another — and both walk the course tracker and the last-fix
-    // fields. Always taken before recomputeMutex, never the other way round.
+    // Guards the course tracker and the last-fix fields against locate().
+    // Always taken before recomputeMutex, never the other way round.
     private val fixMutex = Mutex()
 
-    // isDemo is set in the initial state already, not only once the first list
-    // arrives: otherwise the demo notice would appear late in the UI and the
-    // driver would briefly see the header without it.
     private val mutableState = MutableStateFlow(ChargeStopsState(isDemo = isDemo))
     val state: StateFlow<ChargeStopsState> = mutableState.asStateFlow()
 
@@ -105,16 +92,12 @@ class ChargeStopsFeature(
     /** Contractual shorthand for [state] for callers that only care about the list. */
     val stops: StateFlow<List<ChargeStop>> = mutableStops.asStateFlow()
 
-    /**
-     * Snapshot of the state, for callers without Flow support — from Swift,
-     * `state.value` without SKIE is only available as `Any?` and would need
-     * casting back.
-     */
+    /** Snapshot of the state, for callers without Flow support (Swift). */
     val currentState: ChargeStopsState get() = mutableState.value
 
     private val mutableFix = MutableStateFlow<Fix?>(null)
 
-    /** Last location fix — for screens that plan on demand instead of following the stops list. */
+    /** Last location fix. */
     val currentFix: StateFlow<Fix?> = mutableFix.asStateFlow()
 
     private val mutableEnergy = MutableStateFlow<EnergyState?>(null)
@@ -126,31 +109,24 @@ class ChargeStopsFeature(
     private var sensorJob: Job? = null
     private var planningJob: Job? = null
 
-    // Whether the running location collector feeds recompute() or only the
-    // raw fix. Read from the shared collectors, so an upgrade from
-    // sensors-only to the full pipeline needs no second set of them.
+    // Whether the running location collector feeds recompute() or only the raw fix.
     private var computesStops = false
     private var latestFix: Fix? = null
     private var lastComputedFix: Fix? = null
     private var recomputeOnNextFix = false
 
-    // Last known vehicle and charge state. Fed from the flows because
-    // recompute() needs to access them synchronously.
+    // Fed from the flows because recompute() needs synchronous access.
     private var vehicle: VehicleProfile? = null
     private var energy: EnergyState? = null
 
-    // The set destination and the route computed from it once. The provider
-    // stays in place as long as the destination is set — the route is not
-    // recomputed on every location update, only trimmed from the front.
+    // The route is computed once per destination, not on every location update.
     private var destination: Destination? = null
     private var routedProvider: RoutedRouteProvider? = null
     private var networks: NetworkPreferences = NetworkPreferences()
 
     /**
      * Starts the full pipeline: location updates, charge state, and the
-     * computed corridor list. Calling it more than once is a no-op; calling
-     * it on an instance that is already running [startSensors] upgrades that
-     * instance instead of being silently ignored.
+     * computed corridor list. Idempotent; upgrades a running [startSensors].
      */
     fun start() {
         startSensorCollectors()
@@ -159,13 +135,8 @@ class ChargeStopsFeature(
     }
 
     /**
-     * Tracks location and charge state without computing charging stops — for
-     * the car UI, which plans on demand and has no corridor list to feed.
-     *
-     * Phone and car share one app-scoped instance (ARCHITECTURE.md section 8),
-     * so both entry points can run against the same feature. Sensors-only
-     * never displaces a running full pipeline; [start] does upgrade a running
-     * sensors-only one.
+     * Tracks location and charge state without computing charging stops.
+     * Never displaces a running full pipeline.
      */
     fun startSensors() {
         startSensorCollectors()
@@ -174,8 +145,7 @@ class ChargeStopsFeature(
 
     /**
      * Asks the location source for a fix right now instead of waiting for the
-     * stream's next update — what the map's location button needs when it has
-     * no position to center on yet.
+     * stream's next update.
      */
     fun locate() {
         scope.launch {
@@ -193,10 +163,7 @@ class ChargeStopsFeature(
 
     private fun startLocation(computeStops: Boolean) {
         if (locationJob?.isActive == true) {
-            // The computing stream covers everything the sensors-only one
-            // does, so only the upgrade replaces a running collector. Without
-            // this, whichever surface started first left the other with a
-            // silently dead pipeline (issue #36).
+            // Only the upgrade to the computing stream replaces a running collector.
             if (!computeStops || computesStops) return
             locationJob?.cancel()
         }
@@ -206,9 +173,7 @@ class ChargeStopsFeature(
             locationSource.updates
                 .catch { error ->
                     if (computeStops) {
-                        // The location stream terminates when permission is
-                        // missing or location services are off. The last known
-                        // list stays, and the reason is surfaced alongside it.
+                        // Permission missing or location services off; the last list stays.
                         publish(
                             mutableState.value.copy(
                                 phase = ChargeStopsState.Phase.FAILED,
@@ -216,9 +181,6 @@ class ChargeStopsFeature(
                             ),
                         )
                     } else {
-                        // The fix stays null; screens keep saying they are
-                        // waiting for a location instead of planning from a
-                        // stale one.
                         logWarning("Location stream ended", error)
                     }
                 }
@@ -232,8 +194,6 @@ class ChargeStopsFeature(
             socSource?.energy?.collect { updated ->
                 energy = updated
                 mutableEnergy.value = updated
-                // Sensors-only has no list to recompute; the upgrade to the
-                // full pipeline flips this without restarting the collector.
                 if (computesStops) recomputeLatest()
             }
         }
@@ -243,10 +203,7 @@ class ChargeStopsFeature(
         if (planningJob?.isActive == true) return
         planningJob = scope.launch {
             launch {
-                // A changed vehicle or a newly typed-in charge level changes
-                // range, which affects both classification and corridor size.
-                // Both must take effect immediately, not only at the next
-                // location update — that could be two kilometers away.
+                // Range changes must take effect immediately, not at the next location update.
                 settingsStore?.vehicle?.collect { updated ->
                     vehicle = updated
                     recomputeLatest()
@@ -268,7 +225,7 @@ class ChargeStopsFeature(
                 val cached = operatorCatalog?.options().orEmpty()
                 if (cached.isEmpty()) return@launch
                 recomputeMutex.withLock {
-                    // A live recompute may already have won the race; its list is fresher.
+                    // A live recompute may already have won; its list is fresher.
                     if (mutableState.value.availableOperators.isEmpty()) {
                         publish(mutableState.value.copy(availableOperators = cached))
                     }
@@ -302,11 +259,8 @@ class ChargeStopsFeature(
     }
 
     /**
-     * Computes the route, if needed and possible.
-     *
-     * Exactly one call per destination — not per location update. Without a
-     * location yet, it is deferred to the first fix; without a routing
-     * service, it falls back to the corridor.
+     * Computes the route once per destination, if needed and possible.
+     * Without a location yet, it is deferred to the first fix.
      */
     private suspend fun ensureRoute() {
         val target = destination ?: return
@@ -329,7 +283,7 @@ class ChargeStopsFeature(
         }
 
         if (route == null) {
-            // No reason to empty the list: the corridor keeps supplying results.
+            // The corridor keeps supplying results.
             publish(mutableState.value.copy(routeStatus = RouteStatus.UNAVAILABLE))
             return
         }
@@ -356,10 +310,7 @@ class ChargeStopsFeature(
         val state = energy ?: return FALLBACK_RANGE_KM
         val range = RangeCalculator.rangeKm(profile, state.socPercent, reserveSocPercent)
 
-        // Below the reserve, the corridor would shrink to zero kilometers and
-        // the list would be empty — right when the driver needs it most.
-        // Searching continues regardless; classification will then simply say
-        // that nothing is reachable.
+        // Below the reserve, keep searching; classification says nothing is reachable.
         return range.coerceAtLeast(MIN_SEARCH_RANGE_KM)
     }
 
@@ -394,13 +345,9 @@ class ChargeStopsFeature(
         latestFix = fix
         mutableFix.value = fix
 
-        // The position comes from the fix itself, not only from a successful
-        // recompute: a failing site query used to leave the map without a
-        // location the device demonstrably had, and the location button dead
-        // with it (issue #36).
+        // Published independently of a successful recompute.
         publishPosition(fix.position)
 
-        // Sensors-only tracks the fix and stops here — no corridor list to feed.
         if (!computesStops) return
 
         // A destination might have been set before the first location arrived.
@@ -414,9 +361,6 @@ class ChargeStopsFeature(
     }
 
     private suspend fun recompute(fix: Fix) = recomputeMutex.withLock {
-        // Set only here: if the query below failed before this point, distance
-        // would end up measured from a fix that was never actually computed,
-        // delaying the next update by up to 2 km.
         lastComputedFix = fix
 
         val routed = routedProvider
@@ -448,8 +392,7 @@ class ChargeStopsFeature(
                     socSource = energy?.source,
                     destination = destination,
                     routeStatus = mutableState.value.routeStatus,
-                    // Derived from the unfiltered sites: otherwise the filter
-                    // would hide the very options needed to undo it.
+                    // From the unfiltered sites, so the filter can be undone.
                     availableOperators = sites.toOperatorOptions(),
                     networkFilterActive = networks.isActive,
                     position = fix.position,
@@ -459,7 +402,7 @@ class ChargeStopsFeature(
             throw cancellation
         } catch (error: Exception) {
             logWarning("Failed to load charging stations", error)
-            // The old list is deliberately left in place — see ChargeStopsState.
+            // The old list stays in place.
             publish(
                 mutableState.value.copy(
                     phase = ChargeStopsState.Phase.FAILED,
@@ -472,11 +415,7 @@ class ChargeStopsFeature(
     private fun List<org.julakali.chargeahead.shared.domain.ChargeSite>.toOperatorOptions(): List<OperatorOption> =
         OperatorOptions.fromNames(map { it.operator })
 
-    /**
-     * Position only — no list, so [mutableStops] stays untouched. Uses
-     * [MutableStateFlow.update] rather than a read-copy-write, because this
-     * runs outside [recomputeMutex] and must not clobber a concurrent publish.
-     */
+    /** Runs outside [recomputeMutex], hence [MutableStateFlow.update]. */
     private fun publishPosition(position: LatLon) {
         mutableState.update { it.copy(position = position) }
     }
@@ -487,19 +426,10 @@ class ChargeStopsFeature(
     }
 
     companion object {
-        /**
-         * Search radius as long as vehicle profile or charge state is missing.
-         *
-         * Chosen above the corridor's 150 km cap so the radius lands exactly
-         * there instead of depending on a made-up range. This is not a range
-         * substitute — without a profile there is no classification at all.
-         */
+        /** Search radius as long as vehicle profile or charge state is missing; above the corridor cap. */
         const val FALLBACK_RANGE_KM = 300.0
 
-        /**
-         * Smallest search radius, even with an empty battery. Otherwise the
-         * list would be empty right when the driver needs it most.
-         */
+        /** Smallest search radius, even with an empty battery. */
         const val MIN_SEARCH_RANGE_KM = 25.0
     }
 }

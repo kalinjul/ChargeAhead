@@ -43,8 +43,7 @@ sealed interface TripUiState {
 
 /**
  * Two picked points along start → stops → destination, for sending only a
- * section of the trip to Maps. Survives rotation because it lives here, not
- * in a `remember` (the viewmodels skill, rule 7).
+ * section of the trip to Maps.
  */
 data class SectionSelection(
     val selecting: Boolean = false,
@@ -55,10 +54,7 @@ data class SectionSelection(
     fun toggled(): SectionSelection =
         if (selecting) SectionSelection() else SectionSelection(selecting = true)
 
-    /**
-     * Every point that goes to Maps, not just the two the driver tapped —
-     * the stops between them travel as waypoints and must look selected.
-     */
+    /** Every point that goes to Maps, including the stops between the two picked ones. */
     fun includes(index: Int): Boolean = when {
         a == null -> false
         b == null -> index == a
@@ -77,13 +73,10 @@ data class SectionSelection(
 /**
  * What just happened, once. The UI turns it into a snackbar or a screen
  * change and then calls [TripViewModel.onEventHandled].
- *
- * No text: the reason travels as a type, the wording comes from the
- * platform's resources (AGENTS.md, language rule).
  */
 sealed interface TripEvent {
 
-    /** A plan is ready — the caller decides whether to navigate to it. */
+    /** A plan is ready. */
     data object PlanReady : TripEvent
 
     data object VehicleMissing : TripEvent
@@ -97,14 +90,7 @@ sealed interface TripEvent {
     data object RouteRemoved : TripEvent
 }
 
-/**
- * Planning a trip and everything the result screen shows: the plan itself,
- * whether it is saved, which charge level it started from.
- *
- * The plan is held here rather than recomputed per screen — planning costs a
- * routing request and a database sweep, and the stop detail is a zoom into
- * the same plan, not a new one.
- */
+/** Planning a trip and everything the result screen shows. */
 class TripViewModel(
     private val feature: ChargeStopsFeature,
     private val planning: PlanningFeature,
@@ -120,8 +106,7 @@ class TripViewModel(
 
     val event: StateFlow<TripEvent?> = events.asStateFlow()
 
-    // combine tops out at five typed flows — the plan-local ones are
-    // pre-combined so every input keeps its type.
+    // combine tops out at five typed flows.
     private data class PlanInputs(
         val plan: TripPlan?,
         val planning: Boolean,
@@ -155,15 +140,11 @@ class TripViewModel(
     /**
      * Plans from the current position to [destination].
      *
-     * A [socPercent] the driver just typed is persisted, not just used for
-     * this one plan: the garage and the car UI read the same value, and the
-     * next plan starts from it. `null` means "take the stored one" — that is
-     * what reopening a saved route does.
+     * A [socPercent] is persisted; `null` means "take the stored one".
      */
     fun plan(destination: Destination, socPercent: Double? = null) {
         val from = feature.currentState.position ?: return
-        // Same semantics the screen's remember(plan) had: a new plan starts
-        // with a clean selection and no half-typed charge level.
+        // A new plan starts with a clean selection and closed editors.
         selection.value = SectionSelection()
         socEditor.value = null
         arrivalSocEditor.value = null
@@ -190,10 +171,7 @@ class TripViewModel(
 
     /**
      * Saves the current plan's destination as a favourite, or removes it
-     * again.
-     *
-     * [summary] is user-visible text and therefore comes from the caller's
-     * resources — `shared` has none.
+     * again. [summary] comes from the caller's resources.
      */
     fun toggleSaved(summary: String) {
         val current = currentPlan.value ?: return
@@ -236,11 +214,7 @@ class TripViewModel(
         socEditor.value = null
     }
 
-    /**
-     * Re-plans the same destination from the charge level just entered. The
-     * plan's stops depend on it, so correcting the level means planning
-     * again — there is nothing to patch in place.
-     */
+    /** Re-plans the same destination from the charge level just entered. */
     fun onStartSocConfirmed() {
         val socPercent = socEditor.value?.toIntOrNull()?.takeIf { it in 1..100 } ?: return
         val destination = currentPlan.value?.destination ?: return
@@ -264,11 +238,7 @@ class TripViewModel(
         arrivalSocEditor.value = null
     }
 
-    /**
-     * Re-plans the same destination for the arrival level just entered. Like
-     * the start level, it changes every stop after it — and it is a standing
-     * preference, so it is stored rather than used for this one plan.
-     */
+    /** Stores the arrival level just entered and re-plans the same destination. */
     fun onArrivalSocConfirmed() {
         val socPercent = arrivalSocEditor.value?.toIntOrNull()?.takeIf { it in ARRIVAL_SOC_RANGE } ?: return
         val destination = currentPlan.value?.destination ?: return
@@ -287,7 +257,7 @@ class TripViewModel(
         selection.value = selection.value.picked(index)
     }
 
-    /** After a section went to Maps the mode ends, exactly as before. */
+    /** After a section went to Maps the mode ends. */
     fun onSectionSent() {
         selection.value = SectionSelection()
     }
@@ -297,8 +267,5 @@ class TripViewModel(
     }
 }
 
-/**
- * Stable identity of a saved route: the position, not the name. The same
- * place typed differently is the same route.
- */
+/** Stable identity of a saved route: the position, not the name. */
 fun Destination.routeId(): String = "dest:${position.lat},${position.lon}"

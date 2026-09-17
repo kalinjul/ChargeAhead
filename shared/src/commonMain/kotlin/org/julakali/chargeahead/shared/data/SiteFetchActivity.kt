@@ -7,14 +7,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
 /**
- * Whether any [TiledSiteRepository] is currently asking its source — the map
- * shows a spinner for it.
+ * Whether any [TiledSiteRepository] is currently asking its source.
  *
- * A counter, not a flag: every source has its own repository and they fetch
- * concurrently, so the first one finishing must not clear the spinner while
- * another is still waiting on the network. Cache hits never pass through
- * here, so a pan over known ground stays quiet. One instance per process,
- * shared by all repositories.
+ * A counter, not a flag, because the repositories fetch concurrently.
  */
 class SiteFetchActivity {
     private val running = MutableStateFlow(0)

@@ -162,7 +162,7 @@ class BackendRouteEngineTest {
         assertEquals(listOf(LatLon(48.9, 11.4), LatLon(49.1, 11.6)), route.points)
     }
 
-    /** No road connection is an answer, not a failure — and carries no body to read. */
+    /** No road connection is an answer, not a failure. */
     @Test
     fun noRoadConnectionIsNull() = runBlocking {
         val engine = engineRespondingWith("", status = HttpStatusCode.NoContent)
@@ -170,7 +170,7 @@ class BackendRouteEngineTest {
         assertNull(engine.route(from, to))
     }
 
-    /** The domain type rejects a single point; rejecting it here keeps the crash out. */
+    /** A single point is not a route. */
     @Test
     fun aSinglePointIsNoRoute() = runBlocking {
         val engine = engineRespondingWith(
@@ -183,7 +183,7 @@ class BackendRouteEngineTest {
         assertNull(engine.route(from, to))
     }
 
-    /** In the body, not the query: the destination must not reach an access log. */
+    /** Coordinates go in the body, not the query. */
     @Test
     fun theCoordinatesTravelInTheBody() = runBlocking {
         var sent = ""
@@ -211,7 +211,7 @@ class BackendRouteEngineTest {
         assertEquals("Bearer test-token", header)
     }
 
-    /** 502 means the upstream is down — worth a retry, so it must not look like 204. */
+    /** 502 must not look like 204. */
     @Test
     fun anUpstreamFailurePropagates() {
         val mock = MockEngine { respondError(HttpStatusCode.BadGateway) }

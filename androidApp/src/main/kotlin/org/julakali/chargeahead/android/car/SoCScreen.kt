@@ -15,25 +15,13 @@ import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import kotlinx.coroutines.launch
 
-/**
- * Enter the state of charge manually while driving.
- *
- * In steps rather than as a number input: typing while driving is not an
- * option, and the Car App Library offers no number field for good reason.
- * The precision is sufficient — the range estimate is based on a constant
- * consumption anyway, against which five percentage points of input error don't matter.
- *
- * The steps run from high to low so the most likely tap (a high charge
- * level right after charging) is on top.
- */
+/** Enter the state of charge manually while driving, in steps from high to low. */
 class SoCScreen(
     carContext: CarContext,
     private val settings: SettingsStore,
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
-    // The current value belongs visibly on screen: without it the driver
-    // might re-enter the same value or have to guess what was last set.
     private var currentPercent: Double? = null
     private var diagnostics: SoCDiagnostics? = null
     private var hasCarFuelPermission =
@@ -67,8 +55,7 @@ class SoCScreen(
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
 
         val itemList = ItemList.Builder()
-        // First row only displays, without doing anything — hence one fewer
-        // step available for selection.
+        // The first row only displays the current value.
         itemList.addItem(
             Row.Builder()
                 .setTitle(currentText())
@@ -76,8 +63,7 @@ class SoCScreen(
                 .build(),
         )
 
-        // Only offer what's still missing: if the permission is already
-        // granted, the row would be a dead button.
+        // Only offer the permission row if it isn't granted yet.
         var reserved = 1
         if (!hasCarFuelPermission) {
             itemList.addItem(
@@ -135,20 +121,13 @@ class SoCScreen(
         }
     }
 
-    /**
-     * Requested separately from location, and only here.
-     *
-     * Vehicle data is an opportunistic upgrade: the app does everything it
-     * needs to without it. Asking for a permission you don't need,
-     * unprompted, at startup is the surest way to get it denied.
-     */
+    /** Requested separately from location, and only here. */
     private fun requestCarFuelPermission() {
         if (permissionRequestPending) return
         permissionRequestPending = true
         invalidate()
 
-        // A grant reaches the SoC source through CarPermissions, which
-        // registers its listener in this same session.
+        // A grant reaches the SoC source through CarPermissions.
         permissions.request(listOf(CarEnergyLevels.CAR_FUEL_PERMISSION)) {
             permissionRequestPending = false
             invalidate()
@@ -156,10 +135,7 @@ class SoCScreen(
     }
 
     private companion object {
-        /**
-         * Steps of ten from the top down. Below 10%, the reserve is reached
-         * and range is zero — finer granularity there wouldn't help.
-         */
+        /** Steps of ten from the top down, down to the reserve. */
         val STEP_PERCENTS = listOf(100, 90, 80, 70, 60, 50, 40, 30, 20, 10)
     }
 }

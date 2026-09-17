@@ -11,8 +11,7 @@ object OperatorShortName {
     }
 
     // Keyed by the OperatorKey form ("e on", not "e.on") and matched on the
-    // leading words, since sources append the product line to the company
-    // ("Aral pulse", "EnBW mobility+"). Keep prefixes non-overlapping.
+    // leading words. Keep prefixes non-overlapping.
     private val SHORT_NAMES = listOf(
         "ewe go" to "EWE Go",
         "enbw" to "EnBW",

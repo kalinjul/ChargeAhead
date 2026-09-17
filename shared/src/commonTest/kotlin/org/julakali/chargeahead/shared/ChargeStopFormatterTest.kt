@@ -65,8 +65,7 @@ class ChargeStopFormatterTest {
 
     @Test
     fun secondaryLine_withUnknownReachability_countsTheChargePoints() {
-        // Without a vehicle profile there is no reachability classification. Rather than
-        // claim one, the number that is actually known takes its place.
+        // Without a profile, the connector summary takes the place of a classification.
         val stop = ChargeStop(site, distanceKm = 12.0, reachability = Reachability.UNKNOWN, socOnArrivalPercent = null)
 
         assertEquals("6 Ladepunkte", ChargeStopFormatter.secondaryLine(stop))
@@ -82,7 +81,6 @@ class ChargeStopFormatterTest {
 
     @Test
     fun secondaryLine_withMissingCount_doesNotCount() {
-        // A sum of guessed ones would be worse than "unknown".
         val partiallyCounted = site.copy(
             connectors = listOf(
                 Connector(ConnectorType.CCS2, maxPowerKw = 150.0, count = 4),
@@ -96,7 +94,7 @@ class ChargeStopFormatterTest {
 
     @Test
     fun secondaryLine_isNeverEmpty() {
-        // This line has a fixed spot in both car UIs; empty would look like an app bug.
+        // This line has a fixed spot in both car UIs.
         val withoutConnectors = site.copy(connectors = emptyList())
         val stop = ChargeStop(withoutConnectors, distanceKm = 12.0, reachability = Reachability.UNKNOWN, socOnArrivalPercent = null)
 
@@ -124,8 +122,7 @@ class ChargeStopFormatterTest {
 
     @Test
     fun primaryLine_usesThePlannerChosenConnector() {
-        // The planner knows the vehicle, the formatter doesn't. Once the choice
-        // is already made, the formatter just renders it.
+        // The planner picks the connector; the formatter renders it.
         val stop = ChargeStop(
             site = site,
             distanceKm = 12.0,
@@ -160,7 +157,6 @@ class ChargeStopFormatterTest {
 
     @Test
     fun addressLine_handlesPartialAddresses() {
-        // A half address is worth more than none.
         val townOnly = site.copy(address = Address(town = "Denkendorf"))
         val streetOnly = site.copy(address = Address(street = "Hauptstr. 5"))
 
@@ -327,7 +323,7 @@ class ChargeStopFormatterTest {
         assertEquals("150 kW · 6 Ladepunkte", ChargeStopFormatter.chargeNowSecondaryLine(candidate()))
     }
 
-    // The labels iOS composes its own rows from — same digits and comma as the car rows.
+    // The labels iOS composes its own rows from.
     @Test
     fun labels_forPlatformComposedLines_useGermanFormats() {
         assertEquals("150 kW", ChargeStopFormatter.powerKwLabel(150.4))

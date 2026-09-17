@@ -66,8 +66,7 @@ class RefreshPolicyTest {
 
     @Test
     fun backwardsRunningTimestamp_doesNotBlock() {
-        // Fixes arriving late or timestamped after a clock correction must not
-        // permanently block updates.
+        // A timestamp running backward must not block updates.
         val before = fix(timestampMillis = 500_000L)
         val after = fix(timestampMillis = 400_000L)
 

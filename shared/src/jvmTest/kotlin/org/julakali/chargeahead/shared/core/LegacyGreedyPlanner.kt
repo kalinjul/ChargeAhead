@@ -128,11 +128,7 @@ class LegacyGreedyPlanner(
         val operator: String?,
     )
 
-    /**
-     * Fetched in chunks, not as one polyline: the sources query radially with
-     * a result cap, so a single query over a long route returns an arbitrary
-     * subset of a huge circle, of which the route buffer keeps almost nothing.
-     */
+    /** Fetched in chunks, not as one polyline: the sources query radially with a result cap. */
     private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
         val measure = RouteMeasure(route)
         val cumulative = measure.cumulativeKm
@@ -347,10 +343,10 @@ class LegacyGreedyPlanner(
         /** Only decides whether a stop counts as trip-finishing; never added to the charge target. */
         private const val FINISH_MARGIN_SOC = 5.0
 
-        /** Max straight-line distance from the route — same trade-off as PolylineArea (open item 8). */
+        /** Max straight-line distance from the route. */
         private const val STOP_BUFFER_KM = 3.0
 
-        /** Candidate-fetch chunk length — the area size the sources were built for. */
+        /** Candidate-fetch chunk length. */
         private const val SEGMENT_FETCH_KM = 80.0
 
         /** Don't burn a stop in the first minutes of a leg. */

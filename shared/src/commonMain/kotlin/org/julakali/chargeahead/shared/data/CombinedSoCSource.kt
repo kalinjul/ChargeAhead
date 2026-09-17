@@ -7,15 +7,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 /**
- * Layers the charge-level sources on top of each other: if the vehicle
- * supplies a value, it wins; otherwise the typed-in one applies
- * (ARCHITECTURE.md 1.2).
- *
- * The precedence is non-negotiable and doesn't depend on how old the values
- * are: a measurement from the car is fundamentally superior to a manual
- * entry, no matter how fresh that entry is. Conversely, `null` from the
- * vehicle source is the normal case — in projection mode, hardly any head
- * unit provides this data.
+ * Layers the charge-level sources: if the vehicle supplies a value, it wins
+ * regardless of age; otherwise the typed-in one applies.
  */
 class CombinedSoCSource(
     private val manual: SoCSource,
