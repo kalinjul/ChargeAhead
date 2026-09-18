@@ -73,7 +73,7 @@ class PlanningFeature(
         // Fetch wider than the distance filter, so relaxing the distance has data.
         val radius = maxOf(filters.maxDistanceKm * RELAX_FETCH_FACTOR, MIN_FETCH_RADIUS_KM)
         val sites = try {
-            repository.sitesIn(SectorArea.circle(position, radius), networks.selectedNetworks())
+            repository.load(SectorArea.circle(position, radius), networks.selectedNetworks())
         } catch (failure: Exception) {
             emptyList()
         }

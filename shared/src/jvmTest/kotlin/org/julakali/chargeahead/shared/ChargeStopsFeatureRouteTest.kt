@@ -50,7 +50,7 @@ class ChargeStopsFeatureRouteTest {
         var lastArea: SearchArea? = null
             private set
 
-        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             lastArea = area
             return emptyList()
         }

@@ -209,7 +209,7 @@ class TripPlanner(
             }
             val area = PolylineArea(route.points.subList(startIndex, endIndex + 1), bufferKm = STOP_BUFFER_KM)
             val sites = try {
-                repository.sitesIn(area, networks.selectedNetworks())
+                repository.load(area, networks.selectedNetworks())
             } catch (failure: Exception) {
                 emptyList()
             }

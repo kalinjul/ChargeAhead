@@ -28,6 +28,11 @@ data class ChargeSiteEntity(
     val town: String?,
     val fetchedAtMillis: Long,
     val liveStatusId: String? = null,
+    // Derived when written, so the map can filter in SQL.
+    val maxPowerKw: Double? = null,
+    val maxDcPowerKw: Double? = null,
+    // NetworkCatalog key; null when the catalog doesn't know the operator.
+    val networkKey: String? = null,
 )
 
 @Entity(tableName = "tileCoverage", primaryKeys = ["sourceId", "networkKey", "tileLat", "tileLon"])
@@ -61,7 +66,7 @@ data class CorridorCoverageEntity(
 // (fallbackToDestructiveMigration).
 @Database(
     entities = [ChargeSiteEntity::class, TileCoverageEntity::class, CorridorCoverageEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)

@@ -73,7 +73,7 @@ class TripPlannerTest {
     )
 
     private fun repositoryWith(sites: List<ChargeSite>): SiteRepository = object : SiteRepository {
-        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
+        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
     }
 
     private fun planner(route: Route?, sites: List<ChargeSite>) =
@@ -436,7 +436,7 @@ class TripPlannerTest {
         val route = straightRoute()
         val queriedRadii = mutableListOf<Double>()
         val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
                 queriedRadii += area.radiusKm
                 return sitesAlong(route)
             }
@@ -457,7 +457,7 @@ class TripPlannerTest {
         val route = straightRoute()
         val capturedNetworks = mutableListOf<List<Network>>()
         val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
                 capturedNetworks += networks
                 return sitesAlong(route)
             }

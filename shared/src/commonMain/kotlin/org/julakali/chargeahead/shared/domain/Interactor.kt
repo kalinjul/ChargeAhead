@@ -7,6 +7,8 @@ package org.julakali.chargeahead.shared.domain
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+import org.julakali.chargeahead.shared.logDebug
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -17,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeout
@@ -105,7 +108,7 @@ abstract class SubjectInteractor<P : Any, T> {
 
     val flow: Flow<T> = paramState
         .distinctUntilChanged()
-        .flatMapLatest { createObservable(it) }
+        .flatMapLatest { params -> createObservable(params).timedUntilFirst(params) }
         .distinctUntilChanged()
 
     operator fun invoke(params: P) {
@@ -113,6 +116,23 @@ abstract class SubjectInteractor<P : Any, T> {
     }
 
     protected abstract fun createObservable(params: P): Flow<T>
+
+    /** How long [params] took from being picked up to their first result. Superseded params report nothing. */
+    protected open fun onFirstResult(params: P, took: Duration) {
+        logDebug("${this::class.simpleName}: first result after ${took.inWholeMilliseconds} ms for $params")
+    }
+
+    private fun Flow<T>.timedUntilFirst(params: P): Flow<T> = flow {
+        val start = TimeSource.Monotonic.markNow()
+        var reported = false
+        collect { value ->
+            if (!reported) {
+                reported = true
+                onFirstResult(params, start.elapsedNow())
+            }
+            emit(value)
+        }
+    }
 }
 
 /** [runCatching] that lets cancellation through. */

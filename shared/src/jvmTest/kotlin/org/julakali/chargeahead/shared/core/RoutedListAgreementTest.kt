@@ -64,7 +64,7 @@ class RoutedListAgreementTest {
             override suspend fun route(from: LatLon, to: LatLon): Route = route
         }
         val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
+            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
         }
         val plan = assertIs<TripPlanResult.Planned>(
             TripPlanner(engine, repository).plan(start, Destination("München", end), id4, startSocPercent = 90.0),

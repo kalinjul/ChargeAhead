@@ -13,6 +13,7 @@ import org.julakali.chargeahead.shared.domain.MapChargers
 import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.Reachability
+import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -60,6 +61,7 @@ class HomeViewModel(
     private val feature: ChargeStopsFeature,
     private val planning: PlanningFeature,
     private val observeMapChargers: ObserveMapChargers,
+    private val refreshMapChargers: RefreshMapChargers,
     settings: SettingsStore,
     fetchActivity: SiteFetchActivity,
     /** How long the button may spin before the map says something. */
@@ -70,6 +72,7 @@ class HomeViewModel(
 
     private val attempt = MutableStateFlow(LocationAttempt())
     private var attemptJob: Job? = null
+    private var refreshJob: Job? = null
 
     // Markers first, live data after: the status request must not hold them back.
     private val mapChargers: Flow<MapChargers> = observeMapChargers.flow.transformLatest { result ->
@@ -141,6 +144,12 @@ class HomeViewModel(
     fun onViewportChanged(viewport: BoundingBox?) {
         map.update { it.copy(belowMinZoom = viewport == null) }
         observeMapChargers(ObserveMapChargers.Params(viewport))
+        // Latest viewport wins: a pan supersedes the fetch for the previous one.
+        refreshJob?.cancel()
+        refreshJob = viewport?.let {
+            // A failed refill leaves the stored markers; nothing to tell the driver.
+            viewModelScope.launch { refreshMapChargers(RefreshMapChargers.Params(it)) }
+        }
     }
 
     /** A tapped map marker becomes the same detail dialog the corridor list uses. */

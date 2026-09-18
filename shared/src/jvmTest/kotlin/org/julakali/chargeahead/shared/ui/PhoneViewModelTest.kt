@@ -4,11 +4,15 @@ import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.PlanningFeature
 import org.julakali.chargeahead.shared.core.TripPlanner
 import org.julakali.chargeahead.shared.data.SiteFetchActivity
+import org.julakali.chargeahead.shared.data.TiledSiteRepository
+import org.julakali.chargeahead.shared.db.DatabaseFactory
+import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.Address
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
@@ -17,11 +21,13 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
+import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.Dispatchers
@@ -211,16 +217,17 @@ class PhoneViewModelTest {
         connectors = listOf(Connector(ConnectorType.CCS2, powerKw, 2)),
     )
 
-    /** On the *same* store the ViewModel gets. */
+    /** On the *same* store the ViewModel gets, over an in-memory database. */
     private fun homeViewModel(
         sites: List<ChargeSite>,
         settings: PersistentSettingsStore,
         locationTimeoutMillis: Long = HomeViewModel.DEFAULT_LOCATION_TIMEOUT_MILLIS,
     ): HomeViewModel {
-        val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
-            override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = sites
+        val source = object : ChargeSiteSource {
+            override val id = "demo"
+            override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
         }
+        val repository = TiledSiteRepository(source, createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null
         }
@@ -228,6 +235,7 @@ class PhoneViewModelTest {
             stubFeature(),
             PlanningFeature(TripPlanner(engine, repository), repository, settings),
             ObserveMapChargers(repository, settings),
+            RefreshMapChargers(repository, settings),
             settings,
             SiteFetchActivity(),
             locationTimeoutMillis,
@@ -270,7 +278,7 @@ class PhoneViewModelTest {
             override val updates: Flow<Fix> = emptyFlow()
         },
         repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = emptyList()
+            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> = emptyList()
         },
         dispatcher = Dispatchers.Unconfined,
     )

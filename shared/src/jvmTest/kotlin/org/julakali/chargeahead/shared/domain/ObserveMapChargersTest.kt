@@ -2,7 +2,10 @@ package org.julakali.chargeahead.shared.domain
 
 import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
@@ -16,8 +19,9 @@ class ObserveMapChargersTest {
 
     private val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
     private val fetchedAreas = mutableListOf<SearchArea>()
-    private val fetchedNetworks = mutableListOf<List<Network>>()
     private val storedBoxes = mutableListOf<BoundingBox>()
+    private val storedFilters = mutableListOf<MapFilter>()
+    private lateinit var repository: SiteRepository
 
     private fun site(id: String, operator: String, powerKw: Double, type: ConnectorType = ConnectorType.CCS2) =
         ChargeSite(
@@ -28,25 +32,25 @@ class ObserveMapChargersTest {
             connectors = listOf(Connector(type, powerKw, 2)),
         )
 
-    /** A store holding [stored]; a fetch adds [fetched] to it. */
+    /** A store holding [stored], which leaves filtering to the real store; a fetch adds [fetched] to it. */
     private fun observer(
         stored: List<ChargeSite>,
         fetched: List<ChargeSite> = emptyList(),
         configure: suspend PersistentSettingsStore.() -> Unit = {},
     ): ObserveMapChargers {
         runBlocking { settings.configure() }
-        val store = stored.toMutableList()
-        val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        val store = MutableStateFlow(stored)
+        repository = object : SiteRepository {
+            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
                 fetchedAreas += area
-                fetchedNetworks += networks
-                store += fetched
+                store.update { it + fetched }
                 return fetched
             }
 
-            override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> {
+            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> {
                 storedBoxes += box
-                return store.toList()
+                storedFilters += filter
+                return store
             }
         }
         return ObserveMapChargers(repository, settings).also { it(ObserveMapChargers.Params(viewport)) }
@@ -56,57 +60,48 @@ class ObserveMapChargersTest {
         withTimeout(5_000) { flow.first(matching) }
 
     @Test
-    fun `map chargers honor the physical filters`() = runBlocking<Unit> {
-        val observe = observer(
-            listOf(
-                site("hpc", "Ionity", 350.0),
-                site("slow-dc", "EnBW", 50.0),
-                site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2),
-            ),
-        )
-
-        // Default min power is 150 kW: the 50 kW DC and the AC post disappear.
-        assertEquals(listOf("demo:hpc"), observe.await().chargers.map { it.site.id })
-    }
-
-    @Test
-    fun `network filter applies on the map too`() = runBlocking<Unit> {
-        val observe = observer(
-            listOf(site("ionity", "Ionity", 350.0), site("fastned", "Fastned", 300.0)),
-        ) {
+    fun `the store is asked with the driver's filter`() = runBlocking<Unit> {
+        val observe = observer(listOf(site("fastned", "Fastned", 300.0))) {
+            setChargeFilters(ChargeFilters(minPowerKw = 100.0))
             setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
         }
-        assertEquals(listOf("demo:fastned"), observe.await().chargers.map { it.site.id })
+
+        val result = observe.await()
+
+        val expected = MapFilter(
+            networks = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")),
+            minPowerKw = 100.0,
+            slowMode = false,
+        )
+        assertEquals(expected, storedFilters.single())
+        assertEquals(expected, result.filter)
+        assertEquals(300.0, result.chargers.single().maxPowerKw)
     }
 
     @Test
-    fun `slow mode shows only sub-50kW chargers and ignores the fast filters`() = runBlocking<Unit> {
-        val observe = observer(
-            listOf(
-                site("hpc", "Ionity", 350.0),
-                site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2),
-                site("schuko", "Hotel", 3.7, ConnectorType.SCHUKO),
-            ),
-        ) {
-            // Filters that would normally hide the AC posts and everything but
-            // Ionity — slow mode drops both.
-            setChargeFilters(ChargeFilters(minPowerKw = 150.0, slowMode = true))
-            setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
-        }
-
-        val ids = observe.await().chargers.map { it.site.id }.toSet()
-        assertEquals(setOf("demo:wallbox", "demo:schuko"), ids)
-    }
-
-    @Test
-    fun `a filter change selects again`() = runBlocking<Unit> {
-        val observe = observer(listOf(site("hpc", "Ionity", 350.0), site("slow-dc", "EnBW", 50.0)))
-        observe.await { it.chargers.size == 1 }
+    fun `a filter change asks the store again`() = runBlocking<Unit> {
+        val observe = observer(listOf(site("hpc", "Ionity", 350.0)))
+        observe.await()
 
         settings.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
 
-        val result = observe.await { it.chargers.size == 2 }
-        assertEquals(50.0, result.filter.minPowerKw)
+        assertEquals(50.0, observe.await { it.filter.minPowerKw == 50.0 }.filter.minPowerKw)
+        assertEquals(listOf(ChargeFilters().minPowerKw, 50.0), storedFilters.map { it.minPowerKw })
+    }
+
+    @Test
+    fun `in slow mode a charger shows its strongest connector of any type`() = runBlocking<Unit> {
+        val wallbox = site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2)
+        val observe = observer(listOf(wallbox)) { setChargeFilters(ChargeFilters(slowMode = true)) }
+
+        assertEquals(listOf(MapCharger(wallbox, 22.0)), observe.await().chargers)
+    }
+
+    @Test
+    fun `outside slow mode a site without a DC connector is not a map charger`() = runBlocking<Unit> {
+        val observe = observer(listOf(site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2)))
+
+        assertTrue(observe.await().chargers.isEmpty())
     }
 
     @Test
@@ -160,49 +155,25 @@ class ObserveMapChargersTest {
     }
 
     @Test
-    fun `fetched sites show up once the viewport is refilled`() = runBlocking<Unit> {
+    fun `sites a refresh stores show up on the map`() = runBlocking<Unit> {
         val observe = observer(stored = emptyList(), fetched = listOf(site("new", "Ionity", 350.0)))
+        observe.await()
+
+        RefreshMapChargers(repository, settings)(RefreshMapChargers.Params(viewport)).getOrThrow()
 
         assertEquals(listOf("demo:new"), observe.await { it.chargers.isNotEmpty() }.chargers.map { it.site.id })
     }
 
     @Test
-    fun `fetch uses the strict viewport, the stored read gets the padded box`() = runBlocking<Unit> {
-        val observe = observer(stored = emptyList(), fetched = listOf(site("new", "Ionity", 350.0)))
-        observe.await { it.chargers.isNotEmpty() }
+    fun `the stored read gets the padded box and nothing is fetched`() = runBlocking<Unit> {
+        val observe = observer(stored = emptyList())
+        observe.await()
 
-        assertEquals(viewport, (fetchedAreas.single() as ViewportArea).boundingBox)
+        assertTrue(fetchedAreas.isEmpty())
         val padded = storedBoxes.first()
         assertTrue(padded.south < viewport.south, "padded box must extend south")
         assertTrue(padded.north > viewport.north, "padded box must extend north")
         assertTrue(padded.west < viewport.west, "padded box must extend west")
         assertTrue(padded.east > viewport.east, "padded box must extend east")
-    }
-
-    @Test
-    fun `viewport fetch passes the network selection to the repository`() = runBlocking<Unit> {
-        val observe = observer(stored = emptyList(), fetched = listOf(site("new", "Fastned", 300.0))) {
-            setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
-        }
-        observe.await { it.chargers.isNotEmpty() }
-
-        assertTrue(
-            fetchedNetworks.single().any { it.key == "fastned" },
-            "Fastned must appear in the forwarded selection",
-        )
-    }
-
-    @Test
-    fun `slow mode fetches every network`() = runBlocking<Unit> {
-        val observe = observer(
-            stored = emptyList(),
-            fetched = listOf(site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2)),
-        ) {
-            setChargeFilters(ChargeFilters(slowMode = true))
-            setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
-        }
-        observe.await { it.chargers.isNotEmpty() }
-
-        assertEquals(listOf(emptyList()), fetchedNetworks)
     }
 }

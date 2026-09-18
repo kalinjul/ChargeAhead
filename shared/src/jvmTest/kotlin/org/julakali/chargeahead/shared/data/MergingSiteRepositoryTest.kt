@@ -27,7 +27,7 @@ class MergingSiteRepositoryTest {
         var invalidations = 0
             private set
 
-        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             queries++
             return sites
         }
@@ -41,7 +41,7 @@ class MergingSiteRepositoryTest {
         var recordedNetworks: List<Network>? = null
             private set
 
-        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             recordedNetworks = networks
             return sites
         }
@@ -51,7 +51,7 @@ class MergingSiteRepositoryTest {
     }
 
     private class BrokenSiteRepository(private val reason: String = "No signal") : SiteRepository {
-        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> =
+        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> =
             throw IllegalStateException(reason)
     }
 
@@ -69,7 +69,7 @@ class MergingSiteRepositoryTest {
         val ocm = FixedSiteRepository(listOf(site("ocm:1", offsetKm = 5.0)))
         val bnetza = FixedSiteRepository(listOf(site("bnetza:2", offsetKm = 10.0)))
 
-        val sites = MergingSiteRepository(listOf(ocm, bnetza)).sitesIn(area)
+        val sites = MergingSiteRepository(listOf(ocm, bnetza)).load(area)
 
         assertEquals(1, ocm.queries)
         assertEquals(1, bnetza.queries)
@@ -80,7 +80,7 @@ class MergingSiteRepositoryTest {
     fun theSameLocation_appearsOnlyOnce() = runBlocking {
         val sites = MergingSiteRepository(
             listOf(FixedSiteRepository(listOf(site("ocm:1"))), FixedSiteRepository(listOf(site("bnetza:2")))),
-        ).sitesIn(area)
+        ).load(area)
 
         assertEquals(1, sites.size)
         assertEquals(setOf("ocm", "bnetza"), sites.single().sources)
@@ -91,7 +91,7 @@ class MergingSiteRepositoryTest {
         // One failing source must not empty the list.
         val sites = MergingSiteRepository(
             listOf(FixedSiteRepository(listOf(site("ocm:1"))), BrokenSiteRepository()),
-        ).sitesIn(area)
+        ).load(area)
 
         assertEquals(listOf("ocm:1"), sites.map { it.id })
     }
@@ -100,7 +100,7 @@ class MergingSiteRepositoryTest {
     fun ifTheOtherSourceFails_sameApplies() = runBlocking {
         val sites = MergingSiteRepository(
             listOf(BrokenSiteRepository(), FixedSiteRepository(listOf(site("bnetza:2")))),
-        ).sitesIn(area)
+        ).load(area)
 
         assertEquals(listOf("bnetza:2"), sites.map { it.id })
     }
@@ -110,7 +110,7 @@ class MergingSiteRepositoryTest {
         val repository = MergingSiteRepository(listOf(BrokenSiteRepository(), BrokenSiteRepository()))
 
         runBlocking {
-            assertFailsWith<IllegalStateException> { repository.sitesIn(area) }
+            assertFailsWith<IllegalStateException> { repository.load(area) }
         }
     }
 
@@ -145,7 +145,7 @@ class MergingSiteRepositoryTest {
         val enbw = NetworkCatalog.byKey("enbw")!!
         val networks = listOf(enbw)
 
-        MergingSiteRepository(listOf(source1, source2)).sitesIn(area, networks)
+        MergingSiteRepository(listOf(source1, source2)).load(area, networks)
 
         assertEquals(networks, source1.recordedNetworks)
         assertEquals(networks, source2.recordedNetworks)
