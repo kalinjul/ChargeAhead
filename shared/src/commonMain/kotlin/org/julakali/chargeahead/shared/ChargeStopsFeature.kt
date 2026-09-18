@@ -14,11 +14,6 @@ import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
-import org.julakali.chargeahead.shared.data.OperatorCatalog
-import org.julakali.chargeahead.shared.domain.OperatorOption
-import org.julakali.chargeahead.shared.domain.OperatorOptions
-import org.julakali.chargeahead.shared.domain.Geocoder
-import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteProvider
 import org.julakali.chargeahead.shared.domain.SettingsStore
@@ -56,9 +51,7 @@ class ChargeStopsFeature(
     private val routeProvider: RouteProvider = CorridorRouteProvider(),
     private val refreshPolicy: RefreshPolicy = RefreshPolicy(),
     private val routeEngine: RouteEngine? = null,
-    private val geocoder: Geocoder? = null,
     private val routeBufferKm: Double = RoutedRouteProvider.DEFAULT_BUFFER_KM,
-    private val operatorCatalog: OperatorCatalog? = null,
     private val settingsStore: SettingsStore? = null,
     private val socSource: SoCSource? = null,
     private val reserveSocPercent: Double = DEFAULT_RESERVE_SOC_PERCENT,
@@ -220,23 +213,8 @@ class ChargeStopsFeature(
                     recomputeLatest()
                 }
             }
-
-            launch {
-                val cached = operatorCatalog?.options().orEmpty()
-                if (cached.isEmpty()) return@launch
-                recomputeMutex.withLock {
-                    // A live recompute may already have won; its list is fresher.
-                    if (mutableState.value.availableOperators.isEmpty()) {
-                        publish(mutableState.value.copy(availableOperators = cached))
-                    }
-                }
-            }
         }
     }
-
-    /** Searches for places matching the typed text. Empty list if no geocoder is configured. */
-    suspend fun searchDestinations(query: String): List<Place> =
-        geocoder?.search(query, near = latestFix?.position).orEmpty()
 
     /** Sets the destination; `null` switches back to searching along the direction of travel. */
     suspend fun setDestination(destination: Destination?) {
@@ -392,8 +370,6 @@ class ChargeStopsFeature(
                     socSource = energy?.source,
                     destination = destination,
                     routeStatus = mutableState.value.routeStatus,
-                    // From the unfiltered sites, so the filter can be undone.
-                    availableOperators = sites.toOperatorOptions(),
                     networkFilterActive = networks.isActive,
                     position = fix.position,
                 ),
@@ -411,9 +387,6 @@ class ChargeStopsFeature(
             )
         }
     }
-
-    private fun List<org.julakali.chargeahead.shared.domain.ChargeSite>.toOperatorOptions(): List<OperatorOption> =
-        OperatorOptions.fromNames(map { it.operator })
 
     /** Runs outside [recomputeMutex], hence [MutableStateFlow.update]. */
     private fun publishPosition(position: LatLon) {

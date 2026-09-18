@@ -1,12 +1,5 @@
-package org.julakali.chargeahead.shared.core
+package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.domain.ChargeFilters
-import org.julakali.chargeahead.shared.domain.ChargeSite
-import org.julakali.chargeahead.shared.domain.ConnectorType
-import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
-import org.julakali.chargeahead.shared.domain.NetworkPreferences
-import org.julakali.chargeahead.shared.domain.distanceKmTo
 
 data class ChargeNowCandidate(
     val site: ChargeSite,
@@ -21,7 +14,9 @@ data class ChargeNowResult(
     val relaxed: List<RelaxedFilter>,
     /** Everything DC-qualified that missed the top spots, nearest first — the expanded sheet scrolls on. */
     val more: List<ChargeNowCandidate> = emptyList(),
-)
+) {
+    val isEmpty: Boolean get() = candidates.isEmpty() && more.isEmpty()
+}
 
 /**
  * The best charging sites around the current position, nearest first.

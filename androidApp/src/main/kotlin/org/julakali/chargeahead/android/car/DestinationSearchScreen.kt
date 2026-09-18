@@ -10,13 +10,15 @@ import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.PlanningFeature
 import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.DestinationSearch
+import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.toDestination
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 
 /**
  * Type a destination in the car. While driving, the host disables the
@@ -25,17 +27,16 @@ import kotlinx.coroutines.launch
 class DestinationSearchScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
-    private val planning: PlanningFeature,
     private val settings: SettingsStore,
-) : Screen(carContext) {
+) : Screen(carContext), KoinComponent {
+
+    private val observeDestinationSearch: ObserveDestinationSearch = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var recents: List<Destination> = emptyList()
-    private var results: List<Place> = emptyList()
+    private var search = DestinationSearch(query = "", results = emptyList(), searching = false)
     private var query = ""
     private var submittedQuery = ""
-    private var searching = false
-    private var searchJob: Job? = null
 
     init {
         lifecycleScope.launch {
@@ -44,6 +45,13 @@ class DestinationSearchScreen(
                 invalidate()
             }
         }
+        lifecycleScope.launch {
+            observeDestinationSearch.flow.collect { updated ->
+                search = updated
+                invalidate()
+            }
+        }
+        observeDestinationSearch(ObserveDestinationSearch.Params(query = ""))
     }
 
     override fun onGetTemplate(): Template {
@@ -53,7 +61,7 @@ class DestinationSearchScreen(
             .setShowKeyboardByDefault(true)
 
         // SearchTemplate rejects an item list while loading (issue #81).
-        if (searching) return template.setLoading(true).build()
+        if (search.searching) return template.setLoading(true).build()
 
         // Until the search is submitted, an empty list means "not searched yet".
         val emptyMessage = if (query.isNotBlank() && query != submittedQuery) {
@@ -67,7 +75,7 @@ class DestinationSearchScreen(
         if (query.isBlank()) {
             recents.forEach { destination -> itemList.addItem(recentRow(destination)) }
         } else {
-            results.forEach { place -> itemList.addItem(placeRow(place)) }
+            search.results.orEmpty().forEach { place -> itemList.addItem(placeRow(place)) }
         }
 
         return template.setItemList(itemList.build()).build()
@@ -77,11 +85,7 @@ class DestinationSearchScreen(
     private val callback = object : SearchTemplate.SearchCallback {
         override fun onSearchTextChanged(searchText: String) {
             query = searchText
-            if (searchText.isBlank()) {
-                results = emptyList()
-                searchJob?.cancel()
-                searching = false
-            }
+            if (searchText.isBlank()) observeDestinationSearch(ObserveDestinationSearch.Params(query = ""))
             invalidate()
         }
 
@@ -90,14 +94,7 @@ class DestinationSearchScreen(
             if (searchText.isBlank()) return
 
             submittedQuery = searchText
-            searchJob?.cancel()
-            searching = true
-            invalidate()
-            searchJob = lifecycleScope.launch {
-                results = feature.searchDestinations(searchText)
-                searching = false
-                invalidate()
-            }
+            observeDestinationSearch(ObserveDestinationSearch.Params(searchText, debounce = false))
         }
     }
 
@@ -116,6 +113,6 @@ class DestinationSearchScreen(
     private fun choose(destination: Destination) {
         // The search screen replaces itself with the route.
         screenManager.pop()
-        screenManager.push(RouteScreen(carContext, feature, planning, destination))
+        screenManager.push(RouteScreen(carContext, feature, destination))
     }
 }

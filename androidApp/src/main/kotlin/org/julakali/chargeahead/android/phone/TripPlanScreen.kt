@@ -49,8 +49,8 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.ui.SectionSelection
-import org.julakali.chargeahead.shared.core.PlannedStop
-import org.julakali.chargeahead.shared.core.TripPlan
+import org.julakali.chargeahead.shared.domain.PlannedStop
+import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.LatLon
 import kotlin.math.roundToInt
 

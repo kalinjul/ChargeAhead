@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.SavedRoute
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.routeId
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn

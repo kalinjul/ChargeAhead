@@ -2,14 +2,29 @@ package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.db.DatabaseFactory
+import org.julakali.chargeahead.shared.domain.ChargeNowResult
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.ObserveChargeNow
+import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
+import org.julakali.chargeahead.shared.domain.Place
+import org.julakali.chargeahead.shared.domain.PlanTrip
+import org.julakali.chargeahead.shared.domain.RefreshChargeNow
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.TripPlan
+import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.settings.UserDefaultsStorage
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.koin.core.Koin
 import org.koin.dsl.koinApplication
@@ -64,9 +79,9 @@ class ChargeStopsWatcher(private val feature: ChargeStopsFeature) {
     }
 }
 
-/** [org.julakali.chargeahead.shared.core.TripPlanResult], flattened for Swift. */
+/** [TripPlanResult], flattened for Swift. */
 data class TripPlanOutcome(
-    val plan: org.julakali.chargeahead.shared.core.TripPlan?,
+    val plan: TripPlan?,
     val failure: TripPlanFailure?,
 ) {
     enum class TripPlanFailure { NO_VEHICLE, NO_ROUTE, NO_CHARGER_IN_REACH }
@@ -79,39 +94,67 @@ data class TripPlanOutcome(
  */
 class PlanningBridge(@Suppress("UNUSED_PARAMETER") feature: ChargeStopsFeature) {
 
-    private val planning: PlanningFeature = requireNotNull(graph) {
+    private val koin: Koin = requireNotNull(graph) {
         "No graph yet — call createChargeStopsFeature first"
-    }.get()
+    }
+    private val planTrip: PlanTrip = koin.get()
+    private val observeChargeNow: ObserveChargeNow = koin.get()
+    private val refreshChargeNow: RefreshChargeNow = koin.get()
+    private val observeDestinationSearch: ObserveDestinationSearch = koin.get()
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var chargeNowJob: Job? = null
+    private var searchJob: Job? = null
 
     fun planTrip(
-        from: org.julakali.chargeahead.shared.domain.LatLon,
-        destination: org.julakali.chargeahead.shared.domain.Destination,
+        from: LatLon,
+        destination: Destination,
         onResult: (TripPlanOutcome) -> Unit,
     ) {
         scope.launch {
-            val outcome = when (val result = planning.planTrip(from, destination)) {
-                is org.julakali.chargeahead.shared.core.TripPlanResult.Planned ->
-                    TripPlanOutcome(result.plan, null)
-
-                is org.julakali.chargeahead.shared.core.TripPlanResult.NoVehicle ->
-                    TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_VEHICLE)
-
-                is org.julakali.chargeahead.shared.core.TripPlanResult.NoRoute ->
-                    TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE)
-
-                is org.julakali.chargeahead.shared.core.TripPlanResult.NoChargerInReach ->
-                    TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_CHARGER_IN_REACH)
-            }
+            val outcome = planTrip(PlanTrip.Params(from, destination)).fold(
+                onSuccess = { result ->
+                    when (result) {
+                        is TripPlanResult.Planned -> TripPlanOutcome(result.plan, null)
+                        is TripPlanResult.NoVehicle -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_VEHICLE)
+                        is TripPlanResult.NoRoute -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE)
+                        is TripPlanResult.NoChargerInReach ->
+                            TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_CHARGER_IN_REACH)
+                    }
+                },
+                onFailure = { TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE) },
+            )
             onResult(outcome)
         }
     }
 
-    fun chargeNow(
-        position: org.julakali.chargeahead.shared.domain.LatLon,
-        onResult: (org.julakali.chargeahead.shared.core.ChargeNowResult) -> Unit,
-    ) {
-        scope.launch { onResult(planning.chargeNow(position)) }
+    /** Reports the ranking around [position] on every change until [close]: the stored sites first, the refilled ones after. */
+    fun chargeNow(position: LatLon, onResult: (ChargeNowResult) -> Unit) {
+        observeChargeNow(ObserveChargeNow.Params(position))
+        chargeNowJob?.cancel()
+        chargeNowJob = scope.launch {
+            // Undispatched, so the refill counts as running before the first ranking arrives.
+            launch(start = CoroutineStart.UNDISPATCHED) { refreshChargeNow(RefreshChargeNow.Params(position)) }
+            combine(observeChargeNow.flow.filterNotNull(), refreshChargeNow.inProgress) { result, refreshing ->
+                result.takeUnless { it.isEmpty && refreshing }
+            }
+                .filterNotNull()
+                .collect(onResult)
+        }
+    }
+
+    /** Reports the places found for the latest [searchDestinations] query until [close]. */
+    fun watchDestinationSearch(onChange: (List<Place>) -> Unit) {
+        searchJob?.cancel()
+        searchJob = scope.launch {
+            observeDestinationSearch.flow
+                .filter { !it.searching }
+                .collect { onChange(it.results.orEmpty()) }
+        }
+    }
+
+    /** Debounced; queries shorter than [ObserveDestinationSearch.MIN_QUERY_LENGTH] find nothing. */
+    fun searchDestinations(query: String) {
+        observeDestinationSearch(ObserveDestinationSearch.Params(query))
     }
 
     fun close() {

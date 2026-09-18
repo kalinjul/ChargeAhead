@@ -327,12 +327,12 @@ interface SettingsStore {
     suspend fun removeSavedRoute(id: String)
 }
 
-// The phone's planning flows, a Koin single in chargeStopsModule.
-// Swift goes through PlanningBridge (iosMain) — same reasoning as the watcher.
-class PlanningFeature {
-    suspend fun planTrip(from, destination, socOverridePercent = null): TripPlanResult
-    suspend fun chargeNow(position): ChargeNowResult   // best 3, nearest first; relax ladder: power → networks → distance
-}
+// The phone's planning flows are domain use cases, Koin factories in
+// chargeStopsModule. Swift goes through PlanningBridge (iosMain) — same
+// reasoning as the watcher.
+class PlanTrip : Interactor<PlanTrip.Params, TripPlanResult>        // puts the plan into TripStore
+class ObserveChargeNow : SubjectInteractor<Params, ChargeNowResult?> // best 3, nearest first; relax ladder: power → networks → distance
+class ObserveDestinationSearch : SubjectInteractor<Params, DestinationSearch>
 ```
 
 **The route is computed once per destination, not once per location
@@ -459,8 +459,8 @@ The short version, for the cases where the skill isn't loaded:
   state.
 - No user-visible text in a `UiState` — `shared` has no resources. States
   and reasons are types; the wording comes from `strings.xml`.
-- ViewModels take `SettingsStore`, `ChargeStopsFeature`, `PlanningFeature`
-  — never a `Context`, never a `CoroutineScope`.
+- ViewModels take `SettingsStore`, `ChargeStopsFeature` and domain use
+  cases — never a `Context`, never a `CoroutineScope`.
 - Because they live in `shared`, `:shared:compileKotlinIosSimulatorArm64`
   is mandatory after touching them. It is what keeps the "reusable on iOS"
   claim honest.
