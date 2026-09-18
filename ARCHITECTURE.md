@@ -650,11 +650,14 @@ application-scoped Koin singletons — the
 ViewModels share them, because two instances would mean two location streams
 and two stores that never see each other's writes. The ViewModels are
 declared in `sharedUiModule` (`shared/ui/SharedUiModule.kt`, so iOS can
-start the same graph later) and resolved activity-scoped via
-`phoneViewModel()`. Navigation is a Navigation3 back stack
-(`androidApp/.../phone/Destinations.kt`); per-entry ViewModel scope stays
-open until Platform 37 lifts the lifecycle cap (section 9) — then it is one
-artifact plus one NavDisplay decorator line in `phoneViewModel()`.
+start the same graph later) and resolved with Koin's `koinViewModel()`.
+Navigation is a Navigation3 back stack
+(`androidApp/.../phone/Destinations.kt`) whose `NavDisplay` carries
+`rememberViewModelStoreNavEntryDecorator()` (lifecycle-viewmodel-navigation3):
+every page gets its own ViewModelStore, cleared when it leaves the back
+stack. The chrome outside `NavDisplay` — map, drawer, sheets — resolves
+against the activity, so `PlanSheetViewModel` and friends are shared between
+`PhoneApp` and the sheet that draws them.
 
 **What stays in the UI.** Which page is showing, which sheet is open, the
 Android permission handshake, and state that only lives for a gesture (a
@@ -708,12 +711,10 @@ Instead, `com.android.kotlin.multiplatform.library`, with the Android
 configuration moving into an `androidLibrary { }` block **inside**
 `kotlin { }` — there's no top-level `android { }` anymore.
 
-**compileSdk stays at 36, and that caps androidx.** The latest androidx
-versions (Compose BOM 2026.08.00, core-ktx 1.19.0, lifecycle 2.11.0)
-require compileSdk 37. Android SDK Platform 37 isn't yet available through
-the SDK Manager. So these four libraries are deliberately held back one
-step. Once Platform 37 appears, all four can be bumped together — until
-then, bumping any one of them individually breaks the build.
+**compileSdk 37.** The current androidx line (Compose BOM, core-ktx,
+lifecycle 2.11 and with it lifecycle-viewmodel-navigation3) requires
+compileSdk 37. Until Platform 37 shipped through the SDK Manager these were
+held back one step together; they now move together again.
 
 ### What can actually be checked without a Mac
 

@@ -27,6 +27,7 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.ui.VehicleSettingsUiState
 import org.julakali.chargeahead.shared.ui.VehicleSettingsViewModel
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Free-form entry of battery capacity and consumption. Written immediately on
@@ -35,7 +36,7 @@ import org.julakali.chargeahead.shared.ui.VehicleSettingsViewModel
 @Composable
 fun VehicleSettingsRoute(
     modifier: Modifier = Modifier,
-    viewModel: VehicleSettingsViewModel = phoneViewModel(),
+    viewModel: VehicleSettingsViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     VehicleSettingsScreen(

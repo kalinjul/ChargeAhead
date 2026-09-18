@@ -40,6 +40,7 @@ import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.android.phone.components.SwitchRow
 import org.julakali.chargeahead.shared.ui.NetworksUiState
 import org.julakali.chargeahead.shared.ui.NetworksViewModel
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Selecting charging networks from the shipped catalog. Leaving the screen
@@ -48,7 +49,7 @@ import org.julakali.chargeahead.shared.ui.NetworksViewModel
 @Composable
 fun NetworksRoute(
     modifier: Modifier = Modifier,
-    viewModel: NetworksViewModel = phoneViewModel(),
+    viewModel: NetworksViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

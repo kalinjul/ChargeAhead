@@ -36,12 +36,13 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.SavedRoute
 import org.julakali.chargeahead.shared.ui.RoutesUiState
 import org.julakali.chargeahead.shared.ui.RoutesViewModel
+import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun RoutesRoute(
     onOpen: (Destination) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: RoutesViewModel = phoneViewModel(),
+    viewModel: RoutesViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     RoutesSheetContent(

@@ -22,13 +22,14 @@ import org.julakali.chargeahead.android.phone.components.TickStyle
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.ui.AddCarUiState
 import org.julakali.chargeahead.shared.ui.AddCarViewModel
+import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
 @Composable
 fun AddCarRoute(
     onAdded: (VehiclePreset) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: AddCarViewModel = phoneViewModel(),
+    viewModel: AddCarViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     AddCarScreen(

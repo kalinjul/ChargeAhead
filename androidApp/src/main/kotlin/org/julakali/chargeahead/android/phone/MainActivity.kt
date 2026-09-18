@@ -55,8 +55,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.components.AppSheet
@@ -72,6 +74,7 @@ import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
 import org.julakali.chargeahead.shared.ui.TripEvent
 import org.julakali.chargeahead.shared.ui.TripUiState
 import org.julakali.chargeahead.shared.ui.TripViewModel
+import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -107,11 +110,11 @@ private fun PhoneApp() {
     val context = LocalContext.current
 
     // State holders read by the chrome (app bar, drawer, sheets).
-    val drawerViewModel: DrawerViewModel = phoneViewModel()
-    val homeViewModel: HomeViewModel = phoneViewModel()
-    val tripViewModel: TripViewModel = phoneViewModel()
-    val planSheetViewModel: PlanSheetViewModel = phoneViewModel()
-    val chargeNowViewModel: ChargeNowViewModel = phoneViewModel()
+    val drawerViewModel: DrawerViewModel = koinViewModel()
+    val homeViewModel: HomeViewModel = koinViewModel()
+    val tripViewModel: TripViewModel = koinViewModel()
+    val planSheetViewModel: PlanSheetViewModel = koinViewModel()
+    val chargeNowViewModel: ChargeNowViewModel = koinViewModel()
 
     val drawerUi by drawerViewModel.uiState.collectAsStateWithLifecycle()
     val tripUi by tripViewModel.uiState.collectAsStateWithLifecycle()
@@ -250,6 +253,13 @@ private fun PhoneApp() {
     NavDisplay(
         backStack = backStack,
         onBack = { pop() },
+        // Each page gets its own ViewModelStore, cleared when it leaves the
+        // back stack. The chrome above (drawer, map, sheets) is outside, so
+        // its ViewModels stay activity-scoped.
+        entryDecorators = listOf(
+            rememberSaveableStateHolderNavEntryDecorator(),
+            rememberViewModelStoreNavEntryDecorator(),
+        ),
         transitionSpec = {
             slideInHorizontally(tween(300)) { it } togetherWith fadeOut(tween(300))
         },

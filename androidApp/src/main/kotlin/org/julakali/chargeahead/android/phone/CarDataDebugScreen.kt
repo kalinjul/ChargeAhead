@@ -24,6 +24,7 @@ import org.julakali.chargeahead.shared.domain.CarDataKind
 import org.julakali.chargeahead.shared.domain.CarDataPoint
 import org.julakali.chargeahead.shared.domain.CarDataStatus
 import org.julakali.chargeahead.shared.ui.CarDataViewModel
+import org.koin.androidx.compose.koinViewModel
 
 /**
  * Everything the car hardware last delivered, one row per data point, as
@@ -32,7 +33,7 @@ import org.julakali.chargeahead.shared.ui.CarDataViewModel
 @Composable
 fun CarDataDebugRoute(
     modifier: Modifier = Modifier,
-    viewModel: CarDataViewModel = phoneViewModel(),
+    viewModel: CarDataViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     CarDataDebugScreen(points = uiState.points, modifier = modifier)

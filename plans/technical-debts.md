@@ -8,11 +8,9 @@
       gone, StopDetail carries its stop index. The androidx artifact, not
       the multiplatform one: the iOS phone UI is SwiftUI, so there is
       nothing to navigate there — the swap is coordinate-level if that ever
-      changes. Per-destination ViewModel scope is NOT wired yet:
-      lifecycle-viewmodel-navigation3 rides lifecycle 2.11, which needs the
-      compileSdk 37 that ARCHITECTURE.md §9 documents as unavailable — once
-      Platform 37 lands it is one artifact plus one NavDisplay decorator
-      line in `phoneViewModel()`.
+      changes. Per-destination ViewModel scope is wired through
+      lifecycle-viewmodel-navigation3's NavDisplay decorator; the
+      `phoneViewModel()` indirection is gone, screens call `koinViewModel()`.
 - [x] Use Room for database access — done: Room 2.8.4 KMP replaces
       SQLDelight for the tile cache (same tables, same queries, entities
       and DAO in commonMain, BundledSQLiteDriver on every target). Fresh
