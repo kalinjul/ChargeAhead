@@ -3,7 +3,7 @@ package org.julakali.chargeahead.shared.ui
 import org.julakali.chargeahead.shared.domain.NetworkCatalog
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.OperatorKey
-import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,7 +34,7 @@ class NetworksViewModelTest {
     }
 
     private fun settings() =
-        TrackingSettingsStore(PersistentSettingsStore(InMemoryKeyValueStorage(), Dispatchers.Unconfined))
+        TrackingSettingsStore(PersistentSettingsStore(InMemoryPreferencesDataStore()))
 
     @Test
     fun `toggling stages without touching settings`() = runBlocking<Unit> {

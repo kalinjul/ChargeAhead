@@ -1,6 +1,6 @@
 package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +18,7 @@ class ObserveMapChargersTest {
 
     private val viewport = BoundingBox(south = 51.0, west = 6.5, north = 51.4, east = 7.0)
 
-    private val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
     private val fetchedAreas = mutableListOf<SearchArea>()
     private val storedBoxes = mutableListOf<BoundingBox>()
     private val storedFilters = mutableListOf<MapFilter>()

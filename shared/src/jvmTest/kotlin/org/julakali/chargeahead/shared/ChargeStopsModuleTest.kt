@@ -9,7 +9,7 @@ import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
 import org.julakali.chargeahead.shared.domain.PlanTrip
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.UpdateArrivalSoc
-import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -33,7 +33,7 @@ class ChargeStopsModuleTest {
             modules(
                 module {
                     single<LocationSource> { fakeLocationSource }
-                    single<SettingsStore> { PersistentSettingsStore(InMemoryKeyValueStorage()) }
+                    single<SettingsStore> { PersistentSettingsStore(InMemoryPreferencesDataStore()) }
                     single { DatabaseFactory() }
                     single { ChargeStopsConfig(key, backend) }
                 },

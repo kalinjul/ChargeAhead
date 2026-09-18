@@ -37,7 +37,7 @@ import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripStore
-import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -80,7 +80,7 @@ class PhoneViewModelTest {
     /** Typing the comma in "17,8" must not be swallowed by the stored profile. */
     @Test
     fun `the form keeps what was typed while the store takes what parses`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val viewModel = VehicleSettingsViewModel(settings, stubFeature())
 
         viewModel.onNameChanged("Testwagen")
@@ -104,7 +104,7 @@ class PhoneViewModelTest {
     /** Without a usable capacity, no profile is stored at all. */
     @Test
     fun `an unparseable capacity stores no profile`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val viewModel = VehicleSettingsViewModel(settings, stubFeature())
 
         viewModel.onNameChanged("Testwagen")
@@ -117,7 +117,7 @@ class PhoneViewModelTest {
 
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val addCar = AddCarViewModel(settings)
         val garage = GarageViewModel(settings, stubFeature())
 
@@ -152,7 +152,7 @@ class PhoneViewModelTest {
     /** Re-planning opens the sheet on the destination as a pick, not as typed text. */
     @Test
     fun `the plan sheet opens pre-filled with a destination`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val viewModel = PlanSheetViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings)
         val destination = Destination("Hamburg", LatLon(53.55, 9.99))
 
@@ -168,7 +168,7 @@ class PhoneViewModelTest {
     /** Issue #43: the field used to keep only the name, dropping street and city. */
     @Test
     fun `a picked search result fills the field with its address`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val viewModel = PlanSheetViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings)
         val place = Place(
             name = "Uebel und Gefährlich",
@@ -187,7 +187,7 @@ class PhoneViewModelTest {
     /** Issue #17: a filter change must re-run the marker query, not only a viewport change. */
     @Test
     fun `changing the minimum power reloads the map markers`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val viewModel = homeViewModel(mapSites, settings)
 
         viewModel.onViewportChanged(VIEWPORT)
@@ -204,7 +204,7 @@ class PhoneViewModelTest {
     /** Same reasoning for the other filter the map applies. */
     @Test
     fun `picking networks reloads the map markers`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val viewModel = homeViewModel(mapSites, settings)
 
         viewModel.onViewportChanged(VIEWPORT)
@@ -216,7 +216,7 @@ class PhoneViewModelTest {
 
     @Test
     fun `a viewport change brings the markers' live availability`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val site = mapSite("hpc", "Ionity", 300.0).copy(liveStatusId = "live-hpc")
         val statusSource = ChargePointStatusSource { ids ->
             ids.associateWith { listOf(ChargePointStatus(ChargePointState.AVAILABLE), ChargePointStatus(ChargePointState.OCCUPIED)) }
@@ -269,7 +269,7 @@ class PhoneViewModelTest {
 
     @Test
     fun `the corridor list waits for a fix, then shows the stored stops`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val fixes = MutableSharedFlow<Fix>(extraBufferCapacity = 1)
         val feature = ChargeStopsFeature(
             locationSource = object : LocationSource {
@@ -295,7 +295,7 @@ class PhoneViewModelTest {
 
     @Test
     fun `without a fix the location button says it is searching`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val viewModel = homeViewModel(emptyList(), settings)
 
         viewModel.onLocateRequested()
@@ -307,7 +307,7 @@ class PhoneViewModelTest {
 
     @Test
     fun `past the deadline the map says why it is still empty`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val viewModel = homeViewModel(emptyList(), settings, locationTimeoutMillis = 50L)
 
         viewModel.onLocateRequested()

@@ -1,6 +1,6 @@
 package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 class ObserveChargeNowTest {
 
     private val here = LatLon(48.0, 11.0)
-    private val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
     private val store = MutableStateFlow<List<ChargeSite>>(emptyList())
     private var fetched: List<ChargeSite> = emptyList()
     private val fetches = mutableListOf<Pair<SearchArea, List<Network>>>()

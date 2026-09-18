@@ -1,6 +1,6 @@
 package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -15,7 +15,7 @@ class PlanTripTest {
     private val from = LatLon(49.45, 11.08)
     private val munich = Destination("München", LatLon(48.14, 11.58))
     private val vehicle = VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2))
-    private val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
+    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
     private val store = TripStore()
 
     private data class Call(val from: LatLon, val startSocPercent: Double, val arrivalSocPercent: Double)

@@ -15,14 +15,16 @@ import org.julakali.chargeahead.shared.domain.SavedRoute
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.VehicleProfile
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
@@ -31,12 +33,17 @@ import kotlinx.serialization.json.Json
  *
  * Read once on creation, then kept in memory and written through on every
  * change. A corrupt profile is treated as "no profile".
+ *
+ * The first read blocks: the StateFlows need their stored values from the
+ * start, or the UI would briefly show the defaults. It happens once per
+ * process, since there is one store per process.
  */
 class PersistentSettingsStore(
-    private val storage: KeyValueStorage,
-    // Where the blocking writes run.
-    private val writeDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    private val dataStore: DataStore<Preferences>,
 ) : SettingsStore {
+
+    // Only for the initial values; afterwards the StateFlows are the truth.
+    private val initial: Preferences = runBlocking { dataStore.data.first() }
 
     private val mutableVehicle = MutableStateFlow(readVehicle())
     override val vehicle: StateFlow<VehicleProfile?> = mutableVehicle.asStateFlow()
@@ -53,22 +60,22 @@ class PersistentSettingsStore(
     private val mutableArrivalSoc = MutableStateFlow(readArrivalSoc())
     override val arrivalSocPercent: StateFlow<Double> = mutableArrivalSoc.asStateFlow()
 
-    // Every write goes through here: off the main thread and serialized,
-    // because several writes do read-modify-write.
-    private val writeMutex = Mutex()
-
-    private suspend fun write(block: () -> Unit) = withContext(writeDispatcher) { writeMutex.withLock(action = block) }
+    // Every write goes through here. DataStore runs the edits one after the
+    // other off the main thread, which the read-modify-writes below rely on.
+    private suspend fun write(block: MutablePreferences.() -> Unit) {
+        dataStore.edit { it.block() }
+    }
 
     override suspend fun setVehicle(profile: VehicleProfile?) = write { writeVehicle(profile) }
 
-    // The un-locked core, for callers already holding the write lock.
-    private fun writeVehicle(profile: VehicleProfile?) {
+    // The core, for callers already inside a write.
+    private fun MutablePreferences.writeVehicle(profile: VehicleProfile?) {
         // The selected vehicle stays on the legacy keys.
-        storage.putString(KEY_NAME, profile?.displayName)
-        storage.putString(KEY_BATTERY_KWH, profile?.usableBatteryKwh?.toString())
-        storage.putString(KEY_CONSUMPTION, profile?.consumptionKwhPer100Km?.toString())
-        storage.putString(KEY_CONNECTORS, profile?.acceptedConnectors?.joinToString(",") { it.name })
-        storage.putString(KEY_DC_PEAK, profile?.dcPeakPowerKw?.toString())
+        putString(KEY_NAME, profile?.displayName)
+        putString(KEY_BATTERY_KWH, profile?.usableBatteryKwh?.toString())
+        putString(KEY_CONSUMPTION, profile?.consumptionKwhPer100Km?.toString())
+        putString(KEY_CONNECTORS, profile?.acceptedConnectors?.joinToString(",") { it.name })
+        putString(KEY_DC_PEAK, profile?.dcPeakPowerKw?.toString())
         mutableVehicle.value = profile
 
         if (profile != null) {
@@ -91,8 +98,8 @@ class PersistentSettingsStore(
         }
     }
 
-    private fun writeGarage(vehicles: List<VehicleProfile>) {
-        storage.putJson(
+    private fun MutablePreferences.writeGarage(vehicles: List<VehicleProfile>) {
+        putJson(
             KEY_GARAGE,
             vehicles.takeIf { it.isNotEmpty() }?.map {
                 StoredVehicle(
@@ -108,7 +115,7 @@ class PersistentSettingsStore(
     }
 
     private fun readGarage(): List<VehicleProfile> =
-        storage.getJson<List<StoredVehicle>>(KEY_GARAGE)
+        initial.getJson<List<StoredVehicle>>(KEY_GARAGE)
             .orEmpty()
             .mapNotNull { it.toProfileOrNull() }
 
@@ -129,7 +136,7 @@ class PersistentSettingsStore(
                 .take(MAX_RECENT_DESTINATIONS)
         }
 
-        storage.putJson(
+        putJson(
             KEY_DESTINATIONS,
             updated.takeIf { it.isNotEmpty() }
                 ?.map { StoredDestination(it.name, it.position.lat, it.position.lon, it == destination, it.address) },
@@ -142,8 +149,8 @@ class PersistentSettingsStore(
     override val networks: StateFlow<NetworkPreferences> = mutableNetworks.asStateFlow()
 
     override suspend fun setNetworks(preferences: NetworkPreferences) = write {
-        storage.putString(KEY_ONLY_PREFERRED, preferences.onlyPreferred.toString())
-        storage.putJson(
+        putString(KEY_ONLY_PREFERRED, preferences.onlyPreferred.toString())
+        putJson(
             KEY_PREFERRED_NETWORKS,
             preferences.preferredOperators.takeIf { it.isNotEmpty() }?.toList(),
         )
@@ -151,9 +158,9 @@ class PersistentSettingsStore(
     }
 
     private fun readNetworks(): NetworkPreferences {
-        val onlyPreferred = storage.getStringOrNull(KEY_ONLY_PREFERRED)?.toBooleanStrictOrNull()
+        val onlyPreferred = initial.getStringOrNull(KEY_ONLY_PREFERRED)?.toBooleanStrictOrNull()
             ?: NetworkPreferences().onlyPreferred
-        val preferred = storage.getJson<List<String>>(KEY_PREFERRED_NETWORKS)
+        val preferred = initial.getJson<List<String>>(KEY_PREFERRED_NETWORKS)
             .orEmpty().map(NetworkCatalog::currentKey).toSet()
         return NetworkPreferences(onlyPreferred, preferred)
     }
@@ -162,7 +169,7 @@ class PersistentSettingsStore(
     override val chargeFilters: StateFlow<ChargeFilters> = mutableFilters.asStateFlow()
 
     override suspend fun setChargeFilters(filters: ChargeFilters) = write {
-        storage.putJson(
+        putJson(
             KEY_CHARGE_FILTERS,
             StoredFilters(filters.minPowerKw, filters.maxDistanceKm),
         )
@@ -170,7 +177,7 @@ class PersistentSettingsStore(
     }
 
     private fun readFilters(): ChargeFilters {
-        val stored = storage.getJson<StoredFilters>(KEY_CHARGE_FILTERS) ?: return ChargeFilters()
+        val stored = initial.getJson<StoredFilters>(KEY_CHARGE_FILTERS) ?: return ChargeFilters()
         return ChargeFilters(stored.minPowerKw, stored.maxDistanceKm)
     }
 
@@ -189,8 +196,8 @@ class PersistentSettingsStore(
         writeSavedRoutes(mutableSavedRoutes.value.filterNot { it.id == id })
     }
 
-    private fun writeSavedRoutes(routes: List<SavedRoute>) {
-        storage.putJson(
+    private fun MutablePreferences.writeSavedRoutes(routes: List<SavedRoute>) {
+        putJson(
             KEY_SAVED_ROUTES,
             routes.takeIf { it.isNotEmpty() }?.map {
                 StoredSavedRoute(
@@ -208,7 +215,7 @@ class PersistentSettingsStore(
     }
 
     private fun readSavedRoutes(): List<SavedRoute> =
-        storage.getJson<List<StoredSavedRoute>>(KEY_SAVED_ROUTES)
+        initial.getJson<List<StoredSavedRoute>>(KEY_SAVED_ROUTES)
             .orEmpty()
             .map { SavedRoute(it.id, it.name, Destination(it.destName, LatLon(it.lat, it.lon), it.destAddress), it.summary) }
 
@@ -217,7 +224,7 @@ class PersistentSettingsStore(
 
     override suspend fun recordCarDataPoint(point: CarDataPoint) = write {
         val updated = mutableCarData.value.filterNot { it.kind == point.kind } + point
-        storage.putJson(
+        putJson(
             KEY_CAR_DEBUG,
             updated.map { StoredCarData(it.kind.name, it.status.name, it.value, it.observedAtMillis) },
         )
@@ -225,7 +232,7 @@ class PersistentSettingsStore(
     }
 
     private fun readCarData(): List<CarDataPoint> {
-        val stored = storage.getJson<List<StoredCarData>>(KEY_CAR_DEBUG).orEmpty()
+        val stored = initial.getJson<List<StoredCarData>>(KEY_CAR_DEBUG).orEmpty()
         return stored.mapNotNull {
             // Entries from a newer app version are skipped, not guessed at.
             val kind = CarDataKind.entries.firstOrNull { k -> k.name == it.kind } ?: return@mapNotNull null
@@ -238,7 +245,7 @@ class PersistentSettingsStore(
     override val socDiagnostics: StateFlow<SoCDiagnostics?> = mutableDiagnostics.asStateFlow()
 
     override suspend fun recordSoCDiagnostics(diagnostics: SoCDiagnostics) = write {
-        storage.putJson(
+        putJson(
             KEY_SOC_DIAGNOSTICS,
             StoredDiagnostics(
                 checkedAtMillis = diagnostics.checkedAtMillis,
@@ -250,7 +257,7 @@ class PersistentSettingsStore(
     }
 
     private fun readDiagnostics(): SoCDiagnostics? {
-        val stored = storage.getJson<StoredDiagnostics>(KEY_SOC_DIAGNOSTICS) ?: return null
+        val stored = initial.getJson<StoredDiagnostics>(KEY_SOC_DIAGNOSTICS) ?: return null
         // An unrecognized outcome was written by a newer version.
         val outcome = SoCDiagnostics.Outcome.entries.firstOrNull { it.name == stored.outcome } ?: return null
         return SoCDiagnostics(stored.checkedAtMillis, outcome, stored.detail)
@@ -258,46 +265,46 @@ class PersistentSettingsStore(
 
     override suspend fun setManualSocPercent(socPercent: Double?) = write {
         val clamped = socPercent?.coerceIn(0.0, 100.0)
-        storage.putString(KEY_MANUAL_SOC, clamped?.toString())
+        putString(KEY_MANUAL_SOC, clamped?.toString())
         mutableManualSoc.value = clamped
     }
 
     override suspend fun setArrivalSocPercent(socPercent: Double) = write {
         val clamped = socPercent.coerceIn(0.0, MAX_ARRIVAL_SOC_PERCENT)
-        storage.putString(KEY_ARRIVAL_SOC, clamped.toString())
+        putString(KEY_ARRIVAL_SOC, clamped.toString())
         mutableArrivalSoc.value = clamped
     }
 
     private fun readVehicle(): VehicleProfile? {
-        val battery = storage.getStringOrNull(KEY_BATTERY_KWH)?.toDoubleOrNull() ?: return null
-        val consumption = storage.getStringOrNull(KEY_CONSUMPTION)?.toDoubleOrNull() ?: return null
+        val battery = initial.getStringOrNull(KEY_BATTERY_KWH)?.toDoubleOrNull() ?: return null
+        val consumption = initial.getStringOrNull(KEY_CONSUMPTION)?.toDoubleOrNull() ?: return null
         if (battery <= 0.0 || consumption <= 0.0) return null
 
         return VehicleProfile(
-            displayName = storage.getStringOrNull(KEY_NAME).orEmpty(),
+            displayName = initial.getStringOrNull(KEY_NAME).orEmpty(),
             usableBatteryKwh = battery,
             consumptionKwhPer100Km = consumption,
             acceptedConnectors = readConnectors(),
-            dcPeakPowerKw = storage.getStringOrNull(KEY_DC_PEAK)?.toDoubleOrNull(),
+            dcPeakPowerKw = initial.getStringOrNull(KEY_DC_PEAK)?.toDoubleOrNull(),
         )
     }
 
     /** Unknown connector names are skipped rather than thrown on. */
     private fun readConnectors(): Set<ConnectorType> =
-        storage.getStringOrNull(KEY_CONNECTORS)
+        initial.getStringOrNull(KEY_CONNECTORS)
             ?.split(",")
             ?.mapNotNull { name -> ConnectorType.entries.firstOrNull { it.name == name.trim() } }
             ?.toSet()
             .orEmpty()
 
     private fun readDestinations(): List<StoredDestination> =
-        storage.getJson<List<StoredDestination>>(KEY_DESTINATIONS).orEmpty()
+        initial.getJson<List<StoredDestination>>(KEY_DESTINATIONS).orEmpty()
 
     private fun readManualSoc(): Double? =
-        storage.getStringOrNull(KEY_MANUAL_SOC)?.toDoubleOrNull()?.coerceIn(0.0, 100.0)
+        initial.getStringOrNull(KEY_MANUAL_SOC)?.toDoubleOrNull()?.coerceIn(0.0, 100.0)
 
     private fun readArrivalSoc(): Double =
-        storage.getStringOrNull(KEY_ARRIVAL_SOC)?.toDoubleOrNull()?.coerceIn(0.0, MAX_ARRIVAL_SOC_PERCENT)
+        initial.getStringOrNull(KEY_ARRIVAL_SOC)?.toDoubleOrNull()?.coerceIn(0.0, MAX_ARRIVAL_SOC_PERCENT)
             ?: DEFAULT_ARRIVAL_SOC_PERCENT
 
     @Serializable
@@ -367,33 +374,50 @@ class PersistentSettingsStore(
         fun toDomain() = Destination(name, LatLon(lat, lon), address)
     }
 
-    private companion object {
-        const val MAX_RECENT_DESTINATIONS = 8
+    internal companion object {
+        private const val MAX_RECENT_DESTINATIONS = 8
 
-        const val KEY_DESTINATIONS = "route.destinations"
-        const val KEY_SOC_DIAGNOSTICS = "energy.socDiagnostics"
-        const val KEY_ONLY_PREFERRED = "networks.onlyPreferred"
-        const val KEY_PREFERRED_NETWORKS = "networks.preferred"
-        const val KEY_NAME = "vehicle.displayName"
-        const val KEY_BATTERY_KWH = "vehicle.usableBatteryKwh"
-        const val KEY_CONSUMPTION = "vehicle.consumptionKwhPer100Km"
-        const val KEY_CONNECTORS = "vehicle.acceptedConnectors"
-        const val KEY_DC_PEAK = "vehicle.dcPeakPowerKw"
-        const val KEY_GARAGE = "vehicle.garage"
-        const val KEY_MANUAL_SOC = "energy.manualSocPercent"
-        const val KEY_ARRIVAL_SOC = "energy.arrivalSocPercent"
-        const val KEY_CHARGE_FILTERS = "filters.charge"
-        const val KEY_SAVED_ROUTES = "routes.saved"
-        const val KEY_CAR_DEBUG = "car.debugData"
+        private const val KEY_DESTINATIONS = "route.destinations"
+        private const val KEY_SOC_DIAGNOSTICS = "energy.socDiagnostics"
+        private const val KEY_ONLY_PREFERRED = "networks.onlyPreferred"
+        private const val KEY_PREFERRED_NETWORKS = "networks.preferred"
+        private const val KEY_NAME = "vehicle.displayName"
+        private const val KEY_BATTERY_KWH = "vehicle.usableBatteryKwh"
+        private const val KEY_CONSUMPTION = "vehicle.consumptionKwhPer100Km"
+        private const val KEY_CONNECTORS = "vehicle.acceptedConnectors"
+        private const val KEY_DC_PEAK = "vehicle.dcPeakPowerKw"
+        private const val KEY_GARAGE = "vehicle.garage"
+        private const val KEY_MANUAL_SOC = "energy.manualSocPercent"
+        private const val KEY_ARRIVAL_SOC = "energy.arrivalSocPercent"
+        private const val KEY_CHARGE_FILTERS = "filters.charge"
+        private const val KEY_SAVED_ROUTES = "routes.saved"
+        private const val KEY_CAR_DEBUG = "car.debugData"
+
+        /** Every key the store has ever written; what a migration copies. */
+        val ALL_KEYS: Set<String> = setOf(
+            KEY_DESTINATIONS, KEY_SOC_DIAGNOSTICS, KEY_ONLY_PREFERRED, KEY_PREFERRED_NETWORKS,
+            KEY_NAME, KEY_BATTERY_KWH, KEY_CONSUMPTION, KEY_CONNECTORS, KEY_DC_PEAK, KEY_GARAGE,
+            KEY_MANUAL_SOC, KEY_ARRIVAL_SOC, KEY_CHARGE_FILTERS, KEY_SAVED_ROUTES, KEY_CAR_DEBUG,
+        )
     }
 }
 
 private val json = Json { ignoreUnknownKeys = true }
 
-private inline fun <reified T> KeyValueStorage.putJson(key: String, value: T?) {
+// Everything is stored as a string, as it was in SharedPreferences and
+// NSUserDefaults, so the migrated values keep their keys and format.
+private fun Preferences.getStringOrNull(key: String): String? = this[stringPreferencesKey(key)]
+
+/** `null` deletes the entry. */
+private fun MutablePreferences.putString(key: String, value: String?) {
+    val preferencesKey = stringPreferencesKey(key)
+    if (value == null) remove(preferencesKey) else this[preferencesKey] = value
+}
+
+private inline fun <reified T> MutablePreferences.putJson(key: String, value: T?) {
     putString(key, value?.let { json.encodeToString(it) })
 }
 
 /** null on a missing key or a corrupt payload — the caller supplies the default. */
-private inline fun <reified T> KeyValueStorage.getJson(key: String): T? =
+private inline fun <reified T> Preferences.getJson(key: String): T? =
     getStringOrNull(key)?.let { raw -> runCatching { json.decodeFromString<T>(raw) }.getOrNull() }
