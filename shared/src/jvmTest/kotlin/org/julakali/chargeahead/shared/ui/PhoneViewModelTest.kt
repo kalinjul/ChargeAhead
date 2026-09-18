@@ -1,6 +1,8 @@
 package org.julakali.chargeahead.shared.ui
 
 import org.julakali.chargeahead.shared.ChargeStopsFeature
+import org.julakali.chargeahead.shared.ChargeStopsState
+import org.julakali.chargeahead.shared.core.CorridorPlanner
 import org.julakali.chargeahead.shared.data.CachingChargePointStatusRepository
 import org.julakali.chargeahead.shared.data.TiledSiteRepository
 import org.julakali.chargeahead.shared.db.DatabaseFactory
@@ -22,20 +24,25 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.Geocoder
+import org.julakali.chargeahead.shared.domain.ObserveChargeStops
 import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
+import org.julakali.chargeahead.shared.domain.RefreshChargeStops
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.Place
+import org.julakali.chargeahead.shared.domain.Route
+import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteAvailability
-import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
+import org.julakali.chargeahead.shared.domain.TripStore
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -235,6 +242,11 @@ class PhoneViewModelTest {
         connectors = listOf(Connector(ConnectorType.CCS2, powerKw, 2)),
     )
 
+    private fun fixedSource(sites: List<ChargeSite>) = object : ChargeSiteSource {
+        override val id = "demo"
+        override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
+    }
+
     /** On the *same* store the ViewModel gets, over an in-memory database. */
     private fun homeViewModel(
         sites: List<ChargeSite>,
@@ -242,20 +254,43 @@ class PhoneViewModelTest {
         locationTimeoutMillis: Long = HomeViewModel.DEFAULT_LOCATION_TIMEOUT_MILLIS,
         statusSource: ChargePointStatusSource? = null,
     ): HomeViewModel {
-        val source = object : ChargeSiteSource {
-            override val id = "demo"
-            override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
-        }
-        val repository = TiledSiteRepository(source, createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
+        val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })
         return HomeViewModel(
             stubFeature(),
+            ObserveChargeStops(repository, settings, TripStore(), NoRoute, CorridorPlanner()),
             ObserveMapChargers(repository, statuses, settings),
             RefreshMapChargers(repository, settings),
             RefreshChargerAvailability(repository, statuses, settings),
             settings,
             locationTimeoutMillis,
         )
+    }
+
+    @Test
+    fun `the corridor list waits for a fix, then shows the stored stops`() = runBlocking {
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val fixes = MutableSharedFlow<Fix>(extraBufferCapacity = 1)
+        val feature = ChargeStopsFeature(
+            locationSource = object : LocationSource {
+                override val updates: Flow<Fix> = fixes
+            },
+            dispatcher = Dispatchers.Unconfined,
+        )
+        val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
+        val viewModel = CorridorViewModel(
+            feature,
+            ObserveChargeStops(repository, settings, TripStore(), NoRoute, CorridorPlanner()),
+            RefreshChargeStops(repository, settings),
+        )
+
+        viewModel.uiState.await { it.phase == ChargeStopsState.Phase.WAITING_FOR_LOCATION }
+        feature.start()
+        fixes.emit(Fix(LatLon(51.21, 6.7), bearingDeg = null, speedMps = null, timestampMillis = 0L))
+
+        val ready = viewModel.uiState.await { it.phase == ChargeStopsState.Phase.READY && it.stops.isNotEmpty() }
+        assertEquals(setOf("demo:hpc", "demo:slow"), ready.stops.map { it.site.id }.toSet())
+        feature.close()
     }
 
     @Test
@@ -293,14 +328,15 @@ class PhoneViewModelTest {
         locationSource = object : LocationSource {
             override val updates: Flow<Fix> = emptyFlow()
         },
-        repository = object : SiteRepository {
-            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> = emptyList()
-        },
         dispatcher = Dispatchers.Unconfined,
     )
 
     private object NoGeocoder : Geocoder {
         override suspend fun search(query: String, near: LatLon?, limit: Int): List<Place> = emptyList()
+    }
+
+    private object NoRoute : RouteEngine {
+        override suspend fun route(from: LatLon, to: LatLon): Route? = null
     }
 
     private object NoLocation : LocationSource {

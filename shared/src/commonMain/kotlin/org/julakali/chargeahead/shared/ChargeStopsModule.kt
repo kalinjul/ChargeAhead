@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared
 
+import org.julakali.chargeahead.shared.core.CorridorPlanner
 import org.julakali.chargeahead.shared.core.TripPlanner
 import org.julakali.chargeahead.shared.data.BackendChargePointStatusSource
 import org.julakali.chargeahead.shared.data.CachingChargePointStatusRepository
@@ -19,14 +20,17 @@ import org.julakali.chargeahead.shared.data.pruneCache
 import org.julakali.chargeahead.shared.db.ChargeSiteDatabase
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.ChargeSiteSource
+import org.julakali.chargeahead.shared.domain.CorridorPlanning
 import org.julakali.chargeahead.shared.domain.Geocoder
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.ObserveChargeNow
+import org.julakali.chargeahead.shared.domain.ObserveChargeStops
 import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.PlanTrip
 import org.julakali.chargeahead.shared.domain.RefreshChargeNow
+import org.julakali.chargeahead.shared.domain.RefreshChargeStops
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -109,6 +113,7 @@ fun chargeStopsModule(): Module = module {
 
     single<TripPlanning> { TripPlanner(get(), get()) }
     single { TripStore() }
+    single<CorridorPlanning> { CorridorPlanner() }
     single<ChargePointStatusRepository> {
         val statusSource = get<ChargeStopsConfig>().backend?.let { backend ->
             BackendChargePointStatusSource(get(), backend.baseUrl, backend.token)
@@ -124,6 +129,8 @@ fun chargeStopsModule(): Module = module {
     factory { PlanTrip(get(), get(), get()) }
     factory { UpdateArrivalSoc(get(), get(), get()) }
     factory { ToggleSavedRoute(get()) }
+    factory { ObserveChargeStops(get(), get(), get(), get(), get()) }
+    factory { RefreshChargeStops(get(), get()) }
 
     // The phone's feature. Never closed.
     single<ChargeStopsFeature> { getKoin().newChargeStopsFeature(locationSource = get()) }
@@ -144,13 +151,10 @@ fun Koin.newChargeStopsFeature(
     val database = get<ChargeSiteDatabase>()
     return ChargeStopsFeature(
         locationSource = locationSource,
-        repository = get(),
-        settingsStore = settingsStore,
         socSource = CombinedSoCSource(
             manual = ManualSoCSource(settingsStore, time),
             hardware = hardwareSoCSource,
         ),
-        routeEngine = get(),
         isDemo = get<ChargeStopsConfig>().isDemo,
         onStart = {
             runCatching {

@@ -43,13 +43,13 @@ class GarageViewModel(
         settings.vehicle,
         settings.manualSocPercent,
         settings.arrivalSocPercent,
-        combine(feature.state, arrivalSocEditor, ::Pair),
-    ) { vehicles, selected, socPercent, arrivalSoc, (state, arrivalEditor) ->
+        combine(feature.currentEnergy, arrivalSocEditor, ::Pair),
+    ) { vehicles, selected, socPercent, arrivalSoc, (energy, arrivalEditor) ->
         GarageUiState(
             vehicles = vehicles,
             selected = selected,
             socPercent = socPercent,
-            socFromCar = state.socSource == SoCSourceKind.CAR_HARDWARE,
+            socFromCar = energy?.source == SoCSourceKind.CAR_HARDWARE,
             arrivalSocPercent = arrivalSoc,
             arrivalSocInput = arrivalEditor,
         )

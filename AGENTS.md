@@ -336,7 +336,9 @@ class ObserveDestinationSearch : SubjectInteractor<Params, DestinationSearch>
 ```
 
 **The route is computed once per destination, not once per location
-update.** `PolylineArea.aheadOf()` trims it at the front as the drive
+update.** A planned trip brings its route along (`TripStore`), so
+`ObserveChargeStops` only asks the `RouteEngine` itself when there is no
+plan to the destination. `PolylineArea.aheadOf()` trims it at the front as the drive
 progresses — the route itself doesn't change during the drive, only the
 section still ahead does. `RoutedRouteProvider` falls back to the corridor
 when the driver leaves the route or reaches the destination; without that
@@ -352,16 +354,17 @@ the same process — the Koin `appModule` (androidApp) holds the singleton.
 ```kotlin
 package org.julakali.chargeahead.shared
 
-// Single source of state for both car UIs.
-class ChargeStopsFeature(locationSource, repository, ...) {
-    val state: StateFlow<ChargeStopsState>
-    val stops: StateFlow<List<ChargeStop>>   // shorthand for state.stops
-    val currentState: ChargeStopsState       // snapshot for Swift without SKIE
-    fun start(); fun refresh(); fun close()
+// Location and charge state, one per location source (phone, car session).
+class ChargeStopsFeature(locationSource, socSource, isDemo, ...) {
+    val currentFix: StateFlow<Fix?>
+    val currentEnergy: StateFlow<EnergyState?>
+    val locationFailed: StateFlow<Boolean>
+    fun start(); fun locate(); fun close()
 }
 
-// List AND status. Flat instead of sealed, so the type crosses to Swift
-// losslessly.
+// The corridor list is ObserveChargeStops (domain) over the feature's flows;
+// CorridorViewModel turns it into this state for iOS. List AND status. Flat
+// instead of sealed, so the type crosses to Swift losslessly.
 data class ChargeStopsState(
     val stops: List<ChargeStop>,
     val phase: Phase,          // WAITING_FOR_LOCATION | LOADING | READY | FAILED
@@ -390,7 +393,7 @@ expect fun currentTimeMillis(): Long
 
 The iOS framework is called **`Shared`** (`import Shared`). Swift goes
 through `IosEntryPointsKt.createChargeStopsFeature(openChargeMapKey:)` and
-`ChargeStopsWatcher` — both in `iosMain`, because Kotlin's default arguments
+`ChargeStopsWatcher` (which hosts `CorridorViewModel`) — both in `iosMain`, because Kotlin's default arguments
 don't reach the Objective-C header and a `StateFlow` isn't subscribable from
 Swift without SKIE.
 

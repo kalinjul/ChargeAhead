@@ -59,6 +59,9 @@ interface SiteRepository {
      */
     fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
 
+    /** Every stored site in [area], unfiltered, and again whenever the store changes. */
+    fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+
     /**
      * Discards the stock so the next access actually queries.
      */

@@ -2,6 +2,8 @@ package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.RouteStatus
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 
 /**
@@ -24,23 +26,9 @@ data class ChargeStopsState(
     val routeStatus: RouteStatus = RouteStatus.NONE,
     /** The charging-network filter is currently active. */
     val networkFilterActive: Boolean = false,
-    /** Last computed position. `null` before the first fix. */
-    val position: org.julakali.chargeahead.shared.domain.LatLon? = null,
+    /** Last known position. `null` before the first fix. */
+    val position: LatLon? = null,
 ) {
-    enum class RouteStatus {
-        /** No destination set — the corridor along the direction of travel applies. */
-        NONE,
-
-        /** Destination set, route is being computed. */
-        CALCULATING,
-
-        /** The search runs along the route. */
-        ACTIVE,
-
-        /** Destination set, but no route could be obtained; the search falls back to the direction of travel. */
-        UNAVAILABLE,
-    }
-
     enum class Phase {
         /** No location yet. */
         WAITING_FOR_LOCATION,

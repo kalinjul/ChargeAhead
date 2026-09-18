@@ -15,6 +15,7 @@ import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
+import org.julakali.chargeahead.shared.ui.CorridorViewModel
 import org.julakali.chargeahead.shared.ui.PlanSheetUiState
 import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
 import org.julakali.chargeahead.shared.ui.ViewModelHost
@@ -67,17 +68,30 @@ fun createChargeStopsFeature(
     // Each caller owns its feature; the data graph beneath is shared.
     graph(openChargeMapKey, settingsStore).newChargeStopsFeature(locationSource = CoreLocationSource())
 
-/** Reports every state change to Swift, on the main thread. */
-class ChargeStopsWatcher(private val feature: ChargeStopsFeature) {
+/** The corridor list for Swift: every state change, on the main thread, until [stop]. */
+class ChargeStopsWatcher(feature: ChargeStopsFeature) {
 
+    private val koin: Koin = requireNotNull(graph) {
+        "No graph yet — call createChargeStopsFeature first"
+    }
+    private val viewModels = ViewModelHost()
+    private val viewModel = viewModels.get { CorridorViewModel(feature, koin.get(), koin.get()) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    /** Snapshot of the state, for callers without Flow support. */
+    val currentState: ChargeStopsState get() = viewModel.uiState.value
+
     fun start(onChange: (ChargeStopsState) -> Unit) {
-        scope.launch { feature.state.collect(onChange) }
+        scope.launch { viewModel.uiState.collect(onChange) }
+    }
+
+    fun refresh() {
+        viewModel.onRefresh()
     }
 
     fun stop() {
         scope.cancel()
+        viewModels.clear()
     }
 }
 

@@ -154,7 +154,7 @@ class ChargeNowScreen(
     private fun titleText(subtitle: String?): String {
         val base = carContext.getString(R.string.car_home_charge_now)
         val withSubtitle = subtitle?.let { "$base · $it" } ?: base
-        return if (feature.currentState.isDemo) {
+        return if (feature.isDemo) {
             carContext.getString(R.string.car_title_suffix_demo, withSubtitle)
         } else {
             withSubtitle

@@ -1,8 +1,5 @@
-package org.julakali.chargeahead.shared.core
+package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.domain.Fix
-import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.destination
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
