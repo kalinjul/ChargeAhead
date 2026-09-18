@@ -76,7 +76,5 @@ class PlanningFeature(
 
         const val RELAX_FETCH_FACTOR = 3.0
         const val MIN_FETCH_RADIUS_KM = 15.0
-
-        const val STATUS_TTL_MILLIS = 60_000L
     }
 }
