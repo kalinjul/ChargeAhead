@@ -26,7 +26,7 @@ import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.components.KeyValueGrid
 import org.julakali.chargeahead.android.phone.components.NetworkDot
 import org.julakali.chargeahead.shared.core.MapsHandoff
-import org.julakali.chargeahead.shared.core.PlannedStop
+import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import kotlin.math.roundToInt
 

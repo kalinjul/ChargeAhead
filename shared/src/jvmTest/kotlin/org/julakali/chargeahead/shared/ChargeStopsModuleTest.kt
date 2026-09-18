@@ -3,7 +3,11 @@ package org.julakali.chargeahead.shared
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.ObserveChargeNow
+import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
+import org.julakali.chargeahead.shared.domain.PlanTrip
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.UpdateArrivalSoc
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.flow.Flow
@@ -77,8 +81,13 @@ class ChargeStopsModuleTest {
     }
 
     @Test
-    fun planningResolves() {
-        withGraph(null) { it.get<PlanningFeature>() }
+    fun theUseCasesResolve() {
+        withGraph(null) { koin ->
+            koin.get<PlanTrip>()
+            koin.get<UpdateArrivalSoc>()
+            koin.get<ObserveChargeNow>()
+            koin.get<ObserveDestinationSearch>()
+        }
     }
 
     @Test

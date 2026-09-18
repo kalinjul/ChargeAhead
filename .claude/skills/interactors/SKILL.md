@@ -1,6 +1,6 @@
 ---
 name: interactors
-description: The domain-layer use-case pattern this repository uses — Interactor (one-shot action) and SubjectInteractor (observer, "ObserveX") from Tivi, in org.julakali.chargeahead.shared.domain. Always use this skill when writing or changing a use case, interactor or observer; when a ViewModel calls PlanningFeature, ChargeStopsFeature or a repository directly, or runs its own mapLatest/flatMapLatest pipeline over settings; when business logic (filtering, ranking, selecting) sits in a ViewModel or a feature class; and when wiring an interactor into Koin or a ViewModel's combine(). Also when someone asks where business logic belongs or how to test it without a ViewModel.
+description: The domain-layer use-case pattern this repository uses — Interactor (one-shot action) and SubjectInteractor (observer, "ObserveX") from Tivi, in org.julakali.chargeahead.shared.domain. Always use this skill when writing or changing a use case, interactor or observer; when a ViewModel calls ChargeStopsFeature or a repository directly, or runs its own mapLatest/flatMapLatest pipeline over settings; when business logic (filtering, ranking, selecting) sits in a ViewModel or a feature class; and when wiring an interactor into Koin or a ViewModel's combine(). Also when someone asks where business logic belongs or how to test it without a ViewModel.
 ---
 
 # Interactors and observers
@@ -19,15 +19,17 @@ The worked example is `ObserveMapChargers`, used by `HomeViewModel`.
 | You need…                                     | Base class             | Name          | Example                |
 |-----------------------------------------------|------------------------|---------------|------------------------|
 | a stream the screen shows, driven by input    | `SubjectInteractor<P, T>` | `ObserveX` | `ObserveMapChargers`   |
-| an action that runs once and has an outcome   | `Interactor<P, R>`     | verb phrase   | `PlanTrip` (planned, #98) |
+| an action that runs once and has an outcome   | `Interactor<P, R>`     | verb phrase   | `PlanTrip`             |
 
 ## The rules
 
 1. **Domain only.** A use case lives in `org.julakali.chargeahead.shared.domain`
    and depends on ports (`SiteRepository`, `SettingsStore`,
-   `ChargePointStatusSource`, …) and domain types. Never on `PlanningFeature`,
+   `ChargePointStatusSource`, …) and domain types. Never on
    `ChargeStopsFeature`, `core`, `data` or `ui`. Constants and models it
-   needs move into `domain` (as `MIN_DC_POWER_KW` and `MapCharger` did).
+   needs move into `domain` (as `MIN_DC_POWER_KW` and `MapCharger` did);
+   an algorithm too big to move is reached through a port (`TripPlanning`,
+   implemented by `core.TripPlanner`).
 2. **Params carry only what the UI knows.** The viewport, a search query, a
    position. Everything that comes from settings or a repository the use case
    reads itself — for an observer, as a flow, so a settings change re-runs it
@@ -58,6 +60,13 @@ The worked example is `ObserveMapChargers`, used by `HomeViewModel`.
 9. **Koin: `factory`, not `single`.** A `SubjectInteractor` keeps its params
    per instance; two ViewModels sharing one would steer each other. Declare
    it in `chargeStopsModule()` next to its ports.
+10. **Observers are used only in ViewModels — and in car screens.** The
+    Swift bridge or a feature class never calls a `SubjectInteractor` or
+    collects its `flow`; it goes through the shared ViewModel for that
+    screen and collects its `uiState`, created with `ViewModelHost` and
+    `clear()`ed when it ends (see `PlanningBridge`). Car `Screen`s are the
+    exception: they call the observer and collect its `flow` in
+    `lifecycleScope` themselves (see `ChargeNowScreen`).
 
 ## In the ViewModel
 
@@ -86,7 +95,7 @@ class HomeViewModel(
 }
 ```
 
-An `Interactor` is called from an `on…` event (sketch — none exists yet, #98):
+An `Interactor` is called from an `on…` event (see `TripViewModel`):
 
 ```kotlin
 fun onPlanRequested(destination: Destination) {

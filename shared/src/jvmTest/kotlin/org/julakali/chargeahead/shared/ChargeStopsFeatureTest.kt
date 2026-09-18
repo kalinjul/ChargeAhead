@@ -15,20 +15,14 @@ import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.data.ManualSoCSource
-import org.julakali.chargeahead.shared.data.OperatorCatalog
-import org.julakali.chargeahead.shared.db.ChargeSiteEntity
-import org.julakali.chargeahead.shared.db.DatabaseFactory
-import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.domain.destination
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -459,33 +453,6 @@ class ChargeStopsFeatureTest {
 
         assertTrue(repository.capturedNetworks.last().isEmpty(), "expected empty list when filter is inactive")
 
-        feature.close()
-    }
-
-    @Test
-    fun `seeds the network picker from the local store before the first fix`() = runBlocking {
-        val database = createChargeSiteDatabase(DatabaseFactory())
-        database.chargeSites().upsertSites(
-            listOf(
-                ChargeSiteEntity("a", "test", "Ladepark a", "IONITY GmbH", null, 48.9, 11.4, "CCS2:150.0:4", null, null, null, 0L),
-                ChargeSiteEntity("b", "test", "Ladepark b", "Ionity", null, 48.8, 11.3, "CCS2:150.0:4", null, null, null, 0L),
-            ),
-        )
-
-        val feature = ChargeStopsFeature(
-            locationSource = ControllableLocationSource(),
-            repository = FixedSiteRepository(emptyList()),
-            operatorCatalog = OperatorCatalog(database),
-            dispatcher = Dispatchers.Unconfined,
-        )
-        feature.start()
-
-        // Room queries run on their own context, so await the seed.
-        val seeded = withTimeout(5_000) {
-            feature.state.first { it.availableOperators.isNotEmpty() }
-        }
-        assertEquals(listOf("Ionity"), seeded.availableOperators.map { it.displayName })
-        assertEquals(2, seeded.availableOperators.single().siteCount)
         feature.close()
     }
 }

@@ -15,7 +15,6 @@ import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.PlanningFeature
 import org.julakali.chargeahead.shared.domain.SavedRoute
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import kotlinx.coroutines.flow.combine
@@ -25,7 +24,6 @@ import kotlinx.coroutines.launch
 class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
-    private val planning: PlanningFeature,
     private val settings: SettingsStore,
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
@@ -110,14 +108,14 @@ class CarHomeScreen(
         .setTitle(carContext.getString(R.string.car_home_enter_destination))
         .setImage(icon(R.drawable.ic_search), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature, planning, settings)) }
+        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature, settings)) }
         .build()
 
     private fun chargeNowRow(): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
         .setImage(icon(R.drawable.ic_bolt), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature, planning)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
         .build()
 
     private fun favoriteRow(route: SavedRoute): Row {
@@ -126,7 +124,7 @@ class CarHomeScreen(
             .setImage(icon(R.drawable.ic_heart_filled, CarColor.RED), Row.IMAGE_TYPE_ICON)
             .setBrowsable(true)
             .setOnClickListener {
-                screenManager.push(RouteScreen(carContext, feature, planning, route.destination, route.name))
+                screenManager.push(RouteScreen(carContext, feature, route.destination, route.name))
             }
         route.summary?.let { row.addText(it) }
         return row.build()

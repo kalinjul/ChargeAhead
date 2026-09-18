@@ -2,7 +2,6 @@ package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.Destination
-import org.julakali.chargeahead.shared.domain.OperatorOption
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 
 /**
@@ -23,8 +22,6 @@ data class ChargeStopsState(
     /** The set destination, or `null` if searching along the direction of travel. */
     val destination: Destination? = null,
     val routeStatus: RouteStatus = RouteStatus.NONE,
-    /** The charging networks in the current area, **before** the filter. */
-    val availableOperators: List<OperatorOption> = emptyList(),
     /** The charging-network filter is currently active. */
     val networkFilterActive: Boolean = false,
     /** Last computed position. `null` before the first fix. */

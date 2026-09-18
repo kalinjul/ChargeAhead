@@ -2,7 +2,6 @@ package org.julakali.chargeahead.shared.ui
 
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.data.CachingChargePointStatusRepository
-import org.julakali.chargeahead.shared.data.SiteFetchActivity
 import org.julakali.chargeahead.shared.data.TiledSiteRepository
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
@@ -22,6 +21,8 @@ import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.Geocoder
+import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
@@ -145,7 +146,7 @@ class PhoneViewModelTest {
     @Test
     fun `the plan sheet opens pre-filled with a destination`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = PlanSheetViewModel(stubFeature(), settings)
+        val viewModel = PlanSheetViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings)
         val destination = Destination("Hamburg", LatLon(53.55, 9.99))
 
         viewModel.onSheetOpened(destination)
@@ -161,7 +162,7 @@ class PhoneViewModelTest {
     @Test
     fun `a picked search result fills the field with its address`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = PlanSheetViewModel(stubFeature(), settings)
+        val viewModel = PlanSheetViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings)
         val place = Place(
             name = "Uebel und Gefährlich",
             description = "Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg",
@@ -253,7 +254,6 @@ class PhoneViewModelTest {
             RefreshMapChargers(repository, settings),
             RefreshChargerAvailability(repository, statuses, settings),
             settings,
-            SiteFetchActivity(),
             locationTimeoutMillis,
         )
     }
@@ -298,6 +298,14 @@ class PhoneViewModelTest {
         },
         dispatcher = Dispatchers.Unconfined,
     )
+
+    private object NoGeocoder : Geocoder {
+        override suspend fun search(query: String, near: LatLon?, limit: Int): List<Place> = emptyList()
+    }
+
+    private object NoLocation : LocationSource {
+        override val updates: Flow<Fix> = emptyFlow()
+    }
 
     private companion object {
         const val TIMEOUT_MILLIS = 5_000L

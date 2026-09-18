@@ -628,8 +628,8 @@ dependency.
 
 ```
 ChargeStopsFeature ─┐                        app-scoped, one per process
-PlanningFeature   ──┼──► XViewModel ──► uiState: StateFlow<XUiState>
-SettingsStore     ──┘         ▲                        │
+SettingsStore     ──┼──► XViewModel ──► uiState: StateFlow<XUiState>
+use cases (domain)──┘         ▲                        │
                               │ on…() events           ▼
                         XRoute (androidApp) ──► XScreen (stateless Compose)
 ```
@@ -641,10 +641,11 @@ the base classes from Tivi in `domain/Interactor.kt`. An observer takes only
 what the UI knows as params (the viewport) and reads settings and
 repositories itself; the ViewModel puts its `flow` into `combine()`. They
 are Koin `factory` declarations, one per ViewModel. `ObserveMapChargers` is
-the first; the rules are in the `interactors` skill.
+the worked example; the rules are in the `interactors` skill. The planned
+trip lives in `TripStore`, a single, so phone and car show the same one.
 
 **Scoping.** `SettingsStore` (`appModule`, androidApp) and the phone's
-`ChargeStopsFeature` and `PlanningFeature` (`chargeStopsModule`, shared) are
+`ChargeStopsFeature` and `TripStore` (`chargeStopsModule`, shared) are
 application-scoped Koin singletons — the
 ViewModels share them, because two instances would mean two location streams
 and two stores that never see each other's writes. The ViewModels are

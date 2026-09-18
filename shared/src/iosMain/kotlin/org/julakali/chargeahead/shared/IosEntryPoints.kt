@@ -2,14 +2,31 @@ package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.db.DatabaseFactory
+import org.julakali.chargeahead.shared.domain.ChargeNowResult
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.Place
+import org.julakali.chargeahead.shared.domain.PlanTrip
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.TripPlan
+import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
+import org.julakali.chargeahead.shared.ui.ChargeNowUiState
+import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
+import org.julakali.chargeahead.shared.ui.PlanSheetUiState
+import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
+import org.julakali.chargeahead.shared.ui.ViewModelHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import org.koin.core.Koin
 import org.koin.dsl.koinApplication
@@ -64,57 +81,80 @@ class ChargeStopsWatcher(private val feature: ChargeStopsFeature) {
     }
 }
 
-/** [org.julakali.chargeahead.shared.core.TripPlanResult], flattened for Swift. */
+/** [TripPlanResult], flattened for Swift. */
 data class TripPlanOutcome(
-    val plan: org.julakali.chargeahead.shared.core.TripPlan?,
+    val plan: TripPlan?,
     val failure: TripPlanFailure?,
 ) {
     enum class TripPlanFailure { NO_VEHICLE, NO_ROUTE, NO_CHARGER_IN_REACH }
 }
 
-/**
- * The phone planning flows as plain callbacks on the main thread.
- *
- * @param feature unused; kept for the Swift call site until #39.
- */
-class PlanningBridge(@Suppress("UNUSED_PARAMETER") feature: ChargeStopsFeature) {
+/** The phone planning flows as plain callbacks on the main thread; [close] ends them. */
+class PlanningBridge(feature: ChargeStopsFeature) {
 
-    private val planning: PlanningFeature = requireNotNull(graph) {
+    private val koin: Koin = requireNotNull(graph) {
         "No graph yet — call createChargeStopsFeature first"
-    }.get()
+    }
+    private val planTrip: PlanTrip = koin.get()
+    private val viewModels = ViewModelHost()
+    private val chargeNowViewModel = viewModels.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
+    private val planSheetViewModel = viewModels.get { PlanSheetViewModel(feature, koin.get(), koin.get()) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var chargeNowJob: Job? = null
+    private var searchJob: Job? = null
 
     fun planTrip(
-        from: org.julakali.chargeahead.shared.domain.LatLon,
-        destination: org.julakali.chargeahead.shared.domain.Destination,
+        from: LatLon,
+        destination: Destination,
         onResult: (TripPlanOutcome) -> Unit,
     ) {
         scope.launch {
-            val outcome = when (val result = planning.planTrip(from, destination)) {
-                is org.julakali.chargeahead.shared.core.TripPlanResult.Planned ->
-                    TripPlanOutcome(result.plan, null)
-
-                is org.julakali.chargeahead.shared.core.TripPlanResult.NoVehicle ->
-                    TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_VEHICLE)
-
-                is org.julakali.chargeahead.shared.core.TripPlanResult.NoRoute ->
-                    TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE)
-
-                is org.julakali.chargeahead.shared.core.TripPlanResult.NoChargerInReach ->
-                    TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_CHARGER_IN_REACH)
-            }
+            val outcome = planTrip(PlanTrip.Params(from, destination)).fold(
+                onSuccess = { result ->
+                    when (result) {
+                        is TripPlanResult.Planned -> TripPlanOutcome(result.plan, null)
+                        is TripPlanResult.NoVehicle -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_VEHICLE)
+                        is TripPlanResult.NoRoute -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE)
+                        is TripPlanResult.NoChargerInReach ->
+                            TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_CHARGER_IN_REACH)
+                    }
+                },
+                onFailure = { TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE) },
+            )
             onResult(outcome)
         }
     }
 
-    fun chargeNow(
-        position: org.julakali.chargeahead.shared.domain.LatLon,
-        onResult: (org.julakali.chargeahead.shared.core.ChargeNowResult) -> Unit,
-    ) {
-        scope.launch { onResult(planning.chargeNow(position)) }
+    /** Ranks from the feature's current position and reports every change until [close]. */
+    fun chargeNow(onResult: (ChargeNowResult) -> Unit) {
+        chargeNowJob?.cancel()
+        chargeNowJob = scope.launch {
+            chargeNowViewModel.uiState
+                .mapNotNull { (it as? ChargeNowUiState.Ready)?.result }
+                .collect(onResult)
+        }
+        chargeNowViewModel.onSheetOpened()
+    }
+
+    /** Reports the places found for the latest [searchDestinations] query until [close]. */
+    fun watchDestinationSearch(onChange: (List<Place>) -> Unit) {
+        searchJob?.cancel()
+        searchJob = scope.launch {
+            planSheetViewModel.uiState
+                .filter { !it.searching }
+                .map { it.results.orEmpty() }
+                .distinctUntilChanged()
+                .collect(onChange)
+        }
+    }
+
+    /** Debounced; queries shorter than [PlanSheetUiState.MIN_QUERY_LENGTH] find nothing. */
+    fun searchDestinations(query: String) {
+        planSheetViewModel.onQueryChanged(query)
     }
 
     fun close() {
         scope.cancel()
+        viewModels.clear()
     }
 }

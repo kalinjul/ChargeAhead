@@ -12,3 +12,6 @@ data class SavedRoute(
     val destination: Destination,
     val summary: String? = null,
 )
+
+/** Stable identity of a saved route: the position, not the name. */
+fun Destination.routeId(): String = "dest:${position.lat},${position.lon}"

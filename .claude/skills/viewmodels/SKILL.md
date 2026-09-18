@@ -66,8 +66,8 @@ is fine — that one is multiplatform.
    inside a flow is a different matter and belongs in `withContext`
    (`NetworksViewModel` does this).
 10. **Dependencies are app-scoped objects** (`SettingsStore`,
-    `ChargeStopsFeature`, `PlanningFeature`) **and domain use cases**
-    (`ObserveMapChargers`). A ViewModel takes what it needs in its
+    `ChargeStopsFeature`, `TripStore`) **and domain use cases**
+    (`ObserveMapChargers`, `PlanTrip`). A ViewModel takes what it needs in its
     constructor and nothing else — no `Context`, no `Activity`, no
     `CoroutineScope`.
 11. **Business logic goes into a use case, not the ViewModel.** Selecting,

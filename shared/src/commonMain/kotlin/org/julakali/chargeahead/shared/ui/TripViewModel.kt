@@ -3,13 +3,15 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.PlanningFeature
-import org.julakali.chargeahead.shared.core.TripPlan
-import org.julakali.chargeahead.shared.core.TripPlanResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.SavedRoute
+import org.julakali.chargeahead.shared.domain.PlanTrip
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.ToggleSavedRoute
+import org.julakali.chargeahead.shared.domain.TripPlan
+import org.julakali.chargeahead.shared.domain.TripPlanResult
+import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.UpdateArrivalSoc
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -93,12 +95,14 @@ sealed interface TripEvent {
 /** Planning a trip and everything the result screen shows. */
 class TripViewModel(
     private val feature: ChargeStopsFeature,
-    private val planning: PlanningFeature,
+    private val planTrip: PlanTrip,
+    private val updateArrivalSoc: UpdateArrivalSoc,
+    private val toggleSavedRoute: ToggleSavedRoute,
+    private val tripStore: TripStore,
     private val settings: SettingsStore,
 ) : ViewModel() {
 
-    private val currentPlan = MutableStateFlow<TripPlan?>(null)
-    private val isPlanning = MutableStateFlow(false)
+    private val isPlanning = combine(planTrip.inProgress, updateArrivalSoc.inProgress) { plan, replan -> plan || replan }
     private val selection = MutableStateFlow(SectionSelection())
     private val socEditor = MutableStateFlow<String?>(null)
     private val arrivalSocEditor = MutableStateFlow<String?>(null)
@@ -116,7 +120,7 @@ class TripViewModel(
     )
 
     val uiState: StateFlow<TripUiState> = combine(
-        combine(currentPlan, isPlanning, selection, socEditor, arrivalSocEditor, ::PlanInputs),
+        combine(tripStore.plan, isPlanning, selection, socEditor, arrivalSocEditor, ::PlanInputs),
         settings.savedRoutes,
         settings.manualSocPercent,
         feature.state,
@@ -148,24 +152,21 @@ class TripViewModel(
         selection.value = SectionSelection()
         socEditor.value = null
         arrivalSocEditor.value = null
-        isPlanning.value = true
         viewModelScope.launch {
-            socPercent?.let { settings.setManualSocPercent(it) }
-            feature.setDestination(destination)
-            when (val result = planning.planTrip(from, destination, socOverridePercent = socPercent)) {
-                is TripPlanResult.Planned -> {
-                    currentPlan.value = result.plan
-                    events.value = TripEvent.PlanReady
-                }
+            // Persisted alongside, so the plan starts at once.
+            launch { socPercent?.let { settings.setManualSocPercent(it) } }
+            planTrip(PlanTrip.Params(from, destination, startSocPercent = socPercent))
+                .onSuccess(::onPlanned)
+                .onFailure { events.value = TripEvent.NoRoute }
+        }
+    }
 
-                is TripPlanResult.NoVehicle -> events.value = TripEvent.VehicleMissing
-
-                is TripPlanResult.NoChargerInReach ->
-                    events.value = TripEvent.NoChargerInReach(result.afterKm)
-
-                is TripPlanResult.NoRoute -> events.value = TripEvent.NoRoute
-            }
-            isPlanning.value = false
+    private fun onPlanned(result: TripPlanResult) {
+        events.value = when (result) {
+            is TripPlanResult.Planned -> TripEvent.PlanReady
+            is TripPlanResult.NoVehicle -> TripEvent.VehicleMissing
+            is TripPlanResult.NoChargerInReach -> TripEvent.NoChargerInReach(result.afterKm)
+            is TripPlanResult.NoRoute -> TripEvent.NoRoute
         }
     }
 
@@ -174,23 +175,10 @@ class TripViewModel(
      * again. [summary] comes from the caller's resources.
      */
     fun toggleSaved(summary: String) {
-        val current = currentPlan.value ?: return
+        val current = tripStore.plan.value ?: return
         viewModelScope.launch {
-            val existing = settings.savedRoutes.first()
-                .firstOrNull { it.destination.position == current.destination.position }
-            if (existing != null) {
-                settings.removeSavedRoute(existing.id)
-                events.value = TripEvent.RouteRemoved
-            } else {
-                settings.saveRoute(
-                    SavedRoute(
-                        id = current.destination.routeId(),
-                        name = current.destination.name,
-                        destination = current.destination,
-                        summary = summary,
-                    ),
-                )
-                events.value = TripEvent.RouteSaved
+            toggleSavedRoute(ToggleSavedRoute.Params(current.destination, summary)).onSuccess { saved ->
+                events.value = if (saved) TripEvent.RouteSaved else TripEvent.RouteRemoved
             }
         }
     }
@@ -217,7 +205,7 @@ class TripViewModel(
     /** Re-plans the same destination from the charge level just entered. */
     fun onStartSocConfirmed() {
         val socPercent = socEditor.value?.toIntOrNull()?.takeIf { it in 1..100 } ?: return
-        val destination = currentPlan.value?.destination ?: return
+        val destination = tripStore.plan.value?.destination ?: return
         socEditor.value = null
         plan(destination, socPercent.toDouble())
     }
@@ -238,14 +226,15 @@ class TripViewModel(
         arrivalSocEditor.value = null
     }
 
-    /** Stores the arrival level just entered and re-plans the same destination. */
+    /** Stores the arrival level just entered; the trip is re-planned with it. */
     fun onArrivalSocConfirmed() {
         val socPercent = arrivalSocEditor.value?.toIntOrNull()?.takeIf { it in ARRIVAL_SOC_RANGE } ?: return
-        val destination = currentPlan.value?.destination ?: return
+        val from = feature.currentState.position ?: return
         arrivalSocEditor.value = null
         viewModelScope.launch {
-            settings.setArrivalSocPercent(socPercent.toDouble())
-            plan(destination)
+            updateArrivalSoc(UpdateArrivalSoc.Params(socPercent.toDouble(), from))
+                .onSuccess { result -> result?.let(::onPlanned) }
+                .onFailure { events.value = TripEvent.NoRoute }
         }
     }
 
@@ -266,6 +255,3 @@ class TripViewModel(
         events.value = null
     }
 }
-
-/** Stable identity of a saved route: the position, not the name. */
-fun Destination.routeId(): String = "dest:${position.lat},${position.lon}"

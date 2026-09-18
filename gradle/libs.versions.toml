@@ -1,31 +1,31 @@
 [versions]
 agp = "9.4.0"
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 composePlugin = "1.12.0"
 
-compileSdk = "36"
+compileSdk = "37"
 minSdk = "26"
-targetSdk = "36"
+targetSdk = "37"
 
 carApp = "1.7.0"
 coroutines = "1.11.0"
 serialization = "1.11.0"
 datetime = "0.8.0"
-ktor = "3.5.2"
-room = "2.8.4"
-androidxSqlite = "2.6.1"
+ktor = "3.6.0"
+room = "2.8.5"
+androidxSqlite = "2.7.1"
 datastore = "1.2.1"
 ksp = "2.3.11"
-koin = "4.1.1"
-navigation3 = "1.1.6"
+koin = "4.2.2"
+navigation3 = "1.1.7"
 
-activityCompose = "1.12.4"
-composeBom = "2026.06.01"
-coreKtx = "1.17.0"
-lifecycle = "2.10.0"
+activityCompose = "1.13.0"
+composeBom = "2026.09.00"
+coreKtx = "1.19.0"
+lifecycle = "2.11.0"
 playServicesLocation = "21.4.0"
 playServicesMaps = "20.0.0"
-mapsCompose = "6.6.0"
+mapsCompose = "8.6.0"
 composeCache = "3.0.1"
 
 chargeaheadApi = "0.8.0"
@@ -99,7 +99,6 @@ androidx-compose-material-icons-extended = { module = "androidx.compose.material
 # asynchronous uiState round trip would otherwise overwrite.
 compose-cache = { module = "de.charlex.compose:compose-cache", version.ref = "composeCache" }
 
-# --- Map (decision 2026-09-07: Google Maps Compose; key from local.properties) ---
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 

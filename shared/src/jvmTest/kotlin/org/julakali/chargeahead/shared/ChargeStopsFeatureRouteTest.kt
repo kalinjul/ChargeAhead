@@ -3,10 +3,8 @@ package org.julakali.chargeahead.shared
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Fix
-import org.julakali.chargeahead.shared.domain.Geocoder
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
-import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -79,13 +77,11 @@ class ChargeStopsFeatureRouteTest {
         repository: SiteRepository,
         settingsStore: PersistentSettingsStore,
         routeEngine: RouteEngine? = FixedRoute(Route(a9, 170.0, 108.0)),
-        geocoder: Geocoder? = null,
     ) = ChargeStopsFeature(
         locationSource = locationSource,
         repository = repository,
         settingsStore = settingsStore,
         routeEngine = routeEngine,
-        geocoder = geocoder,
         dispatcher = Dispatchers.Unconfined,
     )
 
@@ -247,37 +243,6 @@ class ChargeStopsFeatureRouteTest {
         location.fixes.emit(fix())
 
         assertIs<PolylineArea>(repository.lastArea)
-
-        feature.close()
-    }
-
-    @Test
-    fun withoutGeocoder_searchReturnsAnEmptyList() = runBlocking {
-        val feature = feature(ControllableLocationSource(), RecordingSiteRepository(), settingsStore(), geocoder = null)
-
-        assertTrue(feature.searchDestinations("München").isEmpty())
-
-        feature.close()
-    }
-
-    @Test
-    fun theDestinationSearchPassesTheLocationAlong() = runBlocking {
-        // "Hauptbahnhof" (main station) is ambiguous without a nearby location.
-        var seen: LatLon? = null
-        val geocoder = object : Geocoder {
-            override suspend fun search(query: String, near: LatLon?, limit: Int): List<Place> {
-                seen = near
-                return listOf(Place("Treffer", "Treffer", LatLon(48.0, 11.0)))
-            }
-        }
-        val location = ControllableLocationSource()
-        val feature = feature(location, RecordingSiteRepository(), settingsStore(), geocoder = geocoder)
-        feature.start()
-        location.fixes.emit(fix())
-
-        feature.searchDestinations("Hauptbahnhof")
-
-        assertEquals(nuremberg, seen)
 
         feature.close()
     }
