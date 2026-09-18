@@ -106,12 +106,6 @@ class PlanSheetViewModel(
         search(query)
     }
 
-    /** Searches right away, for a host that searches on submit instead of while typing (the car). */
-    fun onQuerySubmitted(query: String) {
-        input.update { it.copy(query = query, chosen = null) }
-        observeDestinationSearch(ObserveDestinationSearch.Params(query.trim(), debounce = false))
-    }
-
     fun onDestinationChosen(destination: Destination) {
         choose(destination, query = ChargeStopFormatter.label(destination))
     }
