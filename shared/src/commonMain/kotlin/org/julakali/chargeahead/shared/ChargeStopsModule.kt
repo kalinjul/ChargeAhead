@@ -2,6 +2,7 @@ package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.core.TripPlanner
 import org.julakali.chargeahead.shared.data.BackendChargePointStatusSource
+import org.julakali.chargeahead.shared.data.CachingChargePointStatusRepository
 import org.julakali.chargeahead.shared.data.BackendChargeSiteSource
 import org.julakali.chargeahead.shared.data.BackendGeocoder
 import org.julakali.chargeahead.shared.data.BackendRouteEngine
@@ -22,7 +23,9 @@ import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Geocoder
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
+import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SettingsStore
@@ -104,20 +107,16 @@ fun chargeStopsModule(): Module = module {
 
     single { OperatorCatalog(get()) }
     single { TripPlanner(get(), get()) }
-    factory { ObserveMapChargers(get(), get()) }
-    factory { RefreshMapChargers(get(), get()) }
-    single {
+    single<ChargePointStatusRepository> {
         val statusSource = get<ChargeStopsConfig>().backend?.let { backend ->
             BackendChargePointStatusSource(get(), backend.baseUrl, backend.token)
         }
-        PlanningFeature(
-            tripPlanner = get(),
-            repository = get(),
-            settings = get(),
-            statusSource = statusSource,
-            time = get(),
-        )
+        CachingChargePointStatusRepository(statusSource, get())
     }
+    factory { ObserveMapChargers(get(), get(), get()) }
+    factory { RefreshMapChargers(get(), get()) }
+    factory { RefreshChargerAvailability(get(), get(), get()) }
+    single { PlanningFeature(tripPlanner = get(), repository = get(), settings = get()) }
 
     // The phone's feature. Never closed.
     single<ChargeStopsFeature> { getKoin().newChargeStopsFeature(locationSource = get()) }

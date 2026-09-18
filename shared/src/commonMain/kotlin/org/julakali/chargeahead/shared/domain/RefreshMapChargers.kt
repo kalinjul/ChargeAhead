@@ -1,6 +1,5 @@
 package org.julakali.chargeahead.shared.domain
 
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 
 /**
@@ -16,7 +15,7 @@ class RefreshMapChargers(
     data class Params(val viewport: BoundingBox)
 
     override suspend fun doWork(params: Params) {
-        val filter = combine(settings.chargeFilters, settings.networks, MapFilter::of).first()
+        val filter = settings.mapFilter().first()
         // Slow mode browses every network, so it fetches unfiltered.
         val networks = if (filter.slowMode) emptyList() else filter.networks.selectedNetworks()
         repository.load(ViewportArea(params.viewport), networks)

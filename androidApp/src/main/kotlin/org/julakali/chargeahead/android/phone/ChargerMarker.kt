@@ -150,7 +150,7 @@ fun ChargerPill(
     val labelEndPadding = if (label.isNullOrBlank()) 0.dp else 2.dp
 
     Column(
-        horizontalAlignment = Alignment.End,
+        horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(1.dp),
         modifier = modifier
             .background(Color.White, shape)
@@ -177,7 +177,7 @@ fun ChargerPill(
         when (availability) {
             is SiteAvailability.Live -> Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(end = labelEndPadding),
+                modifier = Modifier.padding(start = 3.dp),
             ) {
                 Box(Modifier.size(7.dp).background(availability.level.color, CircleShape))
                 Spacer(Modifier.width(4.dp))

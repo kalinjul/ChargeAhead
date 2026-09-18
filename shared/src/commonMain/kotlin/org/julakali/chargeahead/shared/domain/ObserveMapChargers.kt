@@ -11,51 +11,38 @@ import kotlinx.coroutines.withContext
 
 /**
  * The chargers the map shows for a viewport: the stored sites that pass the
- * driver's charge filters and networks, capped nearest-first.
+ * driver's charge filters and networks, capped nearest-first, with the live
+ * availability last fetched for them.
  *
- * Never fetches: [RefreshMapChargers] refills the store, and the store's
- * flow brings the new sites in.
+ * Never fetches: [RefreshMapChargers] and [RefreshChargerAvailability] refill
+ * the stores, and the stores' flows bring the new data in.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ObserveMapChargers(
     private val repository: SiteRepository,
+    private val statusRepository: ChargePointStatusRepository,
     private val settings: SettingsStore,
 ) : SubjectInteractor<ObserveMapChargers.Params, MapChargers>() {
 
     /** [viewport] `null` means: zoomed out past the point where markers are useful. */
     data class Params(val viewport: BoundingBox?)
 
-    private val filters: Flow<MapFilter> =
-        combine(settings.chargeFilters, settings.networks, MapFilter::of).distinctUntilChanged()
-
     override fun createObservable(params: Params): Flow<MapChargers> {
+        val filters = settings.mapFilter()
         val viewport = params.viewport ?: return filters.map { MapChargers(it, emptyList()) }
-        val renderBox = viewport.paddedByViewports(RENDER_PADDING_VIEWPORTS)
         return filters.flatMapLatest { filter ->
-            repository.storedSitesIn(renderBox, filter).map { sites -> MapChargers(filter, nearest(sites, viewport, filter)) }
+            combine(
+                repository.mapChargersIn(viewport, filter),
+                statusRepository.statuses,
+            ) { chargers, statuses ->
+                MapChargers(filter, chargers.map { it.withAvailability(statuses, filter.slowMode) })
+            }
         }
     }
 
-    private suspend fun nearest(stored: List<ChargeSite>, viewport: BoundingBox, filter: MapFilter): List<MapCharger> =
-        withContext(Dispatchers.Default) {
-            val centre = LatLon((viewport.south + viewport.north) / 2.0, (viewport.west + viewport.east) / 2.0)
-            stored.mapNotNull { site ->
-                val power = (if (filter.slowMode) site.maxPowerKw else site.maxDcPowerKw) ?: return@mapNotNull null
-                MapCharger(site, power)
-            }
-                .sortedBy { centre.distanceKmTo(it.site.position) }
-                .take(MAX_CHARGERS)
-        }
-
-    private fun BoundingBox.paddedByViewports(factor: Double): BoundingBox {
-        val padLat = (north - south) * factor
-        val padLon = (east - west) * factor
-        return BoundingBox(
-            south = (south - padLat).coerceAtLeast(-90.0),
-            west = west - padLon,
-            north = (north + padLat).coerceAtMost(90.0),
-            east = east + padLon,
-        )
+    private fun MapCharger.withAvailability(statuses: Map<String, List<ChargePointStatus>>, slowMode: Boolean): MapCharger {
+        val points = site.liveStatusId?.let(statuses::get) ?: return this
+        return copy(availability = SiteAvailability.of(points, slowMode))
     }
 
     companion object {
@@ -63,4 +50,35 @@ class ObserveMapChargers(
 
         const val RENDER_PADDING_VIEWPORTS = 2.0
     }
+}
+
+internal fun SettingsStore.mapFilter(): Flow<MapFilter> =
+    combine(chargeFilters, networks, MapFilter::of).distinctUntilChanged()
+
+/** The stored sites the map shows for [viewport]: those in a padded box, capped nearest-first. */
+internal fun SiteRepository.mapChargersIn(viewport: BoundingBox, filter: MapFilter): Flow<List<MapCharger>> {
+    val renderBox = viewport.paddedByViewports(ObserveMapChargers.RENDER_PADDING_VIEWPORTS)
+    return storedSitesIn(renderBox, filter).map { sites -> nearest(sites, viewport, filter) }
+}
+
+private suspend fun nearest(stored: List<ChargeSite>, viewport: BoundingBox, filter: MapFilter): List<MapCharger> =
+    withContext(Dispatchers.Default) {
+        val centre = LatLon((viewport.south + viewport.north) / 2.0, (viewport.west + viewport.east) / 2.0)
+        stored.mapNotNull { site ->
+            val power = (if (filter.slowMode) site.maxPowerKw else site.maxDcPowerKw) ?: return@mapNotNull null
+            MapCharger(site, power)
+        }
+            .sortedBy { centre.distanceKmTo(it.site.position) }
+            .take(ObserveMapChargers.MAX_CHARGERS)
+    }
+
+private fun BoundingBox.paddedByViewports(factor: Double): BoundingBox {
+    val padLat = (north - south) * factor
+    val padLon = (east - west) * factor
+    return BoundingBox(
+        south = (south - padLat).coerceAtLeast(-90.0),
+        west = west - padLon,
+        north = (north + padLat).coerceAtMost(90.0),
+        east = east + padLon,
+    )
 }

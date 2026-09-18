@@ -11,6 +11,7 @@ import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ObserveMapChargersTest {
@@ -22,15 +23,30 @@ class ObserveMapChargersTest {
     private val storedBoxes = mutableListOf<BoundingBox>()
     private val storedFilters = mutableListOf<MapFilter>()
     private lateinit var repository: SiteRepository
+    private val statusStore = MutableStateFlow<Map<String, List<ChargePointStatus>>>(emptyMap())
+    private val refreshedIds = mutableListOf<Collection<String>>()
+    private val statusRepository = object : ChargePointStatusRepository {
+        override val statuses = statusStore
 
-    private fun site(id: String, operator: String, powerKw: Double, type: ConnectorType = ConnectorType.CCS2) =
-        ChargeSite(
-            id = "demo:$id",
-            name = id,
-            operator = operator,
-            position = LatLon(51.2, 6.7),
-            connectors = listOf(Connector(type, powerKw, 2)),
-        )
+        override suspend fun refresh(ids: Collection<String>) {
+            refreshedIds += ids
+        }
+    }
+
+    private fun site(
+        id: String,
+        operator: String,
+        powerKw: Double,
+        type: ConnectorType = ConnectorType.CCS2,
+        liveStatusId: String? = null,
+    ) = ChargeSite(
+        id = "demo:$id",
+        name = id,
+        operator = operator,
+        position = LatLon(51.2, 6.7),
+        connectors = listOf(Connector(type, powerKw, 2)),
+        liveStatusId = liveStatusId,
+    )
 
     /** A store holding [stored], which leaves filtering to the real store; a fetch adds [fetched] to it. */
     private fun observer(
@@ -53,7 +69,7 @@ class ObserveMapChargersTest {
                 return store
             }
         }
-        return ObserveMapChargers(repository, settings).also { it(ObserveMapChargers.Params(viewport)) }
+        return ObserveMapChargers(repository, statusRepository, settings).also { it(ObserveMapChargers.Params(viewport)) }
     }
 
     private suspend fun ObserveMapChargers.await(matching: (MapChargers) -> Boolean = { true }): MapChargers =
@@ -175,5 +191,42 @@ class ObserveMapChargersTest {
         assertTrue(padded.north > viewport.north, "padded box must extend north")
         assertTrue(padded.west < viewport.west, "padded box must extend west")
         assertTrue(padded.east > viewport.east, "padded box must extend east")
+    }
+
+    @Test
+    fun `a charger comes with the status stored for it`() = runBlocking<Unit> {
+        statusStore.value = mapOf("live-hpc" to listOf(ChargePointStatus(ChargePointState.AVAILABLE)))
+        val observe = observer(listOf(site("hpc", "Ionity", 350.0, liveStatusId = "live-hpc"), site("other", "EnBW", 350.0)))
+
+        val chargers = observe.await().chargers.associateBy { it.site.id }
+
+        assertEquals(SiteAvailability.Live(free = 1, total = 1), chargers.getValue("demo:hpc").availability)
+        assertNull(chargers.getValue("demo:other").availability)
+    }
+
+    @Test
+    fun `statuses a refresh stores show up on the map`() = runBlocking<Unit> {
+        val observe = observer(listOf(site("hpc", "Ionity", 350.0, liveStatusId = "live-hpc")))
+        observe.await()
+
+        statusStore.value = mapOf("live-hpc" to listOf(ChargePointStatus(ChargePointState.OUT_OF_ORDER)))
+
+        val charger = observe.await { result -> result.chargers.any { it.availability != null } }.chargers.single()
+        assertEquals(SiteAvailability.OutOfOrder, charger.availability)
+    }
+
+    @Test
+    fun `the availability refresh asks for the chargers the map shows`() = runBlocking<Unit> {
+        observer(
+            listOf(
+                site("hpc", "Ionity", 350.0, liveStatusId = "live-hpc"),
+                site("unknown", "EnBW", 350.0),
+                site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2, liveStatusId = "live-wallbox"),
+            ),
+        )
+
+        RefreshChargerAvailability(repository, statusRepository, settings)(RefreshChargerAvailability.Params(viewport)).getOrThrow()
+
+        assertEquals(listOf(listOf("live-hpc")), refreshedIds.map { it.toList() })
     }
 }

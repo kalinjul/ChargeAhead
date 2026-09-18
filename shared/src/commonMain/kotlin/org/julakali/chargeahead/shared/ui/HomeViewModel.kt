@@ -3,29 +3,25 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.PlanningFeature
 import org.julakali.chargeahead.shared.data.SiteFetchActivity
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MapCharger
-import org.julakali.chargeahead.shared.domain.MapChargers
 import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.Reachability
+import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.distanceKmTo
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -56,12 +52,11 @@ data class HomeUiState(
  * State holder for the map screen. The location pipeline itself lives in the
  * app-scoped [ChargeStopsFeature].
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val feature: ChargeStopsFeature,
-    private val planning: PlanningFeature,
     private val observeMapChargers: ObserveMapChargers,
     private val refreshMapChargers: RefreshMapChargers,
+    private val refreshChargerAvailability: RefreshChargerAvailability,
     settings: SettingsStore,
     fetchActivity: SiteFetchActivity,
     /** How long the button may spin before the map says something. */
@@ -74,19 +69,11 @@ class HomeViewModel(
     private var attemptJob: Job? = null
     private var refreshJob: Job? = null
 
-    // Markers first, live data after: the status request must not hold them back.
-    private val mapChargers: Flow<MapChargers> = observeMapChargers.flow.transformLatest { result ->
-        emit(result)
-        if (result.chargers.any { it.site.liveStatusId != null }) {
-            emit(result.copy(chargers = planning.withAvailability(result.chargers)))
-        }
-    }
-
     val uiState: StateFlow<HomeUiState> = combine(
         feature.state,
         combine(settings.chargeFilters, settings.networks, ::Pair),
         map,
-        mapChargers,
+        observeMapChargers.flow,
         // combine tops out at five typed flows.
         combine(attempt, fetchActivity.isFetching, ::Pair),
     ) { state, (filters, networks), mapState, mapChargers, (attempt, loadingSites) ->
@@ -146,9 +133,14 @@ class HomeViewModel(
         observeMapChargers(ObserveMapChargers.Params(viewport))
         // Latest viewport wins: a pan supersedes the fetch for the previous one.
         refreshJob?.cancel()
+        // A failed refill leaves the stored markers and statuses; nothing to tell the driver.
         refreshJob = viewport?.let {
-            // A failed refill leaves the stored markers; nothing to tell the driver.
-            viewModelScope.launch { refreshMapChargers(RefreshMapChargers.Params(it)) }
+            viewModelScope.launch {
+                // Stored sites get their status right away, the ones the refill adds after it.
+                launch { refreshChargerAvailability(RefreshChargerAvailability.Params(it)) }
+                refreshMapChargers(RefreshMapChargers.Params(it))
+                refreshChargerAvailability(RefreshChargerAvailability.Params(it))
+            }
         }
     }
 
