@@ -22,6 +22,7 @@ import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Geocoder
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SiteRepository
@@ -102,6 +103,7 @@ fun chargeStopsModule(): Module = module {
 
     single { OperatorCatalog(get()) }
     single { TripPlanner(get(), get()) }
+    factory { ObserveMapChargers(get(), get()) }
     single {
         val statusSource = get<ChargeStopsConfig>().backend?.let { backend ->
             BackendChargePointStatusSource(get(), backend.baseUrl, backend.token)

@@ -16,6 +16,7 @@ import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -171,7 +172,7 @@ class PhoneViewModelTest {
     @Test
     fun `changing the minimum power reloads the map markers`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
-        val viewModel = HomeViewModel(stubFeature(), planningOver(mapSites, settings), settings, SiteFetchActivity())
+        val viewModel = homeViewModel(mapSites, settings)
 
         viewModel.onViewportChanged(VIEWPORT)
         // Default minimum is 150 kW, so the 50 kW site starts out hidden.
@@ -188,7 +189,7 @@ class PhoneViewModelTest {
     @Test
     fun `picking networks reloads the map markers`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
-        val viewModel = HomeViewModel(stubFeature(), planningOver(mapSites, settings), settings, SiteFetchActivity())
+        val viewModel = homeViewModel(mapSites, settings)
 
         viewModel.onViewportChanged(VIEWPORT)
         viewModel.uiState.await { it.chargers.isNotEmpty() }
@@ -211,7 +212,11 @@ class PhoneViewModelTest {
     )
 
     /** On the *same* store the ViewModel gets. */
-    private fun planningOver(sites: List<ChargeSite>, settings: PersistentSettingsStore): PlanningFeature {
+    private fun homeViewModel(
+        sites: List<ChargeSite>,
+        settings: PersistentSettingsStore,
+        locationTimeoutMillis: Long = HomeViewModel.DEFAULT_LOCATION_TIMEOUT_MILLIS,
+    ): HomeViewModel {
         val repository = object : SiteRepository {
             override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
             override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = sites
@@ -219,13 +224,20 @@ class PhoneViewModelTest {
         val engine = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = null
         }
-        return PlanningFeature(TripPlanner(engine, repository), repository, settings)
+        return HomeViewModel(
+            stubFeature(),
+            PlanningFeature(TripPlanner(engine, repository), repository, settings),
+            ObserveMapChargers(repository, settings),
+            settings,
+            SiteFetchActivity(),
+            locationTimeoutMillis,
+        )
     }
 
     @Test
     fun `without a fix the location button says it is searching`() = runBlocking {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
-        val viewModel = HomeViewModel(stubFeature(), planningOver(emptyList(), settings), settings, SiteFetchActivity())
+        val viewModel = homeViewModel(emptyList(), settings)
 
         viewModel.onLocateRequested()
 
@@ -237,13 +249,7 @@ class PhoneViewModelTest {
     @Test
     fun `past the deadline the map says why it is still empty`() = runBlocking {
         val settings = PersistentSettingsStore(InMemoryKeyValueStorage())
-        val viewModel = HomeViewModel(
-            stubFeature(),
-            planningOver(emptyList(), settings),
-            settings,
-            SiteFetchActivity(),
-            locationTimeoutMillis = 50L,
-        )
+        val viewModel = homeViewModel(emptyList(), settings, locationTimeoutMillis = 50L)
 
         viewModel.onLocateRequested()
 

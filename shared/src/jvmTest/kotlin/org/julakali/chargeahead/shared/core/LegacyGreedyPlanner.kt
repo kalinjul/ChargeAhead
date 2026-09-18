@@ -7,6 +7,7 @@ import org.julakali.chargeahead.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.DEFAULT_RESERVE_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.Route

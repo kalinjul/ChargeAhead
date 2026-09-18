@@ -60,6 +60,7 @@ import org.julakali.chargeahead.android.BuildConfig
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.domain.ChargeSpeed
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.OperatorShortName
 
 /**
@@ -72,7 +73,7 @@ private fun LatLon.toLatLng() = LatLng(lat, lon)
 
 /** A charger with its icon and position resolved. */
 private class ChargerMarker(
-    val charger: org.julakali.chargeahead.shared.MapCharger,
+    val charger: MapCharger,
     val position: LatLng,
     val icon: BitmapDescriptor,
 )
@@ -84,10 +85,10 @@ private class ChargerMarker(
 @Composable
 fun HomeGoogleMap(
     position: LatLon?,
-    chargers: List<org.julakali.chargeahead.shared.MapCharger>,
+    chargers: List<MapCharger>,
     hasLocationPermission: Boolean,
     onViewportChanged: (org.julakali.chargeahead.shared.domain.BoundingBox?) -> Unit,
-    onChargerTapped: (org.julakali.chargeahead.shared.MapCharger) -> Unit,
+    onChargerTapped: (MapCharger) -> Unit,
     onLocate: () -> Unit,
     searchingLocation: Boolean,
     loadingSites: Boolean,
