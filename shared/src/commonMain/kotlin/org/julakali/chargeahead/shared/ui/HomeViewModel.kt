@@ -3,7 +3,6 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.data.SiteFetchActivity
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
@@ -44,7 +43,7 @@ data class HomeUiState(
     val searchingLocation: Boolean = false,
     /** Long enough without a fix to tell the driver; stays alongside [searchingLocation]. */
     val locationUnavailable: Boolean = false,
-    /** A charger source is being asked over the network. */
+    /** The map's chargers are being refilled. */
     val loadingSites: Boolean = false,
 )
 
@@ -58,7 +57,6 @@ class HomeViewModel(
     private val refreshMapChargers: RefreshMapChargers,
     private val refreshChargerAvailability: RefreshChargerAvailability,
     settings: SettingsStore,
-    fetchActivity: SiteFetchActivity,
     /** How long the button may spin before the map says something. */
     private val locationTimeoutMillis: Long = DEFAULT_LOCATION_TIMEOUT_MILLIS,
 ) : ViewModel() {
@@ -75,7 +73,7 @@ class HomeViewModel(
         map,
         observeMapChargers.flow,
         // combine tops out at five typed flows.
-        combine(attempt, fetchActivity.isFetching, ::Pair),
+        combine(attempt, refreshMapChargers.inProgress, ::Pair),
     ) { state, (filters, networks), mapState, mapChargers, (attempt, loadingSites) ->
         HomeUiState(
             position = state.position,

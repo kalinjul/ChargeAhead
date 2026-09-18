@@ -21,17 +21,20 @@ import org.julakali.chargeahead.android.PhoneUiVisibility
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.PlanningFeature
 import org.julakali.chargeahead.shared.core.MapsHandoff
-import org.julakali.chargeahead.shared.core.PlannedStop
-import org.julakali.chargeahead.shared.core.TripPlan
-import org.julakali.chargeahead.shared.core.TripPlanResult
+import org.julakali.chargeahead.shared.domain.PlannedStop
+import org.julakali.chargeahead.shared.domain.TripPlan
+import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Fix
+import org.julakali.chargeahead.shared.domain.PlanTrip
+import org.julakali.chargeahead.shared.domain.TripStore
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 
 /**
  * The committed route: its planned charging stops, numbered like an
@@ -42,48 +45,71 @@ import kotlinx.coroutines.withTimeoutOrNull
 class RouteScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
-    private val planning: PlanningFeature,
     private val destination: Destination,
     private val title: String = destination.name,
-) : Screen(carContext) {
+) : Screen(carContext), KoinComponent {
+
+    private val planTrip: PlanTrip = get()
+    private val tripStore: TripStore = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var result: TripPlanResult? = null
+    private var plan: TripPlan? = null
+    private var planning = false
+
+    /** Why the last planning attempt found no plan; `null` after a success. */
+    private var failure: TripPlanResult? = null
 
     init {
         lifecycleScope.launch {
-            // Remembered as the app-wide destination.
-            feature.setDestination(destination)
+            // Also a trip the phone plans to the same destination.
+            tripStore.plan.collect { stored ->
+                plan = stored?.takeIf { it.destination.position == destination.position }
+                invalidate()
+            }
+        }
+        lifecycleScope.launch {
+            planTrip.inProgress.collect {
+                planning = it
+                invalidate()
+            }
+        }
+        lifecycleScope.launch {
             plan(feature.currentFix.filterNotNull().first())
         }
     }
 
     private suspend fun plan(fix: Fix) {
-        result = null
-        invalidate()
-        result = planning.planTrip(
-            from = fix.position,
-            destination = destination,
-            socOverridePercent = feature.currentEnergy.value?.socPercent,
-        )
+        val result = planTrip(
+            PlanTrip.Params(
+                from = fix.position,
+                destination = destination,
+                startSocPercent = feature.currentEnergy.value?.socPercent,
+            ),
+        ).getOrDefault(TripPlanResult.NoRoute)
+        failure = result.takeUnless { it is TripPlanResult.Planned }
         invalidate()
     }
 
-    override fun onGetTemplate(): Template = when (val current = result) {
-        null -> loadingTemplate()
-        is TripPlanResult.Planned ->
-            if (current.plan.stops.isEmpty()) {
-                directTemplate()
-            } else {
-                stopsTemplate(current.plan)
-            }
+    override fun onGetTemplate(): Template {
+        val current = plan
+        val failed = failure
+        return when {
+            planning -> loadingTemplate()
+            failed != null -> failureTemplate(failed)
+            current == null -> loadingTemplate()
+            current.stops.isEmpty() -> directTemplate()
+            else -> stopsTemplate(current)
+        }
+    }
 
+    private fun failureTemplate(failure: TripPlanResult): Template = when (failure) {
+        is TripPlanResult.Planned -> loadingTemplate()
         TripPlanResult.NoVehicle -> messageTemplate(carContext.getString(R.string.car_route_no_vehicle))
         TripPlanResult.NoRoute -> messageTemplate(carContext.getString(R.string.car_route_no_route))
         is TripPlanResult.NoChargerInReach -> messageTemplate(
             carContext.getString(
                 R.string.car_route_no_charger,
-                ChargeStopFormatter.distanceLabel(current.afterKm),
+                ChargeStopFormatter.distanceLabel(failure.afterKm),
             ),
         )
     }
@@ -202,7 +228,7 @@ class RouteScreen(
     private fun chargeNowFab(): Action = Action.Builder()
         .setIcon(icon(R.drawable.ic_bolt))
         .setBackgroundColor(CarColor.PRIMARY)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature, planning)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
         .build()
 
     /** Destination in reach without charging: no list to show, just the handoff. */
@@ -227,7 +253,7 @@ class RouteScreen(
     /** Body actions may carry titles — unlike the icon-only FAB. */
     private fun chargeNowTitledAction(): Action = Action.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature, planning)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
         .build()
 
     private fun header(withRefresh: Boolean, subtitle: String? = null): Header {

@@ -14,14 +14,17 @@ import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.PlanningFeature
-import org.julakali.chargeahead.shared.core.ChargeNowCandidate
-import org.julakali.chargeahead.shared.core.ChargeNowResult
-import org.julakali.chargeahead.shared.core.RelaxedFilter
+import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
+import org.julakali.chargeahead.shared.domain.ChargeNowResult
+import org.julakali.chargeahead.shared.domain.RelaxedFilter
 import org.julakali.chargeahead.shared.domain.Fix
+import org.julakali.chargeahead.shared.domain.ObserveChargeNow
+import org.julakali.chargeahead.shared.domain.RefreshChargeNow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 
 /**
  * The best fast chargers around the current position, cheap and near first.
@@ -30,27 +33,42 @@ import kotlinx.coroutines.launch
 class ChargeNowScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
-    private val planning: PlanningFeature,
-) : Screen(carContext) {
+) : Screen(carContext), KoinComponent {
+
+    private val observeChargeNow: ObserveChargeNow = get()
+    private val refreshChargeNow: RefreshChargeNow = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var result: ChargeNowResult? = null
+    private var refreshing = false
 
     init {
+        lifecycleScope.launch {
+            observeChargeNow.flow.collect {
+                result = it
+                invalidate()
+            }
+        }
+        lifecycleScope.launch {
+            refreshChargeNow.inProgress.collect {
+                refreshing = it
+                invalidate()
+            }
+        }
         lifecycleScope.launch {
             load(feature.currentFix.filterNotNull().first())
         }
     }
 
     private suspend fun load(fix: Fix) {
-        result = null
-        invalidate()
-        result = planning.chargeNow(fix.position)
-        invalidate()
+        observeChargeNow(ObserveChargeNow.Params(fix.position))
+        // A failed refill leaves the stored sites to rank.
+        refreshChargeNow(RefreshChargeNow.Params(fix.position))
     }
 
     override fun onGetTemplate(): Template {
-        val current = result ?: return loadingTemplate()
+        // Nothing stored yet: wait for the refill rather than say "nothing nearby".
+        val current = result?.takeUnless { it.isEmpty && refreshing } ?: return loadingTemplate()
 
         val candidates = current.candidates + current.more
         if (candidates.isEmpty()) {

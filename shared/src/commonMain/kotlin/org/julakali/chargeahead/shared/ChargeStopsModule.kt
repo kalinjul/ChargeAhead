@@ -12,9 +12,7 @@ import org.julakali.chargeahead.shared.data.ManualSoCSource
 import org.julakali.chargeahead.shared.data.MergingSiteRepository
 import org.julakali.chargeahead.shared.data.NominatimGeocoder
 import org.julakali.chargeahead.shared.data.OpenChargeMapSource
-import org.julakali.chargeahead.shared.data.OperatorCatalog
 import org.julakali.chargeahead.shared.data.OsrmRouteEngine
-import org.julakali.chargeahead.shared.data.SiteFetchActivity
 import org.julakali.chargeahead.shared.data.TiledSiteRepository
 import org.julakali.chargeahead.shared.data.createHttpClient
 import org.julakali.chargeahead.shared.data.pruneCache
@@ -24,7 +22,11 @@ import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Geocoder
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
+import org.julakali.chargeahead.shared.domain.ObserveChargeNow
+import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
+import org.julakali.chargeahead.shared.domain.PlanTrip
+import org.julakali.chargeahead.shared.domain.RefreshChargeNow
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -32,6 +34,10 @@ import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.TimeProvider
+import org.julakali.chargeahead.shared.domain.ToggleSavedRoute
+import org.julakali.chargeahead.shared.domain.TripPlanning
+import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.UpdateArrivalSoc
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.flow.first
 import org.koin.core.Koin
@@ -67,9 +73,6 @@ fun chargeStopsModule(): Module = module {
     single<HttpClient> { createHttpClient() } withOptions { onClose { it?.close() } }
     single<ChargeSiteDatabase> { createChargeSiteDatabase(get()) }
 
-    // Shared by every source's store, so the map's spinner sees all of them.
-    single { SiteFetchActivity() }
-
     single<SiteRepository> {
         val config = get<ChargeStopsConfig>()
         val backend = config.backend
@@ -85,7 +88,6 @@ fun chargeStopsModule(): Module = module {
                     source = primary,
                     database = get(),
                     time = get(),
-                    fetchActivity = get(),
                 ),
             ),
         )
@@ -105,8 +107,8 @@ fun chargeStopsModule(): Module = module {
         }
     }
 
-    single { OperatorCatalog(get()) }
-    single { TripPlanner(get(), get()) }
+    single<TripPlanning> { TripPlanner(get(), get()) }
+    single { TripStore() }
     single<ChargePointStatusRepository> {
         val statusSource = get<ChargeStopsConfig>().backend?.let { backend ->
             BackendChargePointStatusSource(get(), backend.baseUrl, backend.token)
@@ -116,7 +118,12 @@ fun chargeStopsModule(): Module = module {
     factory { ObserveMapChargers(get(), get(), get()) }
     factory { RefreshMapChargers(get(), get()) }
     factory { RefreshChargerAvailability(get(), get(), get()) }
-    single { PlanningFeature(tripPlanner = get(), repository = get(), settings = get()) }
+    factory { ObserveChargeNow(get(), get()) }
+    factory { RefreshChargeNow(get(), get()) }
+    factory { ObserveDestinationSearch(get(), get()) }
+    factory { PlanTrip(get(), get(), get()) }
+    factory { UpdateArrivalSoc(get(), get(), get()) }
+    factory { ToggleSavedRoute(get()) }
 
     // The phone's feature. Never closed.
     single<ChargeStopsFeature> { getKoin().newChargeStopsFeature(locationSource = get()) }
@@ -138,14 +145,12 @@ fun Koin.newChargeStopsFeature(
     return ChargeStopsFeature(
         locationSource = locationSource,
         repository = get(),
-        operatorCatalog = get(),
         settingsStore = settingsStore,
         socSource = CombinedSoCSource(
             manual = ManualSoCSource(settingsStore, time),
             hardware = hardwareSoCSource,
         ),
         routeEngine = get(),
-        geocoder = get(),
         isDemo = get<ChargeStopsConfig>().isDemo,
         onStart = {
             runCatching {

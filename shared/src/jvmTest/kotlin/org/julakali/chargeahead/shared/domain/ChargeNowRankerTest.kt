@@ -1,12 +1,5 @@
-package org.julakali.chargeahead.shared.core
+package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.domain.ChargeFilters
-import org.julakali.chargeahead.shared.domain.ChargeSite
-import org.julakali.chargeahead.shared.domain.Connector
-import org.julakali.chargeahead.shared.domain.ConnectorType
-import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.NetworkPreferences
-import org.julakali.chargeahead.shared.domain.destination
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

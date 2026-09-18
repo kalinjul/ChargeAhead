@@ -41,8 +41,8 @@ import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.android.phone.components.StationCard
 import org.julakali.chargeahead.android.phone.components.sheetListPadding
 import org.julakali.chargeahead.shared.ChargeStopFormatter
-import org.julakali.chargeahead.shared.core.ChargeNowCandidate
-import org.julakali.chargeahead.shared.core.RelaxedFilter
+import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
+import org.julakali.chargeahead.shared.domain.RelaxedFilter
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import kotlin.math.roundToInt

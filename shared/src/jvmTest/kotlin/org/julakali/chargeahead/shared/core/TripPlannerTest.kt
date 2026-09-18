@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.core
 
+import org.julakali.chargeahead.shared.domain.TripPlan
+import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.Connector

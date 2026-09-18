@@ -10,9 +10,6 @@ data class Network(
 /**
  * The curated, shipped list of selectable charging networks.
  *
- * Not the same as [org.julakali.chargeahead.shared.data.OperatorCatalog], which reads
- * operator names already in the local cache.
- *
  * The first 37 rows are hand-curated (brand-merged, hand-keyed keywords).
  * The remainder are auto-generated singletons for every OCM operator with
  * >= 2 POIs in the European sample (AT/BE/CH/DE/ES/FR/GB/IT/NL/NO/SE),

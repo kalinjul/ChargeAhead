@@ -7,8 +7,6 @@ import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
-data class OperatorCount(val operator: String?, val sites: Long)
-
 data class TileIndex(val tileLat: Long, val tileLon: Long)
 
 @Dao
@@ -138,7 +136,4 @@ interface ChargeSiteDao {
 
     @Query("DELETE FROM chargeSite")
     suspend fun clearAll()
-
-    @Query("SELECT operator, COUNT(*) AS sites FROM chargeSite WHERE operator IS NOT NULL GROUP BY operator")
-    suspend fun operatorCounts(): List<OperatorCount>
 }

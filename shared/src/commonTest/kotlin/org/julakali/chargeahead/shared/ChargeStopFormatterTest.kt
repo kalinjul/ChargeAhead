@@ -1,7 +1,7 @@
 package org.julakali.chargeahead.shared
 
-import org.julakali.chargeahead.shared.core.ChargeNowCandidate
-import org.julakali.chargeahead.shared.core.PlannedStop
+import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
+import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.Address
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeStop

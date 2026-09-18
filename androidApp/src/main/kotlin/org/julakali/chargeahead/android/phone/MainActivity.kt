@@ -64,7 +64,7 @@ import org.julakali.chargeahead.android.phone.components.AppTopBar
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadTheme
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.core.MapsHandoff
-import org.julakali.chargeahead.shared.core.TripPlan
+import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.julakali.chargeahead.shared.ui.DrawerViewModel
 import org.julakali.chargeahead.shared.ui.HomeViewModel

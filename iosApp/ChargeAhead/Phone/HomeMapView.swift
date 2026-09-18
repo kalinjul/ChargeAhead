@@ -96,7 +96,7 @@ struct HomeMapView: View {
                 }
             }
             .sheet(isPresented: $showPlanSheet) {
-                PlanSheetView(feature: viewModel.feature) { destination in
+                PlanSheetView(bridge: planningBridge) { destination in
                     showPlanSheet = false
                     startPlanning(to: destination)
                 }
@@ -185,12 +185,11 @@ struct MapPlaceholderView: View {
 
 /// Destination search — the shared Nominatim geocoder behind a plain text field.
 struct PlanSheetView: View {
-    let feature: ChargeStopsFeature
+    let bridge: PlanningBridge
     let onPlan: (Destination) -> Void
 
     @State private var query = ""
     @State private var results: [Place] = []
-    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -203,16 +202,13 @@ struct PlanSheetView: View {
             }
             .searchable(text: $query, prompt: NSLocalizedString("plan_search_hint", comment: ""))
             .onChange(of: query) { changed in
-                searchTask?.cancel()
-                let trimmed = changed.trimmingCharacters(in: .whitespaces)
-                guard trimmed.count >= 3 else { return }
-                // Debounced: Nominatim allows one request per second.
-                searchTask = Task {
-                    try? await Task.sleep(for: .milliseconds(600))
-                    guard !Task.isCancelled else { return }
-                    let places = try? await feature.searchDestinations(query: trimmed)
-                    if !Task.isCancelled { results = places ?? [] }
-                }
+                bridge.searchDestinations(query: changed)
+            }
+            .onAppear {
+                bridge.watchDestinationSearch { results = $0 }
+            }
+            .onDisappear {
+                bridge.close()
             }
             .navigationTitle(NSLocalizedString("plan_title", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
@@ -261,8 +257,11 @@ struct ChargeNowView: View {
             .navigationTitle(NSLocalizedString("cn_title", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                guard let position else { return }
-                bridge.chargeNow(position: position) { result = $0 }
+                guard position != nil else { return }
+                bridge.chargeNow { result = $0 }
+            }
+            .onDisappear {
+                bridge.close()
             }
         }
     }

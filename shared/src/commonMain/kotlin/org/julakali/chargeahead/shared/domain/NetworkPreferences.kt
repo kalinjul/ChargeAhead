@@ -16,9 +16,3 @@ data class NetworkPreferences(
     fun selectedNetworks(): List<Network> =
         if (isActive) NetworkCatalog.selection(preferredOperators) else emptyList()
 }
-
-data class OperatorOption(
-    val key: String,
-    val displayName: String,
-    val siteCount: Int,
-)
