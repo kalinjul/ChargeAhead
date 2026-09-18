@@ -37,6 +37,15 @@ class SiteMergerTest {
     }
 
     @Test
+    fun theLiveStatusIdSurvivesAMerge() {
+        val live = site("mobilithek:9").copy(liveStatusId = "mobilithek:9")
+
+        val merged = SiteMerger.merge(listOf(site("bnetza:1"), live))
+
+        assertEquals("mobilithek:9", merged.single().liveStatusId)
+    }
+
+    @Test
     fun theSameSiteFromTwoSources_becomesOne() {
         val merged = SiteMerger.merge(listOf(site("ocm:1"), site("bnetza:2")))
 
