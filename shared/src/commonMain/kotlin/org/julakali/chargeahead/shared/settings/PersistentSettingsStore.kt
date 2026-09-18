@@ -76,8 +76,8 @@ class PersistentSettingsStore(
         putString(KEY_CONSUMPTION, profile?.consumptionKwhPer100Km?.toString())
         putString(KEY_CONNECTORS, profile?.acceptedConnectors?.joinToString(",") { it.name })
         putString(KEY_DC_PEAK, profile?.dcPeakPowerKw?.toString())
-        mutableVehicle.value = profile
 
+        // Garage first: whoever sees the new selection must find it in the list.
         if (profile != null) {
             val current = mutableVehicles.value
             // A known car is updated in its slot; only a new one is appended.
@@ -88,14 +88,16 @@ class PersistentSettingsStore(
             }
             writeGarage(updated)
         }
+        mutableVehicle.value = profile
     }
 
     override suspend fun removeVehicle(displayName: String) = write {
         val remaining = mutableVehicles.value.filterNot { it.displayName == displayName }
-        writeGarage(remaining)
+        // Selection first, so it never points at a car already gone from the list.
         if (mutableVehicle.value?.displayName == displayName) {
             writeVehicle(remaining.firstOrNull())
         }
+        writeGarage(remaining)
     }
 
     private fun MutablePreferences.writeGarage(vehicles: List<VehicleProfile>) {
