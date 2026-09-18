@@ -31,7 +31,10 @@ kotlin {
     // skipped automatically by the Kotlin plugin on non-macOS hosts, because
     // it needs Apple's linker. That also means no Objective-C header is
     // produced -- the Swift side stays unverified until a Mac is available.
-    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
+    //
+    // No iosX64 (Intel simulator): AndroidX no longer publishes lifecycle
+    // and sqlite-bundled for it.
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
         target.binaries.framework {
             baseName = "Shared"
             isStatic = true
@@ -101,5 +104,4 @@ dependencies {
     add("kspJvm", libs.androidx.room.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room.compiler)
     add("kspIosArm64", libs.androidx.room.compiler)
-    add("kspIosX64", libs.androidx.room.compiler)
 }
