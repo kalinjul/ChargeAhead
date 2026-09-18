@@ -8,6 +8,7 @@ import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.MapFilter
+import org.julakali.chargeahead.shared.domain.ObserveChargeStops
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.Reachability
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
@@ -53,6 +54,7 @@ data class HomeUiState(
  */
 class HomeViewModel(
     private val feature: ChargeStopsFeature,
+    private val observeChargeStops: ObserveChargeStops,
     private val observeMapChargers: ObserveMapChargers,
     private val refreshMapChargers: RefreshMapChargers,
     private val refreshChargerAvailability: RefreshChargerAvailability,
@@ -68,17 +70,18 @@ class HomeViewModel(
     private var refreshJob: Job? = null
 
     val uiState: StateFlow<HomeUiState> = combine(
-        feature.state,
+        // combine tops out at five typed flows.
+        combine(feature.currentFix, observeChargeStops.flow, ::Pair),
         combine(settings.chargeFilters, settings.networks, ::Pair),
         map,
         observeMapChargers.flow,
-        // combine tops out at five typed flows.
         combine(attempt, refreshMapChargers.inProgress, ::Pair),
-    ) { state, (filters, networks), mapState, mapChargers, (attempt, loadingSites) ->
+    ) { (fix, chargeStops), (filters, networks), mapState, mapChargers, (attempt, loadingSites) ->
+        val position = fix?.position
         HomeUiState(
-            position = state.position,
-            stops = state.stops,
-            isDemo = state.isDemo,
+            position = position,
+            stops = chargeStops?.stops.orEmpty(),
+            isDemo = feature.isDemo,
             chargers = mapChargers.chargers,
             belowMinZoom = mapState.belowMinZoom,
             selectedStop = mapState.selectedStop,
@@ -86,8 +89,8 @@ class HomeViewModel(
             // The markers still show what an earlier filter selected.
             applyingFilters = mapChargers.filter != MapFilter.of(filters, networks),
             // Gated on the position, so a late fix clears both.
-            searchingLocation = attempt.running && state.position == null,
-            locationUnavailable = attempt.timedOut && state.position == null,
+            searchingLocation = attempt.running && position == null,
+            locationUnavailable = attempt.timedOut && position == null,
             loadingSites = loadingSites,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
@@ -97,6 +100,7 @@ class HomeViewModel(
         uiState.map { it.applyingFilters }.stateIn(viewModelScope, WhileUiSubscribed, false)
 
     init {
+        observeChargeStops(ObserveChargeStops.Params(feature.currentFix, feature.currentEnergy))
         observeMapChargers(ObserveMapChargers.Params(viewport = null))
     }
 
@@ -119,7 +123,7 @@ class HomeViewModel(
         attempt.value = LocationAttempt(running = true)
         attemptJob = viewModelScope.launch {
             val position = withTimeoutOrNull(locationTimeoutMillis) {
-                feature.state.first { it.position != null }
+                feature.currentFix.first { it != null }
             }
             if (position == null) attempt.update { it.copy(timedOut = true) }
         }
@@ -144,7 +148,7 @@ class HomeViewModel(
 
     /** A tapped map marker becomes the same detail dialog the corridor list uses. */
     fun onChargerSelected(charger: MapCharger) {
-        val position = feature.currentState.position
+        val position = feature.currentFix.value?.position
         map.update {
             it.copy(
                 selectedStop = ChargeStop(

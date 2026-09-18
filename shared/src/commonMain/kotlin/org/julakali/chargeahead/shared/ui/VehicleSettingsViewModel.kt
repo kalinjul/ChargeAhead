@@ -51,8 +51,8 @@ class VehicleSettingsViewModel(
         settings.vehicle,
         settings.manualSocPercent,
         settings.socDiagnostics,
-        feature.state,
-    ) { form, vehicle, socPercent, diagnostics, state ->
+        feature.currentEnergy,
+    ) { form, vehicle, socPercent, diagnostics, energy ->
         val edited = form ?: Form(
             name = vehicle?.displayName.orEmpty(),
             battery = vehicle?.usableBatteryKwh?.asInput().orEmpty(),
@@ -66,7 +66,7 @@ class VehicleSettingsViewModel(
             consumption = edited.consumption,
             connectors = edited.connectors,
             socInput = edited.socInput,
-            socFromCar = state.socSource == SoCSourceKind.CAR_HARDWARE,
+            socFromCar = energy?.source == SoCSourceKind.CAR_HARDWARE,
             diagnostics = diagnostics,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, VehicleSettingsUiState())

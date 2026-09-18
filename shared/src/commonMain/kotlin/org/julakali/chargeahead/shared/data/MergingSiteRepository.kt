@@ -56,6 +56,16 @@ class MergingSiteRepository(
             },
         ) { stocks -> SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters) }
 
+    override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> =
+        combine(
+            repositories.map { repository ->
+                repository.storedSitesIn(area).catch { failure ->
+                    logWarning("A store failed", failure)
+                    emit(emptyList())
+                }
+            },
+        ) { stocks -> SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters) }
+
     override suspend fun invalidate() {
         repositories.forEach { it.invalidate() }
     }

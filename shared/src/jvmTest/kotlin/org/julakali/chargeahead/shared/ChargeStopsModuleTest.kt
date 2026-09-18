@@ -4,6 +4,7 @@ import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.ObserveChargeNow
+import org.julakali.chargeahead.shared.domain.ObserveChargeStops
 import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
 import org.julakali.chargeahead.shared.domain.PlanTrip
 import org.julakali.chargeahead.shared.domain.SettingsStore
@@ -47,7 +48,7 @@ class ChargeStopsModuleTest {
     }
 
     private fun isDemo(key: String?, backend: BackendConfig? = null): Boolean =
-        withGraph(key, backend) { it.get<ChargeStopsFeature>().currentState.isDemo }
+        withGraph(key, backend) { it.get<ChargeStopsFeature>().isDemo }
 
     @Test
     fun withoutAKey_theDemoSourceIsUsed() {
@@ -86,6 +87,7 @@ class ChargeStopsModuleTest {
             koin.get<PlanTrip>()
             koin.get<UpdateArrivalSoc>()
             koin.get<ObserveChargeNow>()
+            koin.get<ObserveChargeStops>()
             koin.get<ObserveDestinationSearch>()
         }
     }

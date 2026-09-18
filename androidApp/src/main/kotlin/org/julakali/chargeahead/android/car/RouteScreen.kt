@@ -277,7 +277,7 @@ class RouteScreen(
 
     private fun titleText(subtitle: String?): String {
         val base = subtitle?.let { "$title · $it" } ?: title
-        return if (feature.currentState.isDemo) {
+        return if (feature.isDemo) {
             carContext.getString(R.string.car_title_suffix_demo, base)
         } else {
             base

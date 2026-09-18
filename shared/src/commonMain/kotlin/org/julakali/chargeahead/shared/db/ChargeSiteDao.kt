@@ -20,6 +20,9 @@ interface ChargeSiteDao {
      * Otherwise: DC sites from [minPowerKw] up, restricted to [networkKeys]
      * when [filterNetworks] is set.
      */
+    @Query("SELECT * FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east")
+    fun observeSitesInBox(south: Double, north: Double, west: Double, east: Double): Flow<List<ChargeSiteEntity>>
+
     @Query(
         "SELECT * FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east " +
             "AND ((:slowMode AND maxPowerKw < :slowBelowKw) " +

@@ -50,7 +50,7 @@ class ChargeNowViewModel(
 
     /** The sheet was opened: rank from the current position. */
     fun onSheetOpened() {
-        val position = feature.currentState.position
+        val position = feature.currentFix.value?.position
         observeChargeNow(ObserveChargeNow.Params(position))
         refreshJob?.cancel()
         // A failed refill leaves the stored sites to rank.
