@@ -7,8 +7,7 @@ import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
-import org.julakali.chargeahead.shared.settings.SharedPreferencesStorage
-import kotlinx.coroutines.Dispatchers
+import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -17,8 +16,7 @@ import org.koin.dsl.module
  * process, shared by the phone and car UI.
  */
 val appModule = module {
-    // IO: SharedPreferences commit() is a blocking disk write.
-    single<SettingsStore> { PersistentSettingsStore(SharedPreferencesStorage(androidContext()), Dispatchers.IO) }
+    single<SettingsStore> { PersistentSettingsStore(createSettingsDataStore(androidContext())) }
 
     // The phone's location; a car session passes its own.
     single<LocationSource> { FusedLocationSource(androidContext()) }

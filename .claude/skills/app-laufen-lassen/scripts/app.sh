@@ -78,9 +78,10 @@ cmd_emulator() {
         echo "Emulator is already running."; return
     fi
     setsid nohup "$EMULATOR_BIN" -avd "$AVD" >/dev/null 2>&1 &
-    adb wait-for-device
+    # By serial, not plain adb: with a phone attached, plain adb refuses.
     for _ in $(seq 1 60); do
-        [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]] && {
+        local serial; serial=$(adb devices | awk 'NR>1 && $1 ~ /^emulator-/ {print $1; exit}')
+        [[ -n "$serial" && "$(adb -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == "1" ]] && {
             echo "Emulator ready."; return; }
         sleep 5
     done
@@ -166,9 +167,46 @@ pull_app_file() {
 cmd_state() {
     local dev; dev=$(pick_device)
     echo "--- Settings ---"
-    adb -s "$dev" shell run-as "$PKG" cat "/data/data/$PKG/shared_prefs/de.autoapp.settings.xml" \
-        2>/dev/null | grep -oE '<string name="[^"]*">[^<]*' | sed 's/<string name="//;s/">/ = /' \
-        || echo "(none yet)"
+    # A DataStore protobuf: PreferenceMap{1: entry{1: key, 2: Value{5: string}}}.
+    # Every value the app writes is a string.
+    local prefs; prefs=$(mktemp)
+    if pull_app_file "$dev" "files/datastore/settings.preferences_pb" "$prefs"; then
+        python3 - "$prefs" <<'PY'
+import sys
+
+def fields(buf):
+    i = 0
+    while i < len(buf):
+        tag, i = varint(buf, i)
+        number, kind = tag >> 3, tag & 7
+        if kind == 2:
+            size, i = varint(buf, i)
+            yield number, buf[i:i + size]
+            i += size
+        elif kind == 0:
+            _, i = varint(buf, i)
+            yield number, None
+        else:
+            i += {1: 8, 5: 4}[kind]
+            yield number, None
+
+def varint(buf, i):
+    value = shift = 0
+    while True:
+        byte = buf[i]; i += 1
+        value |= (byte & 0x7F) << shift; shift += 7
+        if byte < 0x80:
+            return value, i
+
+for number, entry in fields(open(sys.argv[1], "rb").read()):
+    parts = dict(fields(entry))
+    value = dict(fields(parts.get(2, b""))).get(5)
+    print(f"{parts[1].decode()} = {value.decode() if value is not None else '(not a string)'}")
+PY
+    else
+        echo "(none yet)"
+    fi
+    rm -f "$prefs"
     echo "--- Local store ---"
     # Room runs in WAL mode: while the app is running, the .db file is a stub
     # of a few kilobytes and every row sits in the -wal beside it. Pulling the

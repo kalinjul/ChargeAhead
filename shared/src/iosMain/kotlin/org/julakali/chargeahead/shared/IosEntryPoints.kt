@@ -5,7 +5,7 @@ import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
-import org.julakali.chargeahead.shared.settings.UserDefaultsStorage
+import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,7 +20,7 @@ import org.koin.dsl.module
  * behalf, and [ChargeStopsWatcher] turns a `StateFlow` into a plain callback.
  */
 fun createSettingsStore(): SettingsStore =
-    PersistentSettingsStore(UserDefaultsStorage())
+    PersistentSettingsStore(createSettingsDataStore())
 
 /**
  * The process-wide graph, built on the first [createChargeStopsFeature] call;

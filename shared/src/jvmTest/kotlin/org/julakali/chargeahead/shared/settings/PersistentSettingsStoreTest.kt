@@ -23,7 +23,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aNewStore_hasNeitherProfileNorChargeLevel() {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
         assertNull(store.vehicle.value)
         assertNull(store.manualSocPercent.value)
@@ -31,7 +31,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aSavedProfile_survivesARestart() = runBlocking {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         PersistentSettingsStore(storage).setVehicle(vehicle)
 
         // A new instance on the same storage = an app restart.
@@ -40,7 +40,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aSavedChargeLevel_survivesARestart() = runBlocking {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         PersistentSettingsStore(storage).setManualSocPercent(64.0)
 
         assertEquals(64.0, PersistentSettingsStore(storage).manualSocPercent.value)
@@ -48,7 +48,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun deletingTheProfile_clearsTheStorage() = runBlocking {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         val store = PersistentSettingsStore(storage)
         store.setVehicle(vehicle)
 
@@ -60,7 +60,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun chargeLevelIsClampedBetweenZeroAndHundred() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
         store.setManualSocPercent(140.0)
         assertEquals(100.0, store.manualSocPercent.value)
@@ -72,7 +72,7 @@ class PersistentSettingsStoreTest {
     @Test
     fun aHalfProfileInStorage_countsAsNone() {
         // A partial profile is treated as no profile.
-        val batteryOnly = InMemoryKeyValueStorage(
+        val batteryOnly = InMemoryPreferencesDataStore(
             mapOf("vehicle.usableBatteryKwh" to "77.0", "vehicle.displayName" to "Halb"),
         )
 
@@ -81,13 +81,13 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun nonsensicalValuesInStorage_countAsNoProfile() {
-        val broken = InMemoryKeyValueStorage(
+        val broken = InMemoryPreferencesDataStore(
             mapOf(
                 "vehicle.usableBatteryKwh" to "keine Zahl",
                 "vehicle.consumptionKwhPer100Km" to "18.0",
             ),
         )
-        val zeroBattery = InMemoryKeyValueStorage(
+        val zeroBattery = InMemoryPreferencesDataStore(
             mapOf(
                 "vehicle.usableBatteryKwh" to "0",
                 "vehicle.consumptionKwhPer100Km" to "18.0",
@@ -101,7 +101,7 @@ class PersistentSettingsStoreTest {
     @Test
     fun anUnknownConnectorTypeInStorage_doesNotCostTheWholeProfile() = runBlocking {
         // Unknown connector names are skipped.
-        val storage = InMemoryKeyValueStorage(
+        val storage = InMemoryPreferencesDataStore(
             mapOf(
                 "vehicle.usableBatteryKwh" to "77.0",
                 "vehicle.consumptionKwhPer100Km" to "18.0",
@@ -116,7 +116,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun theConnectorListFullySurvives() = runBlocking {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         PersistentSettingsStore(storage).setVehicle(
             vehicle.copy(acceptedConnectors = setOf(ConnectorType.CCS2, ConnectorType.CHADEMO)),
         )
@@ -134,7 +134,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun withoutADestination_theCorridorApplies() {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
         assertNull(store.destination.value)
         assertTrue(store.recentDestinations.value.isEmpty())
@@ -142,7 +142,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aDestination_survivesARestart() = runBlocking {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         PersistentSettingsStore(storage).setDestination(munich)
 
         assertEquals(munich, PersistentSettingsStore(storage).destination.value)
@@ -150,7 +150,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aDestinationEndsUpInHistory() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
         store.setDestination(munich)
         store.setDestination(nuremberg)
@@ -160,7 +160,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun deletingADestination_keepsTheHistory() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
         store.setDestination(munich)
 
         store.setDestination(null)
@@ -171,7 +171,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun theSameDestinationTwice_appearsOnlyOnceInHistory() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
         store.setDestination(munich)
         store.setDestination(nuremberg)
@@ -182,7 +182,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun theHistoryIsLimited() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
         repeat(12) { i ->
             store.setDestination(Destination("Ziel $i", LatLon(48.0 + i * 0.1, 11.0)))
@@ -195,7 +195,7 @@ class PersistentSettingsStoreTest {
     @Test
     fun aNameWithSpecialCharacters_survivesSaving() = runBlocking {
         // Place names may contain commas, quotes, and line breaks.
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         val tricky = Destination("St. Peter-Ording, \"Nord\"; Zeile\nZwei", LatLon(54.3, 8.6))
         PersistentSettingsStore(storage).setDestination(tricky)
 
@@ -204,7 +204,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun theAddress_survivesSavingInTheHistory() = runBlocking {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         val club = Destination("Uebel und Gefährlich", LatLon(53.556, 9.968), "Feldstraße 66, 20359 Hamburg")
         PersistentSettingsStore(storage).setDestination(club)
 
@@ -216,7 +216,7 @@ class PersistentSettingsStoreTest {
     @Test
     fun aNewStore_hasTheNetworkFilterSwitchedOn() {
         // Default on, so a first selection takes effect immediately.
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
         assertTrue(store.networks.value.onlyPreferred)
         assertFalse(store.networks.value.isActive)
@@ -224,7 +224,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aSwitchedOffNetworkFilter_survivesARestart() = runBlocking {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         PersistentSettingsStore(storage).setNetworks(NetworkPreferences(onlyPreferred = false))
 
         assertFalse(PersistentSettingsStore(storage).networks.value.onlyPreferred)
@@ -233,7 +233,7 @@ class PersistentSettingsStoreTest {
     @Test
     fun aSelectionOnARenamedNetworkKey_isCarriedOver() {
         // An install that ticked EWE Go back when the catalog keyed it "ewe".
-        val storage = InMemoryKeyValueStorage(
+        val storage = InMemoryPreferencesDataStore(
             mapOf("networks.preferred" to """["ewe","enbw"]"""),
         )
 
@@ -244,7 +244,7 @@ class PersistentSettingsStoreTest {
 
     @Test
     fun aBrokenHistory_doesNotCrashTheApp() {
-        val broken = InMemoryKeyValueStorage(mapOf("route.destinations" to "{kein JSON"))
+        val broken = InMemoryPreferencesDataStore(mapOf("route.destinations" to "{kein JSON"))
 
         val store = PersistentSettingsStore(broken)
 

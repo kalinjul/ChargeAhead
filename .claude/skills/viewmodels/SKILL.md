@@ -196,7 +196,7 @@ no Compose — see `PhoneViewModelTest`:
   `Dispatchers.resetMain()` in `@AfterTest`. `viewModelScope` runs on the
   main dispatcher and a plain test JVM has none; `Unconfined` also keeps
   writes in the order they were issued.
-- `PersistentSettingsStore(InMemoryKeyValueStorage())` is a real store on
+- `PersistentSettingsStore(InMemoryPreferencesDataStore())` is a real store on
   in-memory storage — no fake needed.
 - `uiState` only produces while something collects, so assert with
   `withTimeout(5_000) { viewModel.uiState.first { <condition> } }` instead

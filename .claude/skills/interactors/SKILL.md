@@ -108,7 +108,7 @@ ViewModel — see `ObserveMapChargersTest`:
 
 - Fake the ports with an `object : SiteRepository { … }` whose
   `storedSitesIn` returns a `MutableStateFlow` the fake fetch updates; use
-  `PersistentSettingsStore(InMemoryKeyValueStorage())` as the real store.
+  `PersistentSettingsStore(InMemoryPreferencesDataStore())` as the real store.
 - Call the observer with its params, then
   `withTimeout(5_000) { observer.flow.first { <condition> } }`.
 - To see the post-refill result, make the fake's fetch change what it

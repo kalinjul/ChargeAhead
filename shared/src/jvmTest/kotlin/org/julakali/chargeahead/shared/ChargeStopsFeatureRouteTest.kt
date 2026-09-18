@@ -14,7 +14,7 @@ import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SectorArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
-import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -89,7 +89,7 @@ class ChargeStopsFeatureRouteTest {
         dispatcher = Dispatchers.Unconfined,
     )
 
-    private fun settingsStore() = PersistentSettingsStore(InMemoryKeyValueStorage())
+    private fun settingsStore() = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
     @Test
     fun withoutDestination_searchesInDrivingDirection() = runBlocking {
@@ -237,7 +237,7 @@ class ChargeStopsFeatureRouteTest {
 
     @Test
     fun aSavedDestination_persistsAcrossRestart() = runBlocking {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         PersistentSettingsStore(storage).setDestination(munich)
 
         val location = ControllableLocationSource()

@@ -24,7 +24,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `selecting a vehicle adds it to the garage`() = runBlocking<Unit> {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
         store.setVehicle(profile("ID.4"))
         store.setVehicle(profile("Model 3"))
 
@@ -34,7 +34,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `re-selecting a vehicle keeps its place in the garage`() = runBlocking<Unit> {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
         store.setVehicle(profile("ID.4"))
         store.setVehicle(profile("Model 3"))
 
@@ -47,7 +47,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `editing a vehicle updates it in place`() = runBlocking<Unit> {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
         store.setVehicle(profile("ID.4"))
         store.setVehicle(profile("Model 3"))
 
@@ -59,7 +59,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `garage survives the process, selection included`() = runBlocking<Unit> {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         PersistentSettingsStore(storage).apply {
             setVehicle(profile("ID.4"))
             setVehicle(profile("Model 3"))
@@ -73,7 +73,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `removing the selected vehicle promotes the next one`() = runBlocking<Unit> {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
         store.setVehicle(profile("ID.4"))
         store.setVehicle(profile("Model 3"))
 
@@ -85,7 +85,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `removing the last vehicle leaves an honest nothing`() = runBlocking<Unit> {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
         store.setVehicle(profile("ID.4"))
         store.removeVehicle("ID.4")
 
@@ -95,11 +95,14 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `a pre-garage install keeps its single vehicle visible`() = runBlocking<Unit> {
-        val storage = InMemoryKeyValueStorage()
         // Written by an app version that only knew the legacy keys.
-        storage.putString("vehicle.displayName", "Alt-Auto")
-        storage.putString("vehicle.usableBatteryKwh", "58.0")
-        storage.putString("vehicle.consumptionKwhPer100Km", "16.0")
+        val storage = InMemoryPreferencesDataStore(
+            mapOf(
+                "vehicle.displayName" to "Alt-Auto",
+                "vehicle.usableBatteryKwh" to "58.0",
+                "vehicle.consumptionKwhPer100Km" to "16.0",
+            ),
+        )
 
         val store = PersistentSettingsStore(storage)
         assertEquals(listOf("Alt-Auto"), store.vehicles.value.map { it.displayName })
@@ -107,7 +110,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `filters round-trip`() = runBlocking<Unit> {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         PersistentSettingsStore(storage).apply {
             setChargeFilters(ChargeFilters(minPowerKw = 300.0, maxDistanceKm = 2.5))
         }
@@ -119,7 +122,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `saved routes keep order, rename and removal work`() = runBlocking<Unit> {
-        val store = PersistentSettingsStore(InMemoryKeyValueStorage())
+        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val muenchen = SavedRoute("r1", "Amsterdam → München", Destination("München", LatLon(48.14, 11.58)), "660 km · 2 Stopps")
         val hamburg = SavedRoute("r2", "Oma in Hamburg", Destination("Hamburg", LatLon(53.55, 9.99)))
 
@@ -136,7 +139,7 @@ class GarageAndRoutesSettingsTest {
 
     @Test
     fun `a saved route keeps its destination address`() = runBlocking<Unit> {
-        val storage = InMemoryKeyValueStorage()
+        val storage = InMemoryPreferencesDataStore()
         val route = SavedRoute("r1", "Konzert", Destination("Uebel und Gefährlich", LatLon(53.556, 9.968), "Feldstraße 66, 20359 Hamburg"))
         PersistentSettingsStore(storage).saveRoute(route)
 

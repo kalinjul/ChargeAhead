@@ -68,6 +68,9 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             implementation(libs.androidx.room.runtime)
             implementation(libs.androidx.sqlite.bundled)
+            // api, not implementation: PersistentSettingsStore takes a
+            // DataStore, so androidApp needs the type to build one.
+            api(libs.androidx.datastore.preferences)
 
             api(libs.chargeahead.api.model)
         }

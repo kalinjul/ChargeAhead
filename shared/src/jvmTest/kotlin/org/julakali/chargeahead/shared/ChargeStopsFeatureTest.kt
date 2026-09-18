@@ -19,7 +19,7 @@ import org.julakali.chargeahead.shared.data.OperatorCatalog
 import org.julakali.chargeahead.shared.db.ChargeSiteEntity
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
-import org.julakali.chargeahead.shared.settings.InMemoryKeyValueStorage
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.domain.destination
 import kotlinx.coroutines.Dispatchers
@@ -99,7 +99,7 @@ class ChargeStopsFeatureTest {
         acceptedConnectors = setOf(ConnectorType.CCS2),
     )
 
-    private fun settingsStore() = PersistentSettingsStore(InMemoryKeyValueStorage())
+    private fun settingsStore() = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
     @Test
     fun beforeFirstFix_waitsForLocation() {
