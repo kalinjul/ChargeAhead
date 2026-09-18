@@ -60,12 +60,13 @@ The worked example is `ObserveMapChargers`, used by `HomeViewModel`.
 9. **Koin: `factory`, not `single`.** A `SubjectInteractor` keeps its params
    per instance; two ViewModels sharing one would steer each other. Declare
    it in `chargeStopsModule()` next to its ports.
-10. **Observers are used only in ViewModels.** A car screen, the Swift
-    bridge or a feature class never calls a `SubjectInteractor` or collects
-    its `flow`; it goes through the shared ViewModel for that screen and
-    collects its `uiState`. Hosts without a `ViewModelStoreOwner` (car
-    `Screen`s, `PlanningBridge`) create the ViewModel with `ViewModelHost`
-    and `clear()` it when they end.
+10. **Observers are used only in ViewModels — and in car screens.** The
+    Swift bridge or a feature class never calls a `SubjectInteractor` or
+    collects its `flow`; it goes through the shared ViewModel for that
+    screen and collects its `uiState`, created with `ViewModelHost` and
+    `clear()`ed when it ends (see `PlanningBridge`). Car `Screen`s are the
+    exception: they call the observer and collect its `flow` in
+    `lifecycleScope` themselves (see `ChargeNowScreen`).
 
 ## In the ViewModel
 
