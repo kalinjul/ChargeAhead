@@ -48,14 +48,14 @@ class ChargeStopsFeatureTest {
         var queries = 0
             private set
 
-        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             queries++
             return sites
         }
     }
 
     private class BrokenSiteRepository : SiteRepository {
-        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> =
+        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> =
             throw IllegalStateException("Funkloch")
     }
 
@@ -179,7 +179,7 @@ class ChargeStopsFeatureTest {
         val location = ControllableLocationSource()
         var broken = false
         val repository = object : SiteRepository {
-            override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
                 if (broken) throw IllegalStateException("Funkloch")
                 return listOf(site("a", 180.0, 10.0))
             }
@@ -420,7 +420,7 @@ class ChargeStopsFeatureTest {
 
     private class RecordingSiteRepository : SiteRepository {
         val capturedNetworks = mutableListOf<List<Network>>()
-        override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
             capturedNetworks += networks
             return emptyList()
         }

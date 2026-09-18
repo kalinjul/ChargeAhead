@@ -13,6 +13,8 @@ import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
+import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.SearchArea
@@ -20,12 +22,16 @@ import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkCatalog
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
+import org.julakali.chargeahead.shared.domain.maxDcPowerKw
+import org.julakali.chargeahead.shared.domain.maxPowerKw
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
@@ -54,7 +60,7 @@ class TiledSiteRepository(
     private val inFlight = mutableMapOf<String, Deferred<List<ChargeSite>>>()
     private val inFlightGuard = Mutex()
 
-    override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+    override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
         val key = requestKey(area, networks)
         val deferred = inFlightGuard.withLock {
             inFlight[key] ?: scope.async {
@@ -184,6 +190,9 @@ class TiledSiteRepository(
                     town = site.address?.town,
                     liveStatusId = site.liveStatusId,
                     fetchedAtMillis = now,
+                    maxPowerKw = site.maxPowerKw,
+                    maxDcPowerKw = site.maxDcPowerKw,
+                    networkKey = NetworkCatalog.resolve(site),
                 )
             },
             tiles = stampKeys.flatMap { key ->
@@ -201,11 +210,24 @@ class TiledSiteRepository(
         )
     }
 
-    override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> =
-        dao.sitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)
-            .map(ChargeSiteEntity::toDomain)
+    override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> =
+        dao.observeFilteredSitesInBox(
+            south = box.south,
+            north = box.north,
+            west = box.west,
+            east = box.east,
+            slowMode = filter.slowMode,
+            slowBelowKw = MIN_DC_POWER_KW,
+            minPowerKw = filter.minPowerKw,
+            filterNetworks = filter.networks.isActive,
+            networkKeys = filter.networks.preferredOperators.toList(),
+        ).map { entities -> entities.map(ChargeSiteEntity::toDomain) }
 
-    private suspend fun readStored(area: SearchArea): List<ChargeSite> = storedSitesIn(area.boundingBox)
+    private suspend fun readStored(area: SearchArea): List<ChargeSite> {
+        val box = area.boundingBox
+        return dao.sitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)
+            .map(ChargeSiteEntity::toDomain)
+    }
 
     companion object {
         const val DEFAULT_TTL_MILLIS = 3L * 24 * 60 * 60 * 1000

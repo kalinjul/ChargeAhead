@@ -7,6 +7,7 @@ import org.julakali.chargeahead.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.DEFAULT_RESERVE_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.Route
@@ -208,7 +209,7 @@ class TripPlanner(
             }
             val area = PolylineArea(route.points.subList(startIndex, endIndex + 1), bufferKm = STOP_BUFFER_KM)
             val sites = try {
-                repository.sitesIn(area, networks.selectedNetworks())
+                repository.load(area, networks.selectedNetworks())
             } catch (failure: Exception) {
                 emptyList()
             }

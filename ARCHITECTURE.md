@@ -634,6 +634,15 @@ SettingsStore     ──┘         ▲                        │
                         XRoute (androidApp) ──► XScreen (stateless Compose)
 ```
 
+**Use cases.** Business logic a screen needs — selecting, filtering,
+ranking, fetching — lives in `domain` as an `Interactor` (one-shot action)
+or a `SubjectInteractor` observer (`ObserveX`, a stream driven by params),
+the base classes from Tivi in `domain/Interactor.kt`. An observer takes only
+what the UI knows as params (the viewport) and reads settings and
+repositories itself; the ViewModel puts its `flow` into `combine()`. They
+are Koin `factory` declarations, one per ViewModel. `ObserveMapChargers` is
+the first; the rules are in the `interactors` skill.
+
 **Scoping.** `SettingsStore` (`appModule`, androidApp) and the phone's
 `ChargeStopsFeature` and `PlanningFeature` (`chargeStopsModule`, shared) are
 application-scoped Koin singletons — the

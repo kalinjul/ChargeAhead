@@ -9,7 +9,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptor
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -35,13 +34,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -58,8 +57,8 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
 import org.julakali.chargeahead.android.BuildConfig
 import org.julakali.chargeahead.android.R
-import org.julakali.chargeahead.shared.domain.ChargeSpeed
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.OperatorShortName
 
 /**
@@ -70,13 +69,6 @@ val hasGoogleMapsKey: Boolean get() = BuildConfig.HAS_GOOGLE_MAPS_KEY
 
 private fun LatLon.toLatLng() = LatLng(lat, lon)
 
-/** A charger with its icon and position resolved. */
-private class ChargerMarker(
-    val charger: org.julakali.chargeahead.shared.MapCharger,
-    val position: LatLng,
-    val icon: BitmapDescriptor,
-)
-
 /**
  * Home map: viewport-driven. The map reports every settled camera position
  * upward (`null` below [MIN_CHARGER_ZOOM]); the caller passes the chargers back down.
@@ -84,10 +76,10 @@ private class ChargerMarker(
 @Composable
 fun HomeGoogleMap(
     position: LatLon?,
-    chargers: List<org.julakali.chargeahead.shared.MapCharger>,
+    chargers: List<MapCharger>,
     hasLocationPermission: Boolean,
     onViewportChanged: (org.julakali.chargeahead.shared.domain.BoundingBox?) -> Unit,
-    onChargerTapped: (org.julakali.chargeahead.shared.MapCharger) -> Unit,
+    onChargerTapped: (MapCharger) -> Unit,
     onLocate: () -> Unit,
     searchingLocation: Boolean,
     loadingSites: Boolean,
@@ -133,28 +125,7 @@ fun HomeGoogleMap(
 
     val scope = rememberCoroutineScope()
 
-    // Each distinct pill (speed, operator label, availability) is rasterized once and reused.
-    val density = LocalDensity.current
-    val iconCache = remember { mutableMapOf<PillKey, BitmapDescriptor>() }
-    val outOfOrderText = stringResource(R.string.map_out_of_order)
-
-    // Built once per charger-list change, not per recomposition.
-    val markers = remember(chargers, density, outOfOrderText) {
-        chargers.map { charger ->
-            val pillKey = PillKey(
-                speed = ChargeSpeed.of(charger.maxPowerKw),
-                label = OperatorShortName.of(charger.site.operator),
-                availability = charger.availability,
-                outOfOrderText = outOfOrderText,
-            )
-            ChargerMarker(
-                charger = charger,
-                position = charger.site.position.toLatLng(),
-                icon = iconCache.getOrPut(pillKey) { markerPillDescriptor(density, pillKey) },
-            )
-        }
-    }
-
+    val pillIcons = rememberPillIcons()
     val loadingDescription = stringResource(R.string.map_loading_sites)
 
     Box(modifier = modifier) {
@@ -169,16 +140,10 @@ fun HomeGoogleMap(
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
-            markers.forEach { marker ->
-                key(marker.charger.site.id) {
-                    Marker(
-                        state = rememberMarkerState(position = marker.position),
-                        icon = marker.icon,
-                        title = marker.charger.site.name,
-                        anchor = Offset(0.5f, 0.5f),
-                        onClick = { onChargerTapped(marker.charger); true },
-                    )
-                }
+            println("Rendering ${chargers.size} chargers")
+
+            chargers.forEach { charger ->
+                ChargerMarker(charger = charger, icons = pillIcons, onClick = onChargerTapped)
             }
         }
 

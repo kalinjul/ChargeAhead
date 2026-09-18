@@ -32,8 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.julakali.chargeahead.android.R
-import org.julakali.chargeahead.shared.MapCharger
 import org.julakali.chargeahead.shared.domain.BoundingBox
+import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.ui.HomeUiState
 import org.julakali.chargeahead.shared.ui.HomeViewModel
 

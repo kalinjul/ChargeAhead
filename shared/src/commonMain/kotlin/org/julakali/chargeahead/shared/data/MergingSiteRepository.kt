@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared.data
 import org.julakali.chargeahead.shared.core.SiteMerger
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
@@ -10,6 +11,9 @@ import org.julakali.chargeahead.shared.logWarning
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 
 /**
  * Layers several stocks on top of each other and merges them.
@@ -26,9 +30,9 @@ class MergingSiteRepository(
         require(repositories.isNotEmpty()) { "Without a source there's nothing to merge" }
     }
 
-    override suspend fun sitesIn(area: SearchArea, networks: List<Network>): List<ChargeSite> = coroutineScope {
+    override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> = coroutineScope {
         val results = repositories
-            .map { repository -> async { runCatching { repository.sitesIn(area, networks) } } }
+            .map { repository -> async { runCatching { repository.load(area, networks) } } }
             .awaitAll()
 
         results.forEach { result ->
@@ -42,10 +46,15 @@ class MergingSiteRepository(
         SiteMerger.merge(successful.flatten(), maxDistanceMeters)
     }
 
-    override suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = coroutineScope {
-        val results = repositories.map { repo -> async { runCatching { repo.storedSitesIn(box) } } }.awaitAll()
-        SiteMerger.merge(results.mapNotNull { it.getOrNull() }.flatten(), maxDistanceMeters)
-    }
+    override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> =
+        combine(
+            repositories.map { repository ->
+                repository.storedSitesIn(box, filter).catch { failure ->
+                    logWarning("A store failed", failure)
+                    emit(emptyList())
+                }
+            },
+        ) { stocks -> SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters) }
 
     override suspend fun invalidate() {
         repositories.forEach { it.invalidate() }

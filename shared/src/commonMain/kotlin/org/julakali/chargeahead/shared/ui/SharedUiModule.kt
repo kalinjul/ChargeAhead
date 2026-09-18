@@ -8,7 +8,7 @@ import org.koin.dsl.module
 /** Every phone-screen ViewModel, declared once for both platforms. */
 fun sharedUiModule(): Module = module {
     // Not viewModelOf: it would try to inject the defaulted timeout parameter.
-    viewModel { HomeViewModel(get(), get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get()) }
     viewModelOf(::TripViewModel)
     viewModelOf(::PlanSheetViewModel)
     viewModelOf(::ChargeNowViewModel)

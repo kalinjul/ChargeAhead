@@ -3,31 +3,27 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.MapCharger
-import org.julakali.chargeahead.shared.PlanningFeature
 import org.julakali.chargeahead.shared.data.SiteFetchActivity
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.MapCharger
+import org.julakali.chargeahead.shared.domain.MapFilter
+import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.Reachability
+import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
+import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.distanceKmTo
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /** The map screen. */
@@ -56,10 +52,11 @@ data class HomeUiState(
  * State holder for the map screen. The location pipeline itself lives in the
  * app-scoped [ChargeStopsFeature].
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
     private val feature: ChargeStopsFeature,
-    private val planning: PlanningFeature,
+    private val observeMapChargers: ObserveMapChargers,
+    private val refreshMapChargers: RefreshMapChargers,
+    private val refreshChargerAvailability: RefreshChargerAvailability,
     settings: SettingsStore,
     fetchActivity: SiteFetchActivity,
     /** How long the button may spin before the map says something. */
@@ -70,27 +67,26 @@ class HomeViewModel(
 
     private val attempt = MutableStateFlow(LocationAttempt())
     private var attemptJob: Job? = null
-
-    /** The section of the world the map shows; `null` = zoomed out past the marker threshold. */
-    private val viewport = MutableStateFlow<BoundingBox?>(null)
+    private var refreshJob: Job? = null
 
     val uiState: StateFlow<HomeUiState> = combine(
         feature.state,
-        settings.chargeFilters,
-        settings.networks,
+        combine(settings.chargeFilters, settings.networks, ::Pair),
         map,
+        observeMapChargers.flow,
         // combine tops out at five typed flows.
         combine(attempt, fetchActivity.isFetching, ::Pair),
-    ) { state, filters, networks, mapState, (attempt, loadingSites) ->
+    ) { state, (filters, networks), mapState, mapChargers, (attempt, loadingSites) ->
         HomeUiState(
             position = state.position,
             stops = state.stops,
             isDemo = state.isDemo,
-            chargers = mapState.chargers,
+            chargers = mapChargers.chargers,
             belowMinZoom = mapState.belowMinZoom,
             selectedStop = mapState.selectedStop,
             filtersCustomized = !filters.isDefault || networks.isActive,
-            applyingFilters = mapState.applyingFilters,
+            // The markers still show what an earlier filter selected.
+            applyingFilters = mapChargers.filter != MapFilter.of(filters, networks),
             // Gated on the position, so a late fix clears both.
             searchingLocation = attempt.running && state.position == null,
             locationUnavailable = attempt.timedOut && state.position == null,
@@ -103,31 +99,7 @@ class HomeViewModel(
         uiState.map { it.applyingFilters }.stateIn(viewModelScope, WhileUiSubscribed, false)
 
     init {
-        // One pipeline drives both the markers and the "applying filters" flag,
-        // so the flag can't race itself. Only the filters the map applies are keyed on.
-        var lastFilterSig: Pair<NetworkPreferences, Pair<Double, Boolean>>? = null
-        combine(
-            viewport,
-            settings.networks,
-            settings.chargeFilters.map { it.minPowerKw to it.slowMode }.distinctUntilChanged(),
-        ) { viewport, networks, filterKey -> Triple(viewport, networks, filterKey) }
-            // mapLatest cancels a superseded query.
-            .mapLatest { (viewport, networks, filterKey) ->
-                val sig = networks to filterKey
-                val filterChanged = lastFilterSig != null && sig != lastFilterSig
-                lastFilterSig = sig
-                if (filterChanged) map.update { it.copy(applyingFilters = true) }
-                val chargers = withContext(Dispatchers.Default) {
-                    viewport?.let { planning.chargersIn(it) }.orEmpty()
-                }
-                map.update { it.copy(chargers = chargers, applyingFilters = false) }
-                // Markers first, live data after: the status request must not hold them back.
-                if (chargers.any { it.site.liveStatusId != null }) {
-                    val withStatus = planning.withAvailability(chargers)
-                    map.update { it.copy(chargers = withStatus) }
-                }
-            }
-            .launchIn(viewModelScope)
+        observeMapChargers(ObserveMapChargers.Params(viewport = null))
     }
 
     /** Location permission granted: the pipeline may run. Calling it twice is harmless. */
@@ -157,9 +129,19 @@ class HomeViewModel(
 
     /** `null` means: zoomed out past the point where markers are useful. */
     fun onViewportChanged(viewport: BoundingBox?) {
-        // Set before the query runs.
         map.update { it.copy(belowMinZoom = viewport == null) }
-        this.viewport.value = viewport
+        observeMapChargers(ObserveMapChargers.Params(viewport))
+        // Latest viewport wins: a pan supersedes the fetch for the previous one.
+        refreshJob?.cancel()
+        // A failed refill leaves the stored markers and statuses; nothing to tell the driver.
+        refreshJob = viewport?.let {
+            viewModelScope.launch {
+                // Stored sites get their status right away, the ones the refill adds after it.
+                launch { refreshChargerAvailability(RefreshChargerAvailability.Params(it)) }
+                refreshMapChargers(RefreshMapChargers.Params(it))
+                refreshChargerAvailability(RefreshChargerAvailability.Params(it))
+            }
+        }
     }
 
     /** A tapped map marker becomes the same detail dialog the corridor list uses. */
@@ -187,10 +169,8 @@ class HomeViewModel(
     )
 
     private data class MapState(
-        val chargers: List<MapCharger> = emptyList(),
         val belowMinZoom: Boolean = false,
         val selectedStop: ChargeStop? = null,
-        val applyingFilters: Boolean = false,
     )
 
     companion object {

@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared.domain
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 /** Ongoing stream of location fixes. */
 interface LocationSource {
@@ -49,13 +50,14 @@ fun interface TimeProvider {
  * from this stock and replenishes it in the background.
  */
 interface SiteRepository {
-    suspend fun sitesIn(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite>
+    suspend fun load(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite>
 
     /**
-     * Returns whatever is already cached in [box] — no fetch, no coverage
-     * check. An empty result is valid; use [sitesIn] when you need fresh data.
+     * The stored sites in [box] that pass [filter] — no fetch, no coverage
+     * check — and again whenever the store changes. An empty list is valid;
+     * [load] refills.
      */
-    suspend fun storedSitesIn(box: BoundingBox): List<ChargeSite> = emptyList()
+    fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
 
     /**
      * Discards the stock so the next access actually queries.

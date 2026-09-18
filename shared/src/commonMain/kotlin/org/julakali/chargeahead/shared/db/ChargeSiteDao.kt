@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 
 data class OperatorCount(val operator: String?, val sites: Long)
 
@@ -15,6 +16,29 @@ interface ChargeSiteDao {
 
     @Query("SELECT * FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east")
     suspend fun sitesInBox(south: Double, north: Double, west: Double, east: Double): List<ChargeSiteEntity>
+
+    /**
+     * Slow mode: every site whose strongest connector is below [slowBelowKw].
+     * Otherwise: DC sites from [minPowerKw] up, restricted to [networkKeys]
+     * when [filterNetworks] is set.
+     */
+    @Query(
+        "SELECT * FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east " +
+            "AND ((:slowMode AND maxPowerKw < :slowBelowKw) " +
+            "OR (NOT :slowMode AND maxDcPowerKw >= :minPowerKw " +
+            "AND (NOT :filterNetworks OR networkKey IN (:networkKeys))))",
+    )
+    fun observeFilteredSitesInBox(
+        south: Double,
+        north: Double,
+        west: Double,
+        east: Double,
+        slowMode: Boolean,
+        slowBelowKw: Double,
+        minPowerKw: Double,
+        filterNetworks: Boolean,
+        networkKeys: List<String>,
+    ): Flow<List<ChargeSiteEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertSites(sites: List<ChargeSiteEntity>)
