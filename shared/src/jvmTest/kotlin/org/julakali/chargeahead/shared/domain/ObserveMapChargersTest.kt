@@ -205,6 +205,32 @@ class ObserveMapChargersTest {
     }
 
     @Test
+    fun `the availability counts only live points from the minimum power`() = runBlocking<Unit> {
+        fun point(state: ChargePointState, kw: Double) = ChargePointStatus(state, kw, listOf(ConnectorType.CCS2))
+        statusStore.value = mapOf(
+            "live-mixed" to listOf(
+                point(ChargePointState.AVAILABLE, 150.0),
+                point(ChargePointState.AVAILABLE, 150.0),
+                point(ChargePointState.AVAILABLE, 300.0),
+                point(ChargePointState.AVAILABLE, 300.0),
+            ),
+            "live-weak" to listOf(point(ChargePointState.AVAILABLE, 150.0)),
+        )
+        val observe = observer(
+            listOf(
+                site("mixed", "Ionity", 300.0, liveStatusId = "live-mixed"),
+                site("weak", "EnBW", 300.0, liveStatusId = "live-weak"),
+            ),
+        ) { setChargeFilters(ChargeFilters(minPowerKw = 300.0)) }
+
+        val chargers = observe.await().chargers.associateBy { it.site.id }
+
+        assertEquals(SiteAvailability.Live(free = 2, total = 2), chargers.getValue("demo:mixed").availability)
+        // The site data says 300 kW, the live data doesn't: shown, but without a count.
+        assertNull(chargers.getValue("demo:weak").availability)
+    }
+
+    @Test
     fun `statuses a refresh stores show up on the map`() = runBlocking<Unit> {
         val observe = observer(listOf(site("hpc", "Ionity", 350.0, liveStatusId = "live-hpc")))
         observe.await()

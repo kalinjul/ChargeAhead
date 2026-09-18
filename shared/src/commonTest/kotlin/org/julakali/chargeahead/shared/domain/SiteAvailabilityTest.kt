@@ -9,8 +9,11 @@ class SiteAvailabilityTest {
     private fun point(state: ChargePointState, vararg connectors: ConnectorType) =
         ChargePointStatus(state = state, connectors = connectors.toList().ifEmpty { listOf(ConnectorType.CCS2) })
 
-    private fun of(vararg points: ChargePointStatus, slowMode: Boolean = false) =
-        SiteAvailability.of(points.toList(), slowMode)
+    private fun of(vararg points: ChargePointStatus, slowMode: Boolean = false, minPowerKw: Double = 0.0) =
+        SiteAvailability.of(points.toList(), slowMode, minPowerKw)
+
+    private fun point(state: ChargePointState, maxPowerKw: Double) =
+        ChargePointStatus(state = state, maxPowerKw = maxPowerKw, connectors = listOf(ConnectorType.CCS2))
 
     @Test
     fun countsFreePointsAgainstAllKnownOnes() {
@@ -60,5 +63,37 @@ class SiteAvailabilityTest {
         val untyped = ChargePointStatus(state = ChargePointState.AVAILABLE)
 
         assertEquals(SiteAvailability.Live(free = 1, total = 1), of(untyped))
+    }
+
+    @Test
+    fun onlyPointsFromTheMinimumPowerCount() {
+        val availability = of(
+            point(ChargePointState.AVAILABLE, maxPowerKw = 150.0),
+            point(ChargePointState.AVAILABLE, maxPowerKw = 150.0),
+            point(ChargePointState.AVAILABLE, maxPowerKw = 300.0),
+            point(ChargePointState.OCCUPIED, maxPowerKw = 300.0),
+            minPowerKw = 300.0,
+        )
+
+        assertEquals(SiteAvailability.Live(free = 1, total = 2), availability)
+    }
+
+    @Test
+    fun noLivePointFromTheMinimumPowerMeansNoAvailability() {
+        assertNull(of(point(ChargePointState.AVAILABLE, maxPowerKw = 150.0), minPowerKw = 300.0))
+    }
+
+    @Test
+    fun aPointWithoutKnownPowerCounts() {
+        val unrated = ChargePointStatus(state = ChargePointState.AVAILABLE, connectors = listOf(ConnectorType.CCS2))
+
+        assertEquals(SiteAvailability.Live(free = 1, total = 1), of(unrated, minPowerKw = 300.0))
+    }
+
+    @Test
+    fun slowModeIgnoresTheMinimumPower() {
+        val weak = point(ChargePointState.AVAILABLE, maxPowerKw = 11.0)
+
+        assertEquals(SiteAvailability.Live(free = 1, total = 1), of(weak, slowMode = true, minPowerKw = 300.0))
     }
 }
