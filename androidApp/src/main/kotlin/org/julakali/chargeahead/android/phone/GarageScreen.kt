@@ -36,6 +36,7 @@ import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.ui.GarageUiState
 import org.julakali.chargeahead.shared.ui.GarageViewModel
+import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
 /**
@@ -47,7 +48,7 @@ fun GarageRoute(
     onOpenAdvanced: () -> Unit,
     onOpenAdd: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: GarageViewModel = phoneViewModel(),
+    viewModel: GarageViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     GarageScreen(

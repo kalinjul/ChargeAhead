@@ -119,7 +119,7 @@ class ExampleViewModel(
 fun ExampleRoute(
     onOpenDetail: (String) -> Unit,        // navigation comes from the caller
     modifier: Modifier = Modifier,
-    viewModel: ExampleViewModel = phoneViewModel(),
+    viewModel: ExampleViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ExampleScreen(
@@ -148,7 +148,11 @@ Then declare it once:
 viewModelOf(::ExampleViewModel)
 ```
 
-`phoneViewModel()` resolves it through Koin. Forgetting the declaration
+`koinViewModel()` resolves it through Koin, scoped to the Navigation3 entry
+when the Route sits inside `NavDisplay` (cleared on pop) and to the activity
+when it sits in the chrome around it (map, drawer, sheets). A ViewModel that
+both the chrome and a page need must be resolved in the chrome and handed
+down. Forgetting the declaration
 fails at runtime, not at compile time — add it in the same commit.
 
 ## Sealed UiState, or a data class?

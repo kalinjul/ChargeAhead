@@ -77,6 +77,7 @@ koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", versi
 # --- Navigation (phone app only — the car has the Car App Library's own stack) ---
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "navigation3" }
+androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycle" }
 
 # --- Android Auto ---
 car-app = { module = "androidx.car.app:app", version.ref = "carApp" }

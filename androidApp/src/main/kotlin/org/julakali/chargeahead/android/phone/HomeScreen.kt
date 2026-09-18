@@ -36,6 +36,7 @@ import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.ui.HomeUiState
 import org.julakali.chargeahead.shared.ui.HomeViewModel
+import org.koin.androidx.compose.koinViewModel
 
 /** The map screen with its state holder attached. */
 @Composable
@@ -50,7 +51,7 @@ fun HomeRoute(
     onChargeNow: () -> Unit,
     onRoutes: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = phoneViewModel(),
+    viewModel: HomeViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

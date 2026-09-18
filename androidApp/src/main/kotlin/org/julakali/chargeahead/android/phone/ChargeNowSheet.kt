@@ -45,13 +45,14 @@ import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
 import org.julakali.chargeahead.shared.domain.RelaxedFilter
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
+import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
 @Composable
 fun ChargeNowRoute(
     onNavigate: (ChargeNowCandidate) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: ChargeNowViewModel = phoneViewModel(),
+    viewModel: ChargeNowViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ChargeNowSheetContent(uiState = uiState, onNavigate = onNavigate, modifier = modifier)

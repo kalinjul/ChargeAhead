@@ -49,6 +49,7 @@ import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import org.julakali.chargeahead.shared.ui.PlanSheetUiState
 import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
+import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
 /** Destination entry for planning: search via the shared geocoder, recents below. */
@@ -56,7 +57,7 @@ import kotlin.math.roundToInt
 fun PlanSheetRoute(
     onPlan: (Destination, Double) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: PlanSheetViewModel = phoneViewModel(),
+    viewModel: PlanSheetViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     PlanSheetContent(
