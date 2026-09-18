@@ -6,25 +6,27 @@ import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
-import org.julakali.chargeahead.shared.domain.ObserveChargeNow
-import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.PlanTrip
-import org.julakali.chargeahead.shared.domain.RefreshChargeNow
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.settings.UserDefaultsStorage
+import org.julakali.chargeahead.shared.ui.ChargeNowUiState
+import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
+import org.julakali.chargeahead.shared.ui.PlanSheetUiState
+import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
+import org.julakali.chargeahead.shared.ui.ViewModelHost
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import org.koin.core.Koin
 import org.koin.dsl.koinApplication
@@ -87,20 +89,16 @@ data class TripPlanOutcome(
     enum class TripPlanFailure { NO_VEHICLE, NO_ROUTE, NO_CHARGER_IN_REACH }
 }
 
-/**
- * The phone planning flows as plain callbacks on the main thread.
- *
- * @param feature unused; kept for the Swift call site until #39.
- */
-class PlanningBridge(@Suppress("UNUSED_PARAMETER") feature: ChargeStopsFeature) {
+/** The phone planning flows as plain callbacks on the main thread; [close] ends them. */
+class PlanningBridge(feature: ChargeStopsFeature) {
 
     private val koin: Koin = requireNotNull(graph) {
         "No graph yet — call createChargeStopsFeature first"
     }
     private val planTrip: PlanTrip = koin.get()
-    private val observeChargeNow: ObserveChargeNow = koin.get()
-    private val refreshChargeNow: RefreshChargeNow = koin.get()
-    private val observeDestinationSearch: ObserveDestinationSearch = koin.get()
+    private val viewModels = ViewModelHost()
+    private val chargeNowViewModel = viewModels.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
+    private val planSheetViewModel = viewModels.get { PlanSheetViewModel(feature, koin.get(), koin.get()) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var chargeNowJob: Job? = null
     private var searchJob: Job? = null
@@ -127,37 +125,36 @@ class PlanningBridge(@Suppress("UNUSED_PARAMETER") feature: ChargeStopsFeature) 
         }
     }
 
-    /** Reports the ranking around [position] on every change until [close]: the stored sites first, the refilled ones after. */
-    fun chargeNow(position: LatLon, onResult: (ChargeNowResult) -> Unit) {
-        observeChargeNow(ObserveChargeNow.Params(position))
+    /** Ranks from the feature's current position and reports every change until [close]. */
+    fun chargeNow(onResult: (ChargeNowResult) -> Unit) {
         chargeNowJob?.cancel()
         chargeNowJob = scope.launch {
-            // Undispatched, so the refill counts as running before the first ranking arrives.
-            launch(start = CoroutineStart.UNDISPATCHED) { refreshChargeNow(RefreshChargeNow.Params(position)) }
-            combine(observeChargeNow.flow.filterNotNull(), refreshChargeNow.inProgress) { result, refreshing ->
-                result.takeUnless { it.isEmpty && refreshing }
-            }
-                .filterNotNull()
+            chargeNowViewModel.uiState
+                .mapNotNull { (it as? ChargeNowUiState.Ready)?.result }
                 .collect(onResult)
         }
+        chargeNowViewModel.onSheetOpened()
     }
 
     /** Reports the places found for the latest [searchDestinations] query until [close]. */
     fun watchDestinationSearch(onChange: (List<Place>) -> Unit) {
         searchJob?.cancel()
         searchJob = scope.launch {
-            observeDestinationSearch.flow
+            planSheetViewModel.uiState
                 .filter { !it.searching }
-                .collect { onChange(it.results.orEmpty()) }
+                .map { it.results.orEmpty() }
+                .distinctUntilChanged()
+                .collect(onChange)
         }
     }
 
-    /** Debounced; queries shorter than [ObserveDestinationSearch.MIN_QUERY_LENGTH] find nothing. */
+    /** Debounced; queries shorter than [PlanSheetUiState.MIN_QUERY_LENGTH] find nothing. */
     fun searchDestinations(query: String) {
-        observeDestinationSearch(ObserveDestinationSearch.Params(query))
+        planSheetViewModel.onQueryChanged(query)
     }
 
     fun close() {
         scope.cancel()
+        viewModels.clear()
     }
 }

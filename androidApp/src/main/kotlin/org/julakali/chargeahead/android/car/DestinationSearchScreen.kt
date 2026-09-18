@@ -7,15 +7,17 @@ import androidx.car.app.model.ItemList
 import androidx.car.app.model.Row
 import androidx.car.app.model.SearchTemplate
 import androidx.car.app.model.Template
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.Destination
-import org.julakali.chargeahead.shared.domain.DestinationSearch
-import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
-import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.toDestination
+import org.julakali.chargeahead.shared.ui.PlanSheetUiState
+import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
+import org.julakali.chargeahead.shared.ui.ViewModelHost
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -27,31 +29,28 @@ import org.koin.core.component.get
 class DestinationSearchScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
-    private val settings: SettingsStore,
 ) : Screen(carContext), KoinComponent {
 
-    private val observeDestinationSearch: ObserveDestinationSearch = get()
+    private val viewModels = ViewModelHost()
+    private val viewModel = viewModels.get { PlanSheetViewModel(feature, get(), get()) }
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var recents: List<Destination> = emptyList()
-    private var search = DestinationSearch(query = "", results = emptyList(), searching = false)
+    private var uiState = PlanSheetUiState()
     private var query = ""
     private var submittedQuery = ""
 
     init {
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                viewModels.clear()
+            }
+        })
         lifecycleScope.launch {
-            settings.recentDestinations.collect { updated ->
-                recents = updated
+            viewModel.uiState.collect { updated ->
+                uiState = updated
                 invalidate()
             }
         }
-        lifecycleScope.launch {
-            observeDestinationSearch.flow.collect { updated ->
-                search = updated
-                invalidate()
-            }
-        }
-        observeDestinationSearch(ObserveDestinationSearch.Params(query = ""))
     }
 
     override fun onGetTemplate(): Template {
@@ -61,7 +60,7 @@ class DestinationSearchScreen(
             .setShowKeyboardByDefault(true)
 
         // SearchTemplate rejects an item list while loading (issue #81).
-        if (search.searching) return template.setLoading(true).build()
+        if (uiState.searching) return template.setLoading(true).build()
 
         // Until the search is submitted, an empty list means "not searched yet".
         val emptyMessage = if (query.isNotBlank() && query != submittedQuery) {
@@ -73,9 +72,9 @@ class DestinationSearchScreen(
             .setNoItemsMessage(carContext.getString(emptyMessage))
 
         if (query.isBlank()) {
-            recents.forEach { destination -> itemList.addItem(recentRow(destination)) }
+            uiState.recent.forEach { destination -> itemList.addItem(recentRow(destination)) }
         } else {
-            search.results.orEmpty().forEach { place -> itemList.addItem(placeRow(place)) }
+            uiState.results.orEmpty().forEach { place -> itemList.addItem(placeRow(place)) }
         }
 
         return template.setItemList(itemList.build()).build()
@@ -85,7 +84,7 @@ class DestinationSearchScreen(
     private val callback = object : SearchTemplate.SearchCallback {
         override fun onSearchTextChanged(searchText: String) {
             query = searchText
-            if (searchText.isBlank()) observeDestinationSearch(ObserveDestinationSearch.Params(query = ""))
+            if (searchText.isBlank()) viewModel.onQueryChanged("")
             invalidate()
         }
 
@@ -94,7 +93,7 @@ class DestinationSearchScreen(
             if (searchText.isBlank()) return
 
             submittedQuery = searchText
-            observeDestinationSearch(ObserveDestinationSearch.Params(searchText, debounce = false))
+            viewModel.onQuerySubmitted(searchText)
         }
     }
 

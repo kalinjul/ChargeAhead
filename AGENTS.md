@@ -466,7 +466,9 @@ The short version, for the cases where the skill isn't loaded:
   claim honest.
 
 This section is about `androidApp/phone` only. The car UI has its own
-lifecycle from the Car App Library and uses `ChargeStopsFeature` directly.
+lifecycle from the Car App Library and uses `ChargeStopsFeature` directly;
+where it needs a domain observer, it takes the shared ViewModel through
+`ViewModelHost` instead, since observers are used only in ViewModels.
 
 ## Rules for the car UI
 

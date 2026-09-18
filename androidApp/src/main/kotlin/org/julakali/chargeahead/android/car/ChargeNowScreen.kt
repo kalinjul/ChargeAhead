@@ -10,6 +10,8 @@ import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
@@ -17,10 +19,9 @@ import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.RelaxedFilter
-import org.julakali.chargeahead.shared.domain.Fix
-import org.julakali.chargeahead.shared.domain.ObserveChargeNow
-import org.julakali.chargeahead.shared.domain.RefreshChargeNow
-import kotlinx.coroutines.flow.filterNotNull
+import org.julakali.chargeahead.shared.ui.ChargeNowUiState
+import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
+import org.julakali.chargeahead.shared.ui.ViewModelHost
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
@@ -35,40 +36,33 @@ class ChargeNowScreen(
     private val feature: ChargeStopsFeature,
 ) : Screen(carContext), KoinComponent {
 
-    private val observeChargeNow: ObserveChargeNow = get()
-    private val refreshChargeNow: RefreshChargeNow = get()
+    private val viewModels = ViewModelHost()
+    private val viewModel = viewModels.get { ChargeNowViewModel(feature, get(), get()) }
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var result: ChargeNowResult? = null
-    private var refreshing = false
+    private var uiState: ChargeNowUiState = ChargeNowUiState.NoPosition
 
     init {
+        lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                viewModels.clear()
+            }
+        })
         lifecycleScope.launch {
-            observeChargeNow.flow.collect {
-                result = it
+            viewModel.uiState.collect {
+                uiState = it
                 invalidate()
             }
         }
         lifecycleScope.launch {
-            refreshChargeNow.inProgress.collect {
-                refreshing = it
-                invalidate()
-            }
+            // The car's feature may not have a position yet.
+            feature.state.first { it.position != null }
+            viewModel.onSheetOpened()
         }
-        lifecycleScope.launch {
-            load(feature.currentFix.filterNotNull().first())
-        }
-    }
-
-    private suspend fun load(fix: Fix) {
-        observeChargeNow(ObserveChargeNow.Params(fix.position))
-        // A failed refill leaves the stored sites to rank.
-        refreshChargeNow(RefreshChargeNow.Params(fix.position))
     }
 
     override fun onGetTemplate(): Template {
-        // Nothing stored yet: wait for the refill rather than say "nothing nearby".
-        val current = result?.takeUnless { it.isEmpty && refreshing } ?: return loadingTemplate()
+        val current = (uiState as? ChargeNowUiState.Ready)?.result ?: return loadingTemplate()
 
         val candidates = current.candidates + current.more
         if (candidates.isEmpty()) {
@@ -143,7 +137,7 @@ class ChargeNowScreen(
                 Action.Builder()
                     .setIcon(icon(R.drawable.ic_refresh))
                     .setOnClickListener {
-                        lifecycleScope.launch { feature.currentFix.value?.let { load(it) } }
+                        viewModel.onSheetOpened()
                     }
                     .build(),
             )

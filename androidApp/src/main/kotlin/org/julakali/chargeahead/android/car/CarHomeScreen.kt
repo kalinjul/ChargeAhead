@@ -108,7 +108,7 @@ class CarHomeScreen(
         .setTitle(carContext.getString(R.string.car_home_enter_destination))
         .setImage(icon(R.drawable.ic_search), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature, settings)) }
+        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature)) }
         .build()
 
     private fun chargeNowRow(): Row = Row.Builder()

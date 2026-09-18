@@ -257,8 +257,8 @@ struct ChargeNowView: View {
             .navigationTitle(NSLocalizedString("cn_title", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                guard let position else { return }
-                bridge.chargeNow(position: position) { result = $0 }
+                guard position != nil else { return }
+                bridge.chargeNow { result = $0 }
             }
             .onDisappear {
                 bridge.close()
