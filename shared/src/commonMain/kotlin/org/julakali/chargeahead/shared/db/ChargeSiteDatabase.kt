@@ -27,6 +27,7 @@ data class ChargeSiteEntity(
     val postalCode: String?,
     val town: String?,
     val fetchedAtMillis: Long,
+    val liveStatusId: String? = null,
 )
 
 @Entity(tableName = "tileCoverage", primaryKeys = ["sourceId", "networkKey", "tileLat", "tileLon"])
@@ -60,7 +61,7 @@ data class CorridorCoverageEntity(
 // (fallbackToDestructiveMigration).
 @Database(
     entities = [ChargeSiteEntity::class, TileCoverageEntity::class, CorridorCoverageEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)

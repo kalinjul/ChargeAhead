@@ -6,6 +6,8 @@ import org.julakali.chargeahead.shared.core.ChargeNowResult
 import org.julakali.chargeahead.shared.core.TripPlanResult
 import org.julakali.chargeahead.shared.core.TripPlanner
 import org.julakali.chargeahead.shared.domain.BoundingBox
+import org.julakali.chargeahead.shared.domain.ChargePointStatus
+import org.julakali.chargeahead.shared.domain.ChargePointStatusSource
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
@@ -13,16 +15,23 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.SectorArea
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.ViewportArea
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /** A charger as the map shows it: the site and its strongest DC power. */
 data class MapCharger(
     val site: ChargeSite,
     val maxPowerKw: Double,
+    /** `null` until [PlanningFeature.withAvailability] found live data. */
+    val availability: SiteAvailability? = null,
 )
 
 /**
@@ -35,7 +44,13 @@ class PlanningFeature(
     private val tripPlanner: TripPlanner,
     private val repository: SiteRepository,
     private val settings: SettingsStore,
+    /** `null` without a backend: no live data then. */
+    private val statusSource: ChargePointStatusSource? = null,
+    private val time: TimeProvider = TimeProvider { currentTimeMillis() },
 ) {
+
+    private val statusCache = mutableMapOf<String, CachedStatus>()
+    private val statusCacheLock = Mutex()
 
     /**
      * Plans [from] → [destination] with the selected vehicle.
@@ -119,6 +134,39 @@ class PlanningFeature(
             .take(MAX_MAP_CHARGERS)
     }
 
+    /** [chargers] with their live availability, where the backend has any. Failures leave them as they are. */
+    suspend fun withAvailability(chargers: List<MapCharger>): List<MapCharger> {
+        val source = statusSource ?: return chargers
+        val ids = chargers.mapNotNull { it.site.liveStatusId }
+        if (ids.isEmpty()) return chargers
+        val slowMode = settings.chargeFilters.first().slowMode
+
+        val statuses = statusCacheLock.withLock {
+            val now = time.nowMillis()
+            statusCache.values.removeAll { now - it.fetchedAtMillis > STATUS_TTL_MILLIS }
+            val missing = ids.filter { it !in statusCache }
+            if (missing.isNotEmpty()) {
+                val fetched = try {
+                    source.status(missing)
+                } catch (failure: CancellationException) {
+                    throw failure
+                } catch (failure: Exception) {
+                    emptyMap()
+                }
+                // Unknown ids are cached too, so they aren't asked for again right away.
+                missing.forEach { id -> statusCache[id] = CachedStatus(fetched[id].orEmpty(), now) }
+            }
+            ids.associateWith { statusCache[it]?.points.orEmpty() }
+        }
+
+        return chargers.map { charger ->
+            val points = charger.site.liveStatusId?.let { statuses[it] } ?: return@map charger
+            charger.copy(availability = SiteAvailability.of(points, slowMode))
+        }
+    }
+
+    private class CachedStatus(val points: List<ChargePointStatus>, val fetchedAtMillis: Long)
+
     private fun BoundingBox.paddedByViewports(factor: Double): BoundingBox {
         val padLat = (north - south) * factor
         val padLon = (east - west) * factor
@@ -140,5 +188,7 @@ class PlanningFeature(
         const val MAX_MAP_CHARGERS = 200
 
         const val MAP_RENDER_PADDING_VIEWPORTS = 2.0
+
+        const val STATUS_TTL_MILLIS = 60_000L
     }
 }

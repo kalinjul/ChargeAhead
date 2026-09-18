@@ -133,16 +133,19 @@ fun HomeGoogleMap(
 
     val scope = rememberCoroutineScope()
 
-    // Each distinct pill (speed + operator label) is rasterized once and reused.
+    // Each distinct pill (speed, operator label, availability) is rasterized once and reused.
     val density = LocalDensity.current
     val iconCache = remember { mutableMapOf<PillKey, BitmapDescriptor>() }
+    val outOfOrderText = stringResource(R.string.map_out_of_order)
 
     // Built once per charger-list change, not per recomposition.
-    val markers = remember(chargers, density) {
+    val markers = remember(chargers, density, outOfOrderText) {
         chargers.map { charger ->
             val pillKey = PillKey(
-                ChargeSpeed.of(charger.maxPowerKw),
-                OperatorShortName.of(charger.site.operator),
+                speed = ChargeSpeed.of(charger.maxPowerKw),
+                label = OperatorShortName.of(charger.site.operator),
+                availability = charger.availability,
+                outOfOrderText = outOfOrderText,
             )
             ChargerMarker(
                 charger = charger,

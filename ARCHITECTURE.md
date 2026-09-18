@@ -429,6 +429,19 @@ Field-by-field priority:
 `SiteId` stays source-qualified (`ocm:12345`, `bnetza:DE*ABC*E001`), the
 merged site carries both in `sources`.
 
+With a backend configured, the BNetzA merge happens there; the app no longer
+queries the register itself and only merges what one source returns.
+
+### 5.6 Live availability
+
+Sites the backend flags with `hasLiveStatus` keep that id as
+`ChargeSite.liveStatusId` (it survives a merge). The map asks
+`/v1/charge-point-status` for the visible ones after the markers are drawn,
+caches the answer for 60 s in memory, and never stores it in Room. A pill
+then gets a second line: free/known fast-charging points with a
+green/amber/red dot, or a red "Außer Betrieb" when every known point is out
+of order or blocked. `unknown` points count neither way.
+
 ---
 
 ## 6. Data sources

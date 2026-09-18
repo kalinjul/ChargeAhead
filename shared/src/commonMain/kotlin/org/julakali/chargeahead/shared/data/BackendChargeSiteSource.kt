@@ -85,17 +85,20 @@ private fun ChargeSiteDto.toDomain() = ChargeSite(
     connectors = connectors.map { it.toDomain() },
     address = address?.let { Address(street = it.street, postalCode = it.postalCode, town = it.town) },
     sources = sources.ifEmpty { setOf(BackendChargeSiteSource.SOURCE_ID) },
+    liveStatusId = id.takeIf { hasLiveStatus },
 )
 
 private fun ConnectorDto.toDomain() = Connector(
-    type = when (type) {
-        ConnectorTypeDto.CCS2 -> ConnectorType.CCS2
-        ConnectorTypeDto.TYPE2 -> ConnectorType.TYPE2
-        ConnectorTypeDto.CHADEMO -> ConnectorType.CHADEMO
-        ConnectorTypeDto.TESLA_NACS -> ConnectorType.TESLA_NACS
-        ConnectorTypeDto.SCHUKO -> ConnectorType.SCHUKO
-        ConnectorTypeDto.UNKNOWN -> ConnectorType.UNKNOWN
-    },
+    type = type.toDomain(),
     maxPowerKw = maxPowerKw,
     count = count,
 )
+
+internal fun ConnectorTypeDto.toDomain(): ConnectorType = when (this) {
+    ConnectorTypeDto.CCS2 -> ConnectorType.CCS2
+    ConnectorTypeDto.TYPE2 -> ConnectorType.TYPE2
+    ConnectorTypeDto.CHADEMO -> ConnectorType.CHADEMO
+    ConnectorTypeDto.TESLA_NACS -> ConnectorType.TESLA_NACS
+    ConnectorTypeDto.SCHUKO -> ConnectorType.SCHUKO
+    ConnectorTypeDto.UNKNOWN -> ConnectorType.UNKNOWN
+}

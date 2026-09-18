@@ -121,6 +121,11 @@ class HomeViewModel(
                     viewport?.let { planning.chargersIn(it) }.orEmpty()
                 }
                 map.update { it.copy(chargers = chargers, applyingFilters = false) }
+                // Markers first, live data after: the status request must not hold them back.
+                if (chargers.any { it.site.liveStatusId != null }) {
+                    val withStatus = planning.withAvailability(chargers)
+                    map.update { it.copy(chargers = withStatus) }
+                }
             }
             .launchIn(viewModelScope)
     }

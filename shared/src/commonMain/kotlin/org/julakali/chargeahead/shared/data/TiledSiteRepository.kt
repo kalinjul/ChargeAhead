@@ -182,6 +182,7 @@ class TiledSiteRepository(
                     street = site.address?.street,
                     postalCode = site.address?.postalCode,
                     town = site.address?.town,
+                    liveStatusId = site.liveStatusId,
                     fetchedAtMillis = now,
                 )
             },
@@ -254,4 +255,5 @@ private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     connectors = connectors.decodeConnectors(),
     address = Address(street, postalCode, town).takeIf { !it.isEmpty },
     sources = setOf(sourceId),
+    liveStatusId = liveStatusId,
 )

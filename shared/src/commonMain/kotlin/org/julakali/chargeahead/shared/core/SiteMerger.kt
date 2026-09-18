@@ -84,6 +84,7 @@ object SiteMerger {
             connectors = sameSource.flatMap { it.connectors }.mergeConnectors(),
             address = leading.address ?: cluster.firstNotNullOfOrNull { it.address },
             sources = cluster.flatMapTo(mutableSetOf()) { it.sources },
+            liveStatusId = leading.liveStatusId ?: cluster.firstNotNullOfOrNull { it.liveStatusId },
         )
     }
 

@@ -32,6 +32,8 @@ data class ChargeSite(
     val address: Address? = null,
     /** Which sources this site comes from. More than one means it was merged. */
     val sources: Set<String> = emptySet(),
+    /** The id `/v1/charge-point-status` knows this site by; `null` without live status. */
+    val liveStatusId: String? = null,
 )
 
 data class ChargeStop(

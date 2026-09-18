@@ -1,10 +1,10 @@
 package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.core.TripPlanner
+import org.julakali.chargeahead.shared.data.BackendChargePointStatusSource
 import org.julakali.chargeahead.shared.data.BackendChargeSiteSource
 import org.julakali.chargeahead.shared.data.BackendGeocoder
 import org.julakali.chargeahead.shared.data.BackendRouteEngine
-import org.julakali.chargeahead.shared.data.BnetzaSource
 import org.julakali.chargeahead.shared.data.CombinedSoCSource
 import org.julakali.chargeahead.shared.data.DemoSiteSource
 import org.julakali.chargeahead.shared.data.ManualSoCSource
@@ -74,20 +74,15 @@ fun chargeStopsModule(): Module = module {
             key != null -> OpenChargeMapSource(get(), key)
             else -> DemoSiteSource()
         }
-        val sources = buildList {
-            add(primary)
-            if (!config.isDemo) add(BnetzaSource(get()))
-        }
-        // Each source gets its own store and thus its own tile coverage.
         MergingSiteRepository(
-            sources.map { source ->
+            listOf(
                 TiledSiteRepository(
-                    source = source,
+                    source = primary,
                     database = get(),
                     time = get(),
                     fetchActivity = get(),
-                )
-            },
+                ),
+            ),
         )
     }
 
@@ -107,7 +102,18 @@ fun chargeStopsModule(): Module = module {
 
     single { OperatorCatalog(get()) }
     single { TripPlanner(get(), get()) }
-    single { PlanningFeature(tripPlanner = get(), repository = get(), settings = get()) }
+    single {
+        val statusSource = get<ChargeStopsConfig>().backend?.let { backend ->
+            BackendChargePointStatusSource(get(), backend.baseUrl, backend.token)
+        }
+        PlanningFeature(
+            tripPlanner = get(),
+            repository = get(),
+            settings = get(),
+            statusSource = statusSource,
+            time = get(),
+        )
+    }
 
     // The phone's feature. Never closed.
     single<ChargeStopsFeature> { getKoin().newChargeStopsFeature(locationSource = get()) }

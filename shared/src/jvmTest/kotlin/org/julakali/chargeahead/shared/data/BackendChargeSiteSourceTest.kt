@@ -88,6 +88,26 @@ class BackendChargeSiteSourceTest {
     }
 
     @Test
+    fun onlyASiteWithLiveStatusCarriesAStatusId() = runBlocking {
+        val source = sourceRespondingWith(
+            """
+            {
+              "sites": [
+                {"id": "mobilithek:1", "name": "A", "position": {"lat": 48.9, "lon": 11.4}, "hasLiveStatus": true},
+                {"id": "ocm:2", "name": "B", "position": {"lat": 48.9, "lon": 11.5}}
+              ],
+              "attribution": ""
+            }
+            """.trimIndent(),
+        )
+
+        val sites = source.query(area, emptyList())
+
+        assertEquals("mobilithek:1", sites[0].liveStatusId)
+        assertNull(sites[1].liveStatusId)
+    }
+
+    @Test
     fun anEmptyResultIsNotAnError() = runBlocking {
         val sites = sourceRespondingWith("""{"sites": [], "attribution": "x"}""")
             .query(area, emptyList())
