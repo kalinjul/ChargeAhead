@@ -184,6 +184,7 @@ contributor gets the same set.
 - `app-laufen-lassen` — build, install, and drive the phone app on a device
 - `dhu` — the Android Auto Desktop Head Unit for the car surface
 - `viewmodels` — the state-holder pattern every phone screen follows
+- `interactors` — the domain use cases (`Interactor`, `ObserveX`) ViewModels build on
 
 **Chris Banes' Kotlin/Compose skills** come from an external marketplace,
 registered in `.claude/settings.json`. Because the source is a third-party
