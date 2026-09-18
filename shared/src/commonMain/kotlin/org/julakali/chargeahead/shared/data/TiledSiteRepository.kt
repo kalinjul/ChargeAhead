@@ -222,6 +222,12 @@ class TiledSiteRepository(
             networkKeys = filter.networks.preferredOperators.toList(),
         ).map { entities -> entities.map(ChargeSiteEntity::toDomain) }
 
+    override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> {
+        val box = area.boundingBox
+        return dao.observeSitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)
+            .map { entities -> entities.map(ChargeSiteEntity::toDomain).filter { it.position in area } }
+    }
+
     private suspend fun readStored(area: SearchArea): List<ChargeSite> {
         val box = area.boundingBox
         return dao.sitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)

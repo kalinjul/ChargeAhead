@@ -26,8 +26,9 @@ final class ChargeStopsViewModel: ObservableObject {
             settingsStore: ChargeStopsViewModel.settingsStore
         )
         self.feature = feature
-        self.watcher = ChargeStopsWatcher(feature: feature)
-        self.state = feature.currentState
+        let watcher = ChargeStopsWatcher(feature: feature)
+        self.watcher = watcher
+        self.state = watcher.currentState
 
         watcher.start { [weak self] updated in
             guard let self = self else { return }
@@ -47,7 +48,7 @@ final class ChargeStopsViewModel: ObservableObject {
     }
 
     func refresh() {
-        feature.refresh()
+        watcher.refresh()
     }
 
     /// Injected into Info.plist via a build setting; when absent, the shared

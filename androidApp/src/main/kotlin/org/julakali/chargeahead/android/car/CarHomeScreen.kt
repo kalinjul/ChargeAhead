@@ -49,7 +49,7 @@ class CarHomeScreen(
                 .collect { granted ->
                     hasLocationPermission = granted
                     // Starting twice is a no-op.
-                    if (granted) feature.startSensors()
+                    if (granted) feature.start()
                     invalidate()
                 }
         }
@@ -96,7 +96,7 @@ class CarHomeScreen(
 
     private fun title(): String {
         val base = carContext.getString(R.string.app_name)
-        return if (feature.currentState.isDemo) {
+        return if (feature.isDemo) {
             carContext.getString(R.string.car_title_suffix_demo, base)
         } else {
             base

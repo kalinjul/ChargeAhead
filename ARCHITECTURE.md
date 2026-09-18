@@ -193,7 +193,7 @@ flowchart TD
         PH["Phone UI<br/>Compose / SwiftUI"]
     end
     subgraph shared["shared (Kotlin Multiplatform)"]
-        VM["ChargeStopsFeature<br/>StateFlow&lt;ChargeStopList&gt;"]
+        VM["ChargeStopsFeature · ObserveChargeStops<br/>location, charge, corridor list"]
         CORE["core: range · corridor · dedup"]
         DOM["domain: model + ports"]
         DATA["data: sources + cache"]
@@ -664,8 +664,8 @@ legitimate step towards "17,8" and the old screens lost it because they
 derived their fields from the stored profile.
 
 **The car UI does not use ViewModels.** The Car App Library brings its own
-`Screen` lifecycle and its own state model; `ChargeStopsFeature` is the
-shared source of state there, exactly as in section 7. Nothing about the
+`Screen` lifecycle and its own state model; `ChargeStopsFeature` and the
+domain use cases are the shared source of state there, exactly as in section 7. Nothing about the
 phone's state layer applies to `androidApp/car`.
 
 ---

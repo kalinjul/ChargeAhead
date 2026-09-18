@@ -1,8 +1,5 @@
-package org.julakali.chargeahead.shared.core
+package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.domain.Fix
-import org.julakali.chargeahead.shared.domain.angularDifferenceDeg
-import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlin.math.abs
 
 /**

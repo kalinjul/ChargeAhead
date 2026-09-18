@@ -6,8 +6,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * Plans [Params.from] → [Params.destination] with the selected vehicle,
- * makes the destination the app-wide one and puts a successful plan into
- * [TripStore].
+ * puts a successful plan into [TripStore] and makes the destination the
+ * app-wide one.
  */
 class PlanTrip(
     private val planner: TripPlanning,
@@ -27,12 +27,19 @@ class PlanTrip(
     )
 
     override suspend fun doWork(params: Params): TripPlanResult {
+        val result = plan(params)
+        if (result is TripPlanResult.Planned) store.store(result.plan)
+        // After the store, so the corridor takes the plan's route instead of fetching its own.
         settings.setDestination(params.destination)
+        return result
+    }
+
+    private suspend fun plan(params: Params): TripPlanResult {
         val vehicle = settings.vehicle.first() ?: return TripPlanResult.NoVehicle
         val soc = params.startSocPercent
             ?: settings.manualSocPercent.first()
             ?: DEFAULT_ASSUMED_SOC_PERCENT
-        val result = withContext(Dispatchers.Default) {
+        return withContext(Dispatchers.Default) {
             planner.plan(
                 from = params.from,
                 destination = params.destination,
@@ -43,8 +50,6 @@ class PlanTrip(
                 networks = settings.networks.first(),
             )
         }
-        if (result is TripPlanResult.Planned) store.store(result.plan)
-        return result
     }
 
     companion object {

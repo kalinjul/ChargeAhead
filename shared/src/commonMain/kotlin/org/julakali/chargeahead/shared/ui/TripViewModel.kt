@@ -123,8 +123,8 @@ class TripViewModel(
         combine(tripStore.plan, isPlanning, selection, socEditor, arrivalSocEditor, ::PlanInputs),
         settings.savedRoutes,
         settings.manualSocPercent,
-        feature.state,
-    ) { inputs, saved, socPercent, state ->
+        feature.currentFix,
+    ) { inputs, saved, socPercent, fix ->
         val plan = inputs.plan
         when {
             inputs.planning -> TripUiState.Planning
@@ -132,7 +132,7 @@ class TripViewModel(
             else -> TripUiState.Planned(
                 plan = plan,
                 isSaved = saved.any { it.destination.position == plan.destination.position },
-                startPosition = state.position,
+                startPosition = fix?.position,
                 startSocPercent = socPercent,
                 selection = inputs.selection,
                 socInput = inputs.socInput,
@@ -147,7 +147,7 @@ class TripViewModel(
      * A [socPercent] is persisted; `null` means "take the stored one".
      */
     fun plan(destination: Destination, socPercent: Double? = null) {
-        val from = feature.currentState.position ?: return
+        val from = feature.currentFix.value?.position ?: return
         // A new plan starts with a clean selection and closed editors.
         selection.value = SectionSelection()
         socEditor.value = null
@@ -229,7 +229,7 @@ class TripViewModel(
     /** Stores the arrival level just entered; the trip is re-planned with it. */
     fun onArrivalSocConfirmed() {
         val socPercent = arrivalSocEditor.value?.toIntOrNull()?.takeIf { it in ARRIVAL_SOC_RANGE } ?: return
-        val from = feature.currentState.position ?: return
+        val from = feature.currentFix.value?.position ?: return
         arrivalSocEditor.value = null
         viewModelScope.launch {
             updateArrivalSoc(UpdateArrivalSoc.Params(socPercent.toDouble(), from))
