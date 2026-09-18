@@ -35,14 +35,14 @@ class ObserveMapChargers(
                 repository.mapChargersIn(viewport, filter),
                 statusRepository.statuses,
             ) { chargers, statuses ->
-                MapChargers(filter, chargers.map { it.withAvailability(statuses, filter.slowMode) })
+                MapChargers(filter, chargers.map { it.withAvailability(statuses, filter) })
             }
         }
     }
 
-    private fun MapCharger.withAvailability(statuses: Map<String, List<ChargePointStatus>>, slowMode: Boolean): MapCharger {
+    private fun MapCharger.withAvailability(statuses: Map<String, List<ChargePointStatus>>, filter: MapFilter): MapCharger {
         val points = site.liveStatusId?.let(statuses::get) ?: return this
-        return copy(availability = SiteAvailability.of(points, slowMode))
+        return copy(availability = SiteAvailability.of(points, filter.slowMode, filter.minPowerKw))
     }
 
     companion object {
