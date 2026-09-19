@@ -6,7 +6,12 @@ import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +20,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -55,6 +61,21 @@ class NetworksViewModelTest {
     }
 
     @Test
+    fun `a selected network the list never had shows under its key`() = runBlocking<Unit> {
+        val settings = settings()
+        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("stadtwerke-kiel")))
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+
+        val state = vm.uiState.await { it.networks.isNotEmpty() }
+        assertEquals("stadtwerke-kiel", state.networks.first().name, "selected, so on top")
+        assertEquals(LISTED.size + 1, state.networks.size)
+
+        vm.onNetworkToggled("stadtwerke-kiel")
+        vm.onLeave()
+        assertEquals(emptySet(), settings.saved.last().preferredOperators, "it can be unticked")
+    }
+
+    @Test
     fun `toggling stages without touching settings`() = runBlocking<Unit> {
         val settings = settings()
         val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
@@ -76,6 +97,25 @@ class NetworksViewModelTest {
         vm.onLeave()
 
         assertEquals(setOf("enbw"), settings.saved.single().preferredOperators)
+    }
+
+    @Test
+    fun `leaving commits even though the ViewModel is cleared right after`() = runBlocking<Unit> {
+        // Like DataStore, the write suspends while it hops to its own thread.
+        val settings = SlowSettingsStore(PersistentSettingsStore(InMemoryPreferencesDataStore()))
+        val store = ViewModelStore()
+        val vm = ViewModelProvider.create(store, viewModelFactory {
+            initializer { NetworksViewModel(settings, FixedNetworkRepository(LISTED)) }
+        })[NetworksViewModel::class]
+
+        vm.onNetworkToggled("enbw")
+        vm.uiState.await { it.selected == setOf("enbw") }
+        // Popping the screen's back-stack entry disposes the route and clears its ViewModel.
+        vm.onLeave()
+        store.clear()
+
+        val stored = withTimeout(5_000L) { settings.networks.first { it.preferredOperators.isNotEmpty() } }
+        assertEquals(setOf("enbw"), stored.preferredOperators)
     }
 
     @Test
@@ -126,7 +166,7 @@ class NetworksViewModelTest {
         vm.onNetworkToggled("enbw")
         vm.uiState.await { it.selected == setOf("enbw") }
         vm.onLeave()
-        // The ViewModel is activity-scoped, so the same instance is reused.
+        // A second leave, e.g. a recomposition, finds nothing staged.
         vm.onLeave()
 
         assertEquals(1, settings.saved.size, "nothing left staged after the commit")
@@ -236,6 +276,17 @@ class NetworksViewModelTest {
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
         withTimeout(5_000L) { first(matching) }
+}
+
+/** Writes the way DataStore does: only after a hop to another thread. */
+private class SlowSettingsStore(
+    private val delegate: PersistentSettingsStore,
+) : org.julakali.chargeahead.shared.domain.SettingsStore by delegate {
+
+    override suspend fun setNetworks(preferences: NetworkPreferences) = withContext(Dispatchers.IO) {
+        delay(50)
+        delegate.setNetworks(preferences)
+    }
 }
 
 /** Wraps a real SettingsStore to record setNetworks calls for assertion. */
