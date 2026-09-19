@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared.data
 
 import org.julakali.chargeahead.shared.db.ChargeSiteDatabase
+import org.julakali.chargeahead.shared.db.Converters
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.ChargeSite
@@ -289,11 +290,14 @@ class TiledSiteRepositoryTest {
     @Test
     fun anUnknownConnectorTypeFromTheDatabase_doesNotCostTheWholeStore() {
         // Unknown enum names must not throw.
-        val decoded = "STECKER_AUS_DER_ZUKUNFT:150.0:2".decodeConnectors()
+        val decoded = Converters().connectorsFromJson(
+            """[{"type":"STECKER_AUS_DER_ZUKUNFT","maxPowerKw":150.0,"count":2}]""",
+        )
 
         assertEquals(1, decoded.size)
         assertEquals(ConnectorType.UNKNOWN, decoded.single().type)
         assertEquals(150.0, decoded.single().maxPowerKw)
+        assertEquals(2, decoded.single().count)
     }
 
     @Test

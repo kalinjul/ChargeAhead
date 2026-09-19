@@ -10,8 +10,6 @@ import org.julakali.chargeahead.shared.logWarning
 import org.julakali.chargeahead.shared.domain.Address
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeSiteSource
-import org.julakali.chargeahead.shared.domain.Connector
-import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
 import org.julakali.chargeahead.shared.domain.MapFilter
@@ -137,7 +135,7 @@ class TiledSiteRepository(
                 north = box.north,
                 east = box.east,
                 notOlderThanMillis = notOlderThan,
-            ).map { PolylineArea(it.points.decodePoints(), it.bufferKm) }
+            ).map { PolylineArea(it.points, it.bufferKm) }
         } else {
             emptyList()
         }
@@ -160,7 +158,7 @@ class TiledSiteRepository(
                 CorridorCoverageEntity(
                     sourceId = source.id,
                     networkKey = key,
-                    points = fetchArea.points.encodePoints(),
+                    points = fetchArea.points,
                     bufferKm = fetchArea.bufferKm,
                     south = box.south,
                     west = box.west,
@@ -183,7 +181,7 @@ class TiledSiteRepository(
                     operatorId = site.operatorId,
                     lat = site.position.lat,
                     lon = site.position.lon,
-                    connectors = site.connectors.encode(),
+                    connectors = site.connectors,
                     street = site.address?.street,
                     postalCode = site.address?.postalCode,
                     town = site.address?.town,
@@ -241,45 +239,13 @@ class TiledSiteRepository(
     }
 }
 
-/**
- * Connectors as a `type:kW:count` list, separated by semicolons. An empty count means unknown.
- */
-// TODO use Room type converters instead (#93)
-internal fun List<Connector>.encode(): String =
-    joinToString(";") { "${it.type.name}:${it.maxPowerKw}:${it.count ?: ""}" }
-
-internal fun String.decodeConnectors(): List<Connector> =
-    if (isEmpty()) {
-        emptyList()
-    } else {
-        split(";").mapNotNull { entry ->
-            val parts = entry.split(":")
-            if (parts.size != 3) return@mapNotNull null
-            val power = parts[1].toDoubleOrNull() ?: return@mapNotNull null
-            Connector(
-                // Unknown names become UNKNOWN instead of throwing.
-                type = ConnectorType.entries.firstOrNull { it.name == parts[0] } ?: ConnectorType.UNKNOWN,
-                maxPowerKw = power,
-                count = parts[2].toIntOrNull(),
-            )
-        }
-    }
-
-/** Route points as `lat,lon` pairs, separated by semicolons. */
-internal fun List<LatLon>.encodePoints(): String = joinToString(";") { "${it.lat},${it.lon}" }
-
-internal fun String.decodePoints(): List<LatLon> = split(";").map { pair ->
-    val (lat, lon) = pair.split(",")
-    LatLon(lat.toDouble(), lon.toDouble())
-}
-
 private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     id = id,
     name = name,
     operator = operator,
     operatorId = operatorId,
     position = LatLon(lat, lon),
-    connectors = connectors.decodeConnectors(),
+    connectors = connectors,
     address = Address(street, postalCode, town).takeIf { !it.isEmpty },
     sources = setOf(sourceId),
     liveStatusId = liveStatusId,
