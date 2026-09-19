@@ -154,7 +154,7 @@ replaces a keyless `local.properties` with a symlink to the main checkout's.
 A `SessionStart` hook in `.claude/settings.json` runs it, so nobody has to
 think about it. A worktree without the keys is the more insidious case
 anyway — it builds, but the app then stops at startup for lack of a backend
-and shows a placeholder map. The script leaves a `local.properties`
+and shows a "no maps key" notice instead of a map. The script leaves a `local.properties`
 that carries entries of its own untouched.
 
 Tests that need to run coroutines live in `shared/src/jvmTest` and use
@@ -301,10 +301,15 @@ interface LocationSource   { val updates: Flow<Fix> }
 // result cap must be able to query radially, or exactly the nearest
 // charging stations go missing. Empty networkKeys means every network.
 interface ChargeSiteSource { val id: String; suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> }
-// Implemented as TiledSiteRepository (Room). Always reads from the
-// database; if refilling fails, the existing stock is still returned. Only
-// if that is also empty is the error thrown.
-interface SiteRepository   { suspend fun sitesIn(area: SearchArea): List<ChargeSite>; suspend fun invalidate() }
+// Implemented as TiledSiteRepository (Room). load() refills the stock;
+// the storedSitesIn flows are what the UI observes, and emit again whenever
+// the stock changes.
+interface SiteRepository {
+    suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite>
+    fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>>
+    fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>>
+    suspend fun invalidate()
+}
 interface RouteProvider    { fun searchArea(fix: Fix, rangeKm: Double): SearchArea }
 interface RouteEngine      { suspend fun route(from: LatLon, to: LatLon): Route? }
 interface Geocoder         { suspend fun search(query: String, near: LatLon?, limit: Int): List<Place> }
@@ -327,12 +332,22 @@ interface SettingsStore {
     suspend fun removeSavedRoute(id: String)
 }
 
-// The phone's planning flows are domain use cases, Koin factories in
-// chargeStopsModule. Swift goes through PlanningBridge (iosMain) — same
-// reasoning as the watcher.
-class PlanTrip : Interactor<PlanTrip.Params, TripPlanResult>        // puts the plan into TripStore
+// Business logic lives in domain use cases, Koin factories in
+// chargeStopsModule; ViewModels and car screens only wire them up. Swift
+// goes through the bridges in iosMain. Observers read from a store; a
+// Refresh… interactor only refills that store.
+class ObserveChargeStops : SubjectInteractor<Params, ChargeStops?>   // the corridor list, car and iOS
+class RefreshChargeStops : Interactor<Params, Unit>
+class ObserveMapChargers : SubjectInteractor<Params, MapChargers>    // phone map, with live availability
+class RefreshMapChargers : Interactor<Params, Unit>
+class RefreshChargerAvailability : Interactor<Params, Unit>
 class ObserveChargeNow : SubjectInteractor<Params, ChargeNowResult?> // best 3, nearest first; relax ladder: power → networks → distance
+class RefreshChargeNow : Interactor<Params, Unit>
 class ObserveDestinationSearch : SubjectInteractor<Params, DestinationSearch>
+class PlanTrip : Interactor<PlanTrip.Params, TripPlanResult>        // puts the plan into TripStore
+class UpdateArrivalSoc : Interactor<Params, TripPlanResult?>        // stores the level, re-plans the stored trip
+class ToggleSavedRoute : Interactor<Params, Boolean>
+class RefreshNetworks : Interactor<Unit, Unit>
 ```
 
 **The route is computed once per destination, not once per location

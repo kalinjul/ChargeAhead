@@ -109,13 +109,7 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxSize(),
             )
         } else {
-            MapCanvas(
-                center = uiState.position,
-                pins = uiState.stops.map { MapPin(it.site.position, operatorColor(it.site.operator)) },
-                ownPosition = uiState.position,
-                radiusKm = 25.0,
-                modifier = Modifier.fillMaxSize(),
-            )
+            MissingMapsKeyNotice(Modifier.fillMaxSize())
         }
 
         Box(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(16.dp)) {
@@ -156,14 +150,7 @@ fun HomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (!hasGoogleMapsKey) {
-                Text(
-                    stringResource(R.string.home_map_placeholder),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (hasGoogleMapsKey && uiState.belowMinZoom) {
+            if (uiState.belowMinZoom) {
                 Surface(
                     shape = MaterialTheme.shapes.small,
                     color = MaterialTheme.colorScheme.surface,

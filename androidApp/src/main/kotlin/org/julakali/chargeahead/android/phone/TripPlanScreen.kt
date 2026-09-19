@@ -143,22 +143,7 @@ fun TripPlanScreen(
                 modifier = Modifier.fillMaxWidth().height(220.dp),
             )
         } else {
-            // Only the placeholder map needs the pin list.
-            val pins = remember(plan, startPosition) {
-                plan.stops.mapIndexed { index, stop ->
-                    MapPin(stop.site.position, operatorColor(stop.site.operator), label = "${index + 1}")
-                } + listOfNotNull(
-                    startPosition?.let { MapPin(it, MapColors.position) },
-                    MapPin(plan.destination.position, Color(0xFFD93025), emphasized = true),
-                )
-            }
-            MapCanvas(
-                center = null,
-                pins = pins,
-                routePoints = plan.route.points,
-                ownPosition = startPosition,
-                modifier = Modifier.fillMaxWidth().height(220.dp),
-            )
+            MissingMapsKeyNotice(Modifier.fillMaxWidth().height(220.dp))
         }
 
         TripSummary(plan, onReplan = onReplan)

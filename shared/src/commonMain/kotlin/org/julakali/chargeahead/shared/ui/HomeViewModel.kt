@@ -8,7 +8,6 @@ import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.MapFilter
-import org.julakali.chargeahead.shared.domain.ObserveChargeStops
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.Reachability
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
@@ -29,8 +28,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** The map screen. */
 data class HomeUiState(
     val position: LatLon? = null,
-    /** The corridor list. */
-    val stops: List<ChargeStop> = emptyList(),
     val chargers: List<MapCharger> = emptyList(),
     /** Zoomed out too far for markers. */
     val belowMinZoom: Boolean = false,
@@ -53,7 +50,6 @@ data class HomeUiState(
  */
 class HomeViewModel(
     private val feature: ChargeStopsFeature,
-    private val observeChargeStops: ObserveChargeStops,
     private val observeMapChargers: ObserveMapChargers,
     private val refreshMapChargers: RefreshMapChargers,
     private val refreshChargerAvailability: RefreshChargerAvailability,
@@ -70,16 +66,15 @@ class HomeViewModel(
 
     val uiState: StateFlow<HomeUiState> = combine(
         // combine tops out at five typed flows.
-        combine(feature.currentFix, observeChargeStops.flow, ::Pair),
+        feature.currentFix,
         combine(settings.chargeFilters, settings.networks, ::Pair),
         map,
         observeMapChargers.flow,
         combine(attempt, refreshMapChargers.inProgress, ::Pair),
-    ) { (fix, chargeStops), (filters, networks), mapState, mapChargers, (attempt, loadingSites) ->
+    ) { fix, (filters, networks), mapState, mapChargers, (attempt, loadingSites) ->
         val position = fix?.position
         HomeUiState(
             position = position,
-            stops = chargeStops?.stops.orEmpty(),
             chargers = mapChargers.chargers,
             belowMinZoom = mapState.belowMinZoom,
             selectedStop = mapState.selectedStop,
@@ -98,7 +93,6 @@ class HomeViewModel(
         uiState.map { it.applyingFilters }.stateIn(viewModelScope, WhileUiSubscribed, false)
 
     init {
-        observeChargeStops(ObserveChargeStops.Params(feature.currentFix, feature.currentEnergy))
         observeMapChargers(ObserveMapChargers.Params(viewport = null))
     }
 
