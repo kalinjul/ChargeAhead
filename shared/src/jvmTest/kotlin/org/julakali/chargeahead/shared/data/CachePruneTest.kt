@@ -5,6 +5,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import org.julakali.chargeahead.shared.db.ChargeSiteDatabase
 import org.julakali.chargeahead.shared.db.CorridorCoverageEntity
 import org.julakali.chargeahead.shared.db.TileCoverageEntity
+import org.julakali.chargeahead.shared.domain.LatLon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
@@ -31,7 +32,7 @@ class CachePruneTest {
     @Test fun prune_drops_stale_and_deselected_corridors() = runTest {
         val dao = db.chargeSites()
         fun corridor(key: String, fetchedAt: Long) =
-            CorridorCoverageEntity(0, "ocm", key, "48.0,11.0;48.5,11.0", 2.0, 48.0, 10.9, 48.5, 11.1, fetchedAt)
+            CorridorCoverageEntity(0, "ocm", key, listOf(LatLon(48.0, 11.0), LatLon(48.5, 11.0)), 2.0, 48.0, 10.9, 48.5, 11.1, fetchedAt)
         dao.markCorridorsFetched(listOf(corridor("enbw", 10_000L), corridor("ionity", 10_000L), corridor("enbw", 1L)))
 
         pruneCache(db, selectedKeys = setOf("enbw"), now = 10_000L, ttlMillis = 5_000L)

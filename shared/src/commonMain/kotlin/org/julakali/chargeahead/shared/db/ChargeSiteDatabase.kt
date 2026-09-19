@@ -7,6 +7,9 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
+import androidx.room.TypeConverters
+import org.julakali.chargeahead.shared.domain.Connector
+import org.julakali.chargeahead.shared.domain.LatLon
 
 // Charging-station local store (chargeSite) and which area was fetched when
 // (tileCoverage, corridorCoverage).
@@ -20,8 +23,8 @@ data class ChargeSiteEntity(
     val operatorId: Long? = null,
     val lat: Double,
     val lon: Double,
-    // Connectors as a "type:kW:count" list; "count" may be empty.
-    val connectors: String,
+    // Stored as JSON (see Converters).
+    val connectors: List<Connector>,
     // Postal address, if the source knows one.
     val street: String?,
     val postalCode: String?,
@@ -52,8 +55,8 @@ data class CorridorCoverageEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val sourceId: String,
     val networkKey: String,
-    // Route points as "lat,lon;lat,lon;…".
-    val points: String,
+    // Stored as JSON (see Converters).
+    val points: List<LatLon>,
     val bufferKm: Double,
     val south: Double,
     val west: Double,
@@ -66,10 +69,11 @@ data class CorridorCoverageEntity(
 // (fallbackToDestructiveMigration).
 @Database(
     entities = [ChargeSiteEntity::class, TileCoverageEntity::class, CorridorCoverageEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false,
 )
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)
+@TypeConverters(Converters::class)
 abstract class ChargeSiteDatabase : RoomDatabase() {
     abstract fun chargeSites(): ChargeSiteDao
 }
