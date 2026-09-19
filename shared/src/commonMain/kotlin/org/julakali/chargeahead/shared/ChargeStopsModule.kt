@@ -5,6 +5,7 @@ import org.julakali.chargeahead.shared.core.TripPlanner
 import org.julakali.chargeahead.shared.data.BackendChargePointStatusSource
 import org.julakali.chargeahead.shared.data.CachingChargePointStatusRepository
 import org.julakali.chargeahead.shared.data.BackendChargeSiteSource
+import org.julakali.chargeahead.shared.data.BackendDataSourceDirectory
 import org.julakali.chargeahead.shared.data.BackendGeocoder
 import org.julakali.chargeahead.shared.data.BackendNetworkListSource
 import org.julakali.chargeahead.shared.data.BackendRouteEngine
@@ -18,7 +19,9 @@ import org.julakali.chargeahead.shared.data.pruneCache
 import org.julakali.chargeahead.shared.db.ChargeSiteDatabase
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.CorridorPlanning
+import org.julakali.chargeahead.shared.domain.DataSourceDirectory
 import org.julakali.chargeahead.shared.domain.Geocoder
+import org.julakali.chargeahead.shared.domain.LoadDataSources
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.NetworkRepository
@@ -92,6 +95,11 @@ fun chargeStopsModule(): Module = module {
         val backend = get<BackendConfig>()
         CachingChargePointStatusRepository(BackendChargePointStatusSource(get(), backend.baseUrl, backend.token), get())
     }
+    single<DataSourceDirectory> {
+        val backend = get<BackendConfig>()
+        BackendDataSourceDirectory(get(), backend.baseUrl, backend.token)
+    }
+    factory { LoadDataSources(get()) }
     factory { ObserveMapChargers(get(), get(), get()) }
     factory { RefreshMapChargers(get(), get()) }
     factory { RefreshChargerAvailability(get(), get(), get()) }

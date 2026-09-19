@@ -27,8 +27,9 @@ playServicesLocation = "21.4.0"
 playServicesMaps = "20.0.0"
 mapsCompose = "8.6.0"
 composeCache = "3.0.1"
+aboutLibraries = "15.2.0"
 
-chargeaheadApi = "0.9.0"
+chargeaheadApi = "0.10.0"
 
 [libraries]
 # --- shared (Kotlin Multiplatform) ---
@@ -100,6 +101,9 @@ androidx-compose-material-icons-extended = { module = "androidx.compose.material
 # asynchronous uiState round trip would otherwise overwrite.
 compose-cache = { module = "de.charlex.compose:compose-cache", version.ref = "composeCache" }
 
+# Open-source licence list; the Gradle plugin generates the data at build time.
+aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
+
 maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
 
@@ -112,3 +116,4 @@ kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref 
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
+aboutlibraries-android = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutLibraries" }

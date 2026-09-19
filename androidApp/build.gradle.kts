@@ -57,6 +57,8 @@ plugins {
     alias(libs.plugins.compose.compiler)
     // NavKeys are @Serializable — rememberNavBackStack saves them across process death.
     alias(libs.plugins.kotlin.serialization)
+    // Generates R.raw.aboutlibraries (the licence list) as part of the build.
+    alias(libs.plugins.aboutlibraries.android)
 }
 
 android {
@@ -147,6 +149,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.compose.cache)
+    implementation(libs.aboutlibraries.compose.m3)
     implementation(libs.androidx.compose.ui.tooling.preview)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
