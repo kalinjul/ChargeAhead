@@ -338,7 +338,7 @@ interface SettingsStore {
 // Refresh… interactor only refills that store.
 class ObserveChargeStops : SubjectInteractor<Params, ChargeStops?>   // the corridor list, car and iOS
 class RefreshChargeStops : Interactor<Params, Unit>
-class ObserveMapChargers : SubjectInteractor<Params, MapChargers>    // phone map, with live availability
+class ObserveMapChargers : SubjectInteractor<Params, List<MapCharger>> // phone map, with live availability
 class RefreshMapChargers : Interactor<Params, Unit>
 class RefreshChargerAvailability : Interactor<Params, Unit>
 class ObserveChargeNow : SubjectInteractor<Params, ChargeNowResult?> // best 3, nearest first; relax ladder: power → networks → distance

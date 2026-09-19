@@ -44,23 +44,20 @@ The worked example is `ObserveMapChargers`, used by `HomeViewModel`.
    refill() })`); the refill writes to the store and the store's flow
    re-emits. `SubjectInteractor.flow` is `distinctUntilChanged`, so identical
    results are swallowed — don't rely on an emission per trigger.
-5. **If the UI must know which input a result belongs to, return it with the
-   result** (`MapChargers(filter, chargers)`), instead of tracking flags in
-   the ViewModel.
-6. **Heavy computation runs in `withContext(Dispatchers.Default)`** inside the
+5. **Heavy computation runs in `withContext(Dispatchers.Default)`** inside the
    use case. Repository calls stay on the caller's dispatcher — they are
    main-safe.
-7. **Failures of a refill are swallowed with `cancellableRunCatching`**, never
+6. **Failures of a refill are swallowed with `cancellableRunCatching`**, never
    plain `runCatching`: that one would eat the cancellation `flatMapLatest`
    relies on. An `Interactor` returns `Result<R>`; the ViewModel decides what
    a failure looks like.
-8. **Load times are measured by the base class.** `SubjectInteractor` logs
+7. **Load times are measured by the base class.** `SubjectInteractor` logs
    (`logDebug`) how long each new param took from being picked up to its
    first result; override `onFirstResult` only to report it elsewhere.
-9. **Koin: `factory`, not `single`.** A `SubjectInteractor` keeps its params
+8. **Koin: `factory`, not `single`.** A `SubjectInteractor` keeps its params
    per instance; two ViewModels sharing one would steer each other. Declare
    it in `chargeStopsModule()` next to its ports.
-10. **Observers are used only in ViewModels — and in car screens.** The
+9. **Observers are used only in ViewModels — and in car screens.** The
     Swift bridge or a feature class never calls a `SubjectInteractor` or
     collects its `flow`; it goes through the shared ViewModel for that
     screen and collects its `uiState`, created with `ViewModelHost` and
