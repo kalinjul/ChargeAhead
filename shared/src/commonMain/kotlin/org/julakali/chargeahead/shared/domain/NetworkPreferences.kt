@@ -16,11 +16,17 @@ data class NetworkPreferences(
     /** The keys to fetch with; empty means every network. */
     fun selectedKeys(): Set<String> = if (isActive) preferredOperators else emptySet()
 
-    /** How many of [known] the filter keeps; `0` means no filter. Keys no network carries don't count. */
-    fun selectedCount(known: List<Network>): Int =
-        if (isActive) known.count { it.key in preferredOperators } else 0
+    /** How many networks the filter keeps; `0` means no filter. */
+    fun selectedCount(): Int = if (isActive) preferredOperators.size else 0
 
-    /** The backend's current list, plus selected networks that dropped off it so they can be unticked. */
-    fun selectable(known: List<Network>): List<Network> =
-        known.filter { it.rank != null || it.key in preferredOperators }
+    /**
+     * The backend's current list, plus every selected network off it, so each
+     * one that filters can be seen and unticked. One [known] never heard of
+     * shows under its key.
+     */
+    fun selectable(known: List<Network>): List<Network> {
+        val knownKeys = known.mapTo(HashSet()) { it.key }
+        val unknown = preferredOperators.filterNot { it in knownKeys }.map { Network(key = it, name = it) }
+        return known.filter { it.rank != null || it.key in preferredOperators } + unknown
+    }
 }

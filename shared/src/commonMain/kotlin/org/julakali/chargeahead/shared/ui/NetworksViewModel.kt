@@ -9,6 +9,7 @@ import org.julakali.chargeahead.shared.domain.OperatorKey
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Choosing charging networks. */
 data class NetworksUiState(
@@ -125,7 +127,9 @@ class NetworksViewModel(
     /** The screen is being left: commit at once. */
     fun onLeave() {
         commitJob?.cancel()
-        viewModelScope.launch { commit() }
+        // Leaving pops the back-stack entry, which clears this ViewModel and
+        // cancels viewModelScope, so the write must not be its child.
+        viewModelScope.launch(NonCancellable) { commit() }
     }
 
     private fun edit(block: (NetworkPreferences) -> NetworkPreferences) {
@@ -146,8 +150,8 @@ class NetworksViewModel(
     private suspend fun commit() {
         // Read inside the coroutine, so the last queued edit is in.
         val edited = staged.value ?: return
-        settings.setNetworks(edited)
-        // The ViewModel outlives the screen.
+        // Once begun, finish: a half-cancelled write leaves memory and disk apart.
+        withContext(NonCancellable) { settings.setNetworks(edited) }
         staged.value = null
     }
 
