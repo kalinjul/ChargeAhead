@@ -20,6 +20,7 @@ class ChargeNowRankerTest {
         operator = operator,
         position = here.destination(bearingDeg = 90.0, distanceKm = distanceKm),
         connectors = listOf(Connector(connector, powerKw, 4)),
+        networkKey = operator.lowercase(),
     )
 
     private fun rank(

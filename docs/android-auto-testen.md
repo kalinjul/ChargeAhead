@@ -139,11 +139,7 @@ That means there are states worth actually seeing in the DHU:
    message with a "Grant location" button. In projection mode the head unit
    can't show the system dialog itself — the host instructs the driver to
    confirm it on the phone.
-2. **Without an OpenChargeMap key**, the header reads "Charging stops · Demo
-   data" and the list shows fabricated charging parks around the current
-   location. That's intentional (see README.md), but it must never happen
-   without this label.
-3. **Without a network connection**, the most recently fetched list stays
+2. **Without a network connection**, the most recently fetched list stays
    in place, and the header says "Charging stops · not current". A list
    that goes empty in a tunnel would be useless.
 
@@ -204,10 +200,9 @@ responses only appear much later.
   dictates how many rows are allowed via
   `ConstraintManager.getContentLimit(CONTENT_LIMIT_TYPE_LIST)` — typically
   six. The app trims to that.
-- **The list stays empty even though the location is set.** First check
-  whether the header says "demo data": then the key is missing and the demo
-  source is active. If it doesn't say that, the empty list comes from
-  OpenChargeMap — when in doubt, check `adb logcat` for the HTTP response.
+- **The list stays empty even though the location is set.** The empty list
+  comes from the backend — when in doubt, check `adb logcat` for the HTTP
+  response.
 - **The list stays empty and reports "charging station data is currently
   unavailable" even though the phone is online.** On Android derivatives
   like GrapheneOS, `android.permission.INTERNET` is a **revocable**

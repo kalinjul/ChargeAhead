@@ -29,13 +29,14 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>ChargeAhead braucht deinen Standort, um erreichbare Ladestopps in Fahrtrichtung anzuzeigen.</string>
 
-	<!-- The OpenChargeMap key does not belong in the repository
-	     (ARCHITECTURE.md section 6). The value comes from the build setting
-	     OPEN_CHARGE_MAP_API_KEY, set in a non-checked-in .xcconfig
-	     (see iosApp/README.md). If it stays empty, the shared module
-	     returns demo data and labels it as such in the UI. -->
-	<key>OpenChargeMapApiKey</key>
-	<string>$(OPEN_CHARGE_MAP_API_KEY)</string>
+	<!-- The backend address and token do not belong in the repository.
+	     They come from the build settings CHARGEAHEAD_BASE_URL and
+	     CHARGEAHEAD_TOKEN, set in a non-checked-in .xcconfig
+	     (see iosApp/README.md). The app does not start without them. -->
+	<key>ChargeAheadBaseUrl</key>
+	<string>$(CHARGEAHEAD_BASE_URL)</string>
+	<key>ChargeAheadToken</key>
+	<string>$(CHARGEAHEAD_TOKEN)</string>
 
 	<key>UILaunchScreen</key>
 	<dict/>

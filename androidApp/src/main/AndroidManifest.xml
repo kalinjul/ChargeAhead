@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- No network, no charging stations: the OpenChargeMap query runs over HTTPS. -->
+    <!-- No network, no charging stations: everything comes from the backend over HTTPS. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Requested at runtime from M1 on (ChargeStopsScreen / MainActivity).

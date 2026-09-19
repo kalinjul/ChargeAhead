@@ -22,7 +22,8 @@ final class ChargeStopsViewModel: ObservableObject {
 
     init() {
         let feature = IosEntryPointsKt.createChargeStopsFeature(
-            openChargeMapKey: ChargeStopsViewModel.apiKeyFromBundle(),
+            backendBaseUrl: ChargeStopsViewModel.bundleValue("ChargeAheadBaseUrl"),
+            backendToken: ChargeStopsViewModel.bundleValue("ChargeAheadToken"),
             settingsStore: ChargeStopsViewModel.settingsStore
         )
         self.feature = feature
@@ -51,16 +52,15 @@ final class ChargeStopsViewModel: ObservableObject {
         watcher.refresh()
     }
 
-    /// Injected into Info.plist via a build setting; when absent, the shared
-    /// module returns demo data and sets `state.isDemo`.
-    private static func apiKeyFromBundle() -> String? {
-        guard let raw = Bundle.main.object(forInfoDictionaryKey: "OpenChargeMapApiKey") as? String
-        else {
+    /// Injected into Info.plist via a build setting; the shared module stops
+    /// the app when the backend is not configured.
+    private static func bundleValue(_ key: String) -> String? {
+        guard let raw = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
             return nil
         }
-        // A trailing space in the .xcconfig would be URL-encoded into the request.
-        let key = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        return key.isEmpty ? nil : key
+        // A trailing space in the .xcconfig would end up in the request.
+        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
     }
 }
 
@@ -71,9 +71,6 @@ extension ChargeStopsViewModel {
     /// No `switch`: Kotlin enums arrive as Objective-C classes, which can be
     /// compared for equality but not pattern-matched.
     var statusKey: String {
-        if state.isDemo {
-            return "status_demo"
-        }
         let phase = state.phase
         if phase == ChargeStopsState.Phase.waitingForLocation {
             return "status_waiting_for_location"

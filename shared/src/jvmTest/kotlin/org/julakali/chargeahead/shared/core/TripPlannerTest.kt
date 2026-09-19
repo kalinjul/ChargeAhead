@@ -12,7 +12,6 @@ import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteSegment
 import org.julakali.chargeahead.shared.domain.RouteEngine
-import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
@@ -75,7 +74,7 @@ class TripPlannerTest {
     )
 
     private fun repositoryWith(sites: List<ChargeSite>): SiteRepository = object : SiteRepository {
-        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = sites
     }
 
     private fun planner(route: Route?, sites: List<ChargeSite>) =
@@ -417,7 +416,7 @@ class TripPlannerTest {
     @Test
     fun `savings are real minutes, without the network penalty`() {
         val route = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH)
-        val ionity = siteAt(route, 300.0).copy(id = "demo:ionity", operator = "Ionity")
+        val ionity = siteAt(route, 300.0).copy(id = "demo:ionity", operator = "Ionity", networkKey = "ionity")
         val audi = siteAt(route, 300.0, powerKw = 300.0).copy(id = "demo:audi")
         val onlyIonity = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
         val plan = assertIs<TripPlanResult.Planned>(
@@ -438,7 +437,7 @@ class TripPlannerTest {
         val route = straightRoute()
         val queriedRadii = mutableListOf<Double>()
         val repository = object : SiteRepository {
-            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 queriedRadii += area.radiusKm
                 return sitesAlong(route)
             }
@@ -457,10 +456,10 @@ class TripPlannerTest {
     @Test
     fun `an active network filter is forwarded to the repository, not applied on-device`() = runBlocking<Unit> {
         val route = straightRoute()
-        val capturedNetworks = mutableListOf<List<Network>>()
+        val capturedNetworks = mutableListOf<Set<String>>()
         val repository = object : SiteRepository {
-            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
-                capturedNetworks += networks
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+                capturedNetworks += networkKeys
                 return sitesAlong(route)
             }
         }
@@ -474,7 +473,7 @@ class TripPlannerTest {
             "every segment query must carry the resolved network selection",
         )
         assertTrue(
-            capturedNetworks.all { networks -> networks.any { it.key == "ionity" } },
+            capturedNetworks.all { "ionity" in it },
             "the Ionity network must be in every query",
         )
     }

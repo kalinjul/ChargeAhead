@@ -2,7 +2,6 @@ package org.julakali.chargeahead.shared.data
 
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.SectorArea
 import io.ktor.client.engine.mock.MockEngine
@@ -58,6 +57,7 @@ class BackendChargeSiteSourceTest {
                 "position": {"lat": 48.95, "lon": 11.5},
                 "operator": "EnBW",
                 "operatorId": 42,
+                "network": "enbw",
                 "connectors": [
                   {"type": "ccs2", "maxPowerKw": 150.0, "count": 4},
                   {"type": "type2", "maxPowerKw": 22.0}
@@ -70,7 +70,7 @@ class BackendChargeSiteSourceTest {
             """.trimIndent(),
         )
 
-        val sites = source.query(area, emptyList())
+        val sites = source.query(area, emptySet())
 
         assertEquals(1, sites.size)
         val site = sites.single()
@@ -78,6 +78,7 @@ class BackendChargeSiteSourceTest {
         assertEquals("Autohof Nord", site.name)
         assertEquals("EnBW", site.operator)
         assertEquals(42L, site.operatorId)
+        assertEquals("enbw", site.networkKey)
         assertEquals(LatLon(48.95, 11.5), site.position)
         assertEquals("Ingolstadt", site.address?.town)
         assertEquals(setOf("ocm"), site.sources)
@@ -101,7 +102,7 @@ class BackendChargeSiteSourceTest {
             """.trimIndent(),
         )
 
-        val sites = source.query(area, emptyList())
+        val sites = source.query(area, emptySet())
 
         assertEquals("mobilithek:1", sites[0].liveStatusId)
         assertNull(sites[1].liveStatusId)
@@ -110,7 +111,7 @@ class BackendChargeSiteSourceTest {
     @Test
     fun anEmptyResultIsNotAnError() = runBlocking {
         val sites = sourceRespondingWith("""{"sites": [], "attribution": "x"}""")
-            .query(area, emptyList())
+            .query(area, emptySet())
 
         assertTrue(sites.isEmpty())
     }
@@ -123,7 +124,7 @@ class BackendChargeSiteSourceTest {
 
         source.query(
             PolylineArea(listOf(LatLon(48.9, 11.4), LatLon(49.1, 11.6)), bufferKm = 5.0),
-            emptyList(),
+            emptySet(),
         )
 
         assertTrue(""""type":"polyline"""" in sent, sent)
@@ -135,10 +136,9 @@ class BackendChargeSiteSourceTest {
         var sent = ""
         val source = sourceRespondingWith("""{"sites": [], "attribution": "x"}""") { sent = bodyOf(it) }
 
-        source.query(area, listOf(Network("enbw", "EnBW", setOf(60L), setOf("enbw"))))
+        source.query(area, setOf("enbw"))
 
-        assertTrue(""""key":"enbw"""" in sent, sent)
-        assertTrue("60" in sent, sent)
+        assertTrue(""""networks":[{"key":"enbw"}]""" in sent, sent)
     }
 
     @Test
@@ -148,7 +148,7 @@ class BackendChargeSiteSourceTest {
             header = it.headers[HttpHeaders.Authorization]
         }
 
-        source.query(area, emptyList())
+        source.query(area, emptySet())
 
         assertEquals("Bearer test-token", header)
     }
@@ -163,6 +163,6 @@ class BackendChargeSiteSourceTest {
             token = "test-token",
         )
 
-        assertFailsWith<Exception> { runBlocking { source.query(area, emptyList()) } }
+        assertFailsWith<Exception> { runBlocking { source.query(area, emptySet()) } }
     }
 }

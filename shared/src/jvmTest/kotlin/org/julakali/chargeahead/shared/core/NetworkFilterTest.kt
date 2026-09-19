@@ -10,27 +10,26 @@ import org.julakali.chargeahead.shared.domain.destination
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
 
 class NetworkFilterTest {
 
     private val origin = LatLon(48.9331, 11.4779)
     private val area = SectorArea.circle(origin, radiusKm = 100.0)
 
-    private fun site(id: String, operator: String?, distanceKm: Double = 20.0, operatorId: Long? = null) = ChargeSite(
+    private fun site(id: String, networkKey: String?, distanceKm: Double = 20.0) = ChargeSite(
         id = id,
         name = "Ladepark $id",
-        operator = operator,
-        operatorId = operatorId,
+        operator = networkKey,
         position = origin.destination(180.0, distanceKm),
         connectors = listOf(Connector(ConnectorType.CCS2, 150.0, 4)),
+        networkKey = networkKey,
     )
 
     private val sites = listOf(
-        site("a", "IONITY GmbH", 10.0),
-        site("b", "Ionity", 20.0),
-        site("c", "EnBW (D)", 30.0),
-        site("d", "Mer Germany GmbH", 40.0),
+        site("a", "ionity", 10.0),
+        site("b", "ionity", 20.0),
+        site("c", "enbw", 30.0),
+        site("d", "mer", 40.0),
         site("e", null, 50.0),
     )
 
@@ -52,8 +51,7 @@ class NetworkFilterTest {
     }
 
     @Test
-    fun selectedNetwork_catchesBothSpellings() {
-        // "IONITY GmbH" and "Ionity" both resolve to the "ionity" catalog key.
+    fun selectedNetwork_goesByTheKeyTheBackendAssigned() {
         val onlyIonity = NetworkPreferences(
             onlyPreferred = true,
             preferredOperators = setOf("ionity"),
@@ -61,7 +59,7 @@ class NetworkFilterTest {
 
         val planned = ChargeStopPlanner.plan(area, sites, networks = onlyIonity)
 
-        // a and b are Ionity. e has no operator → resolves to null → hidden.
+        // e has no network → hidden.
         assertEquals(listOf("a", "b"), planned.map { it.site.id })
     }
 
@@ -85,7 +83,6 @@ class NetworkFilterTest {
 
         val planned = ChargeStopPlanner.plan(area, sites, networks = twoNetworks)
 
-        // a, b → ionity; c → enbw; d → mer (not selected); e → null (hidden)
         assertEquals(listOf("a", "b", "c"), planned.map { it.site.id })
     }
 
@@ -98,15 +95,5 @@ class NetworkFilterTest {
         )
 
         assertEquals(emptyList(), ChargeStopPlanner.plan(area, sites, networks = unknownNetwork).map { it.site.id })
-    }
-
-    @Test
-    fun resolveByOperatorId_takesIdOverName() {
-        // A site whose operatorId maps to "enbw" in the catalog is allowed
-        // even if its operator string says something unrelated.
-        val prefs = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("enbw"))
-        val byId = site("x", operator = "Some Random Name", operatorId = 86L)
-        val planned = ChargeStopPlanner.plan(area, listOf(byId), networks = prefs)
-        assertEquals(listOf("x"), planned.map { it.site.id })
     }
 }

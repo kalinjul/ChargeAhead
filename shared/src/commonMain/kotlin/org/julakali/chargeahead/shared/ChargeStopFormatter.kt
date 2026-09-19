@@ -104,7 +104,6 @@ object ChargeStopFormatter {
     private val SOURCE_LABELS = mapOf(
         "bnetza" to "Bundesnetzagentur",
         "ocm" to "OpenChargeMap",
-        "demo" to "Demodaten",
     )
 
     // --- Car rows: planned trip stops ---

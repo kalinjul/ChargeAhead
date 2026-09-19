@@ -199,8 +199,7 @@ flowchart TD
         DATA["data: sources + cache"]
     end
     subgraph ext["External"]
-        OCM["OpenChargeMap"]
-        BNA["Bundesnetzagentur"]
+        BE["ChargeAhead backend<br/>sites · networks · routes · search"]
         LOC["GPS"]
     end
     AA --> VM
@@ -210,8 +209,7 @@ flowchart TD
     CORE --> DOM
     DATA --> DOM
     VM --> DATA
-    DATA --> OCM
-    DATA --> BNA
+    DATA --> BE
     VM --> LOC
 ```
 
@@ -514,8 +512,8 @@ that shaped the adapter:
 | **`Quantity` is missing for 159 of 307 connectors**, 22 carry a `0`. Per site, the value is complete for only 69 of 123. | `Connector.count` is nullable. "6 charging points" only appears when the source has a number for every connector — otherwise "charging point count unknown". A sum from guessed ones would be a made-up number. |
 | **12 of 307 connectors have no `PowerKW`.** | They're dropped. "CCS 0 kW" in the car would be worse than one connector fewer. |
 
-Checked continuously by `OpenChargeMapLiveContractTest`, which only runs
-with `OCM_LIVE=1` (see AGENTS.md).
+The OCM adapter now lives in the backend; the app talks to the backend only
+and has no direct source of its own any more.
 
 **Why OCM first:** the only source usable immediately via a bounding-box
 query and with international coverage. The BNetzA bulk download is

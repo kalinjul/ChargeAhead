@@ -17,8 +17,6 @@ data class ChargeStopsState(
     val stops: List<ChargeStop> = emptyList(),
     val phase: Phase = Phase.WAITING_FOR_LOCATION,
     val failure: FailureReason? = null,
-    /** The list came from [org.julakali.chargeahead.shared.data.DemoSiteSource], not real data. */
-    val isDemo: Boolean = false,
     /** Where the charge level in use came from, or `null` if there is none. */
     val socSource: SoCSourceKind? = null,
     /** The set destination, or `null` if searching along the direction of travel. */

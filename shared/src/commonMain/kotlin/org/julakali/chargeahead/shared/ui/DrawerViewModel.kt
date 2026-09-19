@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.domain.ChargeFilters
+import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -20,17 +21,18 @@ data class DrawerUiState(
 /** The navigation drawer's own state holder, since it is reachable from several screens. */
 class DrawerViewModel(
     private val settings: SettingsStore,
+    networkRepository: NetworkRepository,
 ) : ViewModel() {
 
     val uiState: StateFlow<DrawerUiState> = combine(
         settings.vehicle,
         settings.networks,
+        networkRepository.networks,
         settings.chargeFilters,
-    ) { vehicle, networks, filters ->
+    ) { vehicle, networks, known, filters ->
         DrawerUiState(
             vehicleName = vehicle?.displayName,
-            // Count resolved catalog networks, not the raw stored keys.
-            preferredNetworkCount = networks.selectedNetworks().size,
+            preferredNetworkCount = networks.selectedCount(known),
             filters = filters,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, DrawerUiState())

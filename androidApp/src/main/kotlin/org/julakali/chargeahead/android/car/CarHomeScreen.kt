@@ -94,14 +94,7 @@ class CarHomeScreen(
         )
         .build()
 
-    private fun title(): String {
-        val base = carContext.getString(R.string.app_name)
-        return if (feature.isDemo) {
-            carContext.getString(R.string.car_title_suffix_demo, base)
-        } else {
-            base
-        }
-    }
+    private fun title(): String = carContext.getString(R.string.app_name)
 
     // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
     private fun searchRow(): Row = Row.Builder()

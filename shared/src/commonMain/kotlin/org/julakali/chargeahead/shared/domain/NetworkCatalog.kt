@@ -1,12 +1,5 @@
 package org.julakali.chargeahead.shared.domain
 
-data class Network(
-    val key: String,
-    val name: String,
-    val operatorIds: Set<Long>,
-    val nameKeywords: Set<String>,
-)
-
 /**
  * The curated, shipped list of selectable charging networks.
  *

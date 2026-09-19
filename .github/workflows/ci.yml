@@ -30,9 +30,8 @@ env:
 # api-model from our own backend, and it means a pull request from a fork
 # cannot be built here.
 #
-# No provider keys, deliberately: the app then falls back to labeled demo data
-# and to the map placeholder (README.md, "OpenChargeMap key"), which keeps that
-# path continuously exercised.
+# No backend or map keys: the build does not need them, only a running app
+# does.
 jobs:
   android:
     name: Android build + shared tests
@@ -70,10 +69,9 @@ jobs:
         run: ./gradlew :androidApp:assembleDebug
 
       - name: Shared tests (JVM target)
-        # The live contract tests against OpenChargeMap, OSRM and Nominatim
-        # stay off (they only run with OCM_LIVE=1 and friends): a test that
-        # goes red because a third-party service hiccups says nothing about
-        # this repository. AGENTS.md, "Tests".
+        # The live contract tests against the backend stay off (they only run
+        # with CHARGEAHEAD_LIVE=1): a test that goes red because a server
+        # hiccups says nothing about this repository. AGENTS.md, "Tests".
         run: ./gradlew :shared:jvmTest
 
       - name: Upload test reports

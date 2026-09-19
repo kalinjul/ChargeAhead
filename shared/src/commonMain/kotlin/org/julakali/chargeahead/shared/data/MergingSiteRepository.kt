@@ -4,7 +4,6 @@ import org.julakali.chargeahead.shared.core.SiteMerger
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.MapFilter
-import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.logWarning
@@ -30,9 +29,9 @@ class MergingSiteRepository(
         require(repositories.isNotEmpty()) { "Without a source there's nothing to merge" }
     }
 
-    override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> = coroutineScope {
+    override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = coroutineScope {
         val results = repositories
-            .map { repository -> async { runCatching { repository.load(area, networks) } } }
+            .map { repository -> async { runCatching { repository.load(area, networkKeys) } } }
             .awaitAll()
 
         results.forEach { result ->

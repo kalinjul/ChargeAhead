@@ -1,6 +1,6 @@
 package org.julakali.chargeahead.shared.ui
 
-import org.julakali.chargeahead.shared.domain.NetworkCatalog
+import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
@@ -33,15 +33,14 @@ class DrawerViewModelTest {
     @Test
     fun `the count ignores stored keys that no longer name a network`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val real = NetworkCatalog.all.first().key
-        // A key that no longer resolves must not be counted.
+        // A key that no network carries any more must not be counted.
         settings.setNetworks(
             NetworkPreferences(
                 onlyPreferred = true,
-                preferredOperators = setOf(real, "ghost-network-dropped-long-ago"),
+                preferredOperators = setOf("enbw", "ghost-network-dropped-long-ago"),
             ),
         )
-        val vm = DrawerViewModel(settings)
+        val vm = DrawerViewModel(settings, FixedNetworkRepository(listOf(Network("enbw", "EnBW", rank = 0))))
 
         val state = vm.uiState.await { it.preferredNetworkCount > 0 }
         assertEquals(1, state.preferredNetworkCount, "the ghost key must not inflate the count")
