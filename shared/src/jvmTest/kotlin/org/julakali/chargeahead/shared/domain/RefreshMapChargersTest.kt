@@ -13,13 +13,13 @@ class RefreshMapChargersTest {
 
     private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
     private val fetchedAreas = mutableListOf<SearchArea>()
-    private val fetchedNetworks = mutableListOf<List<Network>>()
+    private val fetchedNetworks = mutableListOf<Set<String>>()
 
     private val refresh = RefreshMapChargers(
         repository = object : SiteRepository {
-            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 fetchedAreas += area
-                fetchedNetworks += networks
+                fetchedNetworks += networkKeys
                 return emptyList()
             }
         },
@@ -40,7 +40,7 @@ class RefreshMapChargersTest {
         refresh(RefreshMapChargers.Params(viewport)).getOrThrow()
 
         assertTrue(
-            fetchedNetworks.single().any { it.key == "fastned" },
+            "fastned" in fetchedNetworks.single(),
             "Fastned must appear in the forwarded selection",
         )
     }
@@ -52,14 +52,14 @@ class RefreshMapChargersTest {
 
         refresh(RefreshMapChargers.Params(viewport)).getOrThrow()
 
-        assertEquals(listOf(emptyList()), fetchedNetworks)
+        assertEquals(listOf(emptySet()), fetchedNetworks)
     }
 
     @Test
     fun `a failing fetch comes back as a failure`() = runBlocking<Unit> {
         val failing = RefreshMapChargers(
             repository = object : SiteRepository {
-                override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> =
+                override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> =
                     error("offline")
             },
             settings = settings,

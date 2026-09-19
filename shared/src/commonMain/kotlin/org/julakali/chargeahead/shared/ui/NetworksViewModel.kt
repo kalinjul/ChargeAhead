@@ -3,8 +3,8 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.domain.Network
-import org.julakali.chargeahead.shared.domain.NetworkCatalog
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +38,7 @@ data class NetworksUiState(
  */
 class NetworksViewModel(
     private val settings: SettingsStore,
+    networkRepository: NetworkRepository,
 ) : ViewModel() {
 
     private val search = MutableStateFlow("")
@@ -54,24 +55,26 @@ class NetworksViewModel(
     /** The pending debounced commit, restarted on every edit. */
     private var commitJob: Job? = null
 
-    // Each catalog name folded once, up front.
-    private val foldedCatalog: List<Pair<Network, String>> =
-        NetworkCatalog.all.map { it to OperatorKey.folded(it.name) }
-    private val foldedByKey: Map<String, String> =
-        foldedCatalog.associate { (network, folded) -> network.key to folded }
+    /** The rows to choose from, each name folded once for search and sorting. */
+    private val catalog: Flow<List<Pair<Network, String>>> =
+        combine(networkRepository.networks, settings.networks) { known, stored ->
+            stored.selectable(known).map { it to OperatorKey.folded(it.name) }
+        }
+            .distinctUntilChanged()
+            .flowOn(Dispatchers.Default)
 
     /** The catalog rows that survive the search, in catalog order. */
-    private val matches: Flow<List<Network>> = search
-        .map { it.trim() }
-        .distinctUntilChanged()
-        .map { query ->
-            if (query.isEmpty()) {
-                NetworkCatalog.all
-            } else {
-                val needle = OperatorKey.folded(query)
-                foldedCatalog.filter { (_, folded) -> folded.contains(needle) }.map { it.first }
-            }
+    private val matches: Flow<List<Pair<Network, String>>> = combine(
+        catalog,
+        search.map { it.trim() }.distinctUntilChanged(),
+    ) { catalog, query ->
+        if (query.isEmpty()) {
+            catalog
+        } else {
+            val needle = OperatorKey.folded(query)
+            catalog.filter { (_, folded) -> folded.contains(needle) }
         }
+    }
         .flowOn(Dispatchers.Default)
 
     val uiState: StateFlow<NetworksUiState> = combine(
@@ -115,7 +118,7 @@ class NetworksViewModel(
     /** Re-freeze the order from the selection as it stands, edits included. */
     private fun refreshOrder() {
         viewModelScope.launch {
-            displayOrder.value = (staged.value ?: settings.networks.first()).orderedKeys()
+            displayOrder.value = (staged.value ?: settings.networks.first()).orderedKeys(catalog.first())
         }
     }
 
@@ -149,21 +152,21 @@ class NetworksViewModel(
     }
 
     /** The frozen order applied to whatever [matches] survived the search. */
-    private fun List<String>?.orderFor(matches: List<Network>): List<Network>? {
+    private fun List<String>?.orderFor(matches: List<Pair<Network, String>>): List<Network>? {
         val order = this ?: return null
         val index = order.withIndex().associate { (i, key) -> key to i }
-        return matches.sortedBy { index[it.key] ?: Int.MAX_VALUE }
+        return matches.map { it.first }.sortedBy { index[it.key] ?: Int.MAX_VALUE }
     }
 
     /** Committed picks first, then alphabetical. */
-    private fun List<Network>.committedFirst(committed: NetworkPreferences): List<Network> =
+    private fun List<Pair<Network, String>>.committedFirst(committed: NetworkPreferences): List<Network> =
         sortedWith(
-            compareByDescending<Network> { it.key in committed.preferredOperators }
-                .thenBy { foldedByKey[it.key] ?: it.name },
-        )
+            compareByDescending<Pair<Network, String>> { it.first.key in committed.preferredOperators }
+                .thenBy { it.second },
+        ).map { it.first }
 
-    private fun NetworkPreferences.orderedKeys(): List<String> =
-        NetworkCatalog.all.committedFirst(this).map { it.key }
+    private fun NetworkPreferences.orderedKeys(catalog: List<Pair<Network, String>>): List<String> =
+        catalog.committedFirst(this).map { it.key }
 
     private companion object {
         const val COMMIT_DEBOUNCE_MS = 5_000L

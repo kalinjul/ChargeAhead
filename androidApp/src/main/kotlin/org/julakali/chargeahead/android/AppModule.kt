@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.android
 
 import org.julakali.chargeahead.shared.BackendConfig
-import org.julakali.chargeahead.shared.ChargeStopsConfig
 import org.julakali.chargeahead.shared.data.FusedLocationSource
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.LocationSource
@@ -23,9 +22,8 @@ val appModule = module {
     single { DatabaseFactory(androidContext()) }
 
     single {
-        ChargeStopsConfig(
-            openChargeMapKey = BuildConfig.OPEN_CHARGE_MAP_API_KEY,
-            backend = BackendConfig.of(BuildConfig.CHARGEAHEAD_BASE_URL, BuildConfig.CHARGEAHEAD_TOKEN),
-        )
+        requireNotNull(BackendConfig.of(BuildConfig.CHARGEAHEAD_BASE_URL, BuildConfig.CHARGEAHEAD_TOKEN)) {
+            "chargeAheadBaseUrl and chargeAheadToken must be set in local.properties"
+        }
     }
 }

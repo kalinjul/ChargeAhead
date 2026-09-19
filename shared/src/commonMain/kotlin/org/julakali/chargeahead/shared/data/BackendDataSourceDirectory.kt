@@ -50,27 +50,3 @@ private fun DatasetDto.toDomain() = Dataset(
     url = url,
     license = license?.let { License(it.name, it.url) },
 )
-
-/** Without a backend the app asks Open Charge Map (with a key), OSRM and Nominatim itself. */
-class DirectDataSourceDirectory(private val usesOpenChargeMap: Boolean) : DataSourceDirectory {
-
-    override suspend fun dataSources(): List<DataSource> = listOfNotNull(
-        DataSource(
-            id = "ocm",
-            name = "Open Charge Map",
-            url = "https://openchargemap.org",
-            datasets = listOf(Dataset(DatasetKind.SITES, url = null, license = CC_BY_4)),
-        ).takeIf { usesOpenChargeMap },
-        DataSource(
-            id = "osm",
-            name = "OpenStreetMap",
-            url = "https://www.openstreetmap.org/copyright",
-            datasets = listOf(DatasetKind.ROUTING, DatasetKind.PLACES).map { Dataset(it, url = null, license = ODBL) },
-        ),
-    )
-
-    private companion object {
-        val CC_BY_4 = License("CC BY 4.0", "https://creativecommons.org/licenses/by/4.0/")
-        val ODBL = License("ODbL 1.0", "https://opendatacommons.org/licenses/odbl/1-0/")
-    }
-}

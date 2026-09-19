@@ -6,7 +6,6 @@ import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SectorArea
@@ -35,11 +34,11 @@ class BackendChargeSiteSource(
 
     override val id: String = SOURCE_ID
 
-    override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+    override suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
         val response: ChargeSitesResponse = httpClient.post("${baseUrl.trimEnd('/')}$PATH") {
             bearerAuth(token)
             contentType(ContentType.Application.Json)
-            setBody(ChargeSitesRequest(area = area.toDto(), networks = networks.map { it.toDto() }))
+            setBody(ChargeSitesRequest(area = area.toDto(), networks = networkKeys.map { NetworkFilterDto(key = it) }))
         }.body()
 
         return response.sites.map { it.toDomain() }
@@ -70,12 +69,6 @@ private fun SearchArea.toDto(): AreaDto = when (this) {
 
 private fun LatLon.toDto() = LatLonDto(lat = lat, lon = lon)
 
-private fun Network.toDto() = NetworkFilterDto(
-    key = key,
-    operatorIds = operatorIds,
-    nameKeywords = nameKeywords,
-)
-
 private fun ChargeSiteDto.toDomain() = ChargeSite(
     id = id,
     name = name,
@@ -86,6 +79,7 @@ private fun ChargeSiteDto.toDomain() = ChargeSite(
     address = address?.let { Address(street = it.street, postalCode = it.postalCode, town = it.town) },
     sources = sources.ifEmpty { setOf(BackendChargeSiteSource.SOURCE_ID) },
     liveStatusId = id.takeIf { hasLiveStatus },
+    networkKey = network,
 )
 
 private fun ConnectorDto.toDomain() = Connector(

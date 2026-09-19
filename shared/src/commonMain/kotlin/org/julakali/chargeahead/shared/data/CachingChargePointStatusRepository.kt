@@ -16,8 +16,7 @@ import kotlinx.coroutines.sync.withLock
  * fetch is dropped first. Stale entries are still served until a refresh replaces them.
  */
 class CachingChargePointStatusRepository(
-    /** `null` without a backend: no live data then. */
-    private val source: ChargePointStatusSource?,
+    private val source: ChargePointStatusSource,
     private val time: TimeProvider,
     private val maxEntries: Int = MAX_ENTRIES,
 ) : ChargePointStatusRepository {
@@ -29,7 +28,6 @@ class CachingChargePointStatusRepository(
         cache.map { entries -> entries.mapValues { it.value.points } }
 
     override suspend fun refresh(ids: Collection<String>) {
-        val source = source ?: return
         // One fetch at a time, so overlapping refreshes don't ask for the same ids twice.
         fetchLock.withLock {
             val now = time.nowMillis()

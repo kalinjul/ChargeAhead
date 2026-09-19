@@ -12,7 +12,7 @@ object OperatorKey {
         val trimmed = operator?.trim()?.lowercase() ?: return null
         if (trimmed.isEmpty()) return null
 
-        // Source placeholders aren't an operator (see OpenChargeMapSource).
+        // OCM placeholders like "(Unknown Operator)" aren't an operator.
         if (trimmed.startsWith("(")) return null
 
         var key = trimmed

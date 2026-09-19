@@ -1,13 +1,16 @@
 package org.julakali.chargeahead.shared.ui
 
-import org.julakali.chargeahead.shared.domain.NetworkCatalog
+import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
@@ -37,9 +40,24 @@ class NetworksViewModelTest {
         TrackingSettingsStore(PersistentSettingsStore(InMemoryPreferencesDataStore()))
 
     @Test
+    fun `networks that dropped off the list show only while selected`() = runBlocking<Unit> {
+        val settings = settings()
+        val stored = listOf(
+            Network("kaufland", "Kaufland", rank = 0),
+            Network("enbw", "EnBW", rank = null),
+            Network("ladenetz", "ladenetz.de", rank = null),
+        )
+        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("enbw")))
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(stored))
+
+        val state = vm.uiState.await { it.networks.isNotEmpty() }
+        assertEquals(setOf("kaufland", "enbw"), state.networks.map { it.key }.toSet())
+    }
+
+    @Test
     fun `toggling stages without touching settings`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         vm.onNetworkToggled("enbw")
 
@@ -51,7 +69,7 @@ class NetworksViewModelTest {
     @Test
     fun `leaving the screen commits the staged selection`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         vm.onNetworkToggled("enbw")
         vm.uiState.await { it.selected == setOf("enbw") }
@@ -63,7 +81,7 @@ class NetworksViewModelTest {
     @Test
     fun `leaving without an edit writes nothing`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
         vm.uiState.await { it.networks.isNotEmpty() }
 
         vm.onLeave()
@@ -74,7 +92,7 @@ class NetworksViewModelTest {
     @Test
     fun `toggling twice removes the network`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         vm.onNetworkToggled("tesla")
         vm.uiState.await { "tesla" in it.selected }
@@ -87,7 +105,7 @@ class NetworksViewModelTest {
     @Test
     fun `only preferred is on by default and survives a commit`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         assertTrue(vm.uiState.await { it.networks.isNotEmpty() }.onlyPreferred)
 
@@ -103,7 +121,7 @@ class NetworksViewModelTest {
     @Test
     fun `a second visit starts from what was stored`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         vm.onNetworkToggled("enbw")
         vm.uiState.await { it.selected == setOf("enbw") }
@@ -117,7 +135,7 @@ class NetworksViewModelTest {
     @Test
     fun `search filters the catalog by folded name`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         vm.onSearchChanged("ionity")
 
@@ -126,42 +144,42 @@ class NetworksViewModelTest {
         assertTrue(state.networks.all {
             OperatorKey.folded(it.name).contains(OperatorKey.folded("ionity"))
         })
-        // Full catalog is larger
-        assertTrue(state.networks.size < NetworkCatalog.all.size)
+        // The full list is larger
+        assertTrue(state.networks.size < LISTED.size)
     }
 
     @Test
     fun `clearing search restores the full catalog`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         vm.onSearchChanged("ionity")
         vm.onSearchChanged("")
 
-        val state = vm.uiState.await { it.networks.size == NetworkCatalog.all.size }
-        assertEquals(NetworkCatalog.all.size, state.networks.size)
+        val state = vm.uiState.await { it.networks.size == LISTED.size }
+        assertEquals(LISTED.size, state.networks.size)
     }
 
     @Test
     fun `without a search term the stored networks come first`() = runBlocking<Unit> {
         val settings = settings()
-        // A network far down the catalog, so plain catalog order would not
-        // put it on top by accident.
-        val key = NetworkCatalog.all.last().key
+        // A network late in the alphabet, so plain order would not put it on
+        // top by accident.
+        val key = LISTED.last().key
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf(key)))
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         val state = vm.uiState.await { it.selected == setOf(key) }
         assertEquals(key, state.networks.first().key)
-        assertEquals(NetworkCatalog.all.size, state.networks.size, "nothing dropped")
+        assertEquals(LISTED.size, state.networks.size, "nothing dropped")
     }
 
     @Test
     fun `ticking a network does not reshuffle the open list`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
         vm.onEnter()
-        val key = NetworkCatalog.all.last().key
+        val key = LISTED.last().key
 
         val before = vm.uiState.await { it.networks.isNotEmpty() }.networks.map { it.key }
         vm.onNetworkToggled(key)
@@ -173,8 +191,8 @@ class NetworksViewModelTest {
     @Test
     fun `clearing the search floats a network ticked while searching to the top`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
-        val network = NetworkCatalog.all.last()
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val network = LISTED.last()
         vm.onEnter()
         vm.uiState.await { it.networks.isNotEmpty() }
 
@@ -184,16 +202,16 @@ class NetworksViewModelTest {
         vm.uiState.await { network.key in it.selected }
         vm.onSearchChanged("")
 
-        val state = vm.uiState.await { it.networks.size == NetworkCatalog.all.size && it.networks.first().key == network.key }
+        val state = vm.uiState.await { it.networks.size == LISTED.size && it.networks.first().key == network.key }
         assertEquals(network.key, state.networks.first().key)
-        assertEquals(NetworkCatalog.all.size, state.networks.size, "nothing dropped")
+        assertEquals(LISTED.size, state.networks.size, "nothing dropped")
     }
 
     @Test
     fun `the next visit floats the newly ticked network to the top`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
-        val key = NetworkCatalog.all.last().key
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val key = LISTED.last().key
 
         vm.onEnter()
         vm.onNetworkToggled(key)
@@ -203,13 +221,13 @@ class NetworksViewModelTest {
 
         val state = vm.uiState.await { it.networks.first().key == key }
         assertEquals(key, state.networks.first().key)
-        assertEquals(NetworkCatalog.all.size, state.networks.size, "nothing dropped")
+        assertEquals(LISTED.size, state.networks.size, "nothing dropped")
     }
 
     @Test
     fun `unselected networks are alphabetical`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings)
+        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
 
         val names = vm.uiState.await { it.networks.isNotEmpty() }.networks
             .map { OperatorKey.folded(it.name) }
@@ -231,4 +249,17 @@ private class TrackingSettingsStore(
         saved += preferences
         delegate.setNetworks(preferences)
     }
+}
+
+private val LISTED = listOf(
+    Network("enbw", "EnBW", rank = 0),
+    Network("ionity", "Ionity", rank = 1),
+    Network("tesla", "Tesla", rank = 2),
+    Network("aral-pulse", "Aral pulse", rank = 3),
+    Network("zapgrid", "ZapGrid", rank = 4),
+)
+
+internal class FixedNetworkRepository(networks: List<Network>) : NetworkRepository {
+    override val networks: Flow<List<Network>> = flowOf(networks)
+    override suspend fun refresh() = Unit
 }

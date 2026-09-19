@@ -13,7 +13,6 @@ import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargePointState
 import org.julakali.chargeahead.shared.domain.ChargePointStatus
 import org.julakali.chargeahead.shared.domain.ChargePointStatusSource
-import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Connector
@@ -243,8 +242,8 @@ class PhoneViewModelTest {
     )
 
     private fun fixedSource(sites: List<ChargeSite>) = object : ChargeSiteSource {
-        override val id = "demo"
-        override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> = sites
+        override val id = "fixed"
+        override suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = sites
     }
 
     /** On the *same* store the ViewModel gets, over an in-memory database. */
@@ -252,7 +251,7 @@ class PhoneViewModelTest {
         sites: List<ChargeSite>,
         settings: PersistentSettingsStore,
         locationTimeoutMillis: Long = HomeViewModel.DEFAULT_LOCATION_TIMEOUT_MILLIS,
-        statusSource: ChargePointStatusSource? = null,
+        statusSource: ChargePointStatusSource = ChargePointStatusSource { emptyMap() },
     ): HomeViewModel {
         val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })

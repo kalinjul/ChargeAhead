@@ -16,8 +16,6 @@ import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.SearchArea
-import org.julakali.chargeahead.shared.domain.Network
-import org.julakali.chargeahead.shared.domain.NetworkCatalog
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.maxDcPowerKw
@@ -57,12 +55,12 @@ class TiledSiteRepository(
     private val inFlight = mutableMapOf<String, Deferred<List<ChargeSite>>>()
     private val inFlightGuard = Mutex()
 
-    override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
-        val key = requestKey(area, networks)
+    override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+        val key = requestKey(area, networkKeys)
         val deferred = inFlightGuard.withLock {
             inFlight[key] ?: scope.async {
                 try {
-                    loadSites(area, networks)
+                    loadSites(area, networkKeys)
                 } finally {
                     // Drop it before the result is delivered, so the map only
                     // ever holds live fetches.
@@ -77,12 +75,11 @@ class TiledSiteRepository(
         return deferred.await()
     }
 
-    private suspend fun loadSites(area: SearchArea, networks: List<Network>): List<ChargeSite> {
-        val keys = if (networks.isEmpty()) listOf(NetworkCatalog.UNFILTERED) else networks.map { it.key }
+    private suspend fun loadSites(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+        val keys = networkKeys.ifEmpty { setOf(ALL_NETWORKS) }
         val missing = keys.filterNot { isCovered(area, it) }
         if (missing.isNotEmpty()) {
-            val toFetch = if (networks.isEmpty()) emptyList()
-                          else networks.filter { it.key in missing }
+            val toFetch = if (networkKeys.isEmpty()) emptySet() else missing.toSet()
             val fetchFailure = runCatching { fetchAndStore(area, toFetch, missing) }.exceptionOrNull()
             if (fetchFailure != null) {
                 logWarning("Source '${source.id}' did not respond", fetchFailure)
@@ -99,14 +96,10 @@ class TiledSiteRepository(
         dao.clearCoverage(source.id)
     }
 
-    private fun requestKey(area: SearchArea, networks: List<Network>): String {
+    private fun requestKey(area: SearchArea, networkKeys: Set<String>): String {
         val box = area.boundingBox
-        val networkKeys = if (networks.isEmpty()) {
-            NetworkCatalog.UNFILTERED
-        } else {
-            networks.map { it.key }.sorted().joinToString(",")
-        }
-        return "${box.south},${box.west},${box.north},${box.east}|$networkKeys"
+        val keys = if (networkKeys.isEmpty()) ALL_NETWORKS else networkKeys.sorted().joinToString(",")
+        return "${box.south},${box.west},${box.north},${box.east}|$keys"
     }
 
     /**
@@ -143,13 +136,13 @@ class TiledSiteRepository(
         return Coverage.isCovered(area, freshTiles, corridors)
     }
 
-    // networks = the Network objects to query the source with (missing ones only).
-    // stampKeys = the network keys to stamp on every covered tile (same as missing keys).
-    private suspend fun fetchAndStore(area: SearchArea, networks: List<Network>, stampKeys: List<String>) {
+    // networkKeys = the networks to query the source with (missing ones only, empty for all).
+    // stampKeys = the network keys to stamp on every covered tile.
+    private suspend fun fetchAndStore(area: SearchArea, networkKeys: Set<String>, stampKeys: List<String>) {
         // Records what the source was asked for: the tiles the shape fully
         // contains, plus the route itself as a corridor. Never its box.
         val fetchArea = area.prefetchArea(prefetchMarginKm)
-        val sites = source.query(fetchArea, networks)
+        val sites = source.query(fetchArea, networkKeys)
         val now = time.nowMillis()
         val tiles = Coverage.tilesToRecord(fetchArea)
         val corridors = if (fetchArea is PolylineArea) {
@@ -189,7 +182,7 @@ class TiledSiteRepository(
                     fetchedAtMillis = now,
                     maxPowerKw = site.maxPowerKw,
                     maxDcPowerKw = site.maxDcPowerKw,
-                    networkKey = NetworkCatalog.resolve(site),
+                    networkKey = site.networkKey,
                 )
             },
             tiles = stampKeys.flatMap { key ->
@@ -233,6 +226,9 @@ class TiledSiteRepository(
     }
 
     companion object {
+        /** Coverage key of a fetch without a network filter. */
+        const val ALL_NETWORKS = "*"
+
         const val DEFAULT_TTL_MILLIS = 3L * 24 * 60 * 60 * 1000
 
         const val DEFAULT_PREFETCH_MARGIN_KM = 25.0
@@ -249,4 +245,5 @@ private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     address = Address(street, postalCode, town).takeIf { !it.isEmpty },
     sources = setOf(sourceId),
     liveStatusId = liveStatusId,
+    networkKey = networkKey,
 )

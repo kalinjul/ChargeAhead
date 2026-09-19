@@ -16,6 +16,6 @@ class RefreshChargeNow(
     override suspend fun doWork(params: Params) {
         val filters = settings.chargeFilters.first()
         val networks = settings.networks.first()
-        repository.load(chargeNowArea(params.position, filters), networks.selectedNetworks())
+        repository.load(chargeNowArea(params.position, filters), networks.selectedKeys())
     }
 }

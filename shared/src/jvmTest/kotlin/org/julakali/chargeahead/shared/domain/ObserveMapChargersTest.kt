@@ -57,7 +57,7 @@ class ObserveMapChargersTest {
         runBlocking { settings.configure() }
         val store = MutableStateFlow(stored)
         repository = object : SiteRepository {
-            override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 fetchedAreas += area
                 store.update { it + fetched }
                 return fetched

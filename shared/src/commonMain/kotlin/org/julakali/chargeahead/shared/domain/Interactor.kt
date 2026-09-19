@@ -6,17 +6,15 @@ package org.julakali.chargeahead.shared.domain
 
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import org.julakali.chargeahead.shared.logDebug
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -24,71 +22,46 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withTimeout
 
-interface UserInitiatedParams {
-    val isUserInitiated: Boolean
-}
-
 abstract class Interactor<in P, R> {
-    private val loadingState = MutableStateFlow(State())
+    private val running = MutableStateFlow(0)
 
-    @OptIn(FlowPreview::class)
-    val inProgress: Flow<Boolean> by lazy {
-        loadingState
-            .debounce {
-                if (it.ambientCount > 0) {
-                    5.seconds
-                } else {
-                    0.seconds
-                }
-            }
-            .map { (it.userCount + it.ambientCount) > 0 }
-            .distinctUntilChanged()
-    }
+    /** True from the moment a call starts until the last running one ends — no debounce. */
+    val inProgress: Flow<Boolean> = running
+        .map { it > 0 }
+        .distinctUntilChanged()
 
-    private fun addLoader(fromUser: Boolean) {
-        loadingState.update {
-            if (fromUser) {
-                it.copy(userCount = it.userCount + 1)
-            } else {
-                it.copy(ambientCount = it.ambientCount + 1)
-            }
-        }
-    }
-
-    private fun removeLoader(fromUser: Boolean) {
-        loadingState.update {
-            if (fromUser) {
-                it.copy(userCount = it.userCount - 1)
-            } else {
-                it.copy(ambientCount = it.ambientCount - 1)
-            }
-        }
-    }
-
+    /**
+     * A timeout comes back as a failure. Cancelling the caller still throws,
+     * and either way the call stops counting as in progress.
+     */
     suspend operator fun invoke(
         params: P,
         timeout: Duration = DefaultTimeout,
-        userInitiated: Boolean = params.isUserInitiated,
-    ): Result<R> = cancellableRunCatching {
-        addLoader(userInitiated)
-        withTimeout(timeout) {
-            doWork(params)
+    ): Result<R> {
+        running.update { it + 1 }
+        try {
+            return cancellableRunCatching {
+                try {
+                    withTimeout(timeout) { doWork(params) }
+                } catch (timedOut: TimeoutCancellationException) {
+                    throw InteractorTimeoutException(timeout, timedOut)
+                }
+            }
+        } finally {
+            running.update { it - 1 }
         }
-    }.also {
-        removeLoader(userInitiated)
     }
-
-    private val P.isUserInitiated: Boolean
-        get() = (this as? UserInitiatedParams)?.isUserInitiated ?: true
 
     protected abstract suspend fun doWork(params: P): R
 
     companion object {
         internal val DefaultTimeout = 5.minutes
     }
-
-    private data class State(val userCount: Int = 0, val ambientCount: Int = 0)
 }
+
+/** [Interactor.invoke] ran longer than its timeout. */
+class InteractorTimeoutException(timeout: Duration, cause: Throwable) :
+    Exception("Timed out after $timeout", cause)
 
 suspend operator fun <R> Interactor<Unit, R>.invoke(
     timeout: Duration = Interactor.DefaultTimeout,

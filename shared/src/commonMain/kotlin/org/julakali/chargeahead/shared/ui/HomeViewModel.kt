@@ -31,7 +31,6 @@ data class HomeUiState(
     val position: LatLon? = null,
     /** The corridor list. */
     val stops: List<ChargeStop> = emptyList(),
-    val isDemo: Boolean = false,
     val chargers: List<MapCharger> = emptyList(),
     /** Zoomed out too far for markers. */
     val belowMinZoom: Boolean = false,
@@ -81,7 +80,6 @@ class HomeViewModel(
         HomeUiState(
             position = position,
             stops = chargeStops?.stops.orEmpty(),
-            isDemo = feature.isDemo,
             chargers = mapChargers.chargers,
             belowMinZoom = mapState.belowMinZoom,
             selectedStop = mapState.selectedStop,

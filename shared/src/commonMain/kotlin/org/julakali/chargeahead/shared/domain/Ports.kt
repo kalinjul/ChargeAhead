@@ -14,6 +14,20 @@ interface LocationSource {
     suspend fun currentFix(): Fix? = null
 }
 
+/** The charging networks worth offering, largest first. */
+fun interface NetworkListSource {
+    suspend fun networks(): List<Network>
+}
+
+/** The networks the backend has listed, kept so a selection outlives the list it came from. */
+interface NetworkRepository {
+    /** Every network ever listed; [Network.rank] marks those on the current list. */
+    val networks: Flow<List<Network>>
+
+    /** Keeps what is stored when the backend fails or has no list yet. */
+    suspend fun refresh()
+}
+
 /** A charging-site data source. */
 interface ChargeSiteSource {
     val id: String
@@ -24,20 +38,16 @@ interface ChargeSiteSource {
      * Takes the whole [SearchArea], not just its bounding rectangle, so
      * sources with radial search can respond sorted by distance.
      *
+     * Empty [networkKeys] means every network.
+     *
      * Throws on network or server errors.
      */
-    suspend fun query(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite>
+    suspend fun query(area: SearchArea, networkKeys: Set<String> = emptySet()): List<ChargeSite>
 }
 
 /** Builds the search area from a fix. */
 interface RouteProvider {
     fun searchArea(fix: Fix, rangeKm: Double): SearchArea
-}
-
-/** Access keys for the data sources, supplied by each platform. */
-interface ApiKeyProvider {
-    /** `null` when no key is configured. */
-    fun openChargeMapKey(): String?
 }
 
 /** Clock as a port, for testability. */
@@ -50,7 +60,8 @@ fun interface TimeProvider {
  * from this stock and replenishes it in the background.
  */
 interface SiteRepository {
-    suspend fun load(area: SearchArea, networks: List<Network> = emptyList()): List<ChargeSite>
+    /** Empty [networkKeys] means every network. */
+    suspend fun load(area: SearchArea, networkKeys: Set<String> = emptySet()): List<ChargeSite>
 
     /**
      * The stored sites in [box] that pass [filter] — no fetch, no coverage

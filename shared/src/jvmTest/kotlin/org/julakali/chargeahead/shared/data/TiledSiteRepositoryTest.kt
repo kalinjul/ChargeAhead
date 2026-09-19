@@ -7,7 +7,6 @@ import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Connector
-import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MapFilter
@@ -18,7 +17,6 @@ import org.julakali.chargeahead.shared.domain.SectorArea
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.destination
-import org.julakali.chargeahead.shared.domain.NetworkCatalog
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -52,7 +50,7 @@ class TiledSiteRepositoryTest {
         var lastArea: SearchArea? = null
             private set
 
-        override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        override suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
             queries++
             lastArea = area
             if (broken) throw IllegalStateException("Dead zone")
@@ -77,7 +75,11 @@ class TiledSiteRepositoryTest {
     private val aroundStart = BoundingBox(south = 48.0, west = 10.0, north = 50.0, east = 13.0)
 
     private fun siteWith(id: String, operator: String, powerKw: Double, type: ConnectorType = ConnectorType.CCS2) =
-        site(id, 0.0, 5.0).copy(operator = operator, connectors = listOf(Connector(type, powerKw, 2)))
+        site(id, 0.0, 5.0).copy(
+            operator = operator,
+            connectors = listOf(Connector(type, powerKw, 2)),
+            networkKey = operator.lowercase(),
+        )
 
     /** Stores [sites], then reads them back through [filter]. */
     private fun storedThrough(filter: MapFilter, vararg sites: ChargeSite): Set<String> = runBlocking {
@@ -107,7 +109,7 @@ class TiledSiteRepositoryTest {
             siteWith("unknown", "Hinterhof-Strom", 300.0),
         )
 
-        // Unrecognised operators are hidden while a network filter is active.
+        // Sites of other networks are hidden while a network filter is active.
         assertEquals(setOf("fastned"), ids)
     }
 
@@ -348,10 +350,10 @@ class TiledSiteRepositoryTest {
     }
 
     private class RecordingSource(override val id: String = "ocm") : ChargeSiteSource {
-        val calls = mutableListOf<List<Network>>()
+        val calls = mutableListOf<Set<String>>()
         var toReturn: List<ChargeSite> = emptyList()
-        override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
-            calls += networks; return toReturn
+        override suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+            calls += networkKeys; return toReturn
         }
     }
 
@@ -359,29 +361,25 @@ class TiledSiteRepositoryTest {
     fun adding_a_network_fetches_only_the_missing_one() = runTest {
         val src = RecordingSource()
         val repo = TiledSiteRepository(src, database(), ControllableClock(1000L))
-        val enbw = NetworkCatalog.byKey("enbw")!!
-        val ionity = NetworkCatalog.byKey("ionity")!!
         val a = SectorArea.circle(LatLon(48.1, 11.5), 1.0)
 
-        repo.load(a, listOf(enbw))
-        repo.load(a, listOf(enbw, ionity))
+        repo.load(a, setOf("enbw"))
+        repo.load(a, setOf("enbw", "ionity"))
 
         assertEquals(2, src.calls.size)
-        assertEquals(listOf("enbw"), src.calls[0].map { it.key })
-        assertEquals(listOf("ionity"), src.calls[1].map { it.key })
+        assertEquals(setOf("enbw"), src.calls[0])
+        assertEquals(setOf("ionity"), src.calls[1])
     }
 
     @Test
     fun removing_a_network_fetches_nothing() = runTest {
         val src = RecordingSource()
         val repo = TiledSiteRepository(src, database(), ControllableClock(1000L))
-        val enbw = NetworkCatalog.byKey("enbw")!!
-        val ionity = NetworkCatalog.byKey("ionity")!!
         val a = SectorArea.circle(LatLon(48.1, 11.5), 1.0)
 
-        repo.load(a, listOf(enbw, ionity))
+        repo.load(a, setOf("enbw", "ionity"))
         val before = src.calls.size
-        repo.load(a, listOf(enbw))
+        repo.load(a, setOf("enbw"))
 
         assertEquals(before, src.calls.size)
     }
@@ -396,7 +394,7 @@ class TiledSiteRepositoryTest {
         repo.load(a)
 
         assertEquals(1, src.calls.size)
-        assertEquals(emptyList(), src.calls[0])
+        assertEquals(emptySet(), src.calls[0])
     }
 
     @Test
@@ -439,7 +437,7 @@ class TiledSiteRepositoryTest {
         val source = object : ChargeSiteSource {
             override val id = "test"
             var queries = 0
-            override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            override suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 queries++
                 if (queries == 1) gate.await() // only the first area stalls
                 return emptyList()
@@ -464,7 +462,7 @@ class TiledSiteRepositoryTest {
         val source = object : ChargeSiteSource {
             override val id = "test"
             var queries = 0
-            override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+            override suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 queries++
                 gate.await()
                 return listOf(site("a", 0.0, 10.0))
@@ -490,7 +488,7 @@ class TiledSiteRepositoryTest {
         var queries = 0
             private set
 
-        override suspend fun query(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        override suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
             queries++
             return sites.filter { it.position in area }
         }

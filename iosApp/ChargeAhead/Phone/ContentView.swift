@@ -17,13 +17,6 @@ struct ContentView: View {
                     Text(NSLocalizedString("phone_hint_car_ui", comment: ""))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-
-                    if viewModel.state.isDemo {
-                        // Demo charging sites must be labeled.
-                        Text(NSLocalizedString("phone_demo_notice", comment: ""))
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                    }
                 }
 
                 Section(NSLocalizedString("phone_stops_heading", comment: "")) {

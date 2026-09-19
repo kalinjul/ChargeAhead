@@ -4,8 +4,6 @@ import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.Network
-import org.julakali.chargeahead.shared.domain.NetworkCatalog
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SectorArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
@@ -27,7 +25,7 @@ class MergingSiteRepositoryTest {
         var invalidations = 0
             private set
 
-        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
             queries++
             return sites
         }
@@ -38,11 +36,11 @@ class MergingSiteRepositoryTest {
     }
 
     private class RecordingSiteRepository(private val sites: List<ChargeSite> = emptyList()) : SiteRepository {
-        var recordedNetworks: List<Network>? = null
+        var recordedNetworks: Set<String>? = null
             private set
 
-        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
-            recordedNetworks = networks
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+            recordedNetworks = networkKeys
             return sites
         }
 
@@ -51,7 +49,7 @@ class MergingSiteRepositoryTest {
     }
 
     private class BrokenSiteRepository(private val reason: String = "No signal") : SiteRepository {
-        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> =
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> =
             throw IllegalStateException(reason)
     }
 
@@ -141,9 +139,7 @@ class MergingSiteRepositoryTest {
         val source1 = RecordingSiteRepository()
         val source2 = RecordingSiteRepository()
 
-        // Get test data: enbw network from catalog
-        val enbw = NetworkCatalog.byKey("enbw")!!
-        val networks = listOf(enbw)
+        val networks = setOf("enbw")
 
         MergingSiteRepository(listOf(source1, source2)).load(area, networks)
 

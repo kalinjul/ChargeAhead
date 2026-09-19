@@ -17,7 +17,7 @@ class RefreshMapChargers(
     override suspend fun doWork(params: Params) {
         val filter = settings.mapFilter().first()
         // Slow mode browses every network, so it fetches unfiltered.
-        val networks = if (filter.slowMode) emptyList() else filter.networks.selectedNetworks()
+        val networks = if (filter.slowMode) emptySet() else filter.networks.selectedKeys()
         repository.load(ViewportArea(params.viewport), networks)
     }
 }
