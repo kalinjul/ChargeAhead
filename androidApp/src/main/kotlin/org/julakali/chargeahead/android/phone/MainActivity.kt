@@ -383,6 +383,18 @@ private fun PhoneApp() {
                             CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                         }
                     }
+
+                    entry<Legal> {
+                        Page(title = stringResource(R.string.drawer_legal), onBack = ::pop) { pagePadding ->
+                            LegalScreen(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                        }
+                    }
+
+                    entry<Licenses> {
+                        Page(title = stringResource(R.string.drawer_licenses), onBack = ::pop) { pagePadding ->
+                            LicensesRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                        }
+                    }
         },
         modifier = Modifier.fillMaxSize(),
     )

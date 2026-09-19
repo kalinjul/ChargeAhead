@@ -5,10 +5,12 @@ import org.julakali.chargeahead.shared.core.TripPlanner
 import org.julakali.chargeahead.shared.data.BackendChargePointStatusSource
 import org.julakali.chargeahead.shared.data.CachingChargePointStatusRepository
 import org.julakali.chargeahead.shared.data.BackendChargeSiteSource
+import org.julakali.chargeahead.shared.data.BackendDataSourceDirectory
 import org.julakali.chargeahead.shared.data.BackendGeocoder
 import org.julakali.chargeahead.shared.data.BackendRouteEngine
 import org.julakali.chargeahead.shared.data.CombinedSoCSource
 import org.julakali.chargeahead.shared.data.DemoSiteSource
+import org.julakali.chargeahead.shared.data.DirectDataSourceDirectory
 import org.julakali.chargeahead.shared.data.ManualSoCSource
 import org.julakali.chargeahead.shared.data.MergingSiteRepository
 import org.julakali.chargeahead.shared.data.NominatimGeocoder
@@ -21,7 +23,9 @@ import org.julakali.chargeahead.shared.db.ChargeSiteDatabase
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.CorridorPlanning
+import org.julakali.chargeahead.shared.domain.DataSourceDirectory
 import org.julakali.chargeahead.shared.domain.Geocoder
+import org.julakali.chargeahead.shared.domain.LoadDataSources
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.ObserveChargeNow
@@ -120,6 +124,14 @@ fun chargeStopsModule(): Module = module {
         }
         CachingChargePointStatusRepository(statusSource, get())
     }
+    single<DataSourceDirectory> {
+        val config = get<ChargeStopsConfig>()
+        when (val backend = config.backend) {
+            null -> DirectDataSourceDirectory(usesOpenChargeMap = config.openChargeMapKey != null)
+            else -> BackendDataSourceDirectory(get(), backend.baseUrl, backend.token)
+        }
+    }
+    factory { LoadDataSources(get()) }
     factory { ObserveMapChargers(get(), get(), get()) }
     factory { RefreshMapChargers(get(), get()) }
     factory { RefreshChargerAvailability(get(), get(), get()) }

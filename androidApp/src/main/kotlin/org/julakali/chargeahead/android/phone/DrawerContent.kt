@@ -34,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.components.AppSlider
-import org.julakali.chargeahead.android.phone.components.Fineprint
 import org.julakali.chargeahead.android.phone.components.PrefRow
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.Switch
@@ -136,6 +135,21 @@ internal fun DrawerContent(
 
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            SectionLabel(stringResource(R.string.drawer_about), modifier = Modifier.padding(top = 12.dp))
+            PrefRow(
+                icon = painterResource(R.drawable.ic_info),
+                label = stringResource(R.string.drawer_legal),
+                onClick = { onOpen(Legal) },
+            )
+            PrefRow(
+                icon = painterResource(R.drawable.ic_document),
+                label = stringResource(R.string.drawer_licenses),
+                onClick = { onOpen(Licenses) },
+            )
+        }
+
+        Column {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             SectionLabel(stringResource(R.string.drawer_debug), modifier = Modifier.padding(top = 12.dp))
             PrefRow(
                 icon = painterResource(R.drawable.ic_send),
@@ -143,8 +157,6 @@ internal fun DrawerContent(
                 onClick = { onOpen(CarData) },
             )
         }
-
-        Fineprint(stringResource(R.string.drawer_availability_note))
     }
 }
 

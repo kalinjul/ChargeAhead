@@ -169,8 +169,27 @@
     <string name="drawer_slow_mode">AC-Modus</string>
     <string name="drawer_slow_mode_hint">ignoriert alle Filter und zeigt Lader unter 50 kW</string>
     <string name="drawer_max_distance">Max. Entfernung (Jetzt laden): %1$s km</string>
-    <string name="drawer_availability_note">Ein Nur-frei-Filter folgt, sobald eine Quelle Live-Belegung liefert.</string>
+    <string name="drawer_about">Über ChargeAhead</string>
+    <string name="drawer_legal">Impressum &amp; Datenschutz</string>
+    <string name="drawer_licenses">Lizenzen</string>
     <string name="drawer_car_none">Kein Fahrzeug angelegt</string>
+
+    <!-- Phone: about -->
+    <string name="about_legal_imprint">Impressum</string>
+    <string name="about_legal_imprint_body">Angaben gemäß § 5 DDG\n\nJulian Kalinowski\nWismarstraße 2\n24226 Heikendorf\n\nE-Mail: email@provider.tld</string>
+    <string name="about_legal_privacy">Datenschutz</string>
+    <string name="about_licenses_intro">%1$s nutzt verschiedene Datenquellen für statische und dynamische Daten über Ladestationen sowie verschiedene Open-Source-Komponenten unter den angegebenen Lizenzbedingungen.</string>
+    <string name="about_licenses_libraries">Open-Source-Bibliotheken</string>
+    <string name="about_licenses_data_sources">Datenquellen</string>
+    <string name="about_licenses_back_to_top">Nach oben</string>
+    <string name="about_data_sources_failed">Datenquellen konnten nicht geladen werden.</string>
+    <string name="about_data_sources_retry">Erneut versuchen</string>
+    <string name="about_data_sources_open_dataset">Datensatz öffnen</string>
+    <string name="about_dataset_sites">Ladestationen</string>
+    <string name="about_dataset_status">Live-Belegung</string>
+    <string name="about_dataset_routing">Routen</string>
+    <string name="about_dataset_places">Zielsuche</string>
+    <string name="about_dataset_other">Weitere Daten</string>
 
     <!-- Phone: plan sheet -->
     <string name="plan_title">Route planen</string>

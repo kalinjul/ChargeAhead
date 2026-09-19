@@ -19,4 +19,5 @@ fun sharedUiModule(): Module = module {
     viewModelOf(::VehicleSettingsViewModel)
     viewModelOf(::NetworksViewModel)
     viewModelOf(::CarDataViewModel)
+    viewModelOf(::LicensesViewModel)
 }

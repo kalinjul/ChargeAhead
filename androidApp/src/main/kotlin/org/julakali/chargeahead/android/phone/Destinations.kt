@@ -29,3 +29,9 @@ internal data object Networks : PhoneDestination
 
 @Serializable
 internal data object CarData : PhoneDestination
+
+@Serializable
+internal data object Legal : PhoneDestination
+
+@Serializable
+internal data object Licenses : PhoneDestination
