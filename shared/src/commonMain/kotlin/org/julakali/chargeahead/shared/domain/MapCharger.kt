@@ -19,9 +19,3 @@ data class MapFilter(
             MapFilter(networks, filters.minPowerKw, filters.slowMode)
     }
 }
-
-/** The map's chargers and the [filter] they were selected with. */
-data class MapChargers(
-    val filter: MapFilter,
-    val chargers: List<MapCharger>,
-)

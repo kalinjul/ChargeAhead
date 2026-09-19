@@ -96,8 +96,6 @@
     <string name="phone_detail_navigate">Navigation starten</string>
     <string name="phone_detail_no_navigation">Keine Navigations-App gefunden.</string>
     <string name="phone_detail_unknown_connectors">Anschlüsse unbekannt</string>
-    <string name="phone_detail_live">Jetzt verfügbar</string>
-    <string name="phone_detail_live_none">Keine Live-Daten</string>
     <!-- Charging networks -->
     <!-- Short title: with the full app name there's no room left next to four
          buttons, and the header wraps it mid-word. -->
@@ -140,7 +138,6 @@
     <string name="map_loading_sites">Ladestationen werden geladen</string>
     <string name="map_out_of_order">Außer Betrieb</string>
     <string name="map_zoom_hint">Zum Anzeigen der Ladesäulen reinzoomen</string>
-    <string name="map_applying_filters">Filter werden angewendet …</string>
 
     <!-- Phone: car data debug view -->
     <string name="drawer_debug">Debug</string>

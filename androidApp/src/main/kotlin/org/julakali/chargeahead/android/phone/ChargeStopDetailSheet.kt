@@ -34,7 +34,10 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 
-/** Charging stop details as a bottom sheet over the map. [live] is `null` without live data. */
+/**
+ * Charging stop details as a bottom sheet over the map. With [live] charge
+ * points the connectors come from them alone, otherwise from the site's data.
+ */
 @Composable
 fun ChargeStopDetailSheet(stop: ChargeStop, live: List<LiveConnectorGroup>?, onDismiss: () -> Unit) {
     val context = LocalContext.current
@@ -72,8 +75,14 @@ fun ChargeStopDetailSheet(stop: ChargeStop, live: List<LiveConnectorGroup>?, onD
         }
 
         Column {
+            // Live points replace the site's connectors: the two often disagree on count and power.
+            val liveGroups = live.orEmpty()
             SectionLabel(stringResource(R.string.phone_detail_connectors))
-            val connectorLines = ChargeStopFormatter.connectorLines(stop)
+            val connectorLines = if (liveGroups.isNotEmpty()) {
+                ChargeStopFormatter.liveConnectorLines(liveGroups)
+            } else {
+                ChargeStopFormatter.connectorLines(stop)
+            }
             if (connectorLines.isEmpty()) {
                 Text(
                     stringResource(R.string.phone_detail_unknown_connectors),
@@ -82,20 +91,6 @@ fun ChargeStopDetailSheet(stop: ChargeStop, live: List<LiveConnectorGroup>?, onD
                 )
             } else {
                 connectorLines.forEach {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-
-        live?.let { groups ->
-            Column {
-                SectionLabel(stringResource(R.string.phone_detail_live))
-                val lines = ChargeStopFormatter.liveConnectorLines(groups)
-                (lines.ifEmpty { listOf(stringResource(R.string.phone_detail_live_none)) }).forEach {
                     Text(
                         it,
                         style = MaterialTheme.typography.bodySmall,

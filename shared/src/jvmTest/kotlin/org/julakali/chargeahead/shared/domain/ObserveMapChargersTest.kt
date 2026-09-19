@@ -2,10 +2,12 @@ package org.julakali.chargeahead.shared.domain
 
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.Test
@@ -72,7 +74,7 @@ class ObserveMapChargersTest {
         return ObserveMapChargers(repository, statusRepository, settings).also { it(ObserveMapChargers.Params(viewport)) }
     }
 
-    private suspend fun ObserveMapChargers.await(matching: (MapChargers) -> Boolean = { true }): MapChargers =
+    private suspend fun ObserveMapChargers.await(matching: (List<MapCharger>) -> Boolean = { true }): List<MapCharger> =
         withTimeout(5_000) { flow.first(matching) }
 
     @Test
@@ -90,18 +92,20 @@ class ObserveMapChargersTest {
             slowMode = false,
         )
         assertEquals(expected, storedFilters.single())
-        assertEquals(expected, result.filter)
-        assertEquals(300.0, result.chargers.single().maxPowerKw)
+        assertEquals(300.0, result.single().maxPowerKw)
     }
 
     @Test
     fun `a filter change asks the store again`() = runBlocking<Unit> {
         val observe = observer(listOf(site("hpc", "Ionity", 350.0)))
-        observe.await()
+        // The stored sites don't change, so the result doesn't either; watch the store instead.
+        val collecting = launch { observe.flow.collect {} }
+        withTimeout(5_000) { while (storedFilters.isEmpty()) delay(10) }
 
         settings.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
 
-        assertEquals(50.0, observe.await { it.filter.minPowerKw == 50.0 }.filter.minPowerKw)
+        withTimeout(5_000) { while (storedFilters.size < 2) delay(10) }
+        collecting.cancel()
         assertEquals(listOf(ChargeFilters().minPowerKw, 50.0), storedFilters.map { it.minPowerKw })
     }
 
@@ -110,14 +114,14 @@ class ObserveMapChargersTest {
         val wallbox = site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2)
         val observe = observer(listOf(wallbox)) { setChargeFilters(ChargeFilters(slowMode = true)) }
 
-        assertEquals(listOf(MapCharger(wallbox, 22.0)), observe.await().chargers)
+        assertEquals(listOf(MapCharger(wallbox, 22.0)), observe.await())
     }
 
     @Test
     fun `outside slow mode a site without a DC connector is not a map charger`() = runBlocking<Unit> {
         val observe = observer(listOf(site("wallbox", "Stadtwerke", 22.0, ConnectorType.TYPE2)))
 
-        assertTrue(observe.await().chargers.isEmpty())
+        assertTrue(observe.await().isEmpty())
     }
 
     @Test
@@ -125,7 +129,7 @@ class ObserveMapChargersTest {
         val observe = observer(listOf(site("hpc", "Ionity", 350.0)))
         observe(ObserveMapChargers.Params(viewport = null))
 
-        assertTrue(observe.await { it.chargers.isEmpty() }.chargers.isEmpty())
+        assertTrue(observe.await { it.isEmpty() }.isEmpty())
         assertTrue(fetchedAreas.isEmpty())
     }
 
@@ -145,7 +149,7 @@ class ObserveMapChargersTest {
         }
         val observe = observer(many) { setChargeFilters(ChargeFilters(minPowerKw = 50.0)) }
 
-        val chargers = observe.await().chargers
+        val chargers = observe.await()
         assertEquals(ObserveMapChargers.MAX_CHARGERS, chargers.size)
         assertEquals(
             (1..ObserveMapChargers.MAX_CHARGERS).map { "demo:s$it" },
@@ -167,7 +171,7 @@ class ObserveMapChargersTest {
         )
         val observe = observer(listOf(outsideSite)) { setChargeFilters(ChargeFilters(minPowerKw = 50.0)) }
 
-        assertNotNull(observe.await().chargers.find { it.site.id == "demo:outside" }, "Site in the pad must appear on the map")
+        assertNotNull(observe.await().find { it.site.id == "demo:outside" }, "Site in the pad must appear on the map")
     }
 
     @Test
@@ -177,7 +181,7 @@ class ObserveMapChargersTest {
 
         RefreshMapChargers(repository, settings)(RefreshMapChargers.Params(viewport)).getOrThrow()
 
-        assertEquals(listOf("demo:new"), observe.await { it.chargers.isNotEmpty() }.chargers.map { it.site.id })
+        assertEquals(listOf("demo:new"), observe.await { it.isNotEmpty() }.map { it.site.id })
     }
 
     @Test
@@ -198,7 +202,7 @@ class ObserveMapChargersTest {
         statusStore.value = mapOf("live-hpc" to listOf(ChargePointStatus(ChargePointState.AVAILABLE)))
         val observe = observer(listOf(site("hpc", "Ionity", 350.0, liveStatusId = "live-hpc"), site("other", "EnBW", 350.0)))
 
-        val chargers = observe.await().chargers.associateBy { it.site.id }
+        val chargers = observe.await().associateBy { it.site.id }
 
         assertEquals(SiteAvailability.Live(free = 1, total = 1), chargers.getValue("demo:hpc").availability)
         assertNull(chargers.getValue("demo:other").availability)
@@ -223,7 +227,7 @@ class ObserveMapChargersTest {
             ),
         ) { setChargeFilters(ChargeFilters(minPowerKw = 300.0)) }
 
-        val chargers = observe.await().chargers.associateBy { it.site.id }
+        val chargers = observe.await().associateBy { it.site.id }
 
         assertEquals(SiteAvailability.Live(free = 2, total = 2), chargers.getValue("demo:mixed").availability)
         // The site data says 300 kW, the live data doesn't: shown, but without a count.
@@ -237,7 +241,7 @@ class ObserveMapChargersTest {
 
         statusStore.value = mapOf("live-hpc" to listOf(ChargePointStatus(ChargePointState.OUT_OF_ORDER)))
 
-        val charger = observe.await { result -> result.chargers.any { it.availability != null } }.chargers.single()
+        val charger = observe.await { result -> result.any { it.availability != null } }.single()
         assertEquals(SiteAvailability.OutOfOrder, charger.availability)
     }
 

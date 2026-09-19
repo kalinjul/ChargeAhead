@@ -8,7 +8,6 @@ import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.MapCharger
-import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.ObserveLiveConnectors
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.Reachability
@@ -22,7 +21,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -39,8 +37,6 @@ data class HomeUiState(
     /** The selected site's live charge points; `null` without live data. */
     val selectedStopLive: List<LiveConnectorGroup>? = null,
     val filtersCustomized: Boolean = false,
-    /** A filter/network change is re-querying the map. */
-    val applyingFilters: Boolean = false,
     /** Location is running but has not delivered a position yet. */
     val searchingLocation: Boolean = false,
     /** Long enough without a fix to tell the driver; stays alongside [searchingLocation]. */
@@ -82,23 +78,17 @@ class HomeViewModel(
         val position = fix?.position
         HomeUiState(
             position = position,
-            chargers = mapChargers.chargers,
+            chargers = mapChargers,
             belowMinZoom = mapState.belowMinZoom,
             selectedStop = mapState.selectedStop,
             selectedStopLive = selectedStopLive.takeIf { mapState.selectedStop?.site?.liveStatusId != null },
             filtersCustomized = !filters.isDefault || networks.isActive,
-            // The markers still show what an earlier filter selected.
-            applyingFilters = mapChargers.filter != MapFilter.of(filters, networks),
             // Gated on the position, so a late fix clears both.
             searchingLocation = attempt.running && position == null,
             locationUnavailable = attempt.timedOut && position == null,
             loadingSites = loadingSites,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
-
-    /** Just the "applying filters" flag, so the drawer doesn't recompose on every map change. */
-    val applyingFilters: StateFlow<Boolean> =
-        uiState.map { it.applyingFilters }.stateIn(viewModelScope, WhileUiSubscribed, false)
 
     init {
         observeMapChargers(ObserveMapChargers.Params(viewport = null))
