@@ -89,6 +89,20 @@ class TiledSiteRepositoryTest {
     }
 
     @Test
+    fun theStoreKeepsTheSitesOwnSources() = runBlocking {
+        val sites = listOf(
+            siteWith("merged", "Ionity", 350.0).copy(sources = setOf("datex", "bnetza")),
+            siteWith("plain", "EnBW", 300.0),
+        )
+        val repository = TiledSiteRepository(ControllableSource(sites), database(), ControllableClock())
+        repository.load(area())
+
+        val stored = repository.storedSitesIn(aroundStart, everyDcSite).first().associate { it.id to it.sources }
+        // Without sources of its own, a site credits the source that fetched it.
+        assertEquals(mapOf("merged" to setOf("datex", "bnetza"), "plain" to setOf("test")), stored)
+    }
+
+    @Test
     fun theStoreFiltersByMinimumDcPower() {
         val ids = storedThrough(
             everyDcSite.copy(minPowerKw = 150.0),

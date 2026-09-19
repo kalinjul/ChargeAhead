@@ -32,7 +32,9 @@ import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.PlanTrip
 import org.julakali.chargeahead.shared.domain.RefreshChargeNow
 import org.julakali.chargeahead.shared.domain.RefreshChargeStops
+import org.julakali.chargeahead.shared.domain.ObserveLiveConnectors
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
+import org.julakali.chargeahead.shared.domain.RefreshLiveConnectors
 import org.julakali.chargeahead.shared.domain.RefreshNetworks
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -103,6 +105,8 @@ fun chargeStopsModule(): Module = module {
     factory { ObserveMapChargers(get(), get(), get()) }
     factory { RefreshMapChargers(get(), get()) }
     factory { RefreshChargerAvailability(get(), get(), get()) }
+    factory { ObserveLiveConnectors(get()) }
+    factory { RefreshLiveConnectors(get()) }
     factory { ObserveChargeNow(get(), get()) }
     factory { RefreshChargeNow(get(), get()) }
     factory { ObserveDestinationSearch(get(), get()) }

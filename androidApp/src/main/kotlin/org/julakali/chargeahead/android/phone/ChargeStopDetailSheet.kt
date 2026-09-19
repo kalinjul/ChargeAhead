@@ -32,10 +32,11 @@ import org.julakali.chargeahead.android.phone.components.NetworkDot
 import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.ChargeStop
+import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 
-/** Charging stop details as a bottom sheet over the map. */
+/** Charging stop details as a bottom sheet over the map. [live] is `null` without live data. */
 @Composable
-fun ChargeStopDetailSheet(stop: ChargeStop, onDismiss: () -> Unit) {
+fun ChargeStopDetailSheet(stop: ChargeStop, live: List<LiveConnectorGroup>?, onDismiss: () -> Unit) {
     val context = LocalContext.current
 
     AppSheet(onDismissRequest = onDismiss) {
@@ -81,6 +82,20 @@ fun ChargeStopDetailSheet(stop: ChargeStop, onDismiss: () -> Unit) {
                 )
             } else {
                 connectorLines.forEach {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        live?.let { groups ->
+            Column {
+                SectionLabel(stringResource(R.string.phone_detail_live))
+                val lines = ChargeStopFormatter.liveConnectorLines(groups)
+                (lines.ifEmpty { listOf(stringResource(R.string.phone_detail_live_none)) }).forEach {
                     Text(
                         it,
                         style = MaterialTheme.typography.bodySmall,

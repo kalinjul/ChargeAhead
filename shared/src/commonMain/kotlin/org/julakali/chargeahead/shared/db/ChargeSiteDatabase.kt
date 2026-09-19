@@ -31,6 +31,8 @@ data class ChargeSiteEntity(
     val town: String?,
     val fetchedAtMillis: Long,
     val liveStatusId: String? = null,
+    // The backend's own sources ("datex", "bnetza", …), unlike sourceId.
+    val sources: Set<String> = emptySet(),
     // Derived when written, so the map can filter in SQL.
     val maxPowerKw: Double? = null,
     val maxDcPowerKw: Double? = null,
@@ -69,7 +71,7 @@ data class CorridorCoverageEntity(
 // (fallbackToDestructiveMigration).
 @Database(
     entities = [ChargeSiteEntity::class, TileCoverageEntity::class, CorridorCoverageEntity::class, NetworkEntity::class],
-    version = 7,
+    version = 8,
     exportSchema = false,
 )
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)

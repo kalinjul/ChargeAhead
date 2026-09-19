@@ -25,7 +25,11 @@ import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.Geocoder
 import org.julakali.chargeahead.shared.domain.ObserveChargeStops
 import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
+import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
+import org.julakali.chargeahead.shared.domain.MapCharger
+import org.julakali.chargeahead.shared.domain.ObserveLiveConnectors
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
+import org.julakali.chargeahead.shared.domain.RefreshLiveConnectors
 import org.julakali.chargeahead.shared.domain.RefreshChargeStops
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
@@ -228,6 +232,32 @@ class PhoneViewModelTest {
         assertEquals(SiteAvailability.Live(free = 1, total = 2), charger.availability)
     }
 
+    @Test
+    fun `a selected charger shows its live connectors until dismissed`() = runBlocking {
+        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val site = mapSite("hpc", "Ionity", 300.0).copy(liveStatusId = "live-hpc")
+        val statusSource = ChargePointStatusSource { ids ->
+            ids.associateWith {
+                listOf(
+                    ChargePointStatus(ChargePointState.AVAILABLE, 300.0, listOf(ConnectorType.CCS2)),
+                    ChargePointStatus(ChargePointState.OCCUPIED, 300.0, listOf(ConnectorType.CCS2)),
+                )
+            }
+        }
+        val viewModel = homeViewModel(listOf(site), settings, statusSource = statusSource)
+
+        viewModel.onChargerSelected(MapCharger(site, 300.0))
+
+        val live = viewModel.uiState.await { it.selectedStopLive != null }.selectedStopLive
+        assertEquals(
+            listOf(LiveConnectorGroup(listOf(ConnectorType.CCS2), 300.0, available = 1, occupied = 1, outOfOrder = 0, unknown = 0)),
+            live,
+        )
+
+        viewModel.onSelectedStopDismissed()
+        assertNull(viewModel.uiState.await { it.selectedStop == null }.selectedStopLive)
+    }
+
     private val mapSites = listOf(
         mapSite("hpc", "Ionity", 300.0),
         mapSite("slow", "EnBW", 50.0),
@@ -260,6 +290,8 @@ class PhoneViewModelTest {
             ObserveMapChargers(repository, statuses, settings),
             RefreshMapChargers(repository, settings),
             RefreshChargerAvailability(repository, statuses, settings),
+            ObserveLiveConnectors(statuses),
+            RefreshLiveConnectors(statuses),
             settings,
             locationTimeoutMillis,
         )

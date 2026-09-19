@@ -8,6 +8,7 @@ import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Reachability
@@ -92,16 +93,38 @@ object ChargeStopFormatter {
             }
 
     /**
+     * The live charge points, strongest first — e.g. "CCS 300 kW · 2 von 4 frei · 1 außer Betrieb".
+     */
+    fun liveConnectorLines(groups: List<LiveConnectorGroup>): List<String> =
+        groups.map { group ->
+            val types = group.connectors.filter { it != ConnectorType.UNKNOWN }.map(::connectorTypeLabel)
+            val offer = listOfNotNull(
+                types.joinToString(" / ").takeIf { it.isNotEmpty() },
+                group.maxPowerKw?.let { "${formatPowerKw(it)} kW" },
+            ).joinToString(" ").ifEmpty { "Ladepunkt" }
+            val known = group.total - group.unknown
+            listOfNotNull(
+                offer,
+                if (known == 0) "Status unbekannt" else "${group.available} von $known frei",
+                group.outOfOrder.takeIf { it > 0 }?.let { "$it außer Betrieb" },
+            ).joinToString(" · ")
+        }
+
+    /**
      * Where the data came from — e.g. "Bundesnetzagentur · OpenChargeMap".
      */
     fun sourceLine(stop: ChargeStop): String? =
         stop.site.sources
+            // One Mobilithek source per operator ("mobilithek:enbw"); the driver sees just the platform.
+            .map { it.substringBefore(':') }
+            .distinct()
             .sortedBy { SOURCE_LABELS.keys.indexOf(it).takeIf { index -> index >= 0 } ?: Int.MAX_VALUE }
             .mapNotNull { SOURCE_LABELS[it] }
             .joinToString(" · ")
             .takeIf { it.isNotBlank() }
 
     private val SOURCE_LABELS = mapOf(
+        "mobilithek" to "Mobilithek",
         "bnetza" to "Bundesnetzagentur",
         "ocm" to "OpenChargeMap",
     )

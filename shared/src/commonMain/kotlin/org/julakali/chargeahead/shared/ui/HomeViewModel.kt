@@ -6,11 +6,14 @@ import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.MapFilter
+import org.julakali.chargeahead.shared.domain.ObserveLiveConnectors
 import org.julakali.chargeahead.shared.domain.ObserveMapChargers
 import org.julakali.chargeahead.shared.domain.Reachability
 import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
+import org.julakali.chargeahead.shared.domain.RefreshLiveConnectors
 import org.julakali.chargeahead.shared.domain.RefreshMapChargers
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.distanceKmTo
@@ -33,6 +36,8 @@ data class HomeUiState(
     val belowMinZoom: Boolean = false,
     /** The charger the driver tapped, as a detail dialog; `null` = no dialog. */
     val selectedStop: ChargeStop? = null,
+    /** The selected site's live charge points; `null` without live data. */
+    val selectedStopLive: List<LiveConnectorGroup>? = null,
     val filtersCustomized: Boolean = false,
     /** A filter/network change is re-querying the map. */
     val applyingFilters: Boolean = false,
@@ -53,6 +58,8 @@ class HomeViewModel(
     private val observeMapChargers: ObserveMapChargers,
     private val refreshMapChargers: RefreshMapChargers,
     private val refreshChargerAvailability: RefreshChargerAvailability,
+    private val observeLiveConnectors: ObserveLiveConnectors,
+    private val refreshLiveConnectors: RefreshLiveConnectors,
     settings: SettingsStore,
     /** How long the button may spin before the map says something. */
     private val locationTimeoutMillis: Long = DEFAULT_LOCATION_TIMEOUT_MILLIS,
@@ -68,16 +75,17 @@ class HomeViewModel(
         // combine tops out at five typed flows.
         feature.currentFix,
         combine(settings.chargeFilters, settings.networks, ::Pair),
-        map,
+        combine(map, observeLiveConnectors.flow, ::Pair),
         observeMapChargers.flow,
         combine(attempt, refreshMapChargers.inProgress, ::Pair),
-    ) { fix, (filters, networks), mapState, mapChargers, (attempt, loadingSites) ->
+    ) { fix, (filters, networks), (mapState, selectedStopLive), mapChargers, (attempt, loadingSites) ->
         val position = fix?.position
         HomeUiState(
             position = position,
             chargers = mapChargers.chargers,
             belowMinZoom = mapState.belowMinZoom,
             selectedStop = mapState.selectedStop,
+            selectedStopLive = selectedStopLive.takeIf { mapState.selectedStop?.site?.liveStatusId != null },
             filtersCustomized = !filters.isDefault || networks.isActive,
             // The markers still show what an earlier filter selected.
             applyingFilters = mapChargers.filter != MapFilter.of(filters, networks),
@@ -94,6 +102,7 @@ class HomeViewModel(
 
     init {
         observeMapChargers(ObserveMapChargers.Params(viewport = null))
+        observeLiveConnectors(ObserveLiveConnectors.Params(liveStatusId = null))
     }
 
     /** Location permission granted: the pipeline may run. Calling it twice is harmless. */
@@ -151,10 +160,17 @@ class HomeViewModel(
                 ),
             )
         }
+        val liveStatusId = charger.site.liveStatusId
+        observeLiveConnectors(ObserveLiveConnectors.Params(liveStatusId))
+        // The viewport's refresh may be a minute old by now; a failure keeps what is shown.
+        if (liveStatusId != null) {
+            viewModelScope.launch { refreshLiveConnectors(RefreshLiveConnectors.Params(liveStatusId)) }
+        }
     }
 
     fun onSelectedStopDismissed() {
         map.update { it.copy(selectedStop = null) }
+        observeLiveConnectors(ObserveLiveConnectors.Params(liveStatusId = null))
     }
 
     private data class LocationAttempt(
