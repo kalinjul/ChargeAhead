@@ -179,6 +179,7 @@ class TiledSiteRepository(
                     postalCode = site.address?.postalCode,
                     town = site.address?.town,
                     liveStatusId = site.liveStatusId,
+                    sources = site.sources,
                     fetchedAtMillis = now,
                     maxPowerKw = site.maxPowerKw,
                     maxDcPowerKw = site.maxDcPowerKw,
@@ -243,7 +244,7 @@ private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     position = LatLon(lat, lon),
     connectors = connectors,
     address = Address(street, postalCode, town).takeIf { !it.isEmpty },
-    sources = setOf(sourceId),
+    sources = sources.ifEmpty { setOf(sourceId) },
     liveStatusId = liveStatusId,
     networkKey = networkKey,
 )

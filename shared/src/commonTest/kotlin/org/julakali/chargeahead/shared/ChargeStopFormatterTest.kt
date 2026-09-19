@@ -8,6 +8,7 @@ import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Reachability
 import kotlin.test.Test
@@ -223,6 +224,31 @@ class ChargeStopFormatterTest {
         assertEquals(
             "Bundesnetzagentur · OpenChargeMap",
             ChargeStopFormatter.sourceLine(detailStop(merged)),
+        )
+    }
+
+    @Test
+    fun sourceLine_namesTheMobilithekForOperatorData() {
+        val merged = site.copy(sources = setOf("bnetza", "mobilithek:enbw", "mobilithek:ionity"))
+
+        assertEquals("Mobilithek · Bundesnetzagentur", ChargeStopFormatter.sourceLine(detailStop(merged)))
+    }
+
+    @Test
+    fun liveConnectorLines_countFreePointsAndMentionBrokenOnes() {
+        val groups = listOf(
+            LiveConnectorGroup(listOf(ConnectorType.CCS2), 300.0, available = 2, occupied = 1, outOfOrder = 1, unknown = 0),
+            LiveConnectorGroup(listOf(ConnectorType.TYPE2, ConnectorType.CHADEMO), 50.0, available = 0, occupied = 1, outOfOrder = 0, unknown = 1),
+            LiveConnectorGroup(emptyList(), null, available = 0, occupied = 0, outOfOrder = 0, unknown = 2),
+        )
+
+        assertEquals(
+            listOf(
+                "CCS 300 kW · 2 von 4 frei · 1 außer Betrieb",
+                "Typ 2 / CHAdeMO 50 kW · 0 von 1 frei",
+                "Ladepunkt · Status unbekannt",
+            ),
+            ChargeStopFormatter.liveConnectorLines(groups),
         )
     }
 

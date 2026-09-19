@@ -76,7 +76,11 @@ fun HomeRoute(
     )
 
     uiState.selectedStop?.let { stop ->
-        ChargeStopDetailSheet(stop = stop, onDismiss = viewModel::onSelectedStopDismissed)
+        ChargeStopDetailSheet(
+            stop = stop,
+            live = uiState.selectedStopLive,
+            onDismiss = viewModel::onSelectedStopDismissed,
+        )
     }
 }
 

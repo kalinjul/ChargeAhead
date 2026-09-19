@@ -7,7 +7,7 @@ import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
 
-/** Stores connectors and route points as JSON columns. */
+/** Stores connectors, source ids and route points as JSON columns. */
 class Converters {
 
     @TypeConverter
@@ -17,6 +17,12 @@ class Converters {
     @TypeConverter
     fun connectorsFromJson(value: String): List<Connector> =
         json.decodeFromString<List<StoredConnector>>(value).map { Connector(it.type, it.maxPowerKw, it.count) }
+
+    @TypeConverter
+    fun stringsToJson(values: Set<String>): String = json.encodeToString(values)
+
+    @TypeConverter
+    fun stringsFromJson(value: String): Set<String> = json.decodeFromString(value)
 
     @TypeConverter
     fun pointsToJson(points: List<LatLon>): String =
