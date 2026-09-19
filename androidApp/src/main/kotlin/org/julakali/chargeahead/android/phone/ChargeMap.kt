@@ -140,10 +140,11 @@ fun HomeGoogleMap(
             ),
             modifier = Modifier.fillMaxSize(),
         ) {
-            println("Rendering ${chargers.size} chargers")
-
+            // Keyed by site: the list is re-sorted around the centre on every pan.
             chargers.forEach { charger ->
-                ChargerMarker(charger = charger, icons = pillIcons, onClick = onChargerTapped)
+                key(charger.site.id) {
+                    ChargerMarker(charger = charger, icons = pillIcons, onClick = onChargerTapped)
+                }
             }
         }
 

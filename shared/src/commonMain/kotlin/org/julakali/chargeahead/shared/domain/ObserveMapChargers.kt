@@ -37,7 +37,7 @@ class ObserveMapChargers(
             ) { chargers, statuses ->
                 MapChargers(filter, chargers.map { it.withAvailability(statuses, filter) })
             }
-        }
+        }.distinctUntilChanged()
     }
 
     private fun MapCharger.withAvailability(statuses: Map<String, List<ChargePointStatus>>, filter: MapFilter): MapCharger {
