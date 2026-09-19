@@ -69,22 +69,25 @@ callbacks to a thread with a running run loop; without that, the stream
 would stay silent forever with no error anywhere. That only shows up on a
 device.
 
-## OpenChargeMap key
+## Backend
 
-The key does not belong in the repository. It reaches the code through the
-build setting `OPEN_CHARGE_MAP_API_KEY` into `Info.plist`, and from there
-via `Bundle.main.object(forInfoDictionaryKey: "OpenChargeMapApiKey")`.
+The app gets everything from the ChargeAhead backend and does not run
+without it. Address and token do not belong in the repository. They reach
+the code through the build settings `CHARGEAHEAD_BASE_URL` and
+`CHARGEAHEAD_TOKEN` into `Info.plist`, and from there via
+`Bundle.main.object(forInfoDictionaryKey:)`.
 
 For that, create a `Secrets.xcconfig` next to `project.yml` (it's in
 `.gitignore`):
 
 ```
-OPEN_CHARGE_MAP_API_KEY = YOUR_KEY
+CHARGEAHEAD_BASE_URL = https:/$()/YOUR_HOST
+CHARGEAHEAD_TOKEN = YOUR_TOKEN
 ```
 
-If the file is missing, XcodeGen ignores the `configFiles` entry, the key
-stays empty, and the shared module returns labeled demo data
-(`state.isDemo`).
+`$()` keeps the `//` from starting a comment in the `.xcconfig`. If the file
+is missing, XcodeGen ignores the `configFiles` entry and the project still
+builds, but the app stops at launch.
 
 ## Steps on a Mac
 

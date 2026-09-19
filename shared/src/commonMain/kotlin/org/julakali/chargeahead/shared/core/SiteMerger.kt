@@ -25,7 +25,7 @@ object SiteMerger {
      * Source priority, descending. Determines the position, operator, and
      * connectors of the merged site, as well as its id.
      */
-    val SOURCE_PRIORITY = listOf("bnetza", "ocm", "demo")
+    val SOURCE_PRIORITY = listOf("bnetza", "ocm")
 
     fun merge(
         sites: List<ChargeSite>,

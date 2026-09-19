@@ -42,14 +42,13 @@ class CorridorViewModel(
             stops = stops?.stops.orEmpty(),
             phase = phase,
             failure = failure,
-            isDemo = feature.isDemo,
             socSource = stops?.socSource,
             destination = stops?.destination,
             routeStatus = stops?.routeStatus ?: RouteStatus.NONE,
             networkFilterActive = stops?.networkFilterActive ?: false,
             position = fix?.position,
         )
-    }.stateIn(viewModelScope, WhileUiSubscribed, ChargeStopsState(isDemo = feature.isDemo))
+    }.stateIn(viewModelScope, WhileUiSubscribed, ChargeStopsState())
 
     init {
         observeChargeStops(ObserveChargeStops.Params(feature.currentFix, feature.currentEnergy))

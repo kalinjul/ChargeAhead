@@ -211,14 +211,6 @@ fun HomeScreen(
                     }
                 }
             }
-            if (uiState.isDemo) {
-                // Demo charging sites must be labeled.
-                Text(
-                    stringResource(R.string.phone_demo_notice),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
         }
 
         if (!hasPermission) {

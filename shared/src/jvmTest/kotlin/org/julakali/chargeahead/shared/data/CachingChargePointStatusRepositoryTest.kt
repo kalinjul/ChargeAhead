@@ -9,7 +9,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class CachingChargePointStatusRepositoryTest {
 
@@ -76,14 +75,5 @@ class CachingChargePointStatusRepositoryTest {
         assertFailsWith<IllegalStateException> { repository.refresh(listOf("a")) }
 
         assertEquals(listOf(ChargePointStatus(ChargePointState.AVAILABLE)), repository.statuses.first().getValue("a"))
-    }
-
-    @Test
-    fun `without a source nothing is fetched`() = runBlocking {
-        val repository = CachingChargePointStatusRepository(source = null, time = TimeProvider { now })
-
-        repository.refresh(listOf("a"))
-
-        assertTrue(repository.statuses.first().isEmpty())
     }
 }

@@ -46,12 +46,12 @@ class ObserveChargeStopsTest {
     /** A store that the fetch fills with [sites], or fails while [broken]. */
     private inner class FakeRepository(var sites: List<ChargeSite>) : SiteRepository {
         private val store = MutableStateFlow<List<ChargeSite>>(emptyList())
-        val fetched = mutableListOf<Pair<SearchArea, List<Network>>>()
+        val fetched = mutableListOf<Pair<SearchArea, Set<String>>>()
         var broken = false
         var invalidations = 0
 
-        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
-            fetched += area to networks
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+            fetched += area to networkKeys
             if (broken) throw IllegalStateException("Funkloch")
             store.update { (it + sites).distinctBy(ChargeSite::id) }
             return sites
@@ -254,7 +254,7 @@ class ObserveChargeStopsTest {
         fixes.value = fix()
 
         assertTrue(observe.awaitDone().networkFilterActive)
-        assertEquals(listOf(NetworkCatalog.byKey("ionity")), repository.fetched.last().second)
+        assertEquals(setOf("ionity"), repository.fetched.last().second)
     }
 
     @Test

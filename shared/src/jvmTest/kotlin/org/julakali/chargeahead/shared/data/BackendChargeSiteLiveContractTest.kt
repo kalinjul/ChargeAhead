@@ -2,7 +2,6 @@ package org.julakali.chargeahead.shared.data
 
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.NetworkCatalog
 import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.SectorArea
 import org.julakali.chargeahead.shared.domain.distanceKmTo
@@ -43,7 +42,7 @@ class BackendChargeSiteLiveContractTest {
     fun theQueryReturnsUsableSites() {
         if (skip()) return
 
-        val sites = runBlocking { source().query(area, emptyList()) }
+        val sites = runBlocking { source().query(area, emptySet()) }
 
         assertTrue(sites.size > 20, "Only ${sites.size} sites in the metro area — too few")
         assertTrue(sites.all { it.name.isNotBlank() }, "Site without a name")
@@ -55,7 +54,7 @@ class BackendChargeSiteLiveContractTest {
     fun theNearestChargingStationsAreNotMissing() {
         if (skip()) return
 
-        val sites = runBlocking { source().query(area, emptyList()) }
+        val sites = runBlocking { source().query(area, emptySet()) }
         val nearest = sites.minOf { location.distanceKmTo(it.position) }
 
         assertTrue(nearest < 10.0, "Nearest charging station only at ${nearest.toInt()} km")
@@ -71,7 +70,7 @@ class BackendChargeSiteLiveContractTest {
             bufferKm = 5.0,
         )
 
-        val sites = runBlocking { source().query(corridor, emptyList()) }
+        val sites = runBlocking { source().query(corridor, emptySet()) }
 
         assertTrue(sites.size > 20, "Only ${sites.size} sites along the A9")
         assertTrue(sites.distinctBy { it.id }.size == sites.size, "The backend returned duplicates")
@@ -81,7 +80,7 @@ class BackendChargeSiteLiveContractTest {
     fun connectorsArriveUsable() {
         if (skip()) return
 
-        val connectors = runBlocking { source().query(area, emptyList()) }.flatMap { it.connectors }
+        val connectors = runBlocking { source().query(area, emptySet()) }.flatMap { it.connectors }
 
         assertTrue(connectors.isNotEmpty())
         assertTrue(connectors.all { it.maxPowerKw > 0.0 }, "A connector without a power rating")
@@ -95,13 +94,12 @@ class BackendChargeSiteLiveContractTest {
     fun networkFiltersAreAppliedServerSide() {
         if (skip()) return
 
-        val enbw = NetworkCatalog.byKey("enbw")!!
         val sites = runBlocking {
-            source().query(SectorArea.circle(LatLon(48.137, 11.575), 25.0), listOf(enbw))
+            source().query(SectorArea.circle(LatLon(48.137, 11.575), 25.0), setOf("enbw"))
         }
 
         assertTrue(sites.isNotEmpty(), "EnBW around Munich should return sites")
-        assertTrue(sites.all { it.operatorId == 86L }, "Every returned site must be EnBW")
+        assertTrue(sites.all { it.networkKey == "enbw" }, "Every returned site must be EnBW")
     }
 
     private fun skip(): Boolean {

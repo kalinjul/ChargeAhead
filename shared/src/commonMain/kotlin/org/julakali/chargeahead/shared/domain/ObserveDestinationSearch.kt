@@ -13,7 +13,7 @@ data class DestinationSearch(
 
 /**
  * Places matching the typed text, biased toward the current position.
- * Debounced, since Nominatim allows one request per second.
+ * Debounced, so typing doesn't send a request per keystroke.
  */
 class ObserveDestinationSearch(
     private val geocoder: Geocoder,

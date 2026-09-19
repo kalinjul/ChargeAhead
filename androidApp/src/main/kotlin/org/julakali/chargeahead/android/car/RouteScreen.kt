@@ -275,14 +275,7 @@ class RouteScreen(
         return builder.build()
     }
 
-    private fun titleText(subtitle: String?): String {
-        val base = subtitle?.let { "$title · $it" } ?: title
-        return if (feature.isDemo) {
-            carContext.getString(R.string.car_title_suffix_demo, base)
-        } else {
-            base
-        }
-    }
+    private fun titleText(subtitle: String?): String = subtitle?.let { "$title · $it" } ?: title
 }
 
 private const val GOOGLE_MAPS_PACKAGE = "com.google.android.apps.maps"

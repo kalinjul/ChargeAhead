@@ -29,8 +29,6 @@ import kotlin.coroutines.cancellation.CancellationException
 class ChargeStopsFeature(
     private val locationSource: LocationSource,
     private val socSource: SoCSource? = null,
-    /** The sites come from [org.julakali.chargeahead.shared.data.DemoSiteSource], not real data. */
-    val isDemo: Boolean = false,
     dispatcher: CoroutineDispatcher = Dispatchers.Default,
     /** Called by [close]. */
     private val onClose: () -> Unit = {},

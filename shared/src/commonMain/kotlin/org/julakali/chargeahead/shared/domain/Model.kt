@@ -34,6 +34,8 @@ data class ChargeSite(
     val sources: Set<String> = emptySet(),
     /** The id `/v1/charge-point-status` knows this site by; `null` without live status. */
     val liveStatusId: String? = null,
+    /** The backend's key for the site's network; `null` without a known operator. */
+    val networkKey: String? = null,
 )
 
 data class ChargeStop(

@@ -93,7 +93,7 @@ class ObserveChargeStops(
         val area = corridor.searchArea(inputs.fix, inputs.vehicle, inputs.energy)
         val refill = MutableStateFlow(ChargeStops.Refill.RUNNING)
         launch {
-            val result = cancellableRunCatching { repository.load(area, inputs.networks.selectedNetworks()) }
+            val result = cancellableRunCatching { repository.load(area, inputs.networks.selectedKeys()) }
             result.exceptionOrNull()?.let { logWarning("Failed to load charging stations", it) }
             refill.value = if (result.isSuccess) ChargeStops.Refill.DONE else ChargeStops.Refill.FAILED
         }

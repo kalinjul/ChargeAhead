@@ -14,18 +14,15 @@
 "status_no_stops" = "Keine Ladesäule in Fahrtrichtung gefunden.";
 "status_location_unavailable" = "Kein Standort. Ortung einschalten und Freigabe prüfen.";
 "status_sites_unavailable" = "Ladesäulendaten sind derzeit nicht erreichbar.";
-"status_demo" = "Demodaten — kein OpenChargeMap-Schlüssel hinterlegt.";
 
 /* Phone UI */
 "phone_hint_car_ui" = "Die eigentliche Bedienung findet während der Fahrt in CarPlay statt. Diese Ansicht dient nur zur Kontrolle am Telefon.";
 "phone_platform_label" = "Plattform";
 "phone_stops_heading" = "Ladestopps voraus";
 "phone_action_refresh" = "Aktualisieren";
-"phone_demo_notice" = "Kein OpenChargeMap-Schlüssel hinterlegt — die Liste zeigt erfundene Demodaten. Schlüssel als OPEN_CHARGE_MAP_API_KEY in eine .xcconfig eintragen (siehe iosApp/README.md).";
 
 /* Phone: map home and planning (design mockup in docs/mockup) */
 "home_map_placeholder" = "Kartenplatzhalter — Karten-SDK folgt";
-"phone_demo_notice_short" = "Demodaten — kein OpenChargeMap-Schlüssel";
 "home_pill_plan" = "Planen";
 "home_pill_charge_now" = "Jetzt laden";
 "home_diagnostics" = "Liste";

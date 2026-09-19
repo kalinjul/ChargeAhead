@@ -34,13 +34,12 @@ nothing resolves and nothing compiles. Consequence, and it is a real one:
 **a pull request from a fork cannot be built here.** A preflight step in both
 Gradle jobs says so outright instead of letting the run die on a 401.
 
-No provider keys, as before: the app then falls back to labeled demo data and
-to the map placeholder, so that path stays continuously exercised.
+No backend or map keys: the build does not need them, only a running app
+does.
 
-Not part of CI (deliberately): the live contract tests against
-OpenChargeMap, OSRM, Nominatim and BNetzA. They only run with `OCM_LIVE=1`
-and friends — a build that goes red because a third-party service hiccups
-says nothing about this repository.
+Not part of CI (deliberately): the live contract tests against the backend.
+They only run with `CHARGEAHEAD_LIVE=1` — a build that goes red because a
+server hiccups says nothing about this repository.
 
 ## Releasing
 
@@ -91,7 +90,6 @@ Actions*), except the one variable noted as such.
 | `ANDROID_KEY_PASSWORD` | release | password of that key |
 | `PLAY_SERVICE_ACCOUNT_JSON` | release | the service account JSON, whole file |
 | `GOOGLE_MAPS_API_KEY` | release | Maps SDK key, goes into the manifest |
-| `OPEN_CHARGE_MAP_API_KEY` | release | OpenChargeMap key, unused once the backend is configured |
 | `CHARGEAHEAD_TOKEN` | release | API token, from `/root/chargeahead/api-token.txt` on the host |
 
 One **variable** (same page, *Variables* tab) rather than a secret, because a

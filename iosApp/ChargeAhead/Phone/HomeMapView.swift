@@ -30,12 +30,6 @@ struct HomeMapView: View {
                         Text(NSLocalizedString("home_map_placeholder", comment: ""))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        if viewModel.state.isDemo {
-                            // Demo charging sites must be labeled.
-                            Text(NSLocalizedString("phone_demo_notice_short", comment: ""))
-                                .font(.caption2)
-                                .foregroundStyle(.red)
-                        }
                         if planningInProgress {
                             ProgressView(NSLocalizedString("plan_planning", comment: ""))
                                 .padding(.top, 8)

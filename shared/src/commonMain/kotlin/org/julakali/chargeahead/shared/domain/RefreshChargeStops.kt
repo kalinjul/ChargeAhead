@@ -15,6 +15,6 @@ class RefreshChargeStops(
 
     override suspend fun doWork(params: Params) {
         repository.invalidate()
-        repository.load(params.area, settings.networks.first().selectedNetworks())
+        repository.load(params.area, settings.networks.first().selectedKeys())
     }
 }

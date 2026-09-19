@@ -16,7 +16,7 @@ Shared logic in Kotlin Multiplatform, car UI native twice.
 ## Status: M1 — corridor and real data
 
 The app determines the location, spans a ±35° sector in the direction of
-travel, queries OpenChargeMap for the enclosing rectangle, and shows the
+travel, queries the ChargeAhead backend for the enclosing area, and shows the
 results sorted by distance. Recomputed after 2 km, after 60 s, or
 immediately on a heading change over 45°; queried only when the corridor
 leaves the most recently fetched area.
@@ -25,11 +25,11 @@ Not yet in place: vehicle profile and charge level. Reachability therefore
 stays `UNKNOWN` throughout — guessing it would be worse than leaving it
 open. That's coming in M2.
 
-The OpenChargeMap mapping has been verified against the real service (123
-sites along the A9). Repeatable with:
+The mapping of the backend's answers can be checked against the real
+backend with:
 
 ```bash
-OCM_LIVE=1 ./gradlew :shared:jvmTest --tests '*OpenChargeMapLiveContractTest'
+CHARGEAHEAD_LIVE=1 ./gradlew :shared:jvmTest --tests '*BackendChargeSiteLiveContractTest'
 ```
 
 What **can't** be checked on this development machine (Linux): anything
@@ -54,21 +54,17 @@ needing the generated Objective-C header or a device. The Swift code parses
 Requires JDK 17 and an Android SDK with Platform 36 and Build-Tools 36. The
 path to the SDK lives in `local.properties` (not in the repository).
 
-## OpenChargeMap key
+## Backend
 
-Without a key, OpenChargeMap responds with HTTP 403. The app doesn't abort
-because of this — it shows labeled **demo data** instead: fabricated
-charging parks around the current location, so the UI can be checked even
-without a key.
-
-A free key is available after registering with OpenChargeMap. It does not
-belong in the repository:
+The app gets its charging sites, networks, routes and destination search
+from the ChargeAhead backend and does not run without it: it stops at
+startup when address or token are missing. Neither belongs in the
+repository:
 
 - **Android** — in `local.properties`:
   ```properties
-  openChargeMapApiKey=YOUR_KEY
+  chargeAheadBaseUrl=https://YOUR_HOST
+  chargeAheadToken=YOUR_TOKEN
   ```
-- **iOS** — in `iosApp/Secrets.xcconfig` (not checked in):
-  ```
-  OPEN_CHARGE_MAP_API_KEY = YOUR_KEY
-  ```
+- **iOS** — in `iosApp/Secrets.xcconfig` (not checked in), see
+  [iosApp/README.md](iosApp/README.md).

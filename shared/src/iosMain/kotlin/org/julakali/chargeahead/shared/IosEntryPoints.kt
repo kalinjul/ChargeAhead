@@ -47,26 +47,34 @@ fun createSettingsStore(): SettingsStore =
  */
 private var graph: Koin? = null
 
-private fun graph(openChargeMapKey: String?, settingsStore: SettingsStore): Koin =
+private fun graph(backend: BackendConfig, settingsStore: SettingsStore): Koin =
     graph ?: koinApplication {
         modules(
             module {
                 single { settingsStore }
                 single<LocationSource> { CoreLocationSource() }
                 single { DatabaseFactory() }
-                single { ChargeStopsConfig(openChargeMapKey, backend = null) }
+                single { backend }
             },
             chargeStopsModule(),
         )
     }.koin.also { graph = it }
 
-/** @param settingsStore the same instance that also backs the settings view. */
+/**
+ * @param settingsStore the same instance that also backs the settings view.
+ * @throws IllegalArgumentException when the backend is not configured; the app cannot run without it.
+ */
 fun createChargeStopsFeature(
-    openChargeMapKey: String?,
+    backendBaseUrl: String?,
+    backendToken: String?,
     settingsStore: SettingsStore,
-): ChargeStopsFeature =
+): ChargeStopsFeature {
+    val backend = requireNotNull(BackendConfig.of(backendBaseUrl, backendToken)) {
+        "ChargeAheadBaseUrl and ChargeAheadToken must be set in Info.plist"
+    }
     // Each caller owns its feature; the data graph beneath is shared.
-    graph(openChargeMapKey, settingsStore).newChargeStopsFeature(locationSource = CoreLocationSource())
+    return graph(backend, settingsStore).newChargeStopsFeature(locationSource = CoreLocationSource())
+}
 
 /** The corridor list for Swift: every state change, on the main thread, until [stop]. */
 class ChargeStopsWatcher(feature: ChargeStopsFeature) {

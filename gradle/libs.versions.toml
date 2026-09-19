@@ -28,7 +28,7 @@ playServicesMaps = "20.0.0"
 mapsCompose = "8.6.0"
 composeCache = "3.0.1"
 
-chargeaheadApi = "0.8.0"
+chargeaheadApi = "0.9.0"
 
 [libraries]
 # --- shared (Kotlin Multiplatform) ---

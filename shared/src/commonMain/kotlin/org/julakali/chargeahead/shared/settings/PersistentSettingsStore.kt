@@ -9,7 +9,6 @@ import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.NetworkCatalog
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.SavedRoute
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
@@ -163,7 +162,7 @@ class PersistentSettingsStore(
         val onlyPreferred = initial.getStringOrNull(KEY_ONLY_PREFERRED)?.toBooleanStrictOrNull()
             ?: NetworkPreferences().onlyPreferred
         val preferred = initial.getJson<List<String>>(KEY_PREFERRED_NETWORKS)
-            .orEmpty().map(NetworkCatalog::currentKey).toSet()
+            .orEmpty().map { RENAMED_NETWORK_KEYS[it] ?: it }.toSet()
         return NetworkPreferences(onlyPreferred, preferred)
     }
 
@@ -383,6 +382,9 @@ class PersistentSettingsStore(
         private const val KEY_SOC_DIAGNOSTICS = "energy.socDiagnostics"
         private const val KEY_ONLY_PREFERRED = "networks.onlyPreferred"
         private const val KEY_PREFERRED_NETWORKS = "networks.preferred"
+
+        /** Network keys that were stored under an older name. */
+        private val RENAMED_NETWORK_KEYS = mapOf("ewe" to "ewe-go", "blink-charging-uk" to "blink-charging")
         private const val KEY_NAME = "vehicle.displayName"
         private const val KEY_BATTERY_KWH = "vehicle.usableBatteryKwh"
         private const val KEY_CONSUMPTION = "vehicle.consumptionKwhPer100Km"

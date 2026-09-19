@@ -12,8 +12,8 @@ next reachable charging stations ahead while driving. Shared logic in Kotlin
 Multiplatform, car UI native twice.
 
 Current state: **search along the route.** The app determines the
-location, spans a sector in the direction of travel, queries OpenChargeMap,
-and classifies the results against the remaining range. The driver enters
+location, spans a sector in the direction of travel, queries the ChargeAhead
+backend, and classifies the results against the remaining range. The driver enters
 the vehicle profile and charge level themselves — deliberately without a
 vehicle list (ROADMAP.md, open point 4). Without both, reachability
 stays `UNKNOWN` and the list shows only distances; that's a valid state, not
@@ -153,8 +153,8 @@ In a worktree, `tools/link-local-properties.sh` takes care of that: it
 replaces a keyless `local.properties` with a symlink to the main checkout's.
 A `SessionStart` hook in `.claude/settings.json` runs it, so nobody has to
 think about it. A worktree without the keys is the more insidious case
-anyway — it builds, but the app then shows demo data and a placeholder map,
-which reads like a bug in the code. The script leaves a `local.properties`
+anyway — it builds, but the app then stops at startup for lack of a backend
+and shows a placeholder map. The script leaves a `local.properties`
 that carries entries of its own untouched.
 
 Tests that need to run coroutines live in `shared/src/jvmTest` and use
@@ -241,7 +241,7 @@ enum class Reachability  { REACHABLE, MARGINAL, UNREACHABLE, UNKNOWN }
 data class Connector(val type: ConnectorType, val maxPowerKw: Double, val count: Int?)
 
 data class ChargeSite(
-    val id: String,                  // source-qualified: "ocm:12345", "demo:…"
+    val id: String,                  // source-qualified: "ocm:12345", "datex:enbw:…"
     val name: String,
     val operator: String?,
     val position: LatLon,
@@ -299,8 +299,8 @@ They live in `domain` and know no one; every implementation lives outside.
 interface LocationSource   { val updates: Flow<Fix> }
 // query() gets the whole area, not just its rectangle: sources with a
 // result cap must be able to query radially, or exactly the nearest
-// charging stations go missing. See OpenChargeMapSource.query.
-interface ChargeSiteSource { val id: String; suspend fun query(area: SearchArea): List<ChargeSite> }
+// charging stations go missing. Empty networkKeys means every network.
+interface ChargeSiteSource { val id: String; suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> }
 // Implemented as TiledSiteRepository (Room). Always reads from the
 // database; if refilling fails, the existing stock is still returned. Only
 // if that is also empty is the error thrown.
@@ -355,7 +355,7 @@ the same process — the Koin `appModule` (androidApp) holds the singleton.
 package org.julakali.chargeahead.shared
 
 // Location and charge state, one per location source (phone, car session).
-class ChargeStopsFeature(locationSource, socSource, isDemo, ...) {
+class ChargeStopsFeature(locationSource, socSource, ...) {
     val currentFix: StateFlow<Fix?>
     val currentEnergy: StateFlow<EnergyState?>
     val locationFailed: StateFlow<Boolean>
@@ -369,15 +369,13 @@ data class ChargeStopsState(
     val stops: List<ChargeStop>,
     val phase: Phase,          // WAITING_FOR_LOCATION | LOADING | READY | FAILED
     val failure: FailureReason?,   // LOCATION_UNAVAILABLE | SITES_UNAVAILABLE
-    val isDemo: Boolean,
 )
 
-// The data graph (Koin), declared once for both platforms — decides what
-// happens without an API key. Platform modules supply LocationSource,
-// DatabaseFactory, SettingsStore and ChargeStopsConfig; one HttpClient,
-// database and repository per process, shared by phone and car.
+// The data graph (Koin), declared once for both platforms. Platform modules
+// supply LocationSource, DatabaseFactory, SettingsStore and BackendConfig; one
+// HttpClient, database and repository per process, shared by phone and car.
 fun chargeStopsModule(): Module
-class ChargeStopsConfig(openChargeMapKey: String?, backend: BackendConfig?) { val isDemo: Boolean }
+data class BackendConfig(baseUrl: String, token: String)
 // A feature the caller owns and closes — the car session's, with the car's battery.
 fun Koin.newChargeStopsFeature(locationSource, hardwareSoCSource = null): ChargeStopsFeature
 
@@ -392,7 +390,7 @@ expect fun currentTimeMillis(): Long
 ```
 
 The iOS framework is called **`Shared`** (`import Shared`). Swift goes
-through `IosEntryPointsKt.createChargeStopsFeature(openChargeMapKey:)` and
+through `IosEntryPointsKt.createChargeStopsFeature(backendBaseUrl:backendToken:settingsStore:)` and
 `ChargeStopsWatcher` (which hosts `CorridorViewModel`) — both in `iosMain`, because Kotlin's default arguments
 don't reach the Objective-C header and a `StateFlow` isn't subscribable from
 Swift without SKIE.
@@ -401,43 +399,34 @@ Swift without SKIE.
 
 Each source's mapping is checked twice, and both are necessary:
 
-- `OpenChargeMapSourceTest` (always runs) checks against **fabricated**
-  responses. Fast and network-free, but doesn't notice when the source
+- `BackendChargeSiteSourceTest` (always runs) checks against **fabricated**
+  responses. Fast and network-free, but doesn't notice when the backend
   changes.
-- `OpenChargeMapLiveContractTest` checks against the **real** service. Runs
-  only on explicit request, because a test that goes red on a dead spot says
-  nothing about the code:
+- `BackendChargeSiteLiveContractTest` checks against the **real** backend.
+  Runs only on explicit request, because a test that goes red on a dead spot
+  says nothing about the code:
 
   ```bash
-  OCM_LIVE=1 ./gradlew :shared:jvmTest --tests '*OpenChargeMapLiveContractTest'
+  CHARGEAHEAD_LIVE=1 ./gradlew :shared:jvmTest --tests '*BackendChargeSiteLiveContractTest'
   ```
 
 Whoever changes a source's mapping runs both.
 
-### API keys
-
-The OpenChargeMap key does **not** go into the repository.
-
-- Android: `openChargeMapApiKey` in `local.properties` -> `BuildConfig`
-- iOS: build setting `OPEN_CHARGE_MAP_API_KEY` in a local
-  `iosApp/Secrets.xcconfig` -> `Info.plist`
-
-If it's missing, `DemoSiteSource` stands in for the real source and
-`ChargeStopsState.isDemo` is set. **Both UIs must make that visible** —
-passing off invented charging stations as real would, in an app for the car,
-be not just sloppy but dangerous.
-
 ### The ChargeAhead backend
 
-With `chargeAheadBaseUrl` and `chargeAheadToken` in `local.properties`,
-charging sites, the destination search and route calculation come from the
-backend instead of from OpenChargeMap, Nominatim and OSRM directly, and no
-provider key is needed in the app. Both must be set; one alone is ignored (`BackendConfig.of`). Android
-only so far — iOS still goes to the providers directly.
+Charging sites, live status, charging networks, the destination search and
+route calculation all come from the ChargeAhead backend. There is no
+operation without it: the app stops at startup when it is not configured.
+Address and token do **not** go into the repository.
 
-The destination search then runs against Photon rather than Nominatim, which
-is the point: Nominatim is a geocoder and answers a half-typed word with a
-street of that name.
+- Android: `chargeAheadBaseUrl` and `chargeAheadToken` in `local.properties`
+  -> `BuildConfig`
+- iOS: build settings `CHARGEAHEAD_BASE_URL` and `CHARGEAHEAD_TOKEN` in a
+  local `iosApp/Secrets.xcconfig` -> `Info.plist`
+
+The backend also assigns each site its network (`ChargeSite.networkKey`) and
+lists the networks worth offering (`/v1/networks`), which the app keeps in
+Room. `NetworkCatalog` is the old shipped list and is no longer used.
 
 The contract module `org.julakali.chargeahead:api-model` comes from the
 backend's own Maven repository, which needs `chargeahead.maven.user` and

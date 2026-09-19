@@ -149,7 +149,7 @@ class LegacyGreedyPlanner(
             }
             val area = PolylineArea(route.points.subList(startIndex, endIndex + 1), bufferKm = STOP_BUFFER_KM)
             val sites = try {
-                repository.load(area, networks.selectedNetworks())
+                repository.load(area, networks.selectedKeys())
             } catch (failure: Exception) {
                 emptyList()
             }

@@ -17,30 +17,18 @@ val localProperties: Properties = Properties().apply {
  * value happens to sit in the shell.
  *
  * `trim()` is not decoration: a trailing space in `local.properties`
- * otherwise ends up URL-encoded in the request, and OCM responds with
- * "Invalid API key" — with no hint that a single space is to blame.
+ * otherwise ends up in the request, and the server rejects the key with no
+ * hint that a single space is to blame.
  */
 fun secret(propertyName: String, environmentName: String): String =
     (localProperties.getProperty(propertyName) ?: System.getenv(environmentName)).orEmpty().trim()
 
-/**
- * The OpenChargeMap key does not belong in the repository. If it is missing,
- * it stays empty and the app falls back to demo data instead of breaking the
- * build — which is what CI builds of pull requests from forks do, since those
- * never see secrets.
- *
- * A key in a distributed app is fundamentally extractable; a dedicated proxy
- * is the right approach for production.
- */
-val openChargeMapApiKey: String = secret("openChargeMapApiKey", "OPEN_CHARGE_MAP_API_KEY")
-
-/** Same mechanism, same reasoning. Empty = placeholder map. */
+/** Keys do not belong in the repository. Empty = placeholder map. */
 val googleMapsApiKey: String = secret("googleMapsApiKey", "GOOGLE_MAPS_API_KEY")
 
 /**
- * The ChargeAhead backend. With both set, charging sites come from there and
- * the provider keys stay on the server; empty falls back to the direct
- * sources.
+ * The ChargeAhead backend, which the app cannot run without. Missing values
+ * still build, so CI needs no secrets; the app then stops at startup.
  */
 val chargeAheadBaseUrl: String = secret("chargeAheadBaseUrl", "CHARGEAHEAD_BASE_URL")
 val chargeAheadToken: String = secret("chargeAheadToken", "CHARGEAHEAD_TOKEN")
@@ -81,12 +69,6 @@ android {
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = appVersionCode
         versionName = appVersionName
-
-        buildConfigField(
-            "String",
-            "OPEN_CHARGE_MAP_API_KEY",
-            "\"${openChargeMapApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
-        )
 
         buildConfigField(
             "String",

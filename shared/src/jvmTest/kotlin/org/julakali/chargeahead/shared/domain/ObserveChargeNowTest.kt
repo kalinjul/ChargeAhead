@@ -19,11 +19,11 @@ class ObserveChargeNowTest {
     private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
     private val store = MutableStateFlow<List<ChargeSite>>(emptyList())
     private var fetched: List<ChargeSite> = emptyList()
-    private val fetches = mutableListOf<Pair<SearchArea, List<Network>>>()
+    private val fetches = mutableListOf<Pair<SearchArea, Set<String>>>()
 
     private val repository = object : SiteRepository {
-        override suspend fun load(area: SearchArea, networks: List<Network>): List<ChargeSite> {
-            fetches += area to networks
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+            fetches += area to networkKeys
             store.update { it + fetched }
             return fetched
         }
@@ -106,6 +106,6 @@ class ObserveChargeNowTest {
 
         val (area, networks) = fetches.single()
         assertEquals(10.0 * ObserveChargeNow.RELAX_FETCH_FACTOR, area.radiusKm)
-        assertEquals(listOf("ionity"), networks.map { it.key })
+        assertEquals(setOf("ionity"), networks)
     }
 }
