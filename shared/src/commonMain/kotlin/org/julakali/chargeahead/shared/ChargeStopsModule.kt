@@ -138,7 +138,7 @@ fun Koin.newChargeStopsFeature(
                 val keys = settingsStore.networks.first().preferredOperators
                 pruneCache(database, keys, time.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
             }
-            refreshNetworks(Unit, userInitiated = false)
+            refreshNetworks(Unit)
         },
     )
 }
