@@ -257,7 +257,6 @@ class PhoneViewModelTest {
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })
         return HomeViewModel(
             stubFeature(),
-            ObserveChargeStops(repository, settings, TripStore(), NoRoute, CorridorPlanner()),
             ObserveMapChargers(repository, statuses, settings),
             RefreshMapChargers(repository, settings),
             RefreshChargerAvailability(repository, statuses, settings),
