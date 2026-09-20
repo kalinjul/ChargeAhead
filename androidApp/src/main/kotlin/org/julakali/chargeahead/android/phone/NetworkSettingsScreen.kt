@@ -5,15 +5,11 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -21,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.components.AppCard
 import org.julakali.chargeahead.android.phone.components.Fineprint
+import org.julakali.chargeahead.android.phone.components.LazyFlowRow
 import org.julakali.chargeahead.android.phone.components.SearchField
 import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.android.phone.components.SwitchRow
@@ -107,31 +103,21 @@ fun NetworkSettingsScreen(
                     modifier = Modifier.padding(top = 16.dp),
                 )
             } else {
-                // Chunked once per list change, not per recomposition.
-                val chunks = remember(uiState.networks) { uiState.networks.chunked(PILLS_PER_CHUNK) }
                 AppCard(modifier = Modifier.fillMaxSize().padding(vertical = 8.dp)) {
-                    // A LazyColumn of chunks, each a FlowRow, so only visible chunks compose.
-                    LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                    // One continuous flow; only the lines on screen compose.
+                    LazyFlowRow(
+                        horizontalSpacing = 9.dp,
+                        verticalSpacing = 9.dp,
                         modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 12.dp),
                     ) {
-                        items(chunks, key = { it.first().key }) { chunk ->
-                            FlowRow(
-                                horizontalArrangement = Arrangement.spacedBy(9.dp),
-                                verticalArrangement = Arrangement.spacedBy(9.dp),
-                            ) {
-                                chunk.forEach { network ->
-                                    // Keyed so its animation state stays with the pill.
-                                    key(network.key) {
-                                        OperatorPill(
-                                            name = network.name,
-                                            selected = network.key in uiState.selected,
-                                            fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
-                                            onClick = { onNetworkToggled(network.key) },
-                                        )
-                                    }
-                                }
-                            }
+                        // Keyed so a pill's animation state stays with it as the list filters.
+                        items(uiState.networks, key = { it.key }) { network ->
+                            OperatorPill(
+                                name = network.name,
+                                selected = network.key in uiState.selected,
+                                fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
+                                onClick = { onNetworkToggled(network.key) },
+                            )
                         }
                     }
                 }
@@ -187,9 +173,6 @@ private fun OperatorPill(
 /** Dark ink on a light fill, white on a dark one. */
 private fun Color.readableInk(): Color =
     if (luminance() > 0.55f) Color(0xFF202124) else Color.White
-
-/** Pills per lazy row-chunk. */
-private const val PILLS_PER_CHUNK = 30
 
 /** Brand colours for the networks we recognise, keyed by catalog key. */
 private val brandColors: Map<String, Color> = mapOf(
