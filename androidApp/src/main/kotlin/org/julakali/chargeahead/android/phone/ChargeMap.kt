@@ -106,9 +106,13 @@ fun HomeGoogleMap(
         )
     }
 
+    // No projection to read a viewport from until the map itself is up, so the
+    // first run waits for it — otherwise nothing loads until the driver pans.
+    var mapLoaded by remember { mutableStateOf(false) }
+
     // Load once the camera settles. Also fires for the initial position.
-    LaunchedEffect(cameraPositionState.isMoving) {
-        if (cameraPositionState.isMoving) return@LaunchedEffect
+    LaunchedEffect(mapLoaded, cameraPositionState.isMoving) {
+        if (!mapLoaded || cameraPositionState.isMoving) return@LaunchedEffect
         kotlinx.coroutines.delay(350)
         if (cameraPositionState.position.zoom < MIN_CHARGER_ZOOM) {
             onViewportChanged(null)
@@ -146,6 +150,7 @@ fun HomeGoogleMap(
         GoogleMap(
             cameraPositionState = cameraPositionState,
             properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+            onMapLoaded = { mapLoaded = true },
             // The SDK's own buttons would sit inside the status bar; ours replace them.
             uiSettings = MapUiSettings(
                 zoomControlsEnabled = false,
