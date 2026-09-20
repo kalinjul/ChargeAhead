@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.ChargeStopsFeature
+import org.julakali.chargeahead.shared.combine
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
@@ -13,7 +14,6 @@ import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.toDestination
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -68,10 +68,10 @@ class PlanSheetViewModel(
         input,
         observeDestinationSearch.flow,
         settings.recentDestinations,
-        // combine tops out at five typed flows.
-        combine(settings.vehicle, settings.manualSocPercent, ::Pair),
+        settings.vehicle,
+        settings.manualSocPercent,
         feature.currentFix,
-    ) { input, search, recent, (vehicle, storedSoc), fix ->
+    ) { input, search, recent, vehicle, storedSoc, fix ->
         PlanSheetUiState(
             query = input.query,
             results = search.results,
