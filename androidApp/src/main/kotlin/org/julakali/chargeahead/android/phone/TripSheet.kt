@@ -183,18 +183,16 @@ fun TripSheetContent(
         AnimatedContent(
             targetState = layout,
             transitionSpec = {
-                // Tiles come in from the right, the list from the left. The slide runs at the
-                // old height; only afterwards does the container (and the sheet) resize.
+                // Tiles come in from the right, the list from the left; both fill the same box.
                 val forward = targetState == TripListLayout.TILES
                 val slide = tween<IntOffset>(LAYOUT_SLIDE_MILLIS)
                 (slideInHorizontally(slide) { if (forward) it else -it } + fadeIn(tween(LAYOUT_SLIDE_MILLIS)))
                     .togetherWith(slideOutHorizontally(slide) { if (forward) -it else it } + fadeOut(tween(LAYOUT_SLIDE_MILLIS)))
-                    .using(SizeTransform(clip = true) { _, _ -> tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS) })
+                    .using(SizeTransform(clip = true))
             },
             contentAlignment = Alignment.TopStart,
             label = "trip list layout",
-            // The list fills what the sheet offers; the tile row takes its own height.
-            modifier = if (layout == TripListLayout.LIST) Modifier.weight(1f) else Modifier,
+            modifier = Modifier.weight(1f),
         ) { shown ->
             when (shown) {
                 TripListLayout.LIST -> StopRail(
@@ -212,7 +210,7 @@ fun TripSheetContent(
                     selection = selection,
                     onPickPoint = onPickPoint,
                     onOpenStop = onOpenStop,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -477,31 +475,33 @@ private fun StopTiles(
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        modifier = modifier,
-    ) {
-        itemsIndexed(plan.stops, key = { _, stop -> stop.site.id }) { i, stop ->
-            val index = i + 1
-            val selected = selecting && selection.includes(index)
-            Surface(
-                onClick = { if (selecting) onPickPoint(index) else onOpenStop(stop) },
-                shape = MaterialTheme.shapes.medium,
-                color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-                border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.width(136.dp),
-            ) {
-                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    RankBadge(index, operatorColor(stop.site.operator))
-                    Text(
-                        stop.site.operator ?: stop.site.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    MetaLine(stringResource(R.string.trip_tile_charge, stop.maxPowerKw.roundToInt(), stop.chargeMinutes.roundToInt()))
-                    MetaLine(stringResource(R.string.trip_tile_arrival, etaText(stop.arrivalMinutesFromStart)))
+    // Centred in the room the list would take, so the action row stays where it was.
+    Box(modifier, contentAlignment = Alignment.Center) {
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        ) {
+            itemsIndexed(plan.stops, key = { _, stop -> stop.site.id }) { i, stop ->
+                val index = i + 1
+                val selected = selecting && selection.includes(index)
+                Surface(
+                    onClick = { if (selecting) onPickPoint(index) else onOpenStop(stop) },
+                    shape = MaterialTheme.shapes.medium,
+                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                    border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.width(136.dp),
+                ) {
+                    Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        RankBadge(index, operatorColor(stop.site.operator))
+                        Text(
+                            stop.site.operator ?: stop.site.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        MetaLine(stringResource(R.string.trip_tile_charge, stop.maxPowerKw.roundToInt(), stop.chargeMinutes.roundToInt()))
+                        MetaLine(stringResource(R.string.trip_tile_arrival, etaText(stop.arrivalMinutesFromStart)))
+                    }
                 }
             }
         }
@@ -589,7 +589,6 @@ fun tripPeekHeight(): Dp = (LocalConfiguration.current.screenHeightDp / 3).dp
 private val RAIL_WIDTH = 36.dp
 
 const val LAYOUT_SLIDE_MILLIS = 240
-const val LAYOUT_RESIZE_MILLIS = 220
 private val DOT_SIZE = 28.dp
 private val ROW_PADDING = 10.dp
 

@@ -315,10 +315,8 @@ private fun PhoneApp() {
                         // The handle is the "you can expand this" hint; it folds away with the resize.
                         AnimatedVisibility(
                             visible = expandable,
-                            enter = expandVertically(tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS)) +
-                                fadeIn(tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS)),
-                            exit = shrinkVertically(tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS)) +
-                                fadeOut(tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS)),
+                            enter = expandVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeIn(tween(LAYOUT_SLIDE_MILLIS)),
+                            exit = shrinkVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeOut(tween(LAYOUT_SLIDE_MILLIS)),
                         ) {
                             BottomSheetDefaults.DragHandle()
                         }
