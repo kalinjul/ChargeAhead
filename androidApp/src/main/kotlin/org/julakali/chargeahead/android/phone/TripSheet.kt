@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -363,6 +365,8 @@ private fun RailRow(
         verticalAlignment = Alignment.Top,
         modifier = Modifier
             .fillMaxWidth()
+            // The rail box fills the row's height, so the row needs one.
+            .height(IntrinsicSize.Min)
             .then(
                 if (selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small) else Modifier,
             )
@@ -374,19 +378,28 @@ private fun RailRow(
                 .fillMaxHeight()
                 .drawBehind {
                     val x = size.width / 2
-                    val top = if (index == 0) size.height / 2 else 0f
-                    val bottom = if (index == last) size.height / 2 else size.height
+                    val dotCenter = DOT_TOP.toPx() + DOT_SIZE.toPx() / 2
+                    val top = if (index == 0) dotCenter else 0f
+                    val bottom = if (index == last) dotCenter else size.height
                     drawLine(lineColor, Offset(x, top), Offset(x, bottom), strokeWidth = 2.dp.toPx())
-                },
-            contentAlignment = Alignment.Center,
+                }
+                .padding(top = DOT_TOP),
+            contentAlignment = Alignment.TopCenter,
         ) {
-            dot()
+            // A ring in the surface color lifts the dot off the line.
+            Box(
+                Modifier.size(DOT_SIZE).background(MaterialTheme.colorScheme.surface, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) { dot() }
         }
-        Column(
-            Modifier.weight(1f).padding(vertical = 9.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            content()
+        Column(Modifier.weight(1f)) {
+            Column(
+                Modifier.padding(top = ROW_PADDING, bottom = ROW_PADDING, end = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                content()
+            }
+            if (index != last) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
         }
         trailing?.let {
             Icon(
@@ -528,3 +541,8 @@ internal fun etaText(minutesFromStart: Double): String {
 fun tripPeekHeight(): Dp = (LocalConfiguration.current.screenHeightDp / 3).dp
 
 private val RAIL_WIDTH = 36.dp
+private val DOT_SIZE = 28.dp
+private val ROW_PADDING = 10.dp
+
+/** Puts the dot's centre on the title line. */
+private val DOT_TOP = ROW_PADDING - 2.dp

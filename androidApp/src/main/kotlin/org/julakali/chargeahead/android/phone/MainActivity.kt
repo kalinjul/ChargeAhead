@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -310,7 +311,10 @@ private fun PhoneApp() {
                     sheetContent = {
                         val trip = planned
                         if (trip != null) {
-                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
+                            // Sheet content is measured against the whole screen, so tiles
+                            // must be told the peek is all they get.
+                            val sheetHeight = if (expandable) Modifier.fillMaxHeight(0.85f) else Modifier.height(tripPeekHeight())
+                            Column(Modifier.fillMaxWidth().then(sheetHeight)) {
                                 TripSummary(
                                     trip.plan,
                                     layout = tripLayout,
