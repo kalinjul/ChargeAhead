@@ -653,9 +653,12 @@ Navigation is a Navigation3 back stack
 (`androidApp/.../phone/Destinations.kt`) whose `NavDisplay` carries
 `rememberViewModelStoreNavEntryDecorator()` (lifecycle-viewmodel-navigation3):
 every page gets its own ViewModelStore, cleared when it leaves the back
-stack. The chrome outside `NavDisplay` — map, drawer, sheets — resolves
-against the activity, so `PlanSheetViewModel` and friends are shared between
-`PhoneApp` and the sheet that draws them.
+stack. The chrome outside `NavDisplay` — map, search bar, drawer, trip
+sheet — resolves against the activity, so `SearchViewModel`, `TripViewModel`
+and friends are shared between `PhoneApp` and the composables that draw them.
+The map is the one screen: the search bar plans directly on a pick, the plan
+shows as a `BottomSheetScaffold` sheet over the same map, and the drawer
+opens from the right.
 
 **What stays in the UI.** Which page is showing, which sheet is open, the
 Android permission handshake, and state that only lives for a gesture (a

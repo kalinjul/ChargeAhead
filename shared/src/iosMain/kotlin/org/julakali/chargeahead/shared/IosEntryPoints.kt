@@ -16,8 +16,8 @@ import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.julakali.chargeahead.shared.ui.CorridorViewModel
-import org.julakali.chargeahead.shared.ui.PlanSheetUiState
-import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
+import org.julakali.chargeahead.shared.ui.SearchUiState
+import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.julakali.chargeahead.shared.ui.ViewModelHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -120,7 +120,7 @@ class PlanningBridge(feature: ChargeStopsFeature) {
     private val planTrip: PlanTrip = koin.get()
     private val viewModels = ViewModelHost()
     private val chargeNowViewModel = viewModels.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
-    private val planSheetViewModel = viewModels.get { PlanSheetViewModel(feature, koin.get(), koin.get()) }
+    private val searchViewModel = viewModels.get { SearchViewModel(feature, koin.get(), koin.get()) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var chargeNowJob: Job? = null
     private var searchJob: Job? = null
@@ -162,7 +162,7 @@ class PlanningBridge(feature: ChargeStopsFeature) {
     fun watchDestinationSearch(onChange: (List<Place>) -> Unit) {
         searchJob?.cancel()
         searchJob = scope.launch {
-            planSheetViewModel.uiState
+            searchViewModel.uiState
                 .filter { !it.searching }
                 .map { it.results.orEmpty() }
                 .distinctUntilChanged()
@@ -170,9 +170,9 @@ class PlanningBridge(feature: ChargeStopsFeature) {
         }
     }
 
-    /** Debounced; queries shorter than [PlanSheetUiState.MIN_QUERY_LENGTH] find nothing. */
+    /** Debounced; queries shorter than [SearchUiState.MIN_QUERY_LENGTH] find nothing. */
     fun searchDestinations(query: String) {
-        planSheetViewModel.onQueryChanged(query)
+        searchViewModel.onQueryChanged(query)
     }
 
     fun close() {

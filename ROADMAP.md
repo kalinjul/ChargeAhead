@@ -32,8 +32,9 @@ Two decisions taken on 2026-09-05; **built on 2026-09-07** along the design
 mockup in `docs/mockup/index.html` (design doc:
 `docs/2026-09-07-phone-ui-design.md`). The map itself is still a placeholder
 drawing — the map-SDK decision below remains open, everything else works:
-map-first home, plan-a-route bottom sheet with charging stops from the shared
-`TripPlanner`, "Jetzt laden" (best chargers nearby with an auto-relax filter
+map-first home, an always-present search bar that plans on a pick (since
+2026-09-21; the trip itself is a sheet over the map) with charging stops from
+the shared `TripPlanner`, "Jetzt laden" (best chargers nearby with an auto-relax filter
 ladder), garage with vehicle presets and consumption slider, saved routes,
 and Google-Maps hand-off for the whole route, a section, or a single stop.
 iOS has the core screens (home, plan, charge now, trip, stop detail); the
