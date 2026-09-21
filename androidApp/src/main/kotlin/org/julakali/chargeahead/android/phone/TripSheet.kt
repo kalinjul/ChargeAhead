@@ -34,8 +34,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -542,7 +542,7 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
             }
             IconButton(onClick = onToggleLayout) {
                 Icon(
-                    if (layout == TripListLayout.LIST) Icons.Filled.ViewCarousel else Icons.AutoMirrored.Filled.ViewList,
+                    if (layout == TripListLayout.LIST) Icons.Outlined.ViewCarousel else Icons.AutoMirrored.Outlined.ViewList,
                     contentDescription = stringResource(
                         if (layout == TripListLayout.LIST) R.string.trip_layout_tiles else R.string.trip_layout_list,
                     ),
