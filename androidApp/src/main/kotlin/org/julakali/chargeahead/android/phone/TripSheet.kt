@@ -1,5 +1,12 @@
 package org.julakali.chargeahead.android.phone
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,7 +19,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,6 +33,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -167,24 +181,36 @@ fun TripSheetContent(
             }
         }
 
-        when (layout) {
-            TripListLayout.LIST -> StopRail(
-                plan = plan,
-                startSocPercent = startSocPercent,
-                selection = selection,
-                onPickPoint = onPickPoint,
-                onOpenStop = onOpenStop,
-                onEditStartSoc = onEditStartSoc,
-                onEditArrivalSoc = onEditArrivalSoc,
-                modifier = Modifier.weight(1f),
-            )
-            TripListLayout.TILES -> StopTiles(
-                plan = plan,
-                selection = selection,
-                onPickPoint = onPickPoint,
-                onOpenStop = onOpenStop,
-                modifier = Modifier.weight(1f),
-            )
+        AnimatedContent(
+            targetState = layout,
+            transitionSpec = {
+                (fadeIn(tween(220, delayMillis = 60)) + scaleIn(tween(220, delayMillis = 60), initialScale = 0.96f))
+                    .togetherWith(fadeOut(tween(90)))
+                    .using(SizeTransform(clip = false))
+            },
+            label = "trip list layout",
+            // The list fills what the sheet offers; the tile row takes its own height.
+            modifier = if (layout == TripListLayout.LIST) Modifier.weight(1f) else Modifier,
+        ) { shown ->
+            when (shown) {
+                TripListLayout.LIST -> StopRail(
+                    plan = plan,
+                    startSocPercent = startSocPercent,
+                    selection = selection,
+                    onPickPoint = onPickPoint,
+                    onOpenStop = onOpenStop,
+                    onEditStartSoc = onEditStartSoc,
+                    onEditArrivalSoc = onEditArrivalSoc,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                TripListLayout.TILES -> StopTiles(
+                    plan = plan,
+                    selection = selection,
+                    onPickPoint = onPickPoint,
+                    onOpenStop = onOpenStop,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
 
         Row(
@@ -516,7 +542,7 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
             }
             IconButton(onClick = onToggleLayout) {
                 Icon(
-                    painterResource(if (layout == TripListLayout.LIST) R.drawable.ic_view_tiles else R.drawable.ic_view_list),
+                    if (layout == TripListLayout.LIST) Icons.Filled.ViewCarousel else Icons.AutoMirrored.Filled.ViewList,
                     contentDescription = stringResource(
                         if (layout == TripListLayout.LIST) R.string.trip_layout_tiles else R.string.trip_layout_list,
                     ),
@@ -551,11 +577,17 @@ internal fun etaText(minutesFromStart: Double): String {
     return "%02d:%02d".format(eta.hour, eta.minute)
 }
 
-/** The collapsed sheet already shows the first stops. */
+/** The collapsed list shows the first stops; the tile row is only as tall as it needs. */
 @Composable
-fun tripPeekHeight(): Dp = (LocalConfiguration.current.screenHeightDp / 3).dp
+fun tripPeekHeight(layout: TripListLayout): Dp = when (layout) {
+    TripListLayout.LIST -> (LocalConfiguration.current.screenHeightDp / 3).dp
+    TripListLayout.TILES -> TILES_PEEK + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+}
 
 private val RAIL_WIDTH = 36.dp
+
+/** Summary row, one row of tiles, the action row. */
+private val TILES_PEEK = 236.dp
 private val DOT_SIZE = 28.dp
 private val ROW_PADDING = 10.dp
 

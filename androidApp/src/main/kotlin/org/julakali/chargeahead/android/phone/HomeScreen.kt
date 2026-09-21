@@ -34,6 +34,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -56,6 +57,8 @@ fun HomeRoute(
     planningInProgress: Boolean,
     mode: HomeMode,
     route: RouteOverlay?,
+    /** The trip sheet's peek, so the route fits above it. */
+    mapBottomInset: Dp,
     onRequestPermission: () -> Unit,
     /** The location button with nothing to center on. Owned by the activity. */
     onLocate: () -> Unit,
@@ -88,6 +91,7 @@ fun HomeRoute(
         planningInProgress = planningInProgress,
         mode = mode,
         route = route,
+        mapBottomInset = mapBottomInset,
         onViewportChanged = viewModel::onViewportChanged,
         onChargerTapped = viewModel::onChargerSelected,
         onRequestPermission = onRequestPermission,
@@ -119,6 +123,7 @@ fun HomeScreen(
     planningInProgress: Boolean,
     mode: HomeMode,
     route: RouteOverlay?,
+    mapBottomInset: Dp,
     onViewportChanged: (BoundingBox?) -> Unit,
     onChargerTapped: (MapCharger) -> Unit,
     onRequestPermission: () -> Unit,
@@ -142,6 +147,7 @@ fun HomeScreen(
                 // The route replaces the browsing markers.
                 chargers = if (mode == HomeMode.TRIP) emptyList() else uiState.chargers,
                 route = route,
+                bottomInset = mapBottomInset,
                 hasLocationPermission = hasPermission,
                 cameraPositionState = camera,
                 onViewportChanged = onViewportChanged,

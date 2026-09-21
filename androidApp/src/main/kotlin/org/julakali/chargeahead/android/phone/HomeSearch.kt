@@ -20,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -47,7 +48,12 @@ fun HomeSearchBar(
     focusRequester: FocusRequester,
     /** Show the x even with nothing typed, e.g. while a trip sits underneath. */
     clearable: Boolean = false,
+    /** Grab focus once composed; the bar may appear only when search mode starts. */
+    takeFocus: Boolean = false,
 ) {
+    LaunchedEffect(takeFocus) {
+        if (takeFocus) focusRequester.requestFocus()
+    }
     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

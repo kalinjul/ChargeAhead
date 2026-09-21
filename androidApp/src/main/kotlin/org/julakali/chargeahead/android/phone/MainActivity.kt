@@ -206,11 +206,6 @@ private fun PhoneApp() {
         searchViewModel.onClosed()
     }
 
-    // The bar may only be composed after `searching` flips (a trip shows the header instead).
-    LaunchedEffect(searching) {
-        if (searching) focusRequester.requestFocus()
-    }
-
     val mode = when {
         searching -> HomeMode.SEARCHING
         planned != null -> HomeMode.TRIP
@@ -240,6 +235,8 @@ private fun PhoneApp() {
     LaunchedEffect(expandable) {
         if (!expandable) sheetState.partialExpand()
     }
+
+    val peek = if (planned != null) tripPeekHeight(tripLayout) else 0.dp
 
     fun sendToMaps(url: String) {
         try {
@@ -303,7 +300,7 @@ private fun PhoneApp() {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
-                    sheetPeekHeight = if (planned != null) tripPeekHeight() else 0.dp,
+                    sheetPeekHeight = peek,
                     sheetSwipeEnabled = planned != null && expandable,
                     sheetDragHandle = if (expandable) ({ BottomSheetDefaults.DragHandle() }) else null,
                     sheetContainerColor = MaterialTheme.colorScheme.surface,
@@ -313,7 +310,7 @@ private fun PhoneApp() {
                         if (trip != null) {
                             // Sheet content is measured against the whole screen, so tiles
                             // must be told the peek is all they get.
-                            val sheetHeight = if (expandable) Modifier.fillMaxHeight(0.85f) else Modifier.height(tripPeekHeight())
+                            val sheetHeight = if (expandable) Modifier.fillMaxHeight(0.85f) else Modifier.height(peek)
                             Column(Modifier.fillMaxWidth().then(sheetHeight)) {
                                 TripSummary(
                                     trip.plan,
@@ -362,6 +359,7 @@ private fun PhoneApp() {
                         planningInProgress = tripUi is TripUiState.Planning,
                         mode = mode,
                         route = routeOverlay,
+                        mapBottomInset = peek,
                         onRequestPermission = ::requestLocationPermission,
                         onLocate = ::onLocate,
                         onSettings = { scope.launch { drawerState.open() } },
@@ -401,6 +399,7 @@ private fun PhoneApp() {
                                     },
                                     focusRequester = focusRequester,
                                     clearable = searching,
+                                    takeFocus = searching,
                                 )
                             }
                         },

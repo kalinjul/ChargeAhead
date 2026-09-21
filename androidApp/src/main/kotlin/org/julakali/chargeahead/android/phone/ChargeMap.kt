@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -88,6 +89,8 @@ fun HomeGoogleMap(
     position: LatLon?,
     chargers: List<MapCharger>,
     route: RouteOverlay?,
+    /** How much of the map's bottom the trip sheet covers. */
+    bottomInset: Dp,
     hasLocationPermission: Boolean,
     cameraPositionState: CameraPositionState,
     onViewportChanged: (BoundingBox?) -> Unit,
@@ -145,7 +148,7 @@ fun HomeGoogleMap(
         properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
         onMapLoaded = { mapLoaded = true },
         // The bar on top and the trip sheet below cover the map; a route must fit between them.
-        contentPadding = PaddingValues(top = TOP_CHROME_HEIGHT, bottom = if (route != null) tripPeekHeight() else 0.dp),
+        contentPadding = PaddingValues(top = TOP_CHROME_HEIGHT, bottom = bottomInset),
         // The SDK's own buttons would sit inside the status bar; ours replace them.
         uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false, compassEnabled = false),
         modifier = modifier,
