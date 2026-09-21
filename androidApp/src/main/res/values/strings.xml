@@ -127,10 +127,14 @@
 
     <!-- Phone: map home -->
     <string name="common_back">Zurück</string>
-    <string name="home_pill_plan">Planen</string>
     <string name="home_pill_charge_now">Jetzt laden</string>
     <string name="home_routes">Gespeicherte Routen</string>
-    <string name="home_menu">Menü</string>
+    <string name="home_pill_favorites">Favoriten</string>
+    <string name="home_settings">Einstellungen</string>
+    <string name="home_search_hint">Wohin?</string>
+    <string name="home_search_clear">Eingabe löschen</string>
+    <string name="home_trip_clear">Route verwerfen</string>
+    <string name="plan_vehicle_missing_action">Auto anlegen</string>
     <string name="home_no_position">Kein Standort — Ortung und Freigabe prüfen</string>
     <string name="map_my_location">Auf meinen Standort zentrieren</string>
     <string name="map_compass">Karte nach Norden ausrichten</string>
