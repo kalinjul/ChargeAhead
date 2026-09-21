@@ -223,7 +223,7 @@ private fun PhoneApp() {
         planned?.plan?.let { plan ->
             RouteOverlay(
                 points = plan.route.points,
-                stops = plan.stops.mapIndexed { index, stop -> (index + 1) to stop.site.position },
+                stops = plan.stops.mapIndexed { index, stop -> RouteStop(index + 1, stop.site.position, stop.site.operator) },
                 destination = plan.destination.position,
             )
         }

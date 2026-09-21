@@ -69,10 +69,12 @@ fun LatLon.toLatLng() = LatLng(lat, lon)
 /** What the trip draws over the browsing map. */
 data class RouteOverlay(
     val points: List<LatLon>,
-    /** 1-based stop index to position. */
-    val stops: List<Pair<Int, LatLon>>,
+    val stops: List<RouteStop>,
     val destination: LatLon,
 )
+
+/** A numbered stop marker; the operator picks its colour, like in the list. */
+data class RouteStop(val index: Int, val position: LatLon, val operator: String?)
 
 /** The home camera, owned by the screen so its controls can drive it. */
 @Composable
@@ -163,16 +165,16 @@ fun HomeGoogleMap(
             if (routeLatLngs.size >= 2) {
                 Polyline(points = routeLatLngs, color = ROUTE_COLOR, width = 14f)
             }
-            route.stops.forEach { (index, stopPosition) ->
-                key(index) {
+            route.stops.forEach { stop ->
+                key(stop.index) {
                     MarkerComposable(
-                        keys = arrayOf(index),
-                        state = rememberMarkerState(position = stopPosition.toLatLng()),
+                        keys = arrayOf<Any>(stop.index, stop.operator.orEmpty()),
+                        state = rememberMarkerState(position = stop.position.toLatLng()),
                         anchor = Offset(0.5f, 0.5f),
-                        onClick = { onStopTapped(index); true },
+                        onClick = { onStopTapped(stop.index); true },
                     ) {
-                        ChargeBadge(color = ROUTE_COLOR) {
-                            Text(text = "$index", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                        ChargeBadge(color = operatorColor(stop.operator)) {
+                            Text(text = "${stop.index}", color = Color.White, style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }
