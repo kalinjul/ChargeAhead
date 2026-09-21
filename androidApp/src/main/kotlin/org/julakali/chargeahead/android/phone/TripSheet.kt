@@ -90,8 +90,6 @@ fun TripSheetContent(
     startSocPercent: Double?,
     isSaved: Boolean,
     layout: TripListLayout,
-    /** The visible sheet below the summary. Both layouts fill exactly this, so switching never re-measures. */
-    contentHeight: Dp,
     // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
     selection: SectionSelection,
     // The quick charge-level entry on the start row: `null` while closed.
@@ -151,7 +149,7 @@ fun TripSheetContent(
         )
     }
 
-    Column(modifier = modifier.fillMaxWidth().height(contentHeight)) {
+    Column(modifier = modifier.fillMaxWidth()) {
         if (selecting) {
             val bothPicked = selectionA != null && selectionB != null
             val hint = if (selectionA != null && !bothPicked) {

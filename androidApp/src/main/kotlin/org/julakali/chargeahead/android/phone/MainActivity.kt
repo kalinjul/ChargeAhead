@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -69,7 +70,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
@@ -328,16 +328,13 @@ private fun PhoneApp() {
                             // height stays constant; only the inner box below follows the visible part.
                             Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
                                 val density = LocalDensity.current
-                                var chromeHeight by remember { mutableStateOf(0.dp) }
                                 val visibleSheet = runCatching { sheetState.requireOffset() }
                                     .map { offset -> with(density) { (layoutHeightPx - offset).toDp() } }
                                     .getOrDefault(peek)
                                     .coerceAtLeast(peek)
-                                Column(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .onSizeChanged { chromeHeight = with(density) { it.height.toDp() } },
-                                ) {
+                                // Everything visible lives in this column; the stops take what the
+                                // summary leaves, resolved in the same layout pass (no measured lag).
+                                Column(Modifier.fillMaxWidth().height(visibleSheet)) {
                                     // The handle is the "you can expand this" hint; it folds away with the slide.
                                     AnimatedVisibility(
                                         visible = expandable,
@@ -366,14 +363,12 @@ private fun PhoneApp() {
                                             searching = true
                                         },
                                     )
-                                }
-                                TripSheetContent(
+                                    TripSheetContent(
                                     plan = trip.plan,
                                     startPosition = trip.startPosition,
                                     startSocPercent = trip.startSocPercent,
                                     isSaved = trip.isSaved,
                                     layout = tripLayout,
-                                    contentHeight = (visibleSheet - chromeHeight).coerceAtLeast(0.dp),
                                     selection = trip.selection,
                                     socInput = trip.socInput,
                                     arrivalSocInput = trip.arrivalSocInput,
@@ -391,7 +386,9 @@ private fun PhoneApp() {
                                     onArrivalSocInputChange = tripViewModel::onArrivalSocInputChanged,
                                     onArrivalSocConfirm = tripViewModel::onArrivalSocConfirmed,
                                     onArrivalSocDismiss = tripViewModel::onArrivalSocEditDismissed,
+                                    modifier = Modifier.weight(1f),
                                 )
+                                }
                             }
                         }
                     },
