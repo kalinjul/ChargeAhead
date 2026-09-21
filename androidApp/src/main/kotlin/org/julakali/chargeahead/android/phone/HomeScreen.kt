@@ -298,7 +298,7 @@ fun HomeScreen(
         if (mode == HomeMode.BROWSING) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(24.dp),
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
             ) {
                 if (uiState.belowMinZoom) HintChip(stringResource(R.string.map_zoom_hint))
