@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -90,6 +91,8 @@ fun TripSheetContent(
     startSocPercent: Double?,
     isSaved: Boolean,
     layout: TripListLayout,
+    /** What the collapsed sheet shows below the summary; the tile layout fits itself into it. */
+    collapsedContentHeight: Dp,
     // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
     selection: SectionSelection,
     // The quick charge-level entry on the start row: `null` while closed.
@@ -180,6 +183,80 @@ fun TripSheetContent(
             }
         }
 
+        // Both layouts carry the same action row, so it slides along with them.
+        val actions: @Composable () -> Unit = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp).navigationBarsPadding(),
+            ) {
+                Button(
+                    onClick = {
+                        val lo = minOf(selectionA ?: 0, selectionB ?: (pointCount - 1))
+                        val hi = maxOf(selectionA ?: 0, selectionB ?: (pointCount - 1))
+                        val useSelection = selecting && selectionA != null && selectionB != null
+                        val fromIndex = if (useSelection) lo else 0
+                        val toIndex = if (useSelection) hi else pointCount - 1
+                        // The origin stays "my location": with a fixed origin, Maps
+                        // only previews. The section's first point becomes a waypoint.
+                        val url = MapsHandoff.directionsUrl(
+                            origin = null,
+                            destination = pointPosition(toIndex) ?: plan.destination.position,
+                            waypoints = (maxOf(fromIndex, 1) until toIndex).mapNotNull { pointPosition(it) },
+                        )
+                        onSendToMaps(url)
+                        onSectionSent()
+                    },
+                    shape = MaterialTheme.shapes.small,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_destination),
+                        contentDescription = null,
+                        modifier = Modifier.size(15.dp),
+                    )
+                    Text(
+                        stringResource(R.string.trip_send_maps),
+                        maxLines = 1,
+                        modifier = Modifier.padding(start = 6.dp),
+                    )
+                }
+                OutlinedButton(
+                    onClick = onToggleSelecting,
+                    shape = MaterialTheme.shapes.small,
+                    border = BorderStroke(
+                        1.dp,
+                        if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+                    ),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = if (selecting) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                    ),
+                ) {
+                    Text(
+                        stringResource(
+                            if (selecting) R.string.trip_select_cancel else R.string.trip_select_section,
+                        ),
+                    )
+                }
+                Surface(
+                    onClick = onToggleSave,
+                    shape = MaterialTheme.shapes.small,
+                    color = if (isSaved) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, if (isSaved) Color(0xFFF2B8B2) else MaterialTheme.colorScheme.outlineVariant),
+                    modifier = Modifier.size(width = 44.dp, height = 40.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            painterResource(if (isSaved) R.drawable.ic_heart_filled else R.drawable.ic_heart),
+                            contentDescription = stringResource(R.string.trip_save),
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+            }
+        }
+
         AnimatedContent(
             targetState = layout,
             transitionSpec = {
@@ -195,98 +272,35 @@ fun TripSheetContent(
             modifier = Modifier.weight(1f),
         ) { shown ->
             when (shown) {
-                TripListLayout.LIST -> StopRail(
-                    plan = plan,
-                    startSocPercent = startSocPercent,
-                    selection = selection,
-                    onPickPoint = onPickPoint,
-                    onOpenStop = onOpenStop,
-                    onEditStartSoc = onEditStartSoc,
-                    onEditArrivalSoc = onEditArrivalSoc,
-                    modifier = Modifier.fillMaxSize(),
-                )
-                TripListLayout.TILES -> StopTiles(
-                    plan = plan,
-                    selection = selection,
-                    onPickPoint = onPickPoint,
-                    onOpenStop = onOpenStop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        ) {
-            Button(
-                onClick = {
-                    val lo = minOf(selectionA ?: 0, selectionB ?: (pointCount - 1))
-                    val hi = maxOf(selectionA ?: 0, selectionB ?: (pointCount - 1))
-                    val useSelection = selecting && selectionA != null && selectionB != null
-                    val fromIndex = if (useSelection) lo else 0
-                    val toIndex = if (useSelection) hi else pointCount - 1
-                    // The origin stays "my location": with a fixed origin, Maps
-                    // only previews. The section's first point becomes a waypoint.
-                    val url = MapsHandoff.directionsUrl(
-                        origin = null,
-                        destination = pointPosition(toIndex) ?: plan.destination.position,
-                        waypoints = (maxOf(fromIndex, 1) until toIndex).mapNotNull { pointPosition(it) },
+                TripListLayout.LIST -> Column(Modifier.fillMaxSize()) {
+                    StopRail(
+                        plan = plan,
+                        startSocPercent = startSocPercent,
+                        selection = selection,
+                        onPickPoint = onPickPoint,
+                        onOpenStop = onOpenStop,
+                        onEditStartSoc = onEditStartSoc,
+                        onEditArrivalSoc = onEditArrivalSoc,
+                        modifier = Modifier.weight(1f),
                     )
-                    onSendToMaps(url)
-                    onSectionSent()
-                },
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.weight(1f),
-            ) {
-                Icon(
-                    painterResource(R.drawable.ic_destination),
-                    contentDescription = null,
-                    modifier = Modifier.size(15.dp),
-                )
-                Text(
-                    stringResource(R.string.trip_send_maps),
-                    maxLines = 1,
-                    modifier = Modifier.padding(start = 6.dp),
-                )
-            }
-            OutlinedButton(
-                onClick = onToggleSelecting,
-                shape = MaterialTheme.shapes.small,
-                border = BorderStroke(
-                    1.dp,
-                    if (selecting) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                ),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    containerColor = if (selecting) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
-                ),
-            ) {
-                Text(
-                    stringResource(
-                        if (selecting) R.string.trip_select_cancel else R.string.trip_select_section,
-                    ),
-                )
-            }
-            Surface(
-                onClick = onToggleSave,
-                shape = MaterialTheme.shapes.small,
-                color = if (isSaved) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, if (isSaved) Color(0xFFF2B8B2) else MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.size(width = 44.dp, height = 40.dp),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painterResource(if (isSaved) R.drawable.ic_heart_filled else R.drawable.ic_heart),
-                        contentDescription = stringResource(R.string.trip_save),
-                        tint = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.size(18.dp),
+                    actions()
+                }
+                // Tiles never expand: everything sits inside the collapsed height, the rest stays empty.
+                TripListLayout.TILES -> Box(Modifier.fillMaxWidth().height(collapsedContentHeight)) {
+                    StopTiles(
+                        plan = plan,
+                        selection = selection,
+                        onPickPoint = onPickPoint,
+                        onOpenStop = onOpenStop,
+                        modifier = Modifier.fillMaxWidth().align(Alignment.Center),
                     )
+                    Box(Modifier.align(Alignment.BottomCenter)) { actions() }
                 }
             }
         }
     }
 }
+
 
 /** Start, stops and destination on one vertical line. */
 @Composable

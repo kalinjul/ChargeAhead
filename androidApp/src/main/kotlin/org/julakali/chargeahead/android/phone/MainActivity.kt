@@ -26,14 +26,13 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -69,6 +68,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
@@ -321,40 +321,52 @@ private fun PhoneApp() {
                     sheetContent = {
                         val trip = planned
                         if (trip != null) {
-                            // Sheet content is measured against the whole screen. Sizing it to what
-                            // is actually visible keeps the box identical in both layouts, so a
-                            // layout switch never re-measures the sliding content.
-                            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                            // Sheet content is measured against the whole screen, and the sheet's
+                            // expanded position comes from this height: it must not depend on the offset.
+                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
                                 val density = LocalDensity.current
-                                val visible = runCatching { sheetState.requireOffset() }
-                                    .map { offset -> maxHeight - with(density) { offset.toDp() } }
-                                    .getOrDefault(peek)
-                                Column(Modifier.fillMaxWidth().height(visible.coerceAtLeast(peek))) {
-                                AnimatedVisibility(
-                                    visible = expandable,
-                                    enter = expandVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeIn(tween(LAYOUT_SLIDE_MILLIS)),
-                                    exit = shrinkVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeOut(tween(LAYOUT_SLIDE_MILLIS)),
-                                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                                var chromeHeight by remember { mutableStateOf(0.dp) }
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .onSizeChanged { chromeHeight = with(density) { it.height.toDp() } },
                                 ) {
-                                    BottomSheetDefaults.DragHandle()
+                                    // The handle is the "you can expand this" hint; it folds away with the slide.
+                                    AnimatedVisibility(
+                                        visible = expandable,
+                                        enter = expandVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeIn(tween(LAYOUT_SLIDE_MILLIS)),
+                                        exit = shrinkVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeOut(tween(LAYOUT_SLIDE_MILLIS)),
+                                        modifier = Modifier.align(Alignment.CenterHorizontally),
+                                    ) {
+                                        BottomSheetDefaults.DragHandle()
+                                    }
+                                    TripSummary(
+                                        trip.plan,
+                                        layout = tripLayout,
+                                        onToggleLayout = {
+                                            if (expandable) {
+                                                // Tiles only exist collapsed: come down first, then slide.
+                                                scope.launch {
+                                                    sheetState.partialExpand()
+                                                    tripLayout = TripListLayout.TILES
+                                                }
+                                            } else {
+                                                tripLayout = TripListLayout.LIST
+                                            }
+                                        },
+                                        onReplan = {
+                                            searchViewModel.onOpened(trip.plan.destination)
+                                            searching = true
+                                        },
+                                    )
                                 }
-                                TripSummary(
-                                    trip.plan,
-                                    layout = tripLayout,
-                                    onToggleLayout = {
-                                        tripLayout = if (expandable) TripListLayout.TILES else TripListLayout.LIST
-                                    },
-                                    onReplan = {
-                                        searchViewModel.onOpened(trip.plan.destination)
-                                        searching = true
-                                    },
-                                )
                                 TripSheetContent(
                                     plan = trip.plan,
                                     startPosition = trip.startPosition,
                                     startSocPercent = trip.startSocPercent,
                                     isSaved = trip.isSaved,
                                     layout = tripLayout,
+                                    collapsedContentHeight = (peek - chromeHeight).coerceAtLeast(0.dp),
                                     selection = trip.selection,
                                     socInput = trip.socInput,
                                     arrivalSocInput = trip.arrivalSocInput,
@@ -372,9 +384,8 @@ private fun PhoneApp() {
                                     onArrivalSocInputChange = tripViewModel::onArrivalSocInputChanged,
                                     onArrivalSocConfirm = tripViewModel::onArrivalSocConfirmed,
                                     onArrivalSocDismiss = tripViewModel::onArrivalSocEditDismissed,
-                                    modifier = Modifier.weight(1f).navigationBarsPadding(),
+                                    modifier = Modifier.weight(1f),
                                 )
-                                }
                             }
                         }
                     },
