@@ -45,6 +45,8 @@ fun HomeSearchBar(
     onQueryChange: (String) -> Unit,
     onClear: () -> Unit,
     focusRequester: FocusRequester,
+    /** Show the x even with nothing typed, e.g. while a trip sits underneath. */
+    clearable: Boolean = false,
 ) {
     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp) {
         Row(
@@ -84,7 +86,7 @@ fun HomeSearchBar(
                     strokeWidth = 2.dp,
                     modifier = Modifier.padding(end = 10.dp).size(18.dp),
                 )
-                query.isNotEmpty() -> IconButton(onClick = onClear) {
+                query.isNotEmpty() || clearable -> IconButton(onClick = onClear) {
                     Icon(
                         painterResource(R.drawable.ic_remove),
                         contentDescription = stringResource(R.string.home_search_clear),

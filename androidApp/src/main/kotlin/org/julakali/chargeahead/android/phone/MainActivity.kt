@@ -344,6 +344,7 @@ private fun PhoneApp() {
                         onSettings = { scope.launch { drawerState.open() } },
                         onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
                         onRoutes = { sheet = Sheet.ROUTES },
+                        onDismissSearch = ::closeSearch,
                         topBar = {
                             val trip = planned
                             if (trip != null && !searching) {
@@ -362,10 +363,13 @@ private fun PhoneApp() {
                                     searching = searchUi.searching,
                                     onFocused = { searching = true },
                                     onQueryChange = searchViewModel::onQueryChanged,
+                                    // One tap back to the plain map, whatever was typed or planned.
                                     onClear = {
-                                        if (searchUi.query.isEmpty()) closeSearch() else searchViewModel.onQueryChanged("")
+                                        closeSearch()
+                                        tripViewModel.clear()
                                     },
                                     focusRequester = focusRequester,
+                                    clearable = searching,
                                 )
                             }
                         },

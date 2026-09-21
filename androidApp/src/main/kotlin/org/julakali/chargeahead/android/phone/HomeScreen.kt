@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -59,6 +61,8 @@ fun HomeRoute(
     onSettings: () -> Unit,
     onChargeNow: () -> Unit,
     onRoutes: () -> Unit,
+    /** A tap on the map while the results panel is open. */
+    onDismissSearch: () -> Unit,
     /** Search bar or destination header. */
     topBar: @Composable () -> Unit,
     /** Results while searching. */
@@ -86,6 +90,7 @@ fun HomeRoute(
         onSettings = onSettings,
         onChargeNow = onChargeNow,
         onRoutes = onRoutes,
+        onDismissSearch = onDismissSearch,
         topBar = topBar,
         topPanel = topPanel,
         modifier = modifier,
@@ -114,6 +119,7 @@ fun HomeScreen(
     onSettings: () -> Unit,
     onChargeNow: () -> Unit,
     onRoutes: () -> Unit,
+    onDismissSearch: () -> Unit,
     topBar: @Composable () -> Unit,
     topPanel: @Composable () -> Unit,
     modifier: Modifier = Modifier,
@@ -136,6 +142,15 @@ fun HomeScreen(
             )
         } else {
             MissingMapsKeyNotice(Modifier.fillMaxSize())
+        }
+
+        // While the panel is open the map only takes a dismissing tap.
+        if (mode == HomeMode.SEARCHING) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) { detectTapGestures { onDismissSearch() } },
+            )
         }
 
         // Bar + settings on one line, the map controls hanging under the settings icon.
