@@ -204,6 +204,10 @@
     <string name="trip_summary_distance">%1$d km</string>
     <string name="trip_stop_charge">%1$d kW | %2$d%% - %3$d%%</string>
     <string name="trip_stop_times">Ankunft %1$s | Abfahrt %2$s</string>
+    <string name="trip_tile_charge">%1$d kW · %2$d min</string>
+    <string name="trip_tile_arrival">an %1$s</string>
+    <string name="trip_layout_tiles">Als Kacheln zeigen</string>
+    <string name="trip_layout_list">Als Liste zeigen</string>
     <string name="trip_send_maps">An Maps senden</string>
     <string name="trip_select_section">Abschnitt wählen</string>
     <string name="trip_select_cancel">Abbrechen</string>

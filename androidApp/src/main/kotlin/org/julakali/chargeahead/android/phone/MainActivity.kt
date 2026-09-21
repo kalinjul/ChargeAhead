@@ -36,6 +36,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -225,11 +226,19 @@ private fun PhoneApp() {
         }
     }
 
+    // Tiles fit the peek and never expand; the missing drag handle says so.
+    var tripLayout by rememberSaveable { mutableStateOf(TripListLayout.LIST) }
+    val expandable = tripLayout == TripListLayout.LIST
+
     val sheetState = rememberStandardBottomSheetState(
         initialValue = SheetValue.PartiallyExpanded,
         skipHiddenState = true,
     )
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
+
+    LaunchedEffect(expandable) {
+        if (!expandable) sheetState.partialExpand()
+    }
 
     fun sendToMaps(url: String) {
         try {
@@ -294,7 +303,8 @@ private fun PhoneApp() {
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
                     sheetPeekHeight = if (planned != null) tripPeekHeight() else 0.dp,
-                    sheetSwipeEnabled = planned != null,
+                    sheetSwipeEnabled = planned != null && expandable,
+                    sheetDragHandle = if (expandable) ({ BottomSheetDefaults.DragHandle() }) else null,
                     sheetContainerColor = MaterialTheme.colorScheme.surface,
                     snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
                     sheetContent = {
@@ -303,6 +313,10 @@ private fun PhoneApp() {
                             Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
                                 TripSummary(
                                     trip.plan,
+                                    layout = tripLayout,
+                                    onToggleLayout = {
+                                        tripLayout = if (expandable) TripListLayout.TILES else TripListLayout.LIST
+                                    },
                                     onReplan = {
                                         searchViewModel.onOpened(trip.plan.destination)
                                         searching = true
@@ -313,6 +327,7 @@ private fun PhoneApp() {
                                     startPosition = trip.startPosition,
                                     startSocPercent = trip.startSocPercent,
                                     isSaved = trip.isSaved,
+                                    layout = tripLayout,
                                     selection = trip.selection,
                                     socInput = trip.socInput,
                                     arrivalSocInput = trip.arrivalSocInput,
