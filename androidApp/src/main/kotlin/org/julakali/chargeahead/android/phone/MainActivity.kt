@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -326,8 +327,10 @@ private fun PhoneApp() {
                     sheetContent = {
                         val trip = planned
                         if (trip != null) {
-                            // Tiles don't stretch, so their action row lands inside the peek by itself.
-                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
+                            // Sheet content is measured against the whole screen; tiles never
+                            // expand, so for them the peek is the whole sheet.
+                            val sheetHeight = if (expandable) Modifier.fillMaxHeight(0.85f) else Modifier.height(peek)
+                            Column(Modifier.fillMaxWidth().then(sheetHeight)) {
                                 TripSummary(
                                     trip.plan,
                                     layout = tripLayout,
