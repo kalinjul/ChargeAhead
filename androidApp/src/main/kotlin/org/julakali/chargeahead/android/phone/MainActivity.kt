@@ -62,7 +62,6 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -294,7 +293,7 @@ private fun PhoneApp() {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
-                    sheetPeekHeight = if (planned != null) TRIP_PEEK_HEIGHT else 0.dp,
+                    sheetPeekHeight = if (planned != null) tripPeekHeight() else 0.dp,
                     sheetSwipeEnabled = planned != null,
                     sheetContainerColor = MaterialTheme.colorScheme.surface,
                     snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
@@ -354,11 +353,7 @@ private fun PhoneApp() {
                             if (trip != null && !searching) {
                                 DestinationHeader(
                                     title = ChargeStopFormatter.label(trip.plan.destination),
-                                    subtitle = pluralStringResource(
-                                        R.plurals.trip_topbar_sub,
-                                        trip.plan.stops.size,
-                                        trip.plan.stops.size,
-                                    ),
+                                    subtitle = trip.plan.headerLine(),
                                     onClear = tripViewModel::clear,
                                 )
                             } else {

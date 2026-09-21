@@ -143,7 +143,7 @@ fun HomeGoogleMap(
         properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
         onMapLoaded = { mapLoaded = true },
         // The bar on top and the trip sheet below cover the map; a route must fit between them.
-        contentPadding = PaddingValues(top = TOP_CHROME_HEIGHT, bottom = if (route != null) TRIP_PEEK_HEIGHT else 0.dp),
+        contentPadding = PaddingValues(top = TOP_CHROME_HEIGHT, bottom = if (route != null) tripPeekHeight() else 0.dp),
         // The SDK's own buttons would sit inside the status bar; ours replace them.
         uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false, compassEnabled = false),
         modifier = modifier,

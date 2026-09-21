@@ -37,6 +37,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.components.SocEditDialog
@@ -287,40 +289,21 @@ fun TripSheetContent(
     }
 }
 
-/** The collapsed sheet shows exactly this. */
+/** Charging total and the way back into the search; the numbers sit in the header. */
 @Composable
 fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
     Column {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
             modifier = Modifier
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
                 .fillMaxWidth(),
         ) {
             Text(
-                stringResource(R.string.trip_summary_distance, plan.route.distanceKm.roundToInt()),
-                style = MaterialTheme.typography.headlineSmall.tabular,
+                stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)),
+                style = MaterialTheme.typography.bodySmall.tabular,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Column {
-                Text(
-                    buildString {
-                        append(minutesText(plan.totalMinutes))
-                        append(" · ")
-                        append(pluralStringResource(R.plurals.trip_summary_stops, plan.stops.size, plan.stops.size))
-                    },
-                    style = MaterialTheme.typography.bodySmall.tabular,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(
-                    buildString {
-                        append(stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)))
-                    },
-                    style = MaterialTheme.typography.bodySmall.tabular,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             Spacer(Modifier.weight(1f))
             // The search reopens with the same destination typed in.
             Surface(
@@ -345,6 +328,14 @@ fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
+
+/** "312 km · 3 h 10 min · 2 Stopps" for the destination header. */
+@Composable
+fun TripPlan.headerLine(): String = listOf(
+    stringResource(R.string.trip_summary_distance, route.distanceKm.roundToInt()),
+    minutesText(totalMinutes),
+    pluralStringResource(R.plurals.trip_summary_stops, stops.size, stops.size),
+).joinToString(" · ")
 
 @Composable
 private fun TerminusRow(
@@ -421,5 +412,6 @@ internal fun etaText(minutesFromStart: Double): String {
     return "%02d:%02d".format(eta.hour, eta.minute)
 }
 
-/** Enough of the sheet for the summary row and the handle. */
-val TRIP_PEEK_HEIGHT = 120.dp
+/** The collapsed sheet already shows the first stops. */
+@Composable
+fun tripPeekHeight(): Dp = (LocalConfiguration.current.screenHeightDp / 3).dp

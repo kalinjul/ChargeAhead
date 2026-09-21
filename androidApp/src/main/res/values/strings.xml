@@ -289,10 +289,6 @@
     <string name="garage_connector_ccs">CCS</string>
 
     <!-- Phone: trip top bar -->
-    <plurals name="trip_topbar_sub">
-        <item quantity="one">ab jetzt · %1$d Stopp</item>
-        <item quantity="other">ab jetzt · %1$d Stopps</item>
-    </plurals>
     <plurals name="trip_summary_stops">
         <item quantity="one">%1$d Stopp</item>
         <item quantity="other">%1$d Stopps</item>
