@@ -151,7 +151,7 @@ fun TripSheetContent(
         )
     }
 
-    Column(modifier = modifier) {
+    Column(modifier = modifier.fillMaxWidth().height(contentHeight)) {
         if (selecting) {
             val bothPicked = selectionA != null && selectionB != null
             val hint = if (selectionA != null && !bothPicked) {
@@ -182,7 +182,6 @@ fun TripSheetContent(
             }
         }
 
-        // Both layouts carry the same action row, so it slides along with them.
         val actions: @Composable () -> Unit = {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -267,31 +266,30 @@ fun TripSheetContent(
             },
             contentAlignment = Alignment.TopStart,
             label = "trip list layout",
-            modifier = Modifier.fillMaxWidth().height(contentHeight),
+            modifier = Modifier.fillMaxWidth().weight(1f),
         ) { shown ->
-            Column(Modifier.fillMaxSize()) {
-                when (shown) {
-                    TripListLayout.LIST -> StopRail(
-                        plan = plan,
-                        startSocPercent = startSocPercent,
-                        selection = selection,
-                        onPickPoint = onPickPoint,
-                        onOpenStop = onOpenStop,
-                        onEditStartSoc = onEditStartSoc,
-                        onEditArrivalSoc = onEditArrivalSoc,
-                        modifier = Modifier.weight(1f),
-                    )
-                    TripListLayout.TILES -> StopTiles(
-                        plan = plan,
-                        selection = selection,
-                        onPickPoint = onPickPoint,
-                        onOpenStop = onOpenStop,
-                        modifier = Modifier.weight(1f).fillMaxWidth(),
-                    )
-                }
-                actions()
+            when (shown) {
+                TripListLayout.LIST -> StopRail(
+                    plan = plan,
+                    startSocPercent = startSocPercent,
+                    selection = selection,
+                    onPickPoint = onPickPoint,
+                    onOpenStop = onOpenStop,
+                    onEditStartSoc = onEditStartSoc,
+                    onEditArrivalSoc = onEditArrivalSoc,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                TripListLayout.TILES -> StopTiles(
+                    plan = plan,
+                    selection = selection,
+                    onPickPoint = onPickPoint,
+                    onOpenStop = onOpenStop,
+                    modifier = Modifier.fillMaxSize(),
+                )
             }
         }
+        // Same buttons in both layouts, so they stay put while the content slides.
+        actions()
     }
 }
 
