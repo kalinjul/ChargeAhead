@@ -13,4 +13,8 @@ class TripStore {
     internal fun store(plan: TripPlan) {
         current.value = plan
     }
+
+    internal fun clear() {
+        current.value = null
+    }
 }

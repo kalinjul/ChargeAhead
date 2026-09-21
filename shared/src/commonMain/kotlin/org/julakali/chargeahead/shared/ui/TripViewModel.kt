@@ -161,6 +161,14 @@ class TripViewModel(
         }
     }
 
+    /** The driver dismissed the trip; the map goes back to browsing. */
+    fun clear() {
+        selection.value = SectionSelection()
+        socEditor.value = null
+        arrivalSocEditor.value = null
+        tripStore.clear()
+    }
+
     private fun onPlanned(result: TripPlanResult) {
         events.value = when (result) {
             is TripPlanResult.Planned -> TripEvent.PlanReady
