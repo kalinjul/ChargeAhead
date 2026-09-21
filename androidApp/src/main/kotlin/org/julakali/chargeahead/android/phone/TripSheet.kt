@@ -5,7 +5,6 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -184,10 +183,10 @@ fun TripSheetContent(
         AnimatedContent(
             targetState = layout,
             transitionSpec = {
-                (fadeIn(tween(220, delayMillis = 60)) + scaleIn(tween(220, delayMillis = 60), initialScale = 0.96f))
-                    .togetherWith(fadeOut(tween(90)))
-                    .using(SizeTransform(clip = false))
+                // The sheet itself glides; the content only cross-fades, anchored at the top.
+                fadeIn(tween(200)).togetherWith(fadeOut(tween(120))).using(SizeTransform(clip = false))
             },
+            contentAlignment = Alignment.TopCenter,
             label = "trip list layout",
             // The list fills what the sheet offers; the tile row takes its own height.
             modifier = if (layout == TripListLayout.LIST) Modifier.weight(1f) else Modifier,

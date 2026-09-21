@@ -15,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -236,7 +237,12 @@ private fun PhoneApp() {
         if (!expandable) sheetState.partialExpand()
     }
 
-    val peek = if (planned != null) tripPeekHeight(tripLayout) else 0.dp
+    // The scaffold snaps to a new peek; animating the value makes it glide.
+    val peek by animateDpAsState(
+        targetValue = if (planned != null) tripPeekHeight(tripLayout) else 0.dp,
+        animationSpec = tween(260),
+        label = "sheet peek",
+    )
 
     fun sendToMaps(url: String) {
         try {
