@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -91,8 +90,8 @@ fun TripSheetContent(
     startSocPercent: Double?,
     isSaved: Boolean,
     layout: TripListLayout,
-    /** What the collapsed sheet shows below the summary; the tile layout fits itself into it. */
-    collapsedContentHeight: Dp,
+    /** The visible sheet below the summary. Both layouts fill exactly this, so switching never re-measures. */
+    contentHeight: Dp,
     // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
     selection: SectionSelection,
     // The quick charge-level entry on the start row: `null` while closed.
@@ -265,15 +264,14 @@ fun TripSheetContent(
                 val slide = tween<IntOffset>(LAYOUT_SLIDE_MILLIS)
                 (slideInHorizontally(slide) { if (forward) it else -it } + fadeIn(tween(LAYOUT_SLIDE_MILLIS)))
                     .togetherWith(slideOutHorizontally(slide) { if (forward) -it else it } + fadeOut(tween(LAYOUT_SLIDE_MILLIS)))
-                    .using(SizeTransform(clip = true))
             },
             contentAlignment = Alignment.TopStart,
             label = "trip list layout",
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth().height(contentHeight),
         ) { shown ->
-            when (shown) {
-                TripListLayout.LIST -> Column(Modifier.fillMaxSize()) {
-                    StopRail(
+            Column(Modifier.fillMaxSize()) {
+                when (shown) {
+                    TripListLayout.LIST -> StopRail(
                         plan = plan,
                         startSocPercent = startSocPercent,
                         selection = selection,
@@ -283,19 +281,15 @@ fun TripSheetContent(
                         onEditArrivalSoc = onEditArrivalSoc,
                         modifier = Modifier.weight(1f),
                     )
-                    actions()
-                }
-                // Tiles never expand: everything sits inside the collapsed height, the rest stays empty.
-                TripListLayout.TILES -> Box(Modifier.fillMaxWidth().height(collapsedContentHeight)) {
-                    StopTiles(
+                    TripListLayout.TILES -> StopTiles(
                         plan = plan,
                         selection = selection,
                         onPickPoint = onPickPoint,
                         onOpenStop = onOpenStop,
-                        modifier = Modifier.fillMaxWidth().align(Alignment.Center),
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
                     )
-                    Box(Modifier.align(Alignment.BottomCenter)) { actions() }
                 }
+                actions()
             }
         }
     }

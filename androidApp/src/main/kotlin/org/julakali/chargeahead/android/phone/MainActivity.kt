@@ -26,6 +26,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
@@ -310,6 +311,8 @@ private fun PhoneApp() {
             },
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                BoxWithConstraints {
+                val layoutHeightPx = constraints.maxHeight
                 BottomSheetScaffold(
                     scaffoldState = scaffoldState,
                     sheetPeekHeight = peek,
@@ -321,11 +324,15 @@ private fun PhoneApp() {
                     sheetContent = {
                         val trip = planned
                         if (trip != null) {
-                            // Sheet content is measured against the whole screen, and the sheet's
-                            // expanded position comes from this height: it must not depend on the offset.
+                            // The sheet's expanded position comes from this content's height, so the
+                            // height stays constant; only the inner box below follows the visible part.
                             Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
                                 val density = LocalDensity.current
                                 var chromeHeight by remember { mutableStateOf(0.dp) }
+                                val visibleSheet = runCatching { sheetState.requireOffset() }
+                                    .map { offset -> with(density) { (layoutHeightPx - offset).toDp() } }
+                                    .getOrDefault(peek)
+                                    .coerceAtLeast(peek)
                                 Column(
                                     Modifier
                                         .fillMaxWidth()
@@ -366,7 +373,7 @@ private fun PhoneApp() {
                                     startSocPercent = trip.startSocPercent,
                                     isSaved = trip.isSaved,
                                     layout = tripLayout,
-                                    collapsedContentHeight = (peek - chromeHeight).coerceAtLeast(0.dp),
+                                    contentHeight = (visibleSheet - chromeHeight).coerceAtLeast(0.dp),
                                     selection = trip.selection,
                                     socInput = trip.socInput,
                                     arrivalSocInput = trip.arrivalSocInput,
@@ -384,7 +391,6 @@ private fun PhoneApp() {
                                     onArrivalSocInputChange = tripViewModel::onArrivalSocInputChanged,
                                     onArrivalSocConfirm = tripViewModel::onArrivalSocConfirmed,
                                     onArrivalSocDismiss = tripViewModel::onArrivalSocEditDismissed,
-                                    modifier = Modifier.weight(1f),
                                 )
                             }
                         }
@@ -459,6 +465,7 @@ private fun PhoneApp() {
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.background),
                     )
+                }
                 }
             }
         }
