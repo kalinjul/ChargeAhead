@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -241,10 +240,10 @@ private fun PhoneApp() {
     }
 
     // The scaffold snaps to a new peek; animating the value makes it glide.
+    // The scaffold snaps to a new peek; animating the value makes a trip glide in and out.
     val peek by animateDpAsState(
-        targetValue = if (planned != null) tripPeekHeight(tripLayout) else 0.dp,
-        // A layout switch slides first and resizes after; a trip appearing or leaving just glides.
-        animationSpec = if (planned != null) tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS) else tween(260),
+        targetValue = if (planned != null) tripPeekHeight() else 0.dp,
+        animationSpec = tween(260),
         label = "sheet peek",
     )
 
@@ -329,10 +328,8 @@ private fun PhoneApp() {
                     sheetContent = {
                         val trip = planned
                         if (trip != null) {
-                            // Sheet content is measured against the whole screen, so tiles
-                            // must be told the peek is all they get.
-                            val sheetHeight = if (expandable) Modifier.fillMaxHeight(0.85f) else Modifier.height(peek)
-                            Column(Modifier.fillMaxWidth().then(sheetHeight)) {
+                            // Tiles don't stretch, so their action row lands inside the peek by itself.
+                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
                                 TripSummary(
                                     trip.plan,
                                     layout = tripLayout,

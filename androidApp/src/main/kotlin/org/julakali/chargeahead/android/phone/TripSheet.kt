@@ -20,9 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -585,20 +582,14 @@ internal fun etaText(minutesFromStart: Double): String {
     return "%02d:%02d".format(eta.hour, eta.minute)
 }
 
-/** The collapsed list shows the first stops; the tile row is only as tall as it needs. */
+/** The collapsed sheet shows the first stops, in either layout. */
 @Composable
-fun tripPeekHeight(layout: TripListLayout): Dp = when (layout) {
-    TripListLayout.LIST -> (LocalConfiguration.current.screenHeightDp / 3).dp
-    TripListLayout.TILES -> TILES_PEEK + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-}
+fun tripPeekHeight(): Dp = (LocalConfiguration.current.screenHeightDp / 3).dp
 
 private val RAIL_WIDTH = 36.dp
 
 const val LAYOUT_SLIDE_MILLIS = 240
 const val LAYOUT_RESIZE_MILLIS = 220
-
-/** Summary row, one row of tiles, the action row. */
-private val TILES_PEEK = 236.dp
 private val DOT_SIZE = 28.dp
 private val ROW_PADDING = 10.dp
 
