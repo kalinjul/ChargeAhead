@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,7 +25,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -49,25 +46,23 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.ui.SectionSelection
-import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.LatLon
 import kotlin.math.roundToInt
 
 /**
- * The planned trip: map on top, summary, then the stops as a list with the
- * send actions at its end.
+ * The planned trip as sheet content: section hint, then the stops as a list
+ * with the send actions at its end. The summary above it is the sheet's peek.
  *
  * Section selection works on the point sequence start → stops → destination:
  * tap two of them and exactly that section goes to Maps.
  */
 @Composable
-fun TripPlanScreen(
+fun TripSheetContent(
     plan: TripPlan,
     startPosition: LatLon?,
     startSocPercent: Double?,
     isSaved: Boolean,
-    hasLocationPermission: Boolean,
     // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
     selection: SectionSelection,
     // The quick charge-level entry on the start row: `null` while closed.
@@ -77,10 +72,8 @@ fun TripPlanScreen(
     onToggleSelecting: () -> Unit,
     onPickPoint: (Int) -> Unit,
     onSectionSent: () -> Unit,
-    onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: (String) -> Unit,
     onToggleSave: () -> Unit,
-    onReplan: () -> Unit,
     onEditStartSoc: () -> Unit,
     onSocInputChange: (String) -> Unit,
     onSocConfirm: () -> Unit,
@@ -130,24 +123,7 @@ fun TripPlanScreen(
         )
     }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        if (hasGoogleMapsKey) {
-            val mapStops = remember(plan) {
-                plan.stops.mapIndexed { index, stop -> (index + 1) to stop.site.position }
-            }
-            TripGoogleMap(
-                routePoints = plan.route.points,
-                stops = mapStops,
-                destination = plan.destination.position,
-                hasLocationPermission = hasLocationPermission,
-                modifier = Modifier.fillMaxWidth().height(220.dp),
-            )
-        } else {
-            MissingMapsKeyNotice(Modifier.fillMaxWidth().height(220.dp))
-        }
-
-        TripSummary(plan, onReplan = onReplan)
-
+    Column(modifier = modifier) {
         if (selecting) {
             val bothPicked = selectionA != null && selectionB != null
             val hint = if (selectionA != null && !bothPicked) {
@@ -212,7 +188,7 @@ fun TripPlanScreen(
                         stop.departureSocPercent.roundToInt(),
                     ),
                     selected = selecting && selection.includes(index + 1),
-                    onClick = { if (selecting) onPickPoint(index + 1) else onOpenStop(stop) },
+                    onClick = { if (selecting) onPickPoint(index + 1) },
                     // Section-select mode repurposes the card tap; hide the send button.
                     onSend = if (selecting) null else ({ onSendToMaps(MapsHandoff.navigateUrl(stop.site.position)) }),
                     sendContentDescription = stringResource(R.string.trip_send_stop, stop.site.name),
@@ -311,10 +287,10 @@ fun TripPlanScreen(
     }
 }
 
+/** The collapsed sheet shows exactly this. */
 @Composable
-private fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
+fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
     Column {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -346,7 +322,7 @@ private fun TripSummary(plan: TripPlan, onReplan: () -> Unit) {
                 )
             }
             Spacer(Modifier.weight(1f))
-            // The plan sheet reopens with the same destination picked.
+            // The search reopens with the same destination typed in.
             Surface(
                 onClick = onReplan,
                 shape = MaterialTheme.shapes.small,
@@ -444,3 +420,6 @@ internal fun etaText(minutesFromStart: Double): String {
     val eta = java.time.LocalTime.now().plusMinutes(minutesFromStart.toLong())
     return "%02d:%02d".format(eta.hour, eta.minute)
 }
+
+/** Enough of the sheet for the summary row and the handle. */
+val TRIP_PEEK_HEIGHT = 120.dp
