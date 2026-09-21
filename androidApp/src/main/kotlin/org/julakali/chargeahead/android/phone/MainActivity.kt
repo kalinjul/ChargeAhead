@@ -16,7 +16,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -240,7 +243,8 @@ private fun PhoneApp() {
     // The scaffold snaps to a new peek; animating the value makes it glide.
     val peek by animateDpAsState(
         targetValue = if (planned != null) tripPeekHeight(tripLayout) else 0.dp,
-        animationSpec = tween(260),
+        // A layout switch slides first and resizes after; a trip appearing or leaving just glides.
+        animationSpec = if (planned != null) tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS) else tween(260),
         label = "sheet peek",
     )
 
@@ -308,7 +312,18 @@ private fun PhoneApp() {
                     scaffoldState = scaffoldState,
                     sheetPeekHeight = peek,
                     sheetSwipeEnabled = planned != null && expandable,
-                    sheetDragHandle = if (expandable) ({ BottomSheetDefaults.DragHandle() }) else null,
+                    sheetDragHandle = {
+                        // The handle is the "you can expand this" hint; it folds away with the resize.
+                        AnimatedVisibility(
+                            visible = expandable,
+                            enter = expandVertically(tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS)) +
+                                fadeIn(tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS)),
+                            exit = shrinkVertically(tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS)) +
+                                fadeOut(tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS)),
+                        ) {
+                            BottomSheetDefaults.DragHandle()
+                        }
+                    },
                     sheetContainerColor = MaterialTheme.colorScheme.surface,
                     snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
                     sheetContent = {

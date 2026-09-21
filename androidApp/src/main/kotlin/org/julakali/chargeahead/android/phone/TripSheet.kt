@@ -186,14 +186,15 @@ fun TripSheetContent(
         AnimatedContent(
             targetState = layout,
             transitionSpec = {
-                // Tiles come in from the right, the list from the left; the sheet itself glides.
+                // Tiles come in from the right, the list from the left. The slide runs at the
+                // old height; only afterwards does the container (and the sheet) resize.
                 val forward = targetState == TripListLayout.TILES
-                val spec = tween<IntOffset>(260)
-                (slideInHorizontally(spec) { if (forward) it else -it } + fadeIn(tween(200)))
-                    .togetherWith(slideOutHorizontally(spec) { if (forward) -it else it } + fadeOut(tween(160)))
-                    .using(SizeTransform(clip = true))
+                val slide = tween<IntOffset>(LAYOUT_SLIDE_MILLIS)
+                (slideInHorizontally(slide) { if (forward) it else -it } + fadeIn(tween(LAYOUT_SLIDE_MILLIS)))
+                    .togetherWith(slideOutHorizontally(slide) { if (forward) -it else it } + fadeOut(tween(LAYOUT_SLIDE_MILLIS)))
+                    .using(SizeTransform(clip = true) { _, _ -> tween(LAYOUT_RESIZE_MILLIS, delayMillis = LAYOUT_SLIDE_MILLIS) })
             },
-            contentAlignment = Alignment.TopCenter,
+            contentAlignment = Alignment.TopStart,
             label = "trip list layout",
             // The list fills what the sheet offers; the tile row takes its own height.
             modifier = if (layout == TripListLayout.LIST) Modifier.weight(1f) else Modifier,
@@ -591,6 +592,9 @@ fun tripPeekHeight(layout: TripListLayout): Dp = when (layout) {
 }
 
 private val RAIL_WIDTH = 36.dp
+
+const val LAYOUT_SLIDE_MILLIS = 240
+const val LAYOUT_RESIZE_MILLIS = 220
 
 /** Summary row, one row of tiles, the action row. */
 private val TILES_PEEK = 236.dp
