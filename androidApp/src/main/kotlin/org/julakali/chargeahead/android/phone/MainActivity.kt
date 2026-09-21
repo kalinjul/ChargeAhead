@@ -243,7 +243,6 @@ private fun PhoneApp() {
         if (!expandable) sheetState.partialExpand()
     }
 
-    // The scaffold snaps to a new peek; animating the value makes it glide.
     // The scaffold snaps to a new peek; animating the value makes a trip glide in and out.
     val peek by animateDpAsState(
         targetValue = if (planned != null) tripPeekHeight() else 0.dp,
@@ -447,13 +446,10 @@ private fun PhoneApp() {
                         topPanel = {
                             SearchResultsPanel(
                                 uiState = searchUi,
+                                // No vehicle? Planning reports it as an event, handled above.
                                 onPick = { row ->
-                                    if (!searchUi.hasVehicle) {
-                                        vehicleMissing()
-                                    } else {
-                                        closeSearch()
-                                        tripViewModel.plan(row.destination)
-                                    }
+                                    closeSearch()
+                                    tripViewModel.plan(row.destination)
                                 },
                             )
                         },
