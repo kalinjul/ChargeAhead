@@ -39,6 +39,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -280,6 +281,7 @@ private fun StopRail(
                 index = 0,
                 last = last,
                 selected = selecting && selection.includes(0),
+                selectionShape = selection.spanShape(0),
                 onClick = { if (selecting) onPickPoint(0) else onEditStartSoc() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
                 trailing = painterResource(R.drawable.ic_pen),
@@ -298,6 +300,7 @@ private fun StopRail(
                 index = index,
                 last = last,
                 selected = selecting && selection.includes(index),
+                selectionShape = selection.spanShape(index),
                 onClick = { if (selecting) onPickPoint(index) else onOpenStop(stop) },
                 dot = { RankBadge(index, operatorColor(stop.site.operator)) },
             ) {
@@ -329,6 +332,7 @@ private fun StopRail(
                 index = last,
                 last = last,
                 selected = selecting && selection.includes(last),
+                selectionShape = selection.spanShape(last),
                 onClick = { if (selecting) onPickPoint(last) else onEditArrivalSoc() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
                 trailing = painterResource(R.drawable.ic_pen),
@@ -354,6 +358,8 @@ private fun RailRow(
     index: Int,
     last: Int,
     selected: Boolean,
+    /** Rounded only where the picked span begins or ends. */
+    selectionShape: Shape,
     onClick: () -> Unit,
     dot: @Composable () -> Unit,
     trailing: androidx.compose.ui.graphics.painter.Painter? = null,
@@ -368,7 +374,7 @@ private fun RailRow(
             // The rail box fills the row's height, so the row needs one.
             .height(IntrinsicSize.Min)
             .then(
-                if (selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.small) else Modifier,
+                if (selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer, selectionShape) else Modifier,
             )
             .clickable(onClick = onClick),
     ) {
@@ -410,6 +416,15 @@ private fun RailRow(
             )
         }
     }
+}
+
+/** The tint reads as one block: corners only at the span's ends. */
+@Composable
+private fun SectionSelection.spanShape(index: Int): Shape {
+    val radius = 10.dp
+    val top = if (includes(index - 1)) 0.dp else radius
+    val bottom = if (includes(index + 1)) 0.dp else radius
+    return RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)
 }
 
 @Composable
