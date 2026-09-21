@@ -22,10 +22,13 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DrawerValue
@@ -33,12 +36,18 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,8 +56,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
@@ -70,7 +83,7 @@ import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.julakali.chargeahead.shared.ui.DrawerViewModel
 import org.julakali.chargeahead.shared.ui.HomeViewModel
-import org.julakali.chargeahead.shared.ui.PlanSheetViewModel
+import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.julakali.chargeahead.shared.ui.TripEvent
 import org.julakali.chargeahead.shared.ui.TripUiState
 import org.julakali.chargeahead.shared.ui.TripViewModel
@@ -102,23 +115,24 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private enum class Sheet { NONE, PLAN, CHARGE_NOW, ROUTES }
+private enum class Sheet { NONE, CHARGE_NOW, ROUTES }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PhoneApp() {
     val context = LocalContext.current
 
-    // State holders read by the chrome (app bar, drawer, sheets).
+    // State holders read by the chrome (drawer, bar, sheets).
     val drawerViewModel: DrawerViewModel = koinViewModel()
     val homeViewModel: HomeViewModel = koinViewModel()
     val tripViewModel: TripViewModel = koinViewModel()
-    val planSheetViewModel: PlanSheetViewModel = koinViewModel()
+    val searchViewModel: SearchViewModel = koinViewModel()
     val chargeNowViewModel: ChargeNowViewModel = koinViewModel()
 
     val drawerUi by drawerViewModel.uiState.collectAsStateWithLifecycle()
     val tripUi by tripViewModel.uiState.collectAsStateWithLifecycle()
     val tripEvent by tripViewModel.event.collectAsStateWithLifecycle()
+    val searchUi by searchViewModel.uiState.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -180,6 +194,39 @@ private fun PhoneApp() {
 
     val planned = tripUi as? TripUiState.Planned
 
+    // Searching is a UI mode: the bar has focus and the panel is open.
+    var searching by rememberSaveable { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
+    fun closeSearch() {
+        searching = false
+        focusManager.clearFocus()
+        searchViewModel.onClosed()
+    }
+
+    val mode = when {
+        searching -> HomeMode.SEARCHING
+        planned != null -> HomeMode.TRIP
+        else -> HomeMode.BROWSING
+    }
+
+    val routeOverlay = remember(planned?.plan) {
+        planned?.plan?.let { plan ->
+            RouteOverlay(
+                points = plan.route.points,
+                stops = plan.stops.mapIndexed { index, stop -> (index + 1) to stop.site.position },
+                destination = plan.destination.position,
+            )
+        }
+    }
+
+    val sheetState = rememberStandardBottomSheetState(
+        initialValue = SheetValue.PartiallyExpanded,
+        skipHiddenState = true,
+    )
+    val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
+
     fun sendToMaps(url: String) {
         try {
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
@@ -189,12 +236,25 @@ private fun PhoneApp() {
         }
     }
 
+    fun vehicleMissing() {
+        scope.launch {
+            val result = snackbar.showSnackbar(
+                message = context.getString(R.string.plan_vehicle_missing),
+                actionLabel = context.getString(R.string.plan_vehicle_missing_action),
+            )
+            if (result == SnackbarResult.ActionPerformed) openFromRoot(Garage)
+        }
+    }
+
     // Outcomes of planning and saving, once each.
     LaunchedEffect(tripEvent) {
         when (val event = tripEvent) {
             null -> return@LaunchedEffect
-            TripEvent.PlanReady -> openFromRoot(Trip)
-            TripEvent.VehicleMissing -> snackbar.show(scope, context.getString(R.string.plan_vehicle_missing))
+            TripEvent.PlanReady -> {
+                closeSearch()
+                scope.launch { sheetState.partialExpand() }
+            }
+            TripEvent.VehicleMissing -> vehicleMissing()
             is TripEvent.NoChargerInReach -> snackbar.show(
                 scope,
                 context.getString(R.string.plan_failed_no_charger, event.afterKm.roundToInt()),
@@ -207,42 +267,128 @@ private fun PhoneApp() {
         tripViewModel.onEventHandled()
     }
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        // Open only via the burger: the edge swipe fights the map's pan gesture.
-        gesturesEnabled = drawerState.isOpen,
-        drawerContent = {
-            ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
-                DrawerContent(
-                    uiState = drawerUi,
-                    // The drawer stays open underneath the page.
-                    onOpen = { target -> openFromRoot(target) },
-                    onFilters = drawerViewModel::onFiltersChanged,
-                )
+    // Material's drawer only knows the start edge; in RTL that edge is the right.
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            // Open only via the settings icon: the edge swipe fights the map's pan gesture.
+            gesturesEnabled = drawerState.isOpen,
+            drawerContent = {
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+                        DrawerContent(
+                            uiState = drawerUi,
+                            // The drawer stays open underneath the page.
+                            onOpen = { target -> openFromRoot(target) },
+                            onFilters = drawerViewModel::onFiltersChanged,
+                        )
+                    }
+                }
+            },
+        ) {
+            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                BottomSheetScaffold(
+                    scaffoldState = scaffoldState,
+                    sheetPeekHeight = if (planned != null) TRIP_PEEK_HEIGHT else 0.dp,
+                    sheetSwipeEnabled = planned != null,
+                    sheetContainerColor = MaterialTheme.colorScheme.surface,
+                    snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
+                    sheetContent = {
+                        val trip = planned
+                        if (trip != null) {
+                            Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
+                                TripSummary(
+                                    trip.plan,
+                                    onReplan = {
+                                        searchViewModel.onOpened(trip.plan.destination)
+                                        searching = true
+                                        focusRequester.requestFocus()
+                                    },
+                                )
+                                TripSheetContent(
+                                    plan = trip.plan,
+                                    startPosition = trip.startPosition,
+                                    startSocPercent = trip.startSocPercent,
+                                    isSaved = trip.isSaved,
+                                    selection = trip.selection,
+                                    socInput = trip.socInput,
+                                    arrivalSocInput = trip.arrivalSocInput,
+                                    onToggleSelecting = tripViewModel::onSectionSelectingToggled,
+                                    onPickPoint = tripViewModel::onSectionPointPicked,
+                                    onSectionSent = tripViewModel::onSectionSent,
+                                    onSendToMaps = ::sendToMaps,
+                                    onToggleSave = { tripViewModel.toggleSaved(trip.plan.summaryLine(context)) },
+                                    onEditStartSoc = tripViewModel::onStartSocEditRequested,
+                                    onSocInputChange = tripViewModel::onStartSocInputChanged,
+                                    onSocConfirm = tripViewModel::onStartSocConfirmed,
+                                    onSocDismiss = tripViewModel::onStartSocEditDismissed,
+                                    onEditArrivalSoc = tripViewModel::onArrivalSocEditRequested,
+                                    onArrivalSocInputChange = tripViewModel::onArrivalSocInputChanged,
+                                    onArrivalSocConfirm = tripViewModel::onArrivalSocConfirmed,
+                                    onArrivalSocDismiss = tripViewModel::onArrivalSocEditDismissed,
+                                    modifier = Modifier.weight(1f).navigationBarsPadding(),
+                                )
+                            }
+                        }
+                    },
+                ) { _ ->
+                    // Just the map, built once and kept. Full-screen pages are a
+                    // separate layer above the drawer (below).
+                    HomeRoute(
+                        hasPermission = hasPermission,
+                        planningInProgress = tripUi is TripUiState.Planning,
+                        mode = mode,
+                        route = routeOverlay,
+                        onRequestPermission = ::requestLocationPermission,
+                        onLocate = ::onLocate,
+                        onSettings = { scope.launch { drawerState.open() } },
+                        onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
+                        onRoutes = { sheet = Sheet.ROUTES },
+                        topBar = {
+                            val trip = planned
+                            if (trip != null && !searching) {
+                                DestinationHeader(
+                                    title = ChargeStopFormatter.label(trip.plan.destination),
+                                    subtitle = pluralStringResource(
+                                        R.plurals.trip_topbar_sub,
+                                        trip.plan.stops.size,
+                                        trip.plan.stops.size,
+                                    ),
+                                    onClear = tripViewModel::clear,
+                                )
+                            } else {
+                                HomeSearchBar(
+                                    query = searchUi.query,
+                                    searching = searchUi.searching,
+                                    onFocused = { searching = true },
+                                    onQueryChange = searchViewModel::onQueryChanged,
+                                    onClear = {
+                                        if (searchUi.query.isEmpty()) closeSearch() else searchViewModel.onQueryChanged("")
+                                    },
+                                    focusRequester = focusRequester,
+                                )
+                            }
+                        },
+                        topPanel = {
+                            SearchResultsPanel(
+                                uiState = searchUi,
+                                onPick = { row ->
+                                    if (!searchUi.hasVehicle) {
+                                        vehicleMissing()
+                                    } else {
+                                        closeSearch()
+                                        tripViewModel.plan(row.destination)
+                                    }
+                                },
+                            )
+                        },
+                        // No scaffold padding: the map draws under the status bar.
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background),
+                    )
+                }
             }
-        },
-    ) {
-        Scaffold(
-            // Every page brings its own top bar, so keep clear of the navigation bar here.
-            snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
-            contentWindowInsets = WindowInsets(0),
-        ) { padding ->
-            // Just the map, built once and kept. Full-screen pages are a
-            // separate layer above the drawer (below).
-            HomeRoute(
-                hasPermission = hasPermission,
-                planningInProgress = tripUi is TripUiState.Planning,
-                onRequestPermission = ::requestLocationPermission,
-                onLocate = ::onLocate,
-                onMenu = { scope.launch { drawerState.open() } },
-                onPlan = { sheet = Sheet.PLAN; planSheetViewModel.onSheetOpened() },
-                onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
-                onRoutes = { sheet = Sheet.ROUTES },
-                // No scaffold padding: the map draws under the status bar.
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background),
-            )
         }
     }
 
@@ -267,147 +413,67 @@ private fun PhoneApp() {
         entryProvider = entryProvider {
             entry<Home> { }
 
-                    entry<Trip> {
-                        val trip = planned
-                        if (trip == null) {
-                            while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
-                        } else {
-                            Page(
-                                title = "→ ${ChargeStopFormatter.label(trip.plan.destination)}",
-                                subtitle = pluralStringResource(
-                                    R.plurals.trip_topbar_sub,
-                                    trip.plan.stops.size,
-                                    trip.plan.stops.size,
-                                ),
-                                onBack = ::pop,
-                            ) { pagePadding ->
-                                TripPlanScreen(
-                                    plan = trip.plan,
-                                    startPosition = trip.startPosition,
-                                    startSocPercent = trip.startSocPercent,
-                                    isSaved = trip.isSaved,
-                                    hasLocationPermission = hasPermission,
-                                    selection = trip.selection,
-                                    socInput = trip.socInput,
-                                    arrivalSocInput = trip.arrivalSocInput,
-                                    onToggleSelecting = tripViewModel::onSectionSelectingToggled,
-                                    onPickPoint = tripViewModel::onSectionPointPicked,
-                                    onSectionSent = tripViewModel::onSectionSent,
-                                    onOpenStop = { stop -> backStack.add(StopDetail(trip.plan.stops.indexOf(stop))) },
-                                    onSendToMaps = ::sendToMaps,
-                                    onToggleSave = { tripViewModel.toggleSaved(trip.plan.summaryLine(context)) },
-                                    onReplan = {
-                                        planSheetViewModel.onSheetOpened(trip.plan.destination)
-                                        sheet = Sheet.PLAN
-                                    },
-                                    onEditStartSoc = tripViewModel::onStartSocEditRequested,
-                                    onSocInputChange = tripViewModel::onStartSocInputChanged,
-                                    onSocConfirm = tripViewModel::onStartSocConfirmed,
-                                    onSocDismiss = tripViewModel::onStartSocEditDismissed,
-                                    onEditArrivalSoc = tripViewModel::onArrivalSocEditRequested,
-                                    onArrivalSocInputChange = tripViewModel::onArrivalSocInputChanged,
-                                    onArrivalSocConfirm = tripViewModel::onArrivalSocConfirmed,
-                                    onArrivalSocDismiss = tripViewModel::onArrivalSocEditDismissed,
-                                    modifier = Modifier.fillMaxSize().padding(pagePadding),
-                                )
-                            }
-                        }
-                    }
+            entry<Garage> {
+                Page(title = stringResource(R.string.garage_title), onBack = ::pop) { pagePadding ->
+                    GarageRoute(
+                        onOpenAdvanced = { backStack.add(VehicleEdit) },
+                        onOpenAdd = { backStack.add(AddCar) },
+                        modifier = Modifier.fillMaxSize().padding(pagePadding),
+                    )
+                }
+            }
 
-                    entry<StopDetail> { key ->
-                        val plan = planned?.plan
-                        val stop = plan?.stops?.getOrNull(key.index)
-                        if (plan == null || stop == null) {
+            entry<AddCar> {
+                Page(title = stringResource(R.string.garage_add_title), onBack = ::pop) { pagePadding ->
+                    AddCarRoute(
+                        onAdded = { preset ->
                             pop()
-                        } else {
-                            Page(
-                                title = stringResource(R.string.detail_title),
-                                subtitle = stringResource(
-                                    R.string.detail_stop_x_of_y,
-                                    key.index + 1,
-                                    plan.stops.size,
-                                ),
-                                onBack = ::pop,
-                            ) { pagePadding ->
-                                StopDetailScreen(
-                                    stop = stop,
-                                    onSendToMaps = ::sendToMaps,
-                                    modifier = Modifier.fillMaxSize().padding(pagePadding),
-                                )
-                            }
-                        }
-                    }
+                            snackbar.show(scope, context.getString(R.string.garage_added, preset.name))
+                        },
+                        modifier = Modifier.fillMaxSize().padding(pagePadding),
+                    )
+                }
+            }
 
-                    entry<Garage> {
-                        Page(title = stringResource(R.string.garage_title), onBack = ::pop) { pagePadding ->
-                            GarageRoute(
-                                onOpenAdvanced = { backStack.add(VehicleEdit) },
-                                onOpenAdd = { backStack.add(AddCar) },
-                                modifier = Modifier.fillMaxSize().padding(pagePadding),
-                            )
-                        }
-                    }
+            entry<VehicleEdit> {
+                Page(title = stringResource(R.string.phone_settings_title), onBack = ::pop) { pagePadding ->
+                    VehicleSettingsRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                }
+            }
 
-                    entry<AddCar> {
-                        Page(title = stringResource(R.string.garage_add_title), onBack = ::pop) { pagePadding ->
-                            AddCarRoute(
-                                onAdded = { preset ->
-                                    pop()
-                                    snackbar.show(scope, context.getString(R.string.garage_added, preset.name))
-                                },
-                                modifier = Modifier.fillMaxSize().padding(pagePadding),
-                            )
-                        }
-                    }
+            entry<Networks> {
+                Page(
+                    title = stringResource(R.string.phone_networks_title),
+                    subtitle = networksSummary(drawerUi.preferredNetworkCount),
+                    onBack = ::pop,
+                ) { pagePadding ->
+                    NetworksRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                }
+            }
 
-                    entry<VehicleEdit> {
-                        Page(title = stringResource(R.string.phone_settings_title), onBack = ::pop) { pagePadding ->
-                            VehicleSettingsRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
-                        }
-                    }
+            entry<CarData> {
+                Page(title = stringResource(R.string.cardata_title), onBack = ::pop) { pagePadding ->
+                    CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                }
+            }
 
-                    entry<Networks> {
-                        Page(
-                            title = stringResource(R.string.phone_networks_title),
-                            subtitle = networksSummary(drawerUi.preferredNetworkCount),
-                            onBack = ::pop,
-                        ) { pagePadding ->
-                            NetworksRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
-                        }
-                    }
+            entry<Legal> {
+                Page(title = stringResource(R.string.drawer_legal), onBack = ::pop) { pagePadding ->
+                    LegalScreen(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                }
+            }
 
-                    entry<CarData> {
-                        Page(title = stringResource(R.string.cardata_title), onBack = ::pop) { pagePadding ->
-                            CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
-                        }
-                    }
-
-                    entry<Legal> {
-                        Page(title = stringResource(R.string.drawer_legal), onBack = ::pop) { pagePadding ->
-                            LegalScreen(modifier = Modifier.fillMaxSize().padding(pagePadding))
-                        }
-                    }
-
-                    entry<Licenses> {
-                        Page(title = stringResource(R.string.drawer_licenses), onBack = ::pop) { pagePadding ->
-                            LicensesRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
-                        }
-                    }
+            entry<Licenses> {
+                Page(title = stringResource(R.string.drawer_licenses), onBack = ::pop) { pagePadding ->
+                    LicensesRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                }
+            }
         },
         modifier = Modifier.fillMaxSize(),
     )
 
     when (sheet) {
         Sheet.NONE -> Unit
-
-        Sheet.PLAN -> AppSheet(onDismissRequest = { sheet = Sheet.NONE }) {
-            PlanSheetRoute(
-                onPlan = { destination, socPercent ->
-                    sheet = Sheet.NONE
-                    tripViewModel.plan(destination, socPercent)
-                },
-            )
-        }
 
         Sheet.CHARGE_NOW -> AppSheet(onDismissRequest = { sheet = Sheet.NONE }) {
             ChargeNowRoute(
@@ -426,11 +492,20 @@ private fun PhoneApp() {
         }
     }
 
-    // A sheet, or the drawer once no page is over it, closes on back.
-    BackHandler(enabled = sheet != Sheet.NONE || (drawerState.isOpen && backStack.size == 1)) {
+    // With no page on top, back peels the chrome layer by layer: sheet,
+    // drawer, search, expanded trip sheet, the trip itself.
+    val atRoot = backStack.size == 1
+    val sheetExpanded = planned != null && sheetState.currentValue == SheetValue.Expanded
+    BackHandler(
+        enabled = sheet != Sheet.NONE ||
+            (atRoot && (drawerState.isOpen || searching || sheetExpanded || planned != null)),
+    ) {
         when {
             sheet != Sheet.NONE -> sheet = Sheet.NONE
-            else -> scope.launch { drawerState.close() }
+            drawerState.isOpen -> scope.launch { drawerState.close() }
+            searching -> closeSearch()
+            sheetExpanded -> scope.launch { sheetState.partialExpand() }
+            planned != null -> tripViewModel.clear()
         }
     }
 }
