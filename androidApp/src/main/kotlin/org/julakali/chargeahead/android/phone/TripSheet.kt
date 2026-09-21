@@ -5,6 +5,8 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -60,6 +62,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.android.phone.components.RankBadge
@@ -183,8 +186,12 @@ fun TripSheetContent(
         AnimatedContent(
             targetState = layout,
             transitionSpec = {
-                // The sheet itself glides; the content only cross-fades, anchored at the top.
-                fadeIn(tween(200)).togetherWith(fadeOut(tween(120))).using(SizeTransform(clip = false))
+                // Tiles come in from the right, the list from the left; the sheet itself glides.
+                val forward = targetState == TripListLayout.TILES
+                val spec = tween<IntOffset>(260)
+                (slideInHorizontally(spec) { if (forward) it else -it } + fadeIn(tween(200)))
+                    .togetherWith(slideOutHorizontally(spec) { if (forward) -it else it } + fadeOut(tween(160)))
+                    .using(SizeTransform(clip = true))
             },
             contentAlignment = Alignment.TopCenter,
             label = "trip list layout",
