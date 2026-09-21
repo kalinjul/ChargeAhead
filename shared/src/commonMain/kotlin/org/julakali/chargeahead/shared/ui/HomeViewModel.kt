@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.BoundingBox
+import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
@@ -138,19 +139,22 @@ class HomeViewModel(
     }
 
     /** A tapped map marker becomes the same detail dialog the corridor list uses. */
-    fun onChargerSelected(charger: MapCharger) {
+    fun onChargerSelected(charger: MapCharger) = onSiteSelected(charger.site)
+
+    /** Same dialog for a planned stop, tapped in the trip list or on its route marker. */
+    fun onSiteSelected(site: ChargeSite) {
         val position = feature.currentFix.value?.position
         map.update {
             it.copy(
                 selectedStop = ChargeStop(
-                    site = charger.site,
-                    distanceKm = position?.distanceKmTo(charger.site.position) ?: 0.0,
+                    site = site,
+                    distanceKm = position?.distanceKmTo(site.position) ?: 0.0,
                     reachability = Reachability.UNKNOWN,
                     socOnArrivalPercent = null,
                 ),
             )
         }
-        val liveStatusId = charger.site.liveStatusId
+        val liveStatusId = site.liveStatusId
         observeLiveConnectors(ObserveLiveConnectors.Params(liveStatusId))
         // The viewport's refresh may be a minute old by now; a failure keeps what is shown.
         if (liveStatusId != null) {

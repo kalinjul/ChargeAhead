@@ -319,6 +319,7 @@ private fun PhoneApp() {
                                     onToggleSelecting = tripViewModel::onSectionSelectingToggled,
                                     onPickPoint = tripViewModel::onSectionPointPicked,
                                     onSectionSent = tripViewModel::onSectionSent,
+                                    onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
                                     onSendToMaps = ::sendToMaps,
                                     onToggleSave = { tripViewModel.toggleSaved(trip.plan.summaryLine(context)) },
                                     onEditStartSoc = tripViewModel::onStartSocEditRequested,
@@ -348,6 +349,18 @@ private fun PhoneApp() {
                         onChargeNow = { sheet = Sheet.CHARGE_NOW; chargeNowViewModel.onSheetOpened() },
                         onRoutes = { sheet = Sheet.ROUTES },
                         onDismissSearch = ::closeSearch,
+                        onStopTapped = { index ->
+                            planned?.plan?.stops?.getOrNull(index - 1)?.let { homeViewModel.onSiteSelected(it.site) }
+                        },
+                        tripLineFor = { selected ->
+                            planned?.plan?.stops?.firstOrNull { it.site.id == selected.site.id }?.let { stop ->
+                                context.getString(
+                                    R.string.trip_stop_times,
+                                    etaText(stop.arrivalMinutesFromStart),
+                                    etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes),
+                                )
+                            }
+                        },
                         topBar = {
                             val trip = planned
                             if (trip != null && !searching) {

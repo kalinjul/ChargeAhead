@@ -48,6 +48,7 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.LatLon
 import kotlin.math.roundToInt
@@ -74,6 +75,7 @@ fun TripSheetContent(
     onToggleSelecting: () -> Unit,
     onPickPoint: (Int) -> Unit,
     onSectionSent: () -> Unit,
+    onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: (String) -> Unit,
     onToggleSave: () -> Unit,
     onEditStartSoc: () -> Unit,
@@ -179,7 +181,8 @@ fun TripSheetContent(
                     rank = index + 1,
                     badgeColor = operatorColor(stop.site.operator),
                     title = stop.site.operator ?: stop.site.name,
-                    address = ChargeStopFormatter.addressLine(stop.site),
+                    // The address waits in the detail sheet; the card stays three lines.
+                    address = null,
                     metaLine = stringResource(
                         R.string.trip_stop_charge,
                         stop.maxPowerKw.roundToInt(),
@@ -192,7 +195,7 @@ fun TripSheetContent(
                         etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes),
                     ),
                     selected = selecting && selection.includes(index + 1),
-                    onClick = { if (selecting) onPickPoint(index + 1) },
+                    onClick = { if (selecting) onPickPoint(index + 1) else onOpenStop(stop) },
                     // Section-select mode repurposes the card tap; hide the send button.
                     onSend = if (selecting) null else ({ onSendToMaps(MapsHandoff.navigateUrl(stop.site.position)) }),
                     sendContentDescription = stringResource(R.string.trip_send_stop, stop.site.name),

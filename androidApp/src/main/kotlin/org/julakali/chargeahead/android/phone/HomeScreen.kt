@@ -41,6 +41,7 @@ import com.google.android.gms.maps.model.CameraPosition
 import kotlinx.coroutines.launch
 import org.julakali.chargeahead.android.R
 import org.julakali.chargeahead.shared.domain.BoundingBox
+import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.ui.HomeUiState
 import org.julakali.chargeahead.shared.ui.HomeViewModel
@@ -63,6 +64,10 @@ fun HomeRoute(
     onRoutes: () -> Unit,
     /** A tap on the map while the results panel is open. */
     onDismissSearch: () -> Unit,
+    /** A numbered route marker was tapped, 1-based. */
+    onStopTapped: (Int) -> Unit,
+    /** Arrival and departure for a selected site that is a planned stop. */
+    tripLineFor: (ChargeStop) -> String?,
     /** Search bar or destination header. */
     topBar: @Composable () -> Unit,
     /** Results while searching. */
@@ -91,6 +96,7 @@ fun HomeRoute(
         onChargeNow = onChargeNow,
         onRoutes = onRoutes,
         onDismissSearch = onDismissSearch,
+        onStopTapped = onStopTapped,
         topBar = topBar,
         topPanel = topPanel,
         modifier = modifier,
@@ -101,6 +107,7 @@ fun HomeRoute(
             stop = stop,
             live = uiState.selectedStopLive,
             onDismiss = viewModel::onSelectedStopDismissed,
+            tripLine = tripLineFor(stop),
         )
     }
 }
@@ -120,6 +127,7 @@ fun HomeScreen(
     onChargeNow: () -> Unit,
     onRoutes: () -> Unit,
     onDismissSearch: () -> Unit,
+    onStopTapped: (Int) -> Unit,
     topBar: @Composable () -> Unit,
     topPanel: @Composable () -> Unit,
     modifier: Modifier = Modifier,
@@ -138,6 +146,7 @@ fun HomeScreen(
                 cameraPositionState = camera,
                 onViewportChanged = onViewportChanged,
                 onChargerTapped = onChargerTapped,
+                onStopTapped = onStopTapped,
                 modifier = Modifier.fillMaxSize(),
             )
         } else {

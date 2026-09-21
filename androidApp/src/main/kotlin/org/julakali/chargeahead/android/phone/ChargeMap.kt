@@ -92,6 +92,8 @@ fun HomeGoogleMap(
     cameraPositionState: CameraPositionState,
     onViewportChanged: (BoundingBox?) -> Unit,
     onChargerTapped: (MapCharger) -> Unit,
+    /** A numbered route marker, by its 1-based index. */
+    onStopTapped: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // No projection to read a viewport from until the map itself is up, so the
@@ -164,6 +166,7 @@ fun HomeGoogleMap(
                         keys = arrayOf(index),
                         state = rememberMarkerState(position = stopPosition.toLatLng()),
                         anchor = Offset(0.5f, 0.5f),
+                        onClick = { onStopTapped(index); true },
                     ) {
                         ChargeBadge(color = ROUTE_COLOR) {
                             Text(text = "$index", color = Color.White, style = MaterialTheme.typography.labelLarge)
