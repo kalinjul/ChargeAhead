@@ -71,18 +71,19 @@ class SearchViewModel(
     settings: SettingsStore,
 ) : ViewModel() {
 
-    private val query = MutableStateFlow("")
+    private val input = MutableStateFlow(Input())
 
     val uiState: StateFlow<SearchUiState> = combine(
-        query,
+        input,
         observeDestinationSearch.flow,
         settings.recentDestinations,
         settings.vehicle,
         feature.currentFix,
-    ) { query, search, recent, vehicle, fix ->
+    ) { (query, pick), search, recent, vehicle, fix ->
         SearchUiState(
             query = query,
-            rows = searchRows(query, search.results, recent, fix?.position),
+            rows = pick?.let { listOf(SearchRow(it, it.name, it.address, fix?.position?.distanceKmTo(it.position), recent = false)) }
+                ?: searchRows(query, search.results, recent, fix?.position),
             searching = search.searching,
             failed = search.results == null,
             hasVehicle = vehicle != null,
@@ -94,13 +95,17 @@ class SearchViewModel(
         search("")
     }
 
-    /** The bar took focus; [prefill] is the current destination when re-planning. */
+    /**
+     * The bar took focus. A [prefill] (the current destination when re-planning)
+     * sits in the field as a pick, not as a query: typing over it starts searching.
+     */
     fun onOpened(prefill: Destination? = null) {
-        onQueryChanged(prefill?.let(ChargeStopFormatter::label) ?: "")
+        input.value = Input(query = prefill?.let(ChargeStopFormatter::label) ?: "", pick = prefill)
+        search("")
     }
 
     fun onQueryChanged(query: String) {
-        this.query.value = query
+        input.value = Input(query)
         search(query)
     }
 
@@ -111,4 +116,6 @@ class SearchViewModel(
     private fun search(query: String) {
         observeDestinationSearch(ObserveDestinationSearch.Params(query.trim()))
     }
+
+    private data class Input(val query: String = "", val pick: Destination? = null)
 }

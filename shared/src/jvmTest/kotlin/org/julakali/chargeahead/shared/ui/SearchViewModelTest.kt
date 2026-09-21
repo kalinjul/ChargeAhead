@@ -79,12 +79,16 @@ class SearchViewModelTest {
         assertEquals("42", 41.6.asKmLabel())
     }
 
-    /** "Neu planen" reopens the search on the current destination as typed text. */
+    /** "Neu planen" reopens the search on the current destination as a pick; typing discards it. */
     @Test
-    fun `opening with a prefill puts its label into the query`() = runBlocking<Unit> {
+    fun `opening with a prefill shows it as the committed pick`() = runBlocking<Unit> {
         val viewModel = SearchViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings())
         viewModel.onOpened(hamburg)
-        assertEquals("Hamburg, Hamburg", viewModel.uiState.await { it.query.isNotEmpty() }.query)
+        val opened = viewModel.uiState.await { it.query.isNotEmpty() }
+        assertEquals("Hamburg, Hamburg", opened.query)
+        assertEquals(listOf(hamburg), opened.rows.map { it.destination })
+        viewModel.onQueryChanged("Ha")
+        assertTrue(viewModel.uiState.await { it.query == "Ha" }.rows.isEmpty())
         viewModel.onClosed()
         assertEquals("", viewModel.uiState.await { it.query.isEmpty() }.query)
     }

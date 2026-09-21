@@ -205,6 +205,11 @@ private fun PhoneApp() {
         searchViewModel.onClosed()
     }
 
+    // The bar may only be composed after `searching` flips (a trip shows the header instead).
+    LaunchedEffect(searching) {
+        if (searching) focusRequester.requestFocus()
+    }
+
     val mode = when {
         searching -> HomeMode.SEARCHING
         planned != null -> HomeMode.TRIP
@@ -302,7 +307,6 @@ private fun PhoneApp() {
                                     onReplan = {
                                         searchViewModel.onOpened(trip.plan.destination)
                                         searching = true
-                                        focusRequester.requestFocus()
                                     },
                                 )
                                 TripSheetContent(
