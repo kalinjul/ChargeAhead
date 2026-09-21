@@ -554,7 +554,8 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
                         if (layout == TripListLayout.LIST) R.string.trip_layout_tiles else R.string.trip_layout_list,
                     ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
+                    // ViewWeek fills its grid edge to edge; a touch smaller matches the list glyph's weight.
+                    modifier = Modifier.size(if (layout == TripListLayout.LIST) 16.dp else 18.dp),
                 )
             }
         }
