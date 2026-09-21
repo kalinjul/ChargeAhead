@@ -26,11 +26,11 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -61,6 +61,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalFocusManager
@@ -68,6 +69,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -312,25 +314,30 @@ private fun PhoneApp() {
                     scaffoldState = scaffoldState,
                     sheetPeekHeight = peek,
                     sheetSwipeEnabled = planned != null && expandable,
-                    sheetDragHandle = {
-                        // The handle is the "you can expand this" hint; it folds away with the resize.
-                        AnimatedVisibility(
-                            visible = expandable,
-                            enter = expandVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeIn(tween(LAYOUT_SLIDE_MILLIS)),
-                            exit = shrinkVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeOut(tween(LAYOUT_SLIDE_MILLIS)),
-                        ) {
-                            BottomSheetDefaults.DragHandle()
-                        }
-                    },
+                    // The handle lives inside the content so the content's height is the whole visible sheet.
+                    sheetDragHandle = null,
                     sheetContainerColor = MaterialTheme.colorScheme.surface,
                     snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
                     sheetContent = {
                         val trip = planned
                         if (trip != null) {
-                            // Sheet content is measured against the whole screen; tiles never
-                            // expand, so for them the peek is the whole sheet.
-                            val sheetHeight = if (expandable) Modifier.fillMaxHeight(0.85f) else Modifier.height(peek)
-                            Column(Modifier.fillMaxWidth().then(sheetHeight)) {
+                            // Sheet content is measured against the whole screen. Sizing it to what
+                            // is actually visible keeps the box identical in both layouts, so a
+                            // layout switch never re-measures the sliding content.
+                            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                                val density = LocalDensity.current
+                                val visible = runCatching { sheetState.requireOffset() }
+                                    .map { offset -> maxHeight - with(density) { offset.toDp() } }
+                                    .getOrDefault(peek)
+                                Column(Modifier.fillMaxWidth().height(visible.coerceAtLeast(peek))) {
+                                AnimatedVisibility(
+                                    visible = expandable,
+                                    enter = expandVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeIn(tween(LAYOUT_SLIDE_MILLIS)),
+                                    exit = shrinkVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeOut(tween(LAYOUT_SLIDE_MILLIS)),
+                                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                                ) {
+                                    BottomSheetDefaults.DragHandle()
+                                }
                                 TripSummary(
                                     trip.plan,
                                     layout = tripLayout,
@@ -367,6 +374,7 @@ private fun PhoneApp() {
                                     onArrivalSocDismiss = tripViewModel::onArrivalSocEditDismissed,
                                     modifier = Modifier.weight(1f).navigationBarsPadding(),
                                 )
+                                }
                             }
                         }
                     },
