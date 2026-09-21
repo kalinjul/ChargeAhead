@@ -48,7 +48,6 @@ fun StationCard(
             RankBadge(rank, badgeColor)
             Column(Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                MetaText(metaLine)
                 address?.let {
                     Text(
                         it,
@@ -59,6 +58,7 @@ fun StationCard(
                         modifier = Modifier.padding(top = 2.dp),
                     )
                 }
+                MetaText(metaLine)
                 extraLine?.let { MetaText(it) }
             }
             onSend?.let {

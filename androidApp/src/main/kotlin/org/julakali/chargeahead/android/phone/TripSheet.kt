@@ -179,15 +179,17 @@ fun TripSheetContent(
                     rank = index + 1,
                     badgeColor = operatorColor(stop.site.operator),
                     title = stop.site.operator ?: stop.site.name,
-                    metaLine = stringResource(R.string.trip_stop_power, stop.maxPowerKw.roundToInt()),
                     address = ChargeStopFormatter.addressLine(stop.site),
-                    // The SOC next to the arrival time is the one on arrival, before charging.
-                    extraLine = stringResource(
-                        R.string.trip_stop_eta_charge,
-                        etaText(stop.arrivalMinutesFromStart),
+                    metaLine = stringResource(
+                        R.string.trip_stop_charge,
+                        stop.maxPowerKw.roundToInt(),
                         stop.arrivalSocPercent.roundToInt(),
-                        stop.chargeMinutes.roundToInt(),
                         stop.departureSocPercent.roundToInt(),
+                    ),
+                    extraLine = stringResource(
+                        R.string.trip_stop_times,
+                        etaText(stop.arrivalMinutesFromStart),
+                        etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes),
                     ),
                     selected = selecting && selection.includes(index + 1),
                     onClick = { if (selecting) onPickPoint(index + 1) },
