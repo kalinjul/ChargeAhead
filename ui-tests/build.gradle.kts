@@ -8,9 +8,12 @@ plugins {
 /**
  * Every phone UI test lives here, on top of :phone-ui: behaviour tests run on
  * Robolectric from `test`, screenshot tests from `screenshotTest` via the
- * Compose Preview Screenshot Testing plugin (deprecated in favour of AGP 9.5
- * test suites; migrate once 9.5 is stable).
+ * Compose Preview Screenshot Testing plugin.
  */
+// TODO once AGP 9.5 is stable: drop libs.plugins.screenshot and declare the
+//  suite with testOptions.screenshotTests.create("screenshotTest") { engineVersion = ... };
+//  the source set, the tests and the goldens stay as they are.
+//  https://developer.android.com/studio/preview/compose-screenshot-testing-with-testsuites
 android {
     namespace = "org.julakali.chargeahead.uitests"
     compileSdk = libs.versions.compileSdk.get().toInt()
