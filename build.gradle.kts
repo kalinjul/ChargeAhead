@@ -8,3 +8,10 @@ plugins {
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.aboutlibraries.android) apply false
 }
+
+/** Every test that runs without a device, in one go. */
+tasks.register("allTests") {
+    group = "verification"
+    description = "Shared unit tests, phone UI behaviour tests and screenshot validation."
+    dependsOn(":shared:jvmTest", ":ui-tests:testDebugUnitTest", ":ui-tests:validateDebugScreenshotTest")
+}

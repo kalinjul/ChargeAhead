@@ -28,6 +28,8 @@ pinned through `LocalNow` so trip times don't drift.
 ## Commands
 
 ```bash
+./gradlew allTests                                 # all of the below, minus recording
+
 ./gradlew :shared:jvmTest                          # unit tests
 ./gradlew :ui-tests:testDebugUnitTest              # behaviour tests
 ./gradlew :ui-tests:validateDebugScreenshotTest    # screenshots vs. goldens
