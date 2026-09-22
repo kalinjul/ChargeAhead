@@ -10,7 +10,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -144,6 +147,24 @@ fun HomeGoogleMap(
     }
 
     val pillIcons = rememberPillIcons()
+    // Only flips at the threshold, so panning doesn't recompose every marker.
+    val compactMarkers by remember(cameraPositionState) {
+        derivedStateOf { cameraPositionState.position.zoom < PILL_ZOOM }
+    }
+    // Bitmaps can't morph: fade the old tier out, swap at zero, fade the new one in.
+    // Only markers on screen at the flip take part; the rest swap silently, so a
+    // large loaded set doesn't cost a recomposition per marker per frame.
+    var shownCompact by remember { mutableStateOf(compactMarkers) }
+    val tierAlpha = remember { Animatable(1f) }
+    var fadeBounds by remember { mutableStateOf<LatLngBounds?>(null) }
+    LaunchedEffect(compactMarkers) {
+        if (shownCompact == compactMarkers) return@LaunchedEffect
+        fadeBounds = cameraPositionState.projection?.visibleRegion?.latLngBounds
+        tierAlpha.animateTo(0f, tween(TIER_FADE_OUT_MILLIS))
+        shownCompact = compactMarkers
+        tierAlpha.animateTo(1f, tween(TIER_FADE_IN_MILLIS))
+        fadeBounds = null
+    }
 
     GoogleMap(
         cameraPositionState = cameraPositionState,
@@ -158,7 +179,15 @@ fun HomeGoogleMap(
         // Keyed by site: the list is re-sorted around the centre on every pan.
         chargers.forEach { charger ->
             key(charger.site.id) {
-                ChargerMarker(charger = charger, icons = pillIcons, onClick = onChargerTapped)
+                val bounds = fadeBounds
+                ChargerMarker(
+                    charger = charger,
+                    icons = pillIcons,
+                    compact = shownCompact,
+                    // Reading the animation subscribes to it; off-screen markers don't.
+                    alpha = if (bounds != null && bounds.contains(charger.site.position.toLatLng())) tierAlpha.value else 1f,
+                    onClick = onChargerTapped,
+                )
             }
         }
         if (route != null) {
@@ -205,6 +234,11 @@ private val ROUTE_COLOR = Color(0xFF1A73E8)
 
 /** Below this, no chargers load. */
 const val MIN_CHARGER_ZOOM = 10f
+
+/** Below this the markers are dots; pills would pile up. */
+const val PILL_ZOOM = 11f
+private const val TIER_FADE_OUT_MILLIS = 140
+private const val TIER_FADE_IN_MILLIS = 220
 private const val BOUNDS_PADDING_PX = 120
 
 /** Status bar, search bar and one row of controls. */

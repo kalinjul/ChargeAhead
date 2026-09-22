@@ -57,8 +57,10 @@ fun RoundIcon(icon: Painter, contentDescription: String, tint: Color = MaterialT
 }
 
 @Composable
-fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface) {
-    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface, shadowElevation = 2.dp) {
+fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface, onClick: (() -> Unit)? = null) {
+    val shape = MaterialTheme.shapes.small
+    val surface = MaterialTheme.colorScheme.surface
+    val content: @Composable () -> Unit = {
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
@@ -66,6 +68,11 @@ fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface) {
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
         )
+    }
+    if (onClick != null) {
+        Surface(onClick = onClick, shape = shape, color = surface, shadowElevation = 2.dp) { content() }
+    } else {
+        Surface(shape = shape, color = surface, shadowElevation = 2.dp) { content() }
     }
 }
 

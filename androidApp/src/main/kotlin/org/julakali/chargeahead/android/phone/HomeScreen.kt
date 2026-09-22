@@ -307,7 +307,12 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
             ) {
-                if (uiState.belowMinZoom) HintChip(stringResource(R.string.map_zoom_hint))
+                if (uiState.belowMinZoom) {
+                    // Tapping the hint lands on full markers, not on the dot tier.
+                    HintChip(stringResource(R.string.map_zoom_hint)) {
+                        scope.launch { camera.animate(CameraUpdateFactory.zoomTo(PILL_ZOOM)) }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     HomePill(
                         text = stringResource(R.string.home_pill_charge_now),
