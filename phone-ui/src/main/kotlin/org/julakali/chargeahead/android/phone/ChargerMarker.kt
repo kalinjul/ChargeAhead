@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -191,16 +193,21 @@ fun ChargerPill(
                     .background(level?.tint ?: RedTint)
                     .padding(start = 6.dp, end = 8.dp),
             ) {
-                Text(
-                    text = when (availability) {
-                        is SiteAvailability.Live -> "${availability.free}/${availability.total}"
-                        SiteAvailability.OutOfOrder -> stringResource(R.string.map_out_of_order_mark)
-                    },
-                    color = level?.strong ?: Red,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                )
+                when (availability) {
+                    is SiteAvailability.Live -> Text(
+                        text = "${availability.free}/${availability.total}",
+                        color = level?.strong ?: Red,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                    )
+                    SiteAvailability.OutOfOrder -> Icon(
+                        Icons.Outlined.Block,
+                        contentDescription = stringResource(R.string.map_out_of_order),
+                        tint = Red,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
             }
         }
     }
