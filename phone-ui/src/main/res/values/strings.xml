@@ -139,7 +139,7 @@
     <string name="map_compass">Karte nach Norden ausrichten</string>
     <string name="map_missing_key">Keine Karte: Es ist kein Google-Maps-Schlüssel konfiguriert.</string>
     <string name="map_loading_sites">Ladestationen werden geladen</string>
-    <string name="map_out_of_order_mark">✕</string>
+    <string name="map_out_of_order">Außer Betrieb</string>
     <string name="map_zoom_hint">Zum Anzeigen der Ladesäulen reinzoomen</string>
 
     <!-- Phone: car data debug view -->
