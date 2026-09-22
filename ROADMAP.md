@@ -192,3 +192,7 @@ Still open:
    good enough is for practice to decide.
 9. **Play Store approval** — POI apps go through a separate review against
    the Car App Quality Guidelines. Plan for this before M4.
+10. **From plans to committed trips** — the app watches a committed trip
+    and re-plans charging when the charge or the position drifts, handing
+    the result to Maps; saved routes are not part of that.
+    See `docs/2026-09-22-committed-trip-roadmap.md`.
