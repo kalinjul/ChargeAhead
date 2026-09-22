@@ -25,6 +25,12 @@ android {
 
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
+    // Layoutlib renders glyph edges a shade differently per JDK and OS; a
+    // missing line or a shifted chip is still far above this.
+    screenshotTests {
+        imageDifferenceThreshold = 0.01f
+    }
+
     testOptions {
         unitTests {
             isIncludeAndroidResources = true

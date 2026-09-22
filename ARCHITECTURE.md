@@ -174,15 +174,17 @@ ChargeAhead/
 │   └── iosMain/                   CLLocationManager, Room builder
 ├── androidApp/
 │   ├── car/                       CarAppService, screens, templates
-│   └── phone/                     Compose: onboarding, vehicle, networks, SoC
+│   └── phone/MainActivity         The phone shell: back stack, sheets, permission handshake
+├── phone-ui/                      Compose phone UI as a library: map, search, trip sheet, drawer, resources
+├── ui-tests/                      Every phone UI test: Robolectric behaviour tests + screenshot goldens
 ├── iosApp/
 │   ├── CarPlay/                   CPTemplateApplicationSceneDelegate, templates
 │   └── Phone/                     SwiftUI: the same settings
 └── docs/
 ```
 
-**Dependency direction:** `androidApp`/`iosApp` → `data` → `core` →
-`domain`. `domain` knows no one. All ports are defined there as interfaces,
+**Dependency direction:** `androidApp` → `phone-ui` → `shared`; `ui-tests` → `phone-ui`;
+within `shared`: `data` → `core` → `domain`. `domain` knows no one. All ports are defined there as interfaces,
 all implementations live outside.
 
 ```mermaid
