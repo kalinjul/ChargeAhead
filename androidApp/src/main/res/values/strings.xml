@@ -127,10 +127,13 @@
 
     <!-- Phone: map home -->
     <string name="common_back">Zurück</string>
-    <string name="home_pill_plan">Planen</string>
     <string name="home_pill_charge_now">Jetzt laden</string>
-    <string name="home_routes">Gespeicherte Routen</string>
-    <string name="home_menu">Menü</string>
+    <string name="home_pill_favorites">Favoriten</string>
+    <string name="home_settings">Einstellungen</string>
+    <string name="home_search_hint">Wohin?</string>
+    <string name="home_search_clear">Eingabe löschen</string>
+    <string name="home_trip_clear">Route verwerfen</string>
+    <string name="plan_vehicle_missing_action">Auto anlegen</string>
     <string name="home_no_position">Kein Standort — Ortung und Freigabe prüfen</string>
     <string name="map_my_location">Auf meinen Standort zentrieren</string>
     <string name="map_compass">Karte nach Norden ausrichten</string>
@@ -189,12 +192,6 @@
     <string name="about_dataset_other">Weitere Daten</string>
 
     <!-- Phone: plan sheet -->
-    <string name="plan_title">Route planen</string>
-    <string name="plan_from">Von</string>
-    <string name="plan_from_current">Dein Standort</string>
-    <string name="plan_to">Nach</string>
-    <string name="plan_cta">Route planen</string>
-    <string name="plan_soc_value">%1$s %%</string>
     <string name="plan_search_hint">Ziel suchen</string>
     <string name="plan_no_results">Keine Treffer</string>
     <string name="plan_search_failed">Zielsuche nicht erreichbar</string>
@@ -202,18 +199,21 @@
     <string name="plan_planning">Route wird geplant …</string>
     <string name="plan_failed_no_route">Keine Route gefunden.</string>
     <string name="plan_failed_no_charger">Kein erreichbarer Schnelllader nach km %1$d — Filter lockern oder Ladestand prüfen.</string>
-    <string name="plan_recent">Zuletzt</string>
 
     <!-- Phone: trip plan -->
     <string name="trip_summary_distance">%1$d km</string>
-    <string name="trip_stop_power">%1$d kW</string>
-    <string name="trip_stop_eta_charge">Ankunft %1$s · %2$d %% · %3$d min laden bis %4$d %%</string>
+    <string name="trip_stop_charge">%1$d kW | %2$d%% - %3$d%%</string>
+    <string name="trip_stop_times">Ankunft %1$s | Abfahrt %2$s</string>
+    <string name="trip_tile_charge">%1$d kW · %2$d min</string>
+    <string name="trip_tile_arrival">an %1$s</string>
+    <string name="trip_layout_tiles">Als Kacheln zeigen</string>
+    <string name="trip_layout_list">Als Liste zeigen</string>
     <string name="trip_send_maps">An Maps senden</string>
     <string name="trip_select_section">Abschnitt wählen</string>
     <string name="trip_select_cancel">Abbrechen</string>
     <string name="trip_section_hint">Start und Ende des Abschnitts antippen</string>
-    <string name="trip_dep_now">ab jetzt · %1$d %%</string>
-    <string name="trip_dep_now_unknown">ab jetzt</string>
+    <string name="trip_dep_now">Ladestand: %1$d %%</string>
+    <string name="trip_dep_now_unknown">Ladestand unbekannt</string>
     <string name="trip_arr">an %1$s · %2$d %%</string>
     <string name="trip_send_stop">%1$s an Maps senden</string>
     <string name="trip_summary_charging">%1$s laden</string>
@@ -293,10 +293,6 @@
     <string name="garage_connector_ccs">CCS</string>
 
     <!-- Phone: trip top bar -->
-    <plurals name="trip_topbar_sub">
-        <item quantity="one">ab jetzt · %1$d Stopp</item>
-        <item quantity="other">ab jetzt · %1$d Stopps</item>
-    </plurals>
     <plurals name="trip_summary_stops">
         <item quantity="one">%1$d Stopp</item>
         <item quantity="other">%1$d Stopps</item>

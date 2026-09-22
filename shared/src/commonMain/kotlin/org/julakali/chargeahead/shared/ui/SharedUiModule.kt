@@ -10,7 +10,7 @@ fun sharedUiModule(): Module = module {
     // Not viewModelOf: it would try to inject the defaulted timeout parameter.
     viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::TripViewModel)
-    viewModelOf(::PlanSheetViewModel)
+    viewModelOf(::SearchViewModel)
     viewModelOf(::ChargeNowViewModel)
     viewModelOf(::RoutesViewModel)
     viewModelOf(::DrawerViewModel)

@@ -26,6 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.R
+import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.android.phone.components.AppSheet
 import org.julakali.chargeahead.android.phone.components.Fineprint
 import org.julakali.chargeahead.android.phone.components.NetworkDot
@@ -39,7 +40,13 @@ import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
  * points the connectors come from them alone, otherwise from the site's data.
  */
 @Composable
-fun ChargeStopDetailSheet(stop: ChargeStop, live: List<LiveConnectorGroup>?, onDismiss: () -> Unit) {
+fun ChargeStopDetailSheet(
+    stop: ChargeStop,
+    live: List<LiveConnectorGroup>?,
+    onDismiss: () -> Unit,
+    /** Arrival and departure when the site is a planned stop. */
+    tripLine: String? = null,
+) {
     val context = LocalContext.current
 
     AppSheet(onDismissRequest = onDismiss) {
@@ -60,6 +67,14 @@ fun ChargeStopDetailSheet(stop: ChargeStop, live: List<LiveConnectorGroup>?, onD
                     it,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 3.dp),
+                )
+            }
+            tripLine?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodyMedium.tabular,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(top = 3.dp),
                 )
             }
