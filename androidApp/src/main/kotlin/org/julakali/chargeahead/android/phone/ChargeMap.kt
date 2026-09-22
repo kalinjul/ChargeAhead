@@ -152,13 +152,18 @@ fun HomeGoogleMap(
         derivedStateOf { cameraPositionState.position.zoom < PILL_ZOOM }
     }
     // Bitmaps can't morph: fade the old tier out, swap at zero, fade the new one in.
+    // Only markers on screen at the flip take part; the rest swap silently, so a
+    // large loaded set doesn't cost a recomposition per marker per frame.
     var shownCompact by remember { mutableStateOf(compactMarkers) }
     val tierAlpha = remember { Animatable(1f) }
+    var fadeBounds by remember { mutableStateOf<LatLngBounds?>(null) }
     LaunchedEffect(compactMarkers) {
         if (shownCompact == compactMarkers) return@LaunchedEffect
+        fadeBounds = cameraPositionState.projection?.visibleRegion?.latLngBounds
         tierAlpha.animateTo(0f, tween(TIER_FADE_OUT_MILLIS))
         shownCompact = compactMarkers
         tierAlpha.animateTo(1f, tween(TIER_FADE_IN_MILLIS))
+        fadeBounds = null
     }
 
     GoogleMap(
@@ -174,11 +179,13 @@ fun HomeGoogleMap(
         // Keyed by site: the list is re-sorted around the centre on every pan.
         chargers.forEach { charger ->
             key(charger.site.id) {
+                val bounds = fadeBounds
                 ChargerMarker(
                     charger = charger,
                     icons = pillIcons,
                     compact = shownCompact,
-                    alpha = tierAlpha.value,
+                    // Reading the animation subscribes to it; off-screen markers don't.
+                    alpha = if (bounds != null && bounds.contains(charger.site.position.toLatLng())) tierAlpha.value else 1f,
                     onClick = onChargerTapped,
                 )
             }
