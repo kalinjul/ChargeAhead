@@ -51,6 +51,8 @@ class PlanTripTest {
     }
 
     private val planTrip = PlanTripInteractor(planner, settings, store)
+    private val replanWithArrivalSoc =
+        ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(settings), store, planTrip)
 
     private fun plan(destination: Destination) = TripPlan(
         route = Route(listOf(from, destination.position), distanceKm = 170.0, durationMinutes = 100.0),
@@ -107,7 +109,7 @@ class PlanTripTest {
         planTrip(PlanTripInteractor.Params(from, munich))
         val now = LatLon(49.0, 11.3)
 
-        val result = UpdateArrivalSocInteractor(settings, store, planTrip)(UpdateArrivalSocInteractor.Params(25.0, now)).getOrThrow()
+        val result = replanWithArrivalSoc(ReplanWithArrivalSocInteractor.Params(25.0, now)).getOrThrow()
 
         assertIs<TripPlanResult.Planned>(result)
         assertEquals(Call(now, PlanTripInteractor.DEFAULT_ASSUMED_SOC_PERCENT, 25.0), calls.last())
@@ -116,7 +118,7 @@ class PlanTripTest {
 
     @Test
     fun `without a trip a new arrival charge is only stored`() = runBlocking {
-        val result = UpdateArrivalSocInteractor(settings, store, planTrip)(UpdateArrivalSocInteractor.Params(25.0, from)).getOrThrow()
+        val result = replanWithArrivalSoc(ReplanWithArrivalSocInteractor.Params(25.0, from)).getOrThrow()
 
         assertNull(result)
         assertEquals(25.0, settings.arrivalSocPercent.first())

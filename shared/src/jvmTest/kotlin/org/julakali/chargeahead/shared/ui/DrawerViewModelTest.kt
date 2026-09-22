@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared.ui
 
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +40,7 @@ class DrawerViewModelTest {
                 preferredOperators = setOf("enbw", "stadtwerke-kiel"),
             ),
         )
-        val vm = DrawerViewModel(settings)
+        val vm = DrawerViewModel(settings, UpdateChargeFiltersInteractor(settings))
 
         val state = vm.uiState.await { it.preferredNetworkCount > 0 }
         assertEquals(2, state.preferredNetworkCount)

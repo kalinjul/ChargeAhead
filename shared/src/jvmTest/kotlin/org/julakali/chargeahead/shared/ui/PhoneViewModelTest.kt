@@ -33,6 +33,10 @@ import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInte
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeStopsInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -84,7 +88,12 @@ class PhoneViewModelTest {
     @Test
     fun `the form keeps what was typed while the store takes what parses`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = VehicleSettingsViewModel(settings, stubFeature())
+        val viewModel = VehicleSettingsViewModel(
+            settings,
+            stubFeature(),
+            SelectVehicleInteractor(settings),
+            UpdateManualSocInteractor(settings),
+        )
 
         viewModel.onNameChanged("Testwagen")
         viewModel.onBatteryChanged("77")
@@ -108,7 +117,12 @@ class PhoneViewModelTest {
     @Test
     fun `an unparseable capacity stores no profile`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = VehicleSettingsViewModel(settings, stubFeature())
+        val viewModel = VehicleSettingsViewModel(
+            settings,
+            stubFeature(),
+            SelectVehicleInteractor(settings),
+            UpdateManualSocInteractor(settings),
+        )
 
         viewModel.onNameChanged("Testwagen")
         viewModel.onConsumptionChanged("17,8")
@@ -121,8 +135,15 @@ class PhoneViewModelTest {
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
         val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val addCar = AddCarViewModel(settings)
-        val garage = GarageViewModel(settings, stubFeature())
+        val addCar = AddCarViewModel(settings, SelectVehicleInteractor(settings))
+        val garage = GarageViewModel(
+            settings,
+            stubFeature(),
+            SelectVehicleInteractor(settings),
+            RemoveVehicleInteractor(settings),
+            UpdateManualSocInteractor(settings),
+            UpdateArrivalSocInteractor(settings),
+        )
 
         val preset = addCar.uiState.await { it.matches.isNotEmpty() }.matches.first()
         addCar.onPresetAdded(preset)

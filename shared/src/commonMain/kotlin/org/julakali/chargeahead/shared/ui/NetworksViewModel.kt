@@ -7,6 +7,7 @@ import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -21,7 +22,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Choosing charging networks. */
 data class NetworksUiState(
@@ -41,6 +41,7 @@ data class NetworksUiState(
 class NetworksViewModel(
     private val settings: SettingsStore,
     networkRepository: NetworkRepository,
+    private val updateNetworks: UpdateNetworksInteractor,
 ) : ViewModel() {
 
     private val search = MutableStateFlow("")
@@ -150,8 +151,7 @@ class NetworksViewModel(
     private suspend fun commit() {
         // Read inside the coroutine, so the last queued edit is in.
         val edited = staged.value ?: return
-        // Once begun, finish: a half-cancelled write leaves memory and disk apart.
-        withContext(NonCancellable) { settings.setNetworks(edited) }
+        updateNetworks(UpdateNetworksInteractor.Params(edited))
         staged.value = null
     }
 

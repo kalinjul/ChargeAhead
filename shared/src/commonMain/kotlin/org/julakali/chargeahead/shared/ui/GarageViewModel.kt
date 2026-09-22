@@ -9,6 +9,10 @@ import org.julakali.chargeahead.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -34,6 +38,10 @@ data class GarageUiState(
 class GarageViewModel(
     private val settings: SettingsStore,
     feature: ChargeStopsFeature,
+    private val selectVehicle: SelectVehicleInteractor,
+    private val removeVehicle: RemoveVehicleInteractor,
+    private val updateManualSoc: UpdateManualSocInteractor,
+    private val updateArrivalSoc: UpdateArrivalSocInteractor,
 ) : ViewModel() {
 
     private val arrivalSocEditor = MutableStateFlow<String?>(null)
@@ -58,15 +66,15 @@ class GarageViewModel(
 
     /** Selecting also stores an edited profile. */
     fun onVehicleSelected(profile: VehicleProfile) {
-        viewModelScope.launch { settings.setVehicle(profile) }
+        viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(profile)) }
     }
 
     fun onVehicleRemoved(displayName: String) {
-        viewModelScope.launch { settings.removeVehicle(displayName) }
+        viewModelScope.launch { removeVehicle(RemoveVehicleInteractor.Params(displayName)) }
     }
 
     fun onSocChanged(socPercent: Double) {
-        viewModelScope.launch { settings.setManualSocPercent(socPercent) }
+        viewModelScope.launch { updateManualSoc(UpdateManualSocInteractor.Params(socPercent)) }
     }
 
     /** Opens the arrival-level dialog on the level currently in force. */
@@ -88,7 +96,7 @@ class GarageViewModel(
     fun onArrivalSocConfirmed() {
         val entered = arrivalSocEditor.value?.toIntOrNull()?.takeIf { it in ARRIVAL_SOC_RANGE } ?: return
         arrivalSocEditor.value = null
-        viewModelScope.launch { settings.setArrivalSocPercent(entered.toDouble()) }
+        viewModelScope.launch { updateArrivalSoc(UpdateArrivalSocInteractor.Params(entered.toDouble())) }
     }
 }
 

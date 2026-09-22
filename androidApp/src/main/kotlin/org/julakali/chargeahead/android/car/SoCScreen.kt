@@ -13,14 +13,19 @@ import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import kotlinx.coroutines.launch
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.get
 
 /** Enter the state of charge manually while driving, in steps from high to low. */
 class SoCScreen(
     carContext: CarContext,
     private val settings: SettingsStore,
     private val permissions: CarPermissions,
-) : Screen(carContext) {
+) : Screen(carContext), KoinComponent {
+
+    private val updateManualSoc: UpdateManualSocInteractor = get()
 
     private var currentPercent: Double? = null
     private var diagnostics: SoCDiagnostics? = null
@@ -100,7 +105,7 @@ class SoCScreen(
             .setTitle(carContext.getString(R.string.car_soc_percent, percent))
             .setOnClickListener {
                 lifecycleScope.launch {
-                    settings.setManualSocPercent(percent.toDouble())
+                    updateManualSoc(UpdateManualSocInteractor.Params(percent.toDouble()))
                     screenManager.pop()
                 }
             }
