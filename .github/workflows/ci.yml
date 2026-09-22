@@ -39,11 +39,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      # Android Studio's bundled JBR is 25; the screenshot goldens are rendered
+      # with it, so CI validates with the same one.
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
 
       # Accepts the SDK licenses and puts the command line tools on PATH;
       # AGP downloads what is missing beyond that itself.
@@ -74,6 +76,15 @@ jobs:
         # hiccups says nothing about this repository. AGENTS.md, "Tests".
         run: ./gradlew :shared:jvmTest
 
+      - name: Phone UI behaviour tests (Robolectric)
+        run: ./gradlew :ui-tests:testDebugUnitTest
+
+      - name: Phone UI screenshot tests
+        # Compares against the goldens in ui-tests/src/screenshotTestDebug/reference.
+        # A real change needs `./gradlew :ui-tests:updateDebugScreenshotTest`
+        # and the new PNGs committed; the HTML report below shows the diff.
+        run: ./gradlew :ui-tests:validateDebugScreenshotTest
+
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@v4
@@ -82,6 +93,9 @@ jobs:
           path: |
             shared/build/reports/tests/
             shared/build/test-results/
+            ui-tests/build/reports/tests/
+            ui-tests/build/test-results/
+            ui-tests/build/reports/screenshotTest/
           retention-days: 7
 
       - name: Upload debug APK
@@ -97,11 +111,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4

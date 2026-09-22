@@ -77,7 +77,7 @@ class PlanTripTest {
     }
 
     @Test
-    fun `the start charge is the given one, else the stored one, else the assumption`() = runBlocking {
+    fun `the start charge is the given one - else the stored one - else the assumption`() = runBlocking {
         settings.setVehicle(vehicle)
 
         planTrip(PlanTrip.Params(from, munich))
@@ -112,7 +112,7 @@ class PlanTripTest {
     }
 
     @Test
-    fun `toggling a route saves it, and a second toggle removes it`() = runBlocking {
+    fun `toggling a route saves it and a second toggle removes it`() = runBlocking {
         val toggle = ToggleSavedRoute(settings)
 
         assertEquals(true, toggle(ToggleSavedRoute.Params(munich, "170 km")).getOrThrow())

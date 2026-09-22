@@ -152,41 +152,6 @@ class PhoneViewModelTest {
         assertTrue(!SectionSelection(selecting = true).includes(0), "nothing is selected before the first tap")
     }
 
-    /** Re-planning opens the sheet on the destination as a pick, not as typed text. */
-    @Test
-    fun `the plan sheet opens pre-filled with a destination`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = PlanSheetViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings)
-        val destination = Destination("Hamburg", LatLon(53.55, 9.99))
-
-        viewModel.onSheetOpened(destination)
-        val prefilled = viewModel.uiState.await { it.chosen != null }
-        assertEquals("Hamburg", prefilled.query)
-        assertEquals(destination, prefilled.chosen)
-
-        viewModel.onSheetOpened()
-        assertEquals("", viewModel.uiState.await { it.chosen == null }.query)
-    }
-
-    /** Issue #43: the field used to keep only the name, dropping street and city. */
-    @Test
-    fun `a picked search result fills the field with its address`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = PlanSheetViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings)
-        val place = Place(
-            name = "Uebel und Gefährlich",
-            description = "Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg",
-            position = LatLon(53.556, 9.968),
-            address = Address(street = "Feldstraße 66", postalCode = "20359", town = "Hamburg"),
-        )
-
-        viewModel.onPlaceChosen(place)
-
-        val state = viewModel.uiState.await { it.chosen != null }
-        assertEquals("Uebel und Gefährlich, Feldstraße 66, 20359 Hamburg", state.query)
-        assertEquals(Destination("Uebel und Gefährlich", place.position, "Feldstraße 66, 20359 Hamburg"), state.chosen)
-    }
-
     /** Issue #17: a filter change must re-run the marker query, not only a viewport change. */
     @Test
     fun `changing the minimum power reloads the map markers`() = runBlocking<Unit> {
@@ -298,7 +263,7 @@ class PhoneViewModelTest {
     }
 
     @Test
-    fun `the corridor list waits for a fix, then shows the stored stops`() = runBlocking {
+    fun `the corridor list waits for a fix and then shows the stored stops`() = runBlocking {
         val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val fixes = MutableSharedFlow<Fix>(extraBufferCapacity = 1)
         val feature = ChargeStopsFeature(

@@ -8,7 +8,7 @@ import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.PhoneUiVisibility
-import org.julakali.chargeahead.android.R
+import org.julakali.chargeahead.android.phone.R
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 

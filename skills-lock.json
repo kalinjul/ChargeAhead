@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "testing-setup": {
+      "source": "android/skills",
+      "sourceType": "github",
+      "skillPath": "testing/testing-setup/SKILL.md",
+      "computedHash": "76bfe8e0180767c7c1631066fd1c000ef21bd9145945d1e3192bb165b3d80d4d"
+    }
+  }
+}

@@ -50,7 +50,7 @@ class ConsumptionModelTest {
     }
 
     @Test
-    fun `the segments decide, not the route average`() {
+    fun `the segments decide and not the route average`() {
         val mixed = route(
             distanceKm = 100.0,
             averageSpeedKmh = 100.0,

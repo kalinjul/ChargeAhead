@@ -43,7 +43,7 @@ class ChargeCurveTest {
     }
 
     @Test
-    fun `a weak site caps the power, not the car`() {
+    fun `a weak site caps the power and not the car`() {
         val fast = chargeMinutes(id4, sitePowerKw = 300.0, fromSocPercent = 10.0, toSocPercent = 40.0)
         val slow = chargeMinutes(id4, sitePowerKw = 50.0, fromSocPercent = 10.0, toSocPercent = 40.0)
 

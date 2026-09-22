@@ -98,7 +98,7 @@ class ObserveChargeNowTest {
     }
 
     @Test
-    fun `the refill asks wider than the distance filter, for the selected networks`() = runBlocking {
+    fun `the refill asks wider than the distance filter for the selected networks`() = runBlocking {
         settings.setChargeFilters(ChargeFilters(maxDistanceKm = 10.0))
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
 

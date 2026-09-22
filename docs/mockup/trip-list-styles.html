@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trip list styles</title>
+<style>
+  :root {
+    --bg: #F1F3F4; --surface: #FFFFFF; --text: #202124; --muted: #5F6368; --faint: #80868B;
+    --line: #DADCE0; --primary: #1A73E8; --primary-bg: #E8F0FE; --green: #188038; --red: #D93025;
+    --ionity: #37A8AE; --enbw: #ED1C24; --aral: #1E6BB8; --tesla: #B0B0B0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding-block: 28px; padding-inline: 20px; background: var(--bg); color: var(--text);
+    font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px;
+  }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .intro { color: var(--muted); max-width: 62ch; margin: 0 0 24px; }
+  .row { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .option { width: 360px; }
+  .option h2 { font-size: 15px; font-weight: 500; margin: 0 0 2px; }
+  .option p { color: var(--muted); margin: 0 0 12px; min-height: 3.6em; }
+  .tabnum { font-variant-numeric: tabular-nums; }
+
+  /* phone: only the sheet part, map peeks above */
+  .phone { width: 360px; height: 640px; border-radius: 28px; background: #DDE6DD; position: relative; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,.14); }
+  .map { position: absolute; inset: 0; background:
+    linear-gradient(115deg, transparent 0 46%, #1A73E8 46% 47.3%, transparent 47.3%),
+    repeating-linear-gradient(0deg, #D5DED4 0 1px, transparent 1px 42px),
+    repeating-linear-gradient(90deg, #D5DED4 0 1px, transparent 1px 42px), #E3EBE2; }
+  .header { position: absolute; top: 14px; left: 14px; right: 68px; background: var(--surface); border-radius: 999px; padding: 8px 12px 8px 16px; display: flex; gap: 10px; align-items: center; box-shadow: 0 3px 8px rgba(0,0,0,.12); }
+  .header .title { font-weight: 500; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .header .sub { font-size: 12px; color: var(--muted); }
+  .header .x { margin-left: auto; color: var(--muted); font-size: 16px; }
+  .settings { position: absolute; top: 14px; right: 14px; width: 44px; height: 44px; border-radius: 50%; background: var(--surface); box-shadow: 0 3px 8px rgba(0,0,0,.12); display: grid; place-items: center; color: var(--muted); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 62%; background: var(--surface); border-radius: 26px 26px 0 0; box-shadow: 0 -4px 20px rgba(0,0,0,.12); display: flex; flex-direction: column; }
+  .handle { width: 32px; height: 4px; border-radius: 2px; background: var(--line); margin: 10px auto 4px; }
+  .summary { display: flex; align-items: center; padding: 4px 16px 8px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .replan { margin-left: auto; background: #E8EAED; border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--text); font-weight: 500; }
+  .list { flex: 1; overflow: hidden; padding: 8px 16px 0; }
+  .actions { display: flex; gap: 8px; padding: 10px 16px 14px; align-items: center; }
+  .btn { flex: 1; background: var(--primary); color: #fff; border-radius: 8px; padding: 10px; text-align: center; font-weight: 500; font-size: 13px; }
+  .btn.ghost { flex: 0 0 auto; background: var(--surface); color: var(--text); border: 1px solid var(--line); }
+  .heart { width: 44px; height: 40px; border: 1px solid var(--line); border-radius: 8px; display: grid; place-items: center; color: var(--red); }
+  .meta { font-size: 12px; color: var(--muted); }
+  .name { font-weight: 500; font-size: 13.5px; }
+
+  /* A: rail */
+  .rail { position: relative; padding-left: 34px; }
+  .rail::before { content: ""; position: absolute; left: 11px; top: 14px; bottom: 14px; width: 2px; background: var(--line); }
+  .stop { position: relative; padding: 9px 0; display: grid; gap: 2px; }
+  .stop .dot { position: absolute; left: -34px; top: 10px; width: 24px; height: 24px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-size: 12px; font-weight: 600; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+  .stop.end .dot { width: 12px; height: 12px; left: -28px; top: 15px; border: none; box-shadow: none; }
+  .stop.end.start .dot { background: var(--green); }
+  .stop.end.dest .dot { background: var(--red); border-radius: 3px; }
+  .stop .right { position: absolute; right: 0; top: 10px; font-size: 12px; color: var(--muted); }
+  .stop.section { background: var(--primary-bg); margin: 0 -8px; padding-inline: 8px; border-radius: 8px; }
+
+  /* B: flat rows */
+  .flat .r { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+  .flat .r:last-child { border-bottom: none; }
+  .flat .n { color: var(--faint); width: 16px; }
+  .flat .col { display: grid; gap: 2px; }
+  .flat .times { text-align: right; }
+
+  /* C: tiles */
+  .tiles { display: flex; gap: 10px; overflow: hidden; padding: 4px 0 10px; }
+  .tile { flex: 0 0 132px; background: #F8F9FA; border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 4px; }
+  .tile .badge { width: 22px; height: 22px; border-radius: 50%; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600; }
+  .tile .name { font-size: 13px; }
+  .hint { font-size: 11px; color: var(--faint); margin-top: 6px; }
+  .expanded-note { font-size: 12px; color: var(--muted); padding: 10px 0 0; border-top: 1px dashed var(--line); margin-top: 8px; }
+
+  .verdict { margin-top: 28px; max-width: 70ch; color: var(--muted); }
+  .verdict strong { color: var(--text); }
+</style>
+</head>
+<body>
+<h1>Trip list styles</h1>
+<p class="intro">Three ways to list the charging stops in the trip sheet, same data everywhere: Hamburg → München, three stops. The flag button is gone in all three; navigating to one stop happens from its detail sheet.</p>
+
+<div class="row">
+
+<!-- A: rail -->
+<section class="option">
+  <h2>A · Itinerary rail</h2>
+  <p>A line from start to destination, one dot per stop in the operator colour with the stop number. Rows are plain text, no borders. Section selection highlights a span of the rail (stop 2 shown selected).</p>
+  <div class="phone">
+    <div class="map"></div>
+    <div class="header"><span>➜</span><div><div class="title">München, Marienplatz</div><div class="sub tabnum">612 km · 7 h 05 min · 3 Stopps</div></div><span class="x">✕</span></div>
+    <div class="settings">⚙</div>
+    <div class="sheet">
+      <div class="handle"></div>
+      <div class="summary"><span class="tabnum">1 h 02 min laden</span><span class="replan">Neu planen</span></div>
+      <div class="list">
+        <div class="rail">
+          <div class="stop end start"><span class="dot"></span><div class="name">Start</div><div class="meta">Ladestand: 82 %</div><span class="right tabnum">ab 14:30</span></div>
+          <div class="stop"><span class="dot" style="background:var(--ionity)">1</span><div class="name">Ionity GmbH</div><div class="meta tabnum">350 kW | 12% - 70%</div><div class="meta tabnum">Ankunft 16:48 | Abfahrt 17:10</div></div>
+          <div class="stop section"><span class="dot" style="background:var(--enbw)">2</span><div class="name">EnBW mobility+</div><div class="meta tabnum">300 kW | 15% - 72%</div><div class="meta tabnum">Ankunft 19:05 | Abfahrt 19:26</div></div>
+          <div class="stop"><span class="dot" style="background:var(--aral)">3</span><div class="name">Aral pulse</div><div class="meta tabnum">300 kW | 18% - 60%</div><div class="meta tabnum">Ankunft 20:52 | Abfahrt 21:11</div></div>
+          <div class="stop end dest"><span class="dot"></span><div class="name">München, Marienplatz</div><div class="meta">Ankunft mit 20 %</div><span class="right tabnum">an 21:35</span></div>
+        </div>
+      </div>
+      <div class="actions"><div class="btn">An Maps senden</div><div class="btn ghost">Abschnitt</div><div class="heart">♥</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- B: flat -->
+<section class="option">
+  <h2>B · Flat rows, data column</h2>
+  <p>Hairline dividers only. Operator and charge line left, arrival and departure as a right-aligned column. Calm, but the sequence is only implied by the small index.</p>
+  <div class="phone">
+    <div class="map"></div>
+    <div class="header"><span>➜</span><div><div class="title">München, Marienplatz</div><div class="sub tabnum">612 km · 7 h 05 min · 3 Stopps</div></div><span class="x">✕</span></div>
+    <div class="settings">⚙</div>
+    <div class="sheet">
+      <div class="handle"></div>
+      <div class="summary"><span class="tabnum">1 h 02 min laden</span><span class="replan">Neu planen</span></div>
+      <div class="list flat">
+        <div class="r"><div class="col"><div class="name">Start</div><div class="meta">Ladestand: 82 %</div></div><div class="col times meta tabnum">14:30</div></div>
+        <div class="r"><div class="col"><div class="name"><span class="n">1</span> Ionity GmbH</div><div class="meta tabnum">350 kW | 12% - 70%</div></div><div class="col times meta tabnum"><span>an 16:48</span><span>ab 17:10</span></div></div>
+        <div class="r"><div class="col"><div class="name"><span class="n">2</span> EnBW mobility+</div><div class="meta tabnum">300 kW | 15% - 72%</div></div><div class="col times meta tabnum"><span>an 19:05</span><span>ab 19:26</span></div></div>
+        <div class="r"><div class="col"><div class="name"><span class="n">3</span> Aral pulse</div><div class="meta tabnum">300 kW | 18% - 60%</div></div><div class="col times meta tabnum"><span>an 20:52</span><span>ab 21:11</span></div></div>
+        <div class="r"><div class="col"><div class="name">München, Marienplatz</div><div class="meta">Ankunft mit 20 %</div></div><div class="col times meta tabnum">21:35</div></div>
+      </div>
+      <div class="actions"><div class="btn">An Maps senden</div><div class="btn ghost">Abschnitt</div><div class="heart">♥</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- C: tiles -->
+<section class="option">
+  <h2>C · Tiles in the peek</h2>
+  <p>Collapsed: one swipeable tile per stop. Expanded: the vertical list from A or B. Two layouts for one list; horizontal swipe competes with the sheet drag.</p>
+  <div class="phone">
+    <div class="map"></div>
+    <div class="header"><span>➜</span><div><div class="title">München, Marienplatz</div><div class="sub tabnum">612 km · 7 h 05 min · 3 Stopps</div></div><span class="x">✕</span></div>
+    <div class="settings">⚙</div>
+    <div class="sheet" style="height:38%">
+      <div class="handle"></div>
+      <div class="summary"><span class="tabnum">1 h 02 min laden</span><span class="replan">Neu planen</span></div>
+      <div class="list">
+        <div class="tiles">
+          <div class="tile"><span class="badge" style="background:var(--ionity)">1</span><div class="name">Ionity</div><div class="meta tabnum">350 kW · 22 min</div><div class="meta tabnum">an 16:48</div></div>
+          <div class="tile"><span class="badge" style="background:var(--enbw)">2</span><div class="name">EnBW</div><div class="meta tabnum">300 kW · 21 min</div><div class="meta tabnum">an 19:05</div></div>
+          <div class="tile"><span class="badge" style="background:var(--aral)">3</span><div class="name">Aral pulse</div><div class="meta tabnum">300 kW · 19 min</div><div class="meta tabnum">an 20:52</div></div>
+        </div>
+        <div class="hint">← swipe · expand for the full list</div>
+      </div>
+      <div class="actions"><div class="btn">An Maps senden</div><div class="btn ghost">Abschnitt</div><div class="heart">♥</div></div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<p class="verdict"><strong>Recommendation: A.</strong> The rail says "this is a sequence along a road" without a single card border, fits five rows in the peek, and section selection becomes a highlighted span instead of outlined boxes. B is the fallback if the rail feels too much like a transit app. C only pays off once the list has more stops than fit anyway.</p>
+</body>
+</html>

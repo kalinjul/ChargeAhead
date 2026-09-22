@@ -27,7 +27,7 @@ class CachingChargePointStatusRepositoryTest {
         CachingChargePointStatusRepository(source, TimeProvider { now }, maxEntries)
 
     @Test
-    fun `fetched statuses are served, unknown ids as empty`() = runBlocking {
+    fun `fetched statuses are served and unknown ids come back empty`() = runBlocking {
         val repository = repository()
 
         repository.refresh(listOf("a", "unknown"))

@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
+import org.julakali.chargeahead.shared.combine
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PlanTrip
@@ -110,33 +111,27 @@ class TripViewModel(
 
     val event: StateFlow<TripEvent?> = events.asStateFlow()
 
-    // combine tops out at five typed flows.
-    private data class PlanInputs(
-        val plan: TripPlan?,
-        val planning: Boolean,
-        val selection: SectionSelection,
-        val socInput: String?,
-        val arrivalSocInput: String?,
-    )
-
     val uiState: StateFlow<TripUiState> = combine(
-        combine(tripStore.plan, isPlanning, selection, socEditor, arrivalSocEditor, ::PlanInputs),
+        tripStore.plan,
+        isPlanning,
+        selection,
+        socEditor,
+        arrivalSocEditor,
         settings.savedRoutes,
         settings.manualSocPercent,
         feature.currentFix,
-    ) { inputs, saved, socPercent, fix ->
-        val plan = inputs.plan
+    ) { plan, planning, sectionSelection, socInput, arrivalSocInput, saved, socPercent, fix ->
         when {
-            inputs.planning -> TripUiState.Planning
+            planning -> TripUiState.Planning
             plan == null -> TripUiState.NoPlan
             else -> TripUiState.Planned(
                 plan = plan,
                 isSaved = saved.any { it.destination.position == plan.destination.position },
                 startPosition = fix?.position,
                 startSocPercent = socPercent,
-                selection = inputs.selection,
-                socInput = inputs.socInput,
-                arrivalSocInput = inputs.arrivalSocInput,
+                selection = sectionSelection,
+                socInput = socInput,
+                arrivalSocInput = arrivalSocInput,
             )
         }
     }.stateIn(viewModelScope, WhileUiSubscribed, TripUiState.NoPlan)
@@ -159,6 +154,14 @@ class TripViewModel(
                 .onSuccess(::onPlanned)
                 .onFailure { events.value = TripEvent.NoRoute }
         }
+    }
+
+    /** The driver dismissed the trip; the map goes back to browsing. */
+    fun clear() {
+        selection.value = SectionSelection()
+        socEditor.value = null
+        arrivalSocEditor.value = null
+        tripStore.clear()
     }
 
     private fun onPlanned(result: TripPlanResult) {

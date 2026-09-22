@@ -143,14 +143,14 @@ class TripPlannerTest {
     }
 
     @Test
-    fun `no route means NoRoute, not a crash`() = runBlocking<Unit> {
+    fun `no route means NoRoute and not a crash`() = runBlocking<Unit> {
         val result = planner(route = null, sites = emptyList())
             .plan(start, destination, id4, startSocPercent = 90.0)
         assertIs<TripPlanResult.NoRoute>(result)
     }
 
     @Test
-    fun `no chargers along the way is said, not papered over`() = runBlocking<Unit> {
+    fun `no chargers along the way is said and not papered over`() = runBlocking<Unit> {
         val route = straightRoute()
         val result = planner(route, sites = emptyList()).plan(start, destination, id4, startSocPercent = 90.0)
         assertIs<TripPlanResult.NoChargerInReach>(result)
@@ -169,7 +169,7 @@ class TripPlannerTest {
     }
 
     @Test
-    fun `chargers beside the route still project onto it, in driving order`() = runBlocking<Unit> {
+    fun `chargers beside the route still project onto it in driving order`() = runBlocking<Unit> {
         val route = straightRoute()
         // Chargers ~1 km off the line: the plan must use the projection onto
         // the route, not the raw position.
@@ -206,7 +206,7 @@ class TripPlannerTest {
 
     /** The speed profile beats the route average where the two disagree. */
     @Test
-    fun `the segments decide the plan, not the route average`() = runBlocking<Unit> {
+    fun `the segments decide the plan and not the route average`() = runBlocking<Unit> {
         val flat = straightRoute(averageSpeedKmh = 110.0)
         // Same distance and same total time, but driven in two very different halves.
         val mixed = flat.copy(
@@ -231,7 +231,7 @@ class TripPlannerTest {
 
     /** Issue #54: clock time runs on the same speed profile as the energy. */
     @Test
-    fun `stop ETAs follow the segments, not the route average`() = runBlocking<Unit> {
+    fun `stop ETAs follow the segments and not the route average`() = runBlocking<Unit> {
         // Slow first half, fast second half; the segments add up to the route's own duration.
         val mixed = straightRoute().copy(
             durationMinutes = 330.0 + 110.0,
@@ -293,7 +293,7 @@ class TripPlannerTest {
      * goes, not just how much of it there is.
      */
     @Test
-    fun `charge time follows the curve, not a flat average`() = runBlocking<Unit> {
+    fun `charge time follows the curve and not a flat average`() = runBlocking<Unit> {
         val route = straightRoute()
         val plan = assertIs<TripPlanResult.Planned>(
             planner(route, sitesAlong(route)).plan(start, destination, id4, startSocPercent = 90.0),
@@ -414,7 +414,7 @@ class TripPlannerTest {
 
     /** Penalties steer the choice but are not time: a preferred stop may save less than nothing. */
     @Test
-    fun `savings are real minutes, without the network penalty`() {
+    fun `savings are real minutes without the network penalty`() {
         val route = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH)
         val ionity = siteAt(route, 300.0).copy(id = "demo:ionity", operator = "Ionity", networkKey = "ionity")
         val audi = siteAt(route, 300.0, powerKw = 300.0).copy(id = "demo:audi")
@@ -433,7 +433,7 @@ class TripPlannerTest {
     }
 
     @Test
-    fun `candidates are fetched in source-sized segments, not one giant area`() = runBlocking<Unit> {
+    fun `candidates are fetched in source-sized segments and not one giant area`() = runBlocking<Unit> {
         val route = straightRoute()
         val queriedRadii = mutableListOf<Double>()
         val repository = object : SiteRepository {
@@ -454,7 +454,7 @@ class TripPlannerTest {
     }
 
     @Test
-    fun `an active network filter is forwarded to the repository, not applied on-device`() = runBlocking<Unit> {
+    fun `an active network filter is forwarded to the repository and not applied on-device`() = runBlocking<Unit> {
         val route = straightRoute()
         val capturedNetworks = mutableListOf<Set<String>>()
         val repository = object : SiteRepository {
