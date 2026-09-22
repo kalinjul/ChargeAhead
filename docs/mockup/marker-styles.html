@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marker styles</title>
+<style>
+  :root {
+    --text: #202124; --muted: #5F6368; --outline: #DADCE0; --surface: #fff;
+    --green: #188038; --amber: #F9AB00; --red: #D93025; --grey: #9AA0A6;
+    --green-bg: #E6F4EA; --amber-bg: #FEF7E0; --red-bg: #FCE8E6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-block: 28px; padding-inline: 20px; background: #F1F3F4; color: var(--text); font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .intro { color: var(--muted); max-width: 66ch; margin: 0 0 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 22px; }
+  .option { background: var(--surface); border-radius: 12px; padding: 16px; }
+  .option h2 { font-size: 15px; font-weight: 500; margin: 0 0 2px; }
+  .option p { color: var(--muted); margin: 0 0 12px; font-size: 13px; min-height: 5.2em; }
+  .map { position: relative; height: 210px; border-radius: 10px; overflow: hidden;
+    background: repeating-linear-gradient(0deg, #D5DED4 0 1px, transparent 1px 38px), repeating-linear-gradient(90deg, #D5DED4 0 1px, transparent 1px 38px), #E3EBE2; }
+  .map::before { content: ""; position: absolute; inset: 0; background: linear-gradient(28deg, transparent 0 49%, #C9D6EA 49% 52%, transparent 52%), linear-gradient(-60deg, transparent 0 63%, #cfd9cc 63% 66%, transparent 66%); }
+  .m { position: absolute; transform: translate(-50%, -50%); }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .caption { font-size: 11px; color: var(--muted); margin-top: 8px; }
+  .tabnum { font-variant-numeric: tabular-nums; }
+
+  /* base pill (today's look) */
+  .pill { display: inline-flex; align-items: center; gap: 5px; background: #fff; border: 1px solid var(--outline); border-radius: 999px; padding: 3px 7px 3px 6px; font-size: 13px; font-weight: 500; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+  .bolts { display: inline-flex; }
+  .bolts svg { width: 14px; height: 14px; margin-left: -6px; filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff); }
+  .bolts svg:first-child { margin-left: 0; }
+  .g { fill: var(--green); } .a { fill: var(--amber); } .r { fill: var(--red); } .x { fill: var(--grey); }
+
+  /* A: coloured number chip */
+  .chip { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 18px; padding: 0 5px; border-radius: 9px; color: #fff; font-size: 11.5px; font-weight: 600; margin-left: 1px; }
+  .chip.good { background: var(--green); } .chip.low { background: var(--amber); color: #3b2a00; } .chip.none { background: var(--red); } .chip.out { background: var(--red); }
+
+  /* B: tinted pill */
+  .tint.good { background: var(--green-bg); border-color: #A8DAB5; } .tint.low { background: var(--amber-bg); border-color: #F9D77C; } .tint.none { background: var(--red-bg); border-color: #F2B8B2; }
+  .tint .n { font-weight: 600; margin-left: 1px; } .tint.good .n { color: var(--green); } .tint.low .n { color: #B06000; } .tint.none .n { color: var(--red); }
+  .tint .sep { width: 1px; height: 12px; background: currentColor; opacity: .25; margin: 0 1px; }
+
+  /* C: count badge on the corner */
+  .badgewrap { position: relative; display: inline-flex; }
+  .badge { position: absolute; top: -8px; right: -9px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; color: #fff; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #fff; }
+  .badge.good { background: var(--green); } .badge.low { background: var(--amber); color: #3b2a00; } .badge.none { background: var(--red); }
+
+  /* D: availability replaces bolts colour + count */
+  .lead { width: 8px; height: 8px; border-radius: 50%; }
+  .lead.good { background: var(--green); } .lead.low { background: var(--amber); } .lead.none { background: var(--red); }
+
+  /* far zoom dots */
+  .dot { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+  .dot.good { background: var(--green); } .dot.low { background: var(--amber); } .dot.none { background: var(--red); } .dot.na { background: #fff; box-shadow: 0 0 0 1px var(--outline); }
+  .dot.big { width: 15px; height: 15px; }
+  .dotnum { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 1px rgba(0,0,0,.15); }
+  .dotnum.good { background: var(--green); } .dotnum.low { background: var(--amber); color: #3b2a00; } .dotnum.none { background: var(--red); }
+
+  .verdict { margin-top: 26px; max-width: 72ch; color: var(--muted); }
+  .verdict strong { color: var(--text); }
+</style>
+</head>
+<body>
+<h1>Marker styles</h1>
+<p class="intro">Same five sites on every map: Ionity 6/8 free, EnBW 1/4, Aral pulse 0/2, Tesla out of order, Allego without live data. Markers without live data stay exactly as they are today. Bottom row of each card: the far-zoom tier.</p>
+
+<svg width="0" height="0" style="position:absolute"><defs><symbol id="bolt" viewBox="0 0 24 24"><path d="M11 21h-1l1-7H7.5c-.58 0-.57-.32-.38-.66L13 3h1l-1 7h3.5c.49 0 .56.33.47.51L11 21z"/></symbol></defs></svg>
+
+<div class="grid">
+
+<!-- A -->
+<section class="option">
+  <h2>A · Number chip in the availability colour</h2>
+  <p>One line, same capsule as the non-live pill. The count sits in a small filled chip: green, amber or red. Availability is the first thing you read, name and speed stay where they are. Out of order: red ✕ chip.</p>
+  <div class="map">
+    <span class="m pill" style="left:30%;top:28%"><span class="bolts"><svg class="g"><use href="#bolt"/></svg><svg class="g"><use href="#bolt"/></svg></span>Ionity<span class="chip good tabnum">6/8</span></span>
+    <span class="m pill" style="left:68%;top:40%"><span class="bolts"><svg class="a"><use href="#bolt"/></svg></span>EnBW<span class="chip low tabnum">1/4</span></span>
+    <span class="m pill" style="left:42%;top:66%"><span class="bolts"><svg class="g"><use href="#bolt"/></svg></span>Aral pulse<span class="chip none tabnum">0/2</span></span>
+    <span class="m pill" style="left:78%;top:78%"><span class="bolts"><svg class="x"><use href="#bolt"/></svg><svg class="x"><use href="#bolt"/></svg><svg class="x"><use href="#bolt"/></svg></span>Tesla<span class="chip out">✕</span></span>
+    <span class="m pill" style="left:18%;top:82%"><span class="bolts"><svg class="g"><use href="#bolt"/></svg></span>Allego</span>
+  </div>
+  <div class="row"><span class="dot good"></span><span class="dot low"></span><span class="dot none"></span><span class="dot none"></span><span class="dot na"></span><span class="caption" style="margin:0 0 0 6px">far zoom: plain dots, white = no live data</span></div>
+</section>
+
+<!-- B -->
+<section class="option">
+  <h2>B · Whole pill tinted</h2>
+  <p>The capsule itself takes a pale availability tint with a matching border; the count is plain text in the strong colour after a hairline. Softer than A, reads as a state rather than a badge. Non-live pills stay white, so live sites stand out as a group.</p>
+  <div class="map">
+    <span class="m pill tint good" style="left:30%;top:28%"><span class="bolts"><svg class="g"><use href="#bolt"/></svg><svg class="g"><use href="#bolt"/></svg></span>Ionity<span class="sep"></span><span class="n tabnum">6/8</span></span>
+    <span class="m pill tint low" style="left:68%;top:40%"><span class="bolts"><svg class="a"><use href="#bolt"/></svg></span>EnBW<span class="sep"></span><span class="n tabnum">1/4</span></span>
+    <span class="m pill tint none" style="left:42%;top:66%"><span class="bolts"><svg class="g"><use href="#bolt"/></svg></span>Aral pulse<span class="sep"></span><span class="n tabnum">0/2</span></span>
+    <span class="m pill tint none" style="left:78%;top:78%"><span class="bolts"><svg class="x"><use href="#bolt"/></svg><svg class="x"><use href="#bolt"/></svg><svg class="x"><use href="#bolt"/></svg></span>Tesla<span class="sep"></span><span class="n">✕</span></span>
+    <span class="m pill" style="left:18%;top:82%"><span class="bolts"><svg class="g"><use href="#bolt"/></svg></span>Allego</span>
+  </div>
+  <div class="row"><span class="dot big good"></span><span class="dot big low"></span><span class="dot big none"></span><span class="dot big none"></span><span class="dot big na"></span><span class="caption" style="margin:0 0 0 6px">far zoom: slightly larger dots</span></div>
+</section>
+
+<!-- C -->
+<section class="option">
+  <h2>C · Count badge on the corner</h2>
+  <p>Today's pill untouched; the free count hangs off the top-right corner like a notification badge. Smallest footprint of the four, but the badge covers a bit of map and overlaps neighbours in dense spots.</p>
+  <div class="map">
+    <span class="m badgewrap" style="left:30%;top:28%"><span class="pill"><span class="bolts"><svg class="g"><use href="#bolt"/></svg><svg class="g"><use href="#bolt"/></svg></span>Ionity</span><span class="badge good tabnum">6</span></span>
+    <span class="m badgewrap" style="left:68%;top:40%"><span class="pill"><span class="bolts"><svg class="a"><use href="#bolt"/></svg></span>EnBW</span><span class="badge low tabnum">1</span></span>
+    <span class="m badgewrap" style="left:42%;top:66%"><span class="pill"><span class="bolts"><svg class="g"><use href="#bolt"/></svg></span>Aral pulse</span><span class="badge none tabnum">0</span></span>
+    <span class="m badgewrap" style="left:78%;top:78%"><span class="pill"><span class="bolts"><svg class="x"><use href="#bolt"/></svg><svg class="x"><use href="#bolt"/></svg><svg class="x"><use href="#bolt"/></svg></span>Tesla</span><span class="badge none">✕</span></span>
+    <span class="m pill" style="left:18%;top:82%"><span class="bolts"><svg class="g"><use href="#bolt"/></svg></span>Allego</span>
+  </div>
+  <div class="row"><span class="dotnum good">6</span><span class="dotnum low">1</span><span class="dotnum none">0</span><span class="dotnum none">✕</span><span class="dot big na"></span><span class="caption" style="margin:0 0 0 6px">far zoom: dot carries the free count</span></div>
+</section>
+
+<!-- D -->
+<section class="option">
+  <h2>D · Leading status dot, count at the end</h2>
+  <p>A small status dot leads the pill, then bolts, name and the plain count. Closest to the current two-line pill folded into one line; least colour on the map, so it stays calm but the state is subtler than in A or B.</p>
+  <div class="map">
+    <span class="m pill" style="left:30%;top:28%"><span class="lead good"></span><span class="bolts"><svg class="g"><use href="#bolt"/></svg><svg class="g"><use href="#bolt"/></svg></span>Ionity<span class="tabnum" style="color:var(--muted)">6/8</span></span>
+    <span class="m pill" style="left:68%;top:40%"><span class="lead low"></span><span class="bolts"><svg class="a"><use href="#bolt"/></svg></span>EnBW<span class="tabnum" style="color:var(--muted)">1/4</span></span>
+    <span class="m pill" style="left:42%;top:66%"><span class="lead none"></span><span class="bolts"><svg class="g"><use href="#bolt"/></svg></span>Aral pulse<span class="tabnum" style="color:var(--muted)">0/2</span></span>
+    <span class="m pill" style="left:78%;top:78%;border-color:var(--red);border-width:2px"><span class="lead none"></span><span class="bolts"><svg class="x"><use href="#bolt"/></svg><svg class="x"><use href="#bolt"/></svg><svg class="x"><use href="#bolt"/></svg></span>Tesla<span style="color:var(--red);font-weight:700">✕</span></span>
+    <span class="m pill" style="left:18%;top:82%"><span class="bolts"><svg class="g"><use href="#bolt"/></svg></span>Allego</span>
+  </div>
+  <div class="row"><span class="dot good"></span><span class="dot low"></span><span class="dot none"></span><span class="dot none"></span><span class="dot na"></span><span class="caption" style="margin:0 0 0 6px">far zoom: plain dots</span></div>
+</section>
+
+</div>
+
+<p class="verdict"><strong>Recommendation: A.</strong> One shape for every marker, availability is the loudest element, and the pill grows by one chip instead of a whole line. B is the softer sibling if A feels too badge-heavy. C wins on footprint but overlaps in cities. D is the most conservative and the state is easy to miss.</p>
+</body>
+</html>
