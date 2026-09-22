@@ -59,6 +59,7 @@ fun ChargerMarker(
     /** Far zoom: a dot instead of the pill. */
     compact: Boolean,
     onClick: (MapCharger) -> Unit,
+    alpha: Float = 1f,
 ) {
     val key = PillKey(
         speed = ChargeSpeed.of(charger.maxPowerKw),
@@ -71,6 +72,7 @@ fun ChargerMarker(
         state = rememberUpdatedMarkerState(position = LatLng(charger.site.position.lat, charger.site.position.lon)),
         icon = remember(icons, key) { icons[key] },
         title = charger.site.name,
+        alpha = alpha,
         anchor = Offset(0.5f, 0.5f),
         onClick = { onClick(charger); true },
     )

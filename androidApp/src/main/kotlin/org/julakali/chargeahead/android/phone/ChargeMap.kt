@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -149,6 +151,12 @@ fun HomeGoogleMap(
     val compactMarkers by remember(cameraPositionState) {
         derivedStateOf { cameraPositionState.position.zoom < PILL_ZOOM }
     }
+    // Bitmaps can't morph, so the new tier fades in instead of popping.
+    val tierAlpha = remember { Animatable(1f) }
+    LaunchedEffect(compactMarkers) {
+        tierAlpha.snapTo(0f)
+        tierAlpha.animateTo(1f, tween(TIER_FADE_MILLIS))
+    }
 
     GoogleMap(
         cameraPositionState = cameraPositionState,
@@ -163,7 +171,13 @@ fun HomeGoogleMap(
         // Keyed by site: the list is re-sorted around the centre on every pan.
         chargers.forEach { charger ->
             key(charger.site.id) {
-                ChargerMarker(charger = charger, icons = pillIcons, compact = compactMarkers, onClick = onChargerTapped)
+                ChargerMarker(
+                    charger = charger,
+                    icons = pillIcons,
+                    compact = compactMarkers,
+                    alpha = tierAlpha.value,
+                    onClick = onChargerTapped,
+                )
             }
         }
         if (route != null) {
@@ -213,6 +227,7 @@ const val MIN_CHARGER_ZOOM = 10f
 
 /** Below this the markers are dots; pills would pile up. */
 const val PILL_ZOOM = 11f
+private const val TIER_FADE_MILLIS = 250
 private const val BOUNDS_PADDING_PX = 120
 
 /** Status bar, search bar and one row of controls. */
