@@ -23,12 +23,15 @@ an error.
 
 ```
 shared/      Kotlin Multiplatform — domain, formatting, later data layer
-androidApp/  Android app: CarAppService (Android Auto) + Compose phone UI
+phone-ui/    Compose phone UI as an Android library (+ its resources)
+androidApp/  Android app: CarAppService (Android Auto) + the phone shell (MainActivity)
+ui-tests/    Phone UI tests: Robolectric behaviour tests + screenshot goldens (docs/testing.md)
 iosApp/      Swift: CarPlay scene + SwiftUI phone UI
 tools/       Helper scripts (Swift syntax check)
 ```
 
-Dependency direction: `androidApp`/`iosApp` → `shared`. Never the reverse.
+Dependency direction: `androidApp` → `phone-ui` → `shared`, `ui-tests` → `phone-ui`,
+`iosApp` → `shared`. Never the reverse.
 `shared` knows neither Android nor iOS frameworks in `commonMain`.
 
 ## Language
@@ -559,6 +562,10 @@ called in Swift.
 1. `./gradlew :androidApp:assembleDebug` completes — show the output, don't
    just claim it.
 2. `./gradlew :shared:jvmTest` completes.
+2b. `./gradlew :ui-tests:testDebugUnitTest :ui-tests:validateDebugScreenshotTest`
+   completes, if `phone-ui/` or `ui-tests/` was touched. A screenshot that
+   changed on purpose is re-recorded with `updateDebugScreenshotTest` and the
+   PNG committed — see docs/testing.md.
 3. `./gradlew :shared:compileKotlinIosSimulatorArm64` completes, if
    `shared/` was touched. This is mandatory, not optional: otherwise
    `commonMain` is only checked against JVM and Android, and Kotlin/Native

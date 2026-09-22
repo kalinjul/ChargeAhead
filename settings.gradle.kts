@@ -35,3 +35,5 @@ rootProject.name = "ChargeAhead"
 
 include(":shared")
 include(":androidApp")
+include(":phone-ui")
+include(":ui-tests")

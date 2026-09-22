@@ -110,7 +110,7 @@ class ChargeNowRankerTest {
     }
 
     @Test
-    fun `the rest of the pool comes along, nearest first`() {
+    fun `the rest of the pool comes along nearest first`() {
         val result = rank(
             listOf(
                 site("fastned", "Fastned", 300.0, 1.0),

@@ -138,7 +138,7 @@ class ChargeStopOptimizerTest {
     }
 
     @Test
-    fun `ties go to the later stop, every time`() {
+    fun `ties always go to the later stop`() {
         val nodes = listOf(node(30.0), node(30.0))
         val runs = List(3) {
             ChargeStopOptimizer()

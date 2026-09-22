@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 class MapsHandoffTest {
 
     @Test
-    fun `directions url carries origin, destination and waypoints`() {
+    fun `directions url carries origin and destination and waypoints`() {
         val url = MapsHandoff.directionsUrl(
             origin = LatLon(52.37, 4.9),
             destination = LatLon(48.14, 11.58),

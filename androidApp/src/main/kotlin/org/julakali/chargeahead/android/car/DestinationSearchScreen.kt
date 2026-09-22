@@ -8,7 +8,7 @@ import androidx.car.app.model.Row
 import androidx.car.app.model.SearchTemplate
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
-import org.julakali.chargeahead.android.R
+import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.DestinationSearch
