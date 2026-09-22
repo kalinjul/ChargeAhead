@@ -151,11 +151,14 @@ fun HomeGoogleMap(
     val compactMarkers by remember(cameraPositionState) {
         derivedStateOf { cameraPositionState.position.zoom < PILL_ZOOM }
     }
-    // Bitmaps can't morph, so the new tier fades in instead of popping.
+    // Bitmaps can't morph: fade the old tier out, swap at zero, fade the new one in.
+    var shownCompact by remember { mutableStateOf(compactMarkers) }
     val tierAlpha = remember { Animatable(1f) }
     LaunchedEffect(compactMarkers) {
-        tierAlpha.snapTo(0f)
-        tierAlpha.animateTo(1f, tween(TIER_FADE_MILLIS))
+        if (shownCompact == compactMarkers) return@LaunchedEffect
+        tierAlpha.animateTo(0f, tween(TIER_FADE_OUT_MILLIS))
+        shownCompact = compactMarkers
+        tierAlpha.animateTo(1f, tween(TIER_FADE_IN_MILLIS))
     }
 
     GoogleMap(
@@ -174,7 +177,7 @@ fun HomeGoogleMap(
                 ChargerMarker(
                     charger = charger,
                     icons = pillIcons,
-                    compact = compactMarkers,
+                    compact = shownCompact,
                     alpha = tierAlpha.value,
                     onClick = onChargerTapped,
                 )
@@ -227,7 +230,8 @@ const val MIN_CHARGER_ZOOM = 10f
 
 /** Below this the markers are dots; pills would pile up. */
 const val PILL_ZOOM = 11f
-private const val TIER_FADE_MILLIS = 250
+private const val TIER_FADE_OUT_MILLIS = 140
+private const val TIER_FADE_IN_MILLIS = 220
 private const val BOUNDS_PADDING_PX = 120
 
 /** Status bar, search bar and one row of controls. */
