@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -144,8 +142,9 @@ private fun renderToBitmapDescriptor(
 }
 
 /**
- * A white capsule with one-to-three bolts plus the operator's short name; with
- * live data a coloured chip with the free charge points closes the line.
+ * A capsule with one-to-three bolts plus the operator's short name. With live
+ * data the whole capsule takes a pale availability tint and the free count
+ * closes the line in the strong colour.
  */
 @Composable
 fun ChargerPill(
@@ -155,17 +154,20 @@ fun ChargerPill(
     modifier: Modifier = Modifier,
 ) {
     val outOfOrder = availability is SiteAvailability.OutOfOrder
+    val level = (availability as? SiteAvailability.Live)?.level
+    val tint = level?.tint ?: if (outOfOrder) RedTint else Color.White
+    val border = when {
+        outOfOrder -> Red
+        level != null -> level.tintBorder
+        else -> Outline
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .background(Color.White, CircleShape)
-            .border(
-                width = if (outOfOrder) 2.dp else 1.dp,
-                color = if (outOfOrder) Red else Outline,
-                shape = CircleShape,
-            )
-            .padding(start = 6.dp, end = if (availability == null) 6.dp else 4.dp, top = 3.dp, bottom = 3.dp),
+            .background(tint, CircleShape)
+            .border(width = if (outOfOrder) 2.dp else 1.dp, color = border, shape = CircleShape)
+            .padding(horizontal = 6.dp, vertical = 3.dp),
     ) {
         Bolts(count = speed.bolts, color = if (outOfOrder) Grey else speed.color)
         if (!label.isNullOrBlank()) {
@@ -175,38 +177,27 @@ fun ChargerPill(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
-                modifier = Modifier.padding(start = 5.dp, end = 2.dp),
+                modifier = Modifier.padding(start = 5.dp),
             )
         }
-        when (availability) {
-            is SiteAvailability.Live -> AvailabilityChip(
-                text = "${availability.free}/${availability.total}",
-                color = availability.level.color,
-                textColor = if (availability.level == AvailabilityLevel.LOW) TextColor else Color.White,
-                modifier = Modifier.padding(start = 4.dp),
+        if (availability != null) {
+            Box(
+                Modifier
+                    .padding(horizontal = 5.dp)
+                    .size(width = 1.dp, height = 12.dp)
+                    .background(border),
             )
-            SiteAvailability.OutOfOrder -> AvailabilityChip(
-                text = stringResource(R.string.map_out_of_order_mark),
-                color = Red,
-                textColor = Color.White,
-                modifier = Modifier.padding(start = 4.dp),
+            Text(
+                text = when (availability) {
+                    is SiteAvailability.Live -> "${availability.free}/${availability.total}"
+                    SiteAvailability.OutOfOrder -> stringResource(R.string.map_out_of_order_mark)
+                },
+                color = level?.strong ?: Red,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
             )
-            null -> Unit
         }
-    }
-}
-
-@Composable
-private fun AvailabilityChip(text: String, color: Color, textColor: Color, modifier: Modifier = Modifier) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .defaultMinSize(minWidth = 24.dp)
-            .height(15.dp)
-            .background(color, CircleShape)
-            .padding(horizontal = 5.dp),
-    ) {
-        Text(text = text, color = textColor, fontSize = 10.5.sp, lineHeight = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
@@ -271,6 +262,29 @@ private val Green = Color(0xFF188038)
 private val Grey = Color(0xFF9AA0A6)
 private val Outline = Color(0xFFDADCE0)
 private val TextColor = Color(0xFF202124)
+private val RedTint = Color(0xFFFCE8E6)
+
+private val AvailabilityLevel.tint: Color
+    get() = when (this) {
+        AvailabilityLevel.GOOD -> Color(0xFFE6F4EA)
+        AvailabilityLevel.LOW -> Color(0xFFFEF7E0)
+        AvailabilityLevel.NONE -> RedTint
+    }
+
+private val AvailabilityLevel.tintBorder: Color
+    get() = when (this) {
+        AvailabilityLevel.GOOD -> Color(0xFFA8DAB5)
+        AvailabilityLevel.LOW -> Color(0xFFF9D77C)
+        AvailabilityLevel.NONE -> Color(0xFFF2B8B2)
+    }
+
+/** Text on the tint: green, a darker amber for contrast, red. */
+private val AvailabilityLevel.strong: Color
+    get() = when (this) {
+        AvailabilityLevel.GOOD -> Green
+        AvailabilityLevel.LOW -> Color(0xFFB06000)
+        AvailabilityLevel.NONE -> Red
+    }
 
 @Preview(showBackground = true, backgroundColor = 0xFFE8EAED)
 @Composable
