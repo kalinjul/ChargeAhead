@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.AppCard
@@ -160,7 +162,10 @@ private fun OperatorPill(
         shape = CircleShape,
         color = container,
         contentColor = content,
-        modifier = Modifier.graphicsLayer { scaleX = scale.value; scaleY = scale.value },
+        modifier = Modifier
+            // So a screen reader — and a test — can tell a picked network from the rest.
+            .semantics { this.selected = selected }
+            .graphicsLayer { scaleX = scale.value; scaleY = scale.value },
     ) {
         Text(
             name,

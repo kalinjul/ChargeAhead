@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -58,11 +59,12 @@ fun LazyFlowRow(
     content: LazyFlowRowScope.() -> Unit,
 ) {
     val latestContent = rememberUpdatedState(content)
-    // content is a fresh lambda every recomposition, so this runs on every read; what it
-    // saves is downstream — FlowItemProvider.equals compares keys, so a read that finds
-    // the same items as last time keeps the old derived value and skips remeasuring.
+    // Referential, as LazyColumn does it: every rebuild counts as a change. The rebuilt
+    // provider holds freshly-captured item lambdas, and what they draw can differ while
+    // every key stays the same — a pill that just became selected — so comparing providers
+    // by their keys would leave the old lambdas, and the old drawing, in place.
     val itemProvider = remember {
-        val provider = derivedStateOf {
+        val provider = derivedStateOf(referentialEqualityPolicy()) {
             FlowItemProvider(FlowScope().apply(latestContent.value).intervals)
         }
         provider::value
@@ -361,13 +363,4 @@ private class FlowItemProvider(private val intervals: List<FlowInterval>) : Lazy
         }
         return getDefaultLazyLayoutKey(index)
     }
-
-    // Compared by key sequence, not identity, so a read that turns up the same items
-    // (same order, same keys) as last time lets derivedStateOf keep the old value and
-    // skip triggering a remeasure of LazyFlowRow for an unrelated recomposition.
-    private val keys: List<Any> by lazy(LazyThreadSafetyMode.NONE) { List(itemCount) { getKey(it) } }
-
-    override fun equals(other: Any?): Boolean = other is FlowItemProvider && keys == other.keys
-
-    override fun hashCode(): Int = keys.hashCode()
 }
