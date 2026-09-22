@@ -8,7 +8,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -22,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCompositionContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
@@ -142,9 +146,8 @@ private fun renderToBitmapDescriptor(
 }
 
 /**
- * A capsule with one-to-three bolts plus the operator's short name. With live
- * data the whole capsule takes a pale availability tint and the free count
- * closes the line in the strong colour.
+ * A two-tone capsule: bolts and the operator's short name on white; with live
+ * data a tinted right half carries the free count in the strong colour.
  */
 @Composable
 fun ChargerPill(
@@ -155,48 +158,50 @@ fun ChargerPill(
 ) {
     val outOfOrder = availability is SiteAvailability.OutOfOrder
     val level = (availability as? SiteAvailability.Live)?.level
-    val tint = level?.tint ?: if (outOfOrder) RedTint else Color.White
-    val border = when {
-        outOfOrder -> Red
-        level != null -> level.tintBorder
-        else -> Outline
-    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .background(tint, CircleShape)
-            .border(width = if (outOfOrder) 2.dp else 1.dp, color = border, shape = CircleShape)
-            .padding(horizontal = 6.dp, vertical = 3.dp),
+            .height(IntrinsicSize.Min)
+            .border(width = if (outOfOrder) 2.dp else 1.dp, color = if (outOfOrder) Red else Outline, shape = CircleShape)
+            .clip(CircleShape)
+            .background(Color.White),
     ) {
-        Bolts(count = speed.bolts, color = if (outOfOrder) Grey else speed.color)
-        if (!label.isNullOrBlank()) {
-            Text(
-                text = label,
-                color = TextColor,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                modifier = Modifier.padding(start = 5.dp),
-            )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 3.dp, bottom = 3.dp),
+        ) {
+            Bolts(count = speed.bolts, color = if (outOfOrder) Grey else speed.color)
+            if (!label.isNullOrBlank()) {
+                Text(
+                    text = label,
+                    color = TextColor,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 5.dp),
+                )
+            }
         }
         if (availability != null) {
             Box(
-                Modifier
-                    .padding(horizontal = 5.dp)
-                    .size(width = 1.dp, height = 12.dp)
-                    .background(border),
-            )
-            Text(
-                text = when (availability) {
-                    is SiteAvailability.Live -> "${availability.free}/${availability.total}"
-                    SiteAvailability.OutOfOrder -> stringResource(R.string.map_out_of_order_mark)
-                },
-                color = level?.strong ?: Red,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-            )
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .background(level?.tint ?: RedTint)
+                    .padding(start = 6.dp, end = 8.dp),
+            ) {
+                Text(
+                    text = when (availability) {
+                        is SiteAvailability.Live -> "${availability.free}/${availability.total}"
+                        SiteAvailability.OutOfOrder -> stringResource(R.string.map_out_of_order_mark)
+                    },
+                    color = level?.strong ?: Red,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }
@@ -269,13 +274,6 @@ private val AvailabilityLevel.tint: Color
         AvailabilityLevel.GOOD -> Color(0xFFE6F4EA)
         AvailabilityLevel.LOW -> Color(0xFFFEF7E0)
         AvailabilityLevel.NONE -> RedTint
-    }
-
-private val AvailabilityLevel.tintBorder: Color
-    get() = when (this) {
-        AvailabilityLevel.GOOD -> Color(0xFFA8DAB5)
-        AvailabilityLevel.LOW -> Color(0xFFF9D77C)
-        AvailabilityLevel.NONE -> Color(0xFFF2B8B2)
     }
 
 /** Text on the tint: green, a darker amber for contrast, red. */
