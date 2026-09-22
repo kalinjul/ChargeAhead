@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.test.assertIsDisplayed
@@ -87,5 +88,41 @@ class LazyFlowRowTest {
             "a width-only change should keep the scroll position, not reset it to the top",
             state.firstVisibleLine > 0,
         )
+    }
+
+    @Test
+    fun `an item redraws when its content changes but its key does not`() {
+        // The network picker's case: tapping a pill changes only how that pill draws,
+        // while the list keeps the same items in the same order, so no key changes.
+        // The labels arrive as a parameter, as NetworkSettingsScreen takes its ui state,
+        // so only the caller recomposes — the item itself reads no state of its own.
+        val selected = mutableStateOf(setOf<String>())
+
+        compose.setThemedContent {
+            Labels(labels = listOf("a", "b").map { it to (it in selected.value) })
+        }
+        compose.onNodeWithText("a off").assertIsDisplayed()
+
+        compose.runOnIdle { selected.value = setOf("a") }
+        compose.waitForIdle()
+
+        compose.onNodeWithText("a on").assertIsDisplayed()
+        compose.onNodeWithText("b off").assertIsDisplayed()
+    }
+
+    @Composable
+    private fun Labels(labels: List<Pair<String, Boolean>>) {
+        LazyFlowRow(
+            modifier = Modifier.width(300.dp).height(300.dp),
+            horizontalSpacing = 4.dp,
+            verticalSpacing = 4.dp,
+        ) {
+            items(labels, key = { it.first }) { (label, on) ->
+                Text(
+                    text = if (on) "$label on" else "$label off",
+                    modifier = Modifier.width(100.dp).height(30.dp),
+                )
+            }
+        }
     }
 }
