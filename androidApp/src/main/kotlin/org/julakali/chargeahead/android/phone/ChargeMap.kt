@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -144,6 +145,10 @@ fun HomeGoogleMap(
     }
 
     val pillIcons = rememberPillIcons()
+    // Only flips at the threshold, so panning doesn't recompose every marker.
+    val compactMarkers by remember(cameraPositionState) {
+        derivedStateOf { cameraPositionState.position.zoom < PILL_ZOOM }
+    }
 
     GoogleMap(
         cameraPositionState = cameraPositionState,
@@ -158,7 +163,7 @@ fun HomeGoogleMap(
         // Keyed by site: the list is re-sorted around the centre on every pan.
         chargers.forEach { charger ->
             key(charger.site.id) {
-                ChargerMarker(charger = charger, icons = pillIcons, onClick = onChargerTapped)
+                ChargerMarker(charger = charger, icons = pillIcons, compact = compactMarkers, onClick = onChargerTapped)
             }
         }
         if (route != null) {
@@ -205,6 +210,9 @@ private val ROUTE_COLOR = Color(0xFF1A73E8)
 
 /** Below this, no chargers load. */
 const val MIN_CHARGER_ZOOM = 10f
+
+/** Below this the markers are dots; pills would pile up. */
+private const val PILL_ZOOM = 12.5f
 private const val BOUNDS_PADDING_PX = 120
 
 /** Status bar, search bar and one row of controls. */

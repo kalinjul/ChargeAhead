@@ -9,13 +9,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,12 +56,16 @@ import org.julakali.chargeahead.android.R
 fun ChargerMarker(
     charger: MapCharger,
     icons: PillIcons,
+    /** Far zoom: a dot instead of the pill. */
+    compact: Boolean,
     onClick: (MapCharger) -> Unit,
 ) {
     val key = PillKey(
         speed = ChargeSpeed.of(charger.maxPowerKw),
-        label = OperatorShortName.of(charger.site.operator),
+        // Dots don't carry the name, so all sites of a kind share one bitmap.
+        label = if (compact) null else OperatorShortName.of(charger.site.operator),
         availability = charger.availability,
+        compact = compact,
     )
     Marker(
         state = rememberUpdatedMarkerState(position = LatLng(charger.site.position.lat, charger.site.position.lon)),
@@ -77,6 +80,7 @@ data class PillKey(
     val speed: ChargeSpeed,
     val label: String?,
     val availability: SiteAvailability?,
+    val compact: Boolean = false,
 )
 
 /** Renders each distinct [ChargerPill] once, so markers that look alike share one bitmap. */
@@ -89,7 +93,11 @@ class PillIcons internal constructor(
 
     operator fun get(key: PillKey): BitmapDescriptor =
         cache[key] ?: renderToBitmapDescriptor(parent, compositionContext) {
-            ChargerPill(speed = key.speed, label = key.label, availability = key.availability)
+            if (key.compact) {
+                ChargerDot(speed = key.speed, availability = key.availability)
+            } else {
+                ChargerPill(speed = key.speed, label = key.label, availability = key.availability)
+            }
         }.also { cache.put(key, it) }
 }
 
@@ -134,8 +142,8 @@ private fun renderToBitmapDescriptor(
 }
 
 /**
- * A white chip with one-to-three bolts plus the operator's short name, and
- * with live data a second line with the free charge points.
+ * A white capsule with one-to-three bolts plus the operator's short name; with
+ * live data a coloured chip with the free charge points closes the line.
  */
 @Composable
 fun ChargerPill(
@@ -145,58 +153,77 @@ fun ChargerPill(
     modifier: Modifier = Modifier,
 ) {
     val outOfOrder = availability is SiteAvailability.OutOfOrder
-    // One line is a capsule; two lines would make that a blob.
-    val shape = if (availability != null) RoundedCornerShape(10.dp) else CircleShape
-    val labelEndPadding = if (label.isNullOrBlank()) 0.dp else 2.dp
 
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(1.dp),
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
-            .background(Color.White, shape)
+            .background(Color.White, CircleShape)
             .border(
                 width = if (outOfOrder) 2.dp else 1.dp,
                 color = if (outOfOrder) Red else Outline,
-                shape = shape,
+                shape = CircleShape,
             )
-            .padding(horizontal = 6.dp, vertical = 3.dp),
+            .padding(start = 6.dp, end = if (availability == null) 6.dp else 3.dp, top = 3.dp, bottom = 3.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Bolts(count = speed.bolts, color = if (outOfOrder) Grey else speed.color)
-            if (!label.isNullOrBlank()) {
-                Text(
-                    text = label,
-                    color = TextColor,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    modifier = Modifier.padding(start = 5.dp, end = labelEndPadding),
-                )
-            }
+        Bolts(count = speed.bolts, color = if (outOfOrder) Grey else speed.color)
+        if (!label.isNullOrBlank()) {
+            Text(
+                text = label,
+                color = TextColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                modifier = Modifier.padding(start = 5.dp, end = 2.dp),
+            )
         }
         when (availability) {
-            is SiteAvailability.Live -> Row(
-                verticalAlignment = Alignment.CenterVertically,
+            is SiteAvailability.Live -> AvailabilityChip(
+                text = "${availability.free}/${availability.total}",
+                color = availability.level.color,
+                textColor = if (availability.level == AvailabilityLevel.LOW) TextColor else Color.White,
                 modifier = Modifier.padding(start = 3.dp),
-            ) {
-                Box(Modifier.size(7.dp).background(availability.level.color, CircleShape))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = "${availability.free}/${availability.total}",
-                    color = TextColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-            SiteAvailability.OutOfOrder -> Text(
-                text = stringResource(R.string.map_out_of_order),
+            )
+            SiteAvailability.OutOfOrder -> AvailabilityChip(
+                text = stringResource(R.string.map_out_of_order_mark),
                 color = Red,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
+                textColor = Color.White,
+                modifier = Modifier.padding(start = 3.dp),
             )
             null -> Unit
         }
     }
+}
+
+@Composable
+private fun AvailabilityChip(text: String, color: Color, textColor: Color, modifier: Modifier = Modifier) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .defaultMinSize(minWidth = 26.dp)
+            .height(18.dp)
+            .background(color, CircleShape)
+            .padding(horizontal = 5.dp),
+    ) {
+        Text(text = text, color = textColor, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+/** Far-zoom marker: the availability colour when live, otherwise the speed colour. */
+@Composable
+fun ChargerDot(speed: ChargeSpeed, availability: SiteAvailability?, modifier: Modifier = Modifier) {
+    val fill = when (availability) {
+        is SiteAvailability.Live -> availability.level.color
+        SiteAvailability.OutOfOrder -> Red
+        null -> speed.color
+    }
+    Box(
+        modifier
+            .size(15.dp)
+            .background(Color.White, CircleShape)
+            .border(1.dp, Outline, CircleShape)
+            .padding(2.dp)
+            .background(fill, CircleShape),
+    )
 }
 
 /** Overlapping bolts; each one's white halo cuts a visible edge into the one before. */
@@ -253,5 +280,12 @@ private fun ChargerPillPreview() {
         ChargerPill(speed = ChargeSpeed.FAST, label = "Aral pulse", availability = SiteAvailability.Live(free = 1, total = 4))
         ChargerPill(speed = ChargeSpeed.MEDIUM, label = null, availability = SiteAvailability.Live(free = 0, total = 2))
         ChargerPill(speed = ChargeSpeed.FAST, label = "EWE Go", availability = SiteAvailability.OutOfOrder)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ChargerDot(speed = ChargeSpeed.HYPER, availability = null)
+            ChargerDot(speed = ChargeSpeed.FAST, availability = SiteAvailability.Live(free = 6, total = 8))
+            ChargerDot(speed = ChargeSpeed.FAST, availability = SiteAvailability.Live(free = 1, total = 4))
+            ChargerDot(speed = ChargeSpeed.FAST, availability = SiteAvailability.Live(free = 0, total = 2))
+            ChargerDot(speed = ChargeSpeed.FAST, availability = SiteAvailability.OutOfOrder)
+        }
     }
 }
