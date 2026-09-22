@@ -74,6 +74,10 @@ engine, three charge sites along that line, empty live status and network
 lists. Nothing reaches a server. Room runs for real on the bundled SQLite
 driver.
 
+Hand-offs to Google Maps are asserted on the `Intent` Robolectric records:
+the whole trip, a picked section (first stop as waypoint, last as
+destination) and a stop's "Navigation starten" `geo:` URI.
+
 One wart: the Maps SDK's `CameraUpdateFactory` is only initialised by a
 rendering map, which Robolectric has not. The harness installs a no-op
 delegate through the SDK's obfuscated `CameraUpdateFactory.zza`. If a Maps

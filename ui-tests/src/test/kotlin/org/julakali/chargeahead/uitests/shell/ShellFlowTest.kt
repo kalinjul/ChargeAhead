@@ -1,8 +1,11 @@
 package org.julakali.chargeahead.uitests.shell
 
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -14,13 +17,21 @@ import org.julakali.chargeahead.uitests.setThemedContent
 import org.julakali.chargeahead.uitests.string
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.Shadows
+import org.julakali.chargeahead.shared.core.MapsHandoff
+import org.julakali.chargeahead.shared.domain.ChargeSite
 
 /** The phone shell end to end, on the faked graph of [PhoneAppHarness]. */
 @RunWith(RobolectricTestRunner::class)
+// Robolectric's default screen is 320x470 dp; the trip sheet's peek is a third of that.
+@Config(qualifiers = "w411dp-h891dp-xxhdpi")
 class ShellFlowTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
@@ -165,6 +176,82 @@ class ShellFlowTest {
         pressBack()
         waitForTextGone(compose.string(R.string.routes_title))
         assertEquals(0, countOf(compose.string(R.string.routes_empty)))
+    }
+
+    /** Tiles keep the action row inside the peek, so it can be tapped without expanding the sheet. */
+    private fun showTiles() {
+        compose.onNodeWithContentDescription(compose.string(R.string.trip_layout_tiles)).performClick()
+        // The toggle flips its label once the tiles are in.
+        compose.waitUntil(WAIT_MILLIS) {
+            compose.onAllNodesWithContentDescription(compose.string(R.string.trip_layout_list)).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    /** The stop rows the planner actually placed, in trip order, by their fake site. */
+    private fun plannedSites(): List<ChargeSite> =
+        harness.sites.filter { site -> countOf(site.operator!!, substring = true) > 0 }
+
+    private fun nextStartedUrl(): String {
+        val intent = Shadows.shadowOf(compose.activity).nextStartedActivity
+        assertNotNull("no activity was started", intent)
+        assertEquals(Intent.ACTION_VIEW, intent.action)
+        return intent.dataString!!
+    }
+
+    @Test
+    fun `an maps senden hands the whole trip to google maps`() {
+        launch()
+        searchAndPick()
+        waitForTrip()
+        showTiles()
+        val stops = plannedSites()
+        assertTrue("the planner placed no stops", stops.isNotEmpty())
+
+        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
+
+        val url = nextStartedUrl()
+        // Origin stays "my location", the stops ride along as waypoints, München is the destination.
+        assertEquals(MapsHandoff.directionsUrl(origin = null, destination = harness.muenchen, waypoints = stops.map { it.position }), url)
+        waitForText(compose.string(R.string.trip_maps_sent))
+    }
+
+    @Test
+    fun `a picked section sends only that stretch`() {
+        launch()
+        searchAndPick()
+        waitForTrip()
+        showTiles()
+        val stops = plannedSites()
+        assertTrue("need two stops for a section", stops.size >= 2)
+
+        compose.onNodeWithText(compose.string(R.string.trip_select_section)).performClick()
+        waitForText(compose.string(R.string.trip_section_hint))
+        compose.onNodeWithText(stops[0].operator!!, substring = true).performClick()
+        waitForText(compose.string(R.string.trip_section_hint_second))
+        compose.onNodeWithText(stops[1].operator!!, substring = true).performClick()
+        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
+
+        // From stop 1 to stop 2: the first point becomes a waypoint, the last the destination.
+        assertEquals(MapsHandoff.directionsUrl(origin = null, destination = stops[1].position, waypoints = listOf(stops[0].position)), nextStartedUrl())
+        // Selection mode ends with the hand-off.
+        waitForText(compose.string(R.string.trip_select_section))
+    }
+
+    @Test
+    fun `navigation starten from a stop's detail sheet opens a geo uri for that site`() {
+        launch()
+        searchAndPick()
+        waitForTrip()
+        showTiles()
+        val stop = plannedSites().first()
+
+        compose.onNodeWithText(stop.operator!!, substring = true).performClick()
+        waitForText(compose.string(R.string.phone_detail_navigate))
+        compose.onNodeWithText(compose.string(R.string.phone_detail_navigate)).performClick()
+
+        val url = nextStartedUrl()
+        assertTrue("expected a geo: uri, got $url", url.startsWith("geo:${stop.position.lat},${stop.position.lon}"))
+        assertTrue("the label should name the site: $url", url.contains(Uri.encode(stop.name)))
     }
 
     private companion object {
