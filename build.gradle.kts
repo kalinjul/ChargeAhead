@@ -10,7 +10,7 @@ plugins {
 }
 
 /** Every test that runs without a device, in one go. */
-tasks.register("allTests") {
+tasks.register("testAll") {
     group = "verification"
     description = "Shared unit tests, phone UI behaviour tests and screenshot validation."
     dependsOn(":shared:jvmTest", ":ui-tests:testDebugUnitTest", ":ui-tests:validateDebugScreenshotTest")
