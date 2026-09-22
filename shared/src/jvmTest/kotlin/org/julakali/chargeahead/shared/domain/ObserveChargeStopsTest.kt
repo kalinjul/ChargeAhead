@@ -120,7 +120,7 @@ class ObserveChargeStopsTest {
     }
 
     @Test
-    fun `a small movement does not search again, one over two kilometres does`() = runBlocking<Unit> {
+    fun `a small movement does not search again but one over two kilometres does`() = runBlocking<Unit> {
         val repository = FakeRepository(listOf(site("a", 180.0, 10.0)))
         val observe = observer(repository)
 
@@ -229,7 +229,7 @@ class ObserveChargeStopsTest {
 
     /** The 1.2x margin: a band just beyond range is still searched and flagged. */
     @Test
-    fun `just out of reach stays visible, far away does not`() = runBlocking<Unit> {
+    fun `just out of reach stays visible but far away does not`() = runBlocking<Unit> {
         settings.setVehicle(vehicle)
         // 20% - 10% = 10% of 77 kWh = 7.7 kWh -> just under 43 km of range,
         // so a search radius of about 51 km.

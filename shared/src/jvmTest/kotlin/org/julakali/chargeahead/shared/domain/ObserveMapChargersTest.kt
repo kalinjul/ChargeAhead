@@ -134,7 +134,7 @@ class ObserveMapChargersTest {
     }
 
     @Test
-    fun `the cap keeps the nearest sites, dropping the far ones`() = runBlocking<Unit> {
+    fun `the cap keeps the nearest sites and drops the far ones`() = runBlocking<Unit> {
         // 350 sites marching away from the viewport centre; only the nearest fit.
         val centreLat = (viewport.south + viewport.north) / 2.0
         val centreLon = (viewport.west + viewport.east) / 2.0

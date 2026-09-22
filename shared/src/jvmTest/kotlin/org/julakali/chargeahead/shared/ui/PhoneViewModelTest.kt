@@ -263,7 +263,7 @@ class PhoneViewModelTest {
     }
 
     @Test
-    fun `the corridor list waits for a fix, then shows the stored stops`() = runBlocking {
+    fun `the corridor list waits for a fix and then shows the stored stops`() = runBlocking {
         val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val fixes = MutableSharedFlow<Fix>(extraBufferCapacity = 1)
         val feature = ChargeStopsFeature(

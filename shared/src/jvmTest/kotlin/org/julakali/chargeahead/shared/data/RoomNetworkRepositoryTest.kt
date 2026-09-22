@@ -26,7 +26,7 @@ class RoomNetworkRepositoryTest {
     }
 
     @Test
-    fun `a network that dropped off the list keeps its name, unranked`() = runBlocking {
+    fun `a network that dropped off the list keeps its name but loses its rank`() = runBlocking {
         listed = listOf(Network("enbw", "EnBW"), Network("ladenetz", "ladenetz.de"))
         repository.refresh()
         listed = listOf(Network("kaufland", "Kaufland"), Network("enbw", "EnBW"))
