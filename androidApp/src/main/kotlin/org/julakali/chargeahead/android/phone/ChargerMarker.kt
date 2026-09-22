@@ -208,20 +208,24 @@ private fun AvailabilityChip(text: String, color: Color, textColor: Color, modif
     }
 }
 
-/** Far-zoom marker: the availability colour when live, otherwise the speed colour. */
+/**
+ * Far-zoom marker: the availability colour when live, otherwise the speed colour.
+ * Out of order is grey inside a red ring, so it can't be mistaken for merely full.
+ */
 @Composable
 fun ChargerDot(speed: ChargeSpeed, availability: SiteAvailability?, modifier: Modifier = Modifier) {
+    val outOfOrder = availability is SiteAvailability.OutOfOrder
     val fill = when (availability) {
         is SiteAvailability.Live -> availability.level.color
-        SiteAvailability.OutOfOrder -> Red
+        SiteAvailability.OutOfOrder -> Grey
         null -> speed.color
     }
     Box(
         modifier
             .size(15.dp)
             .background(Color.White, CircleShape)
-            .border(1.dp, Outline, CircleShape)
-            .padding(2.dp)
+            .border(if (outOfOrder) 2.dp else 1.dp, if (outOfOrder) Red else Outline, CircleShape)
+            .padding(if (outOfOrder) 3.dp else 2.dp)
             .background(fill, CircleShape),
     )
 }
