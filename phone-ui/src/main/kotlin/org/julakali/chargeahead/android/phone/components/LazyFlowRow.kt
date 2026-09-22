@@ -17,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.referentialEqualityPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
@@ -45,9 +44,10 @@ import kotlin.math.roundToInt
  * Give this a bounded height — with an unbounded one every line counts as visible
  * and it degrades to composing everything, just like a plain `FlowRow`.
  *
- * Line breaks depend on the container width and on the item count, so a change to
- * either sends the scroll position back to the top. For a searchable list that is
- * what you want anyway: new results start at the first line.
+ * Line breaks depend on the container width and on the item count. An item-count change
+ * sends the scroll position back to the top — for a searchable list that is what you want
+ * anyway: new results start at the first line. A width-only change instead keeps the item
+ * that was on top in view.
  */
 @Composable
 fun LazyFlowRow(
@@ -58,9 +58,11 @@ fun LazyFlowRow(
     content: LazyFlowRowScope.() -> Unit,
 ) {
     val latestContent = rememberUpdatedState(content)
-    // Rebuilt only when the content lambda itself changes, not per item.
+    // content is a fresh lambda every recomposition, so this runs on every read; what it
+    // saves is downstream — FlowItemProvider.equals compares keys, so a read that finds
+    // the same items as last time keeps the old derived value and skips remeasuring.
     val itemProvider = remember {
-        val provider = derivedStateOf(referentialEqualityPolicy()) {
+        val provider = derivedStateOf {
             FlowItemProvider(FlowScope().apply(latestContent.value).intervals)
         }
         provider::value
@@ -82,7 +84,7 @@ fun LazyFlowRow(
         val horizontalGap = horizontalSpacing.roundToPx()
         val verticalGap = verticalSpacing.roundToPx()
         val itemConstraints = Constraints(maxWidth = width)
-        state.discardCacheIfStale(width, itemCount)
+        val anchorItemIndex = state.discardCacheIfStale(width, itemCount)
 
         // Both caches live for this measure pass only, so no item is composed twice.
         val placeables = HashMap<Int, Placeable?>()
@@ -113,6 +115,14 @@ fun LazyFlowRow(
                 }
                 index++
             }
+            // A later boundary already cached from a previous pass may no longer match what
+            // this line actually wraps to — the list can reorder at the same width and item
+            // count (e.g. NetworksViewModel re-freezing display order after a search clears).
+            // That boundary, and everything cached past it, was computed from a packing that
+            // no longer holds, so drop it and let it be rediscovered from the live content.
+            if (lineIndex + 1 <= state.lineStarts.lastIndex && state.lineStarts[lineIndex + 1] != index) {
+                while (state.lineStarts.size > lineIndex + 1) state.lineStarts.removeAt(state.lineStarts.lastIndex)
+            }
             // Remember where the next line starts, so scrolling back can find this one again.
             if (lineIndex == state.lineStarts.lastIndex && index < itemCount) state.lineStarts.add(index)
             FlowLine(endIndex = index, placeables = row, height = height)
@@ -120,6 +130,17 @@ fun LazyFlowRow(
 
         var line = state.firstVisibleLine
         var offset = state.firstVisibleLineScrollOffset - state.pendingScroll.roundToInt()
+
+        // Width changed but the list didn't: find the line the previously-top item now
+        // falls on, so the viewport keeps showing roughly the same content instead of
+        // resetting to the very first line.
+        if (anchorItemIndex != null && anchorItemIndex > 0) {
+            while (true) {
+                val current = lineAt(line)
+                if (current.endIndex > anchorItemIndex || current.endIndex >= itemCount) break
+                line++
+            }
+        }
 
         // Scrolled back above the anchor line: walk to earlier lines until it fits again.
         while (offset < 0 && line > 0) {
@@ -247,9 +268,20 @@ class LazyFlowRowState : ScrollableState {
 
     override val isScrollInProgress: Boolean get() = scrolling.isScrollInProgress
 
-    /** Line breaks hold only for one width and one list; when either moves, start over at the top. */
-    internal fun discardCacheIfStale(width: Int, itemCount: Int) {
-        if (width == cachedWidth && itemCount == cachedItemCount) return
+    /**
+     * Line breaks hold only for one width and one list. A list-size change starts over at
+     * the top — for a searchable list that's what you want anyway: new results start at the
+     * first line. A width-only change (rotation, split-screen resize) instead returns the
+     * item that was at the top of the viewport, so the caller can keep it in view rather than
+     * silently jumping back to the top of a possibly long list.
+     */
+    internal fun discardCacheIfStale(width: Int, itemCount: Int): Int? {
+        if (width == cachedWidth && itemCount == cachedItemCount) return null
+        val anchorItemIndex = if (itemCount == cachedItemCount && cachedWidth != -1) {
+            lineStarts.getOrNull(firstVisibleLine)
+        } else {
+            null
+        }
         cachedWidth = width
         cachedItemCount = itemCount
         lineStarts.clear()
@@ -257,6 +289,7 @@ class LazyFlowRowState : ScrollableState {
         firstVisibleLine = 0
         firstVisibleLineScrollOffset = 0
         pendingScroll = 0f
+        return anchorItemIndex
     }
 
     /** Takes the anchor a measure pass settled on. Writes only real changes, so measuring can't loop. */
@@ -328,4 +361,13 @@ private class FlowItemProvider(private val intervals: List<FlowInterval>) : Lazy
         }
         return getDefaultLazyLayoutKey(index)
     }
+
+    // Compared by key sequence, not identity, so a read that turns up the same items
+    // (same order, same keys) as last time lets derivedStateOf keep the old value and
+    // skip triggering a remeasure of LazyFlowRow for an unrelated recomposition.
+    private val keys: List<Any> by lazy(LazyThreadSafetyMode.NONE) { List(itemCount) { getKey(it) } }
+
+    override fun equals(other: Any?): Boolean = other is FlowItemProvider && keys == other.keys
+
+    override fun hashCode(): Int = keys.hashCode()
 }
