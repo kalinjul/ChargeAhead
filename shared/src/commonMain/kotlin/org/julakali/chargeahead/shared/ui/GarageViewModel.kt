@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
+import org.julakali.chargeahead.shared.combine
 import org.julakali.chargeahead.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.SettingsStore
@@ -10,7 +11,6 @@ import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -43,8 +43,9 @@ class GarageViewModel(
         settings.vehicle,
         settings.manualSocPercent,
         settings.arrivalSocPercent,
-        combine(feature.currentEnergy, arrivalSocEditor, ::Pair),
-    ) { vehicles, selected, socPercent, arrivalSoc, (energy, arrivalEditor) ->
+        feature.currentEnergy,
+        arrivalSocEditor,
+    ) { vehicles, selected, socPercent, arrivalSoc, energy, arrivalEditor ->
         GarageUiState(
             vehicles = vehicles,
             selected = selected,

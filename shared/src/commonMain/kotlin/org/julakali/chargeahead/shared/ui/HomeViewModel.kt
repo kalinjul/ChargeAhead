@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
+import org.julakali.chargeahead.shared.combine
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeStop
@@ -20,7 +21,6 @@ import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -69,13 +69,15 @@ class HomeViewModel(
     private var refreshJob: Job? = null
 
     val uiState: StateFlow<HomeUiState> = combine(
-        // combine tops out at five typed flows.
         feature.currentFix,
-        combine(settings.chargeFilters, settings.networks, ::Pair),
-        combine(map, observeLiveConnectors.flow, ::Pair),
+        settings.chargeFilters,
+        settings.networks,
+        map,
+        observeLiveConnectors.flow,
         observeMapChargers.flow,
-        combine(attempt, refreshMapChargers.inProgress, ::Pair),
-    ) { fix, (filters, networks), (mapState, selectedStopLive), mapChargers, (attempt, loadingSites) ->
+        attempt,
+        refreshMapChargers.inProgress,
+    ) { fix, filters, networks, mapState, selectedStopLive, mapChargers, attempt, loadingSites ->
         val position = fix?.position
         HomeUiState(
             position = position,
