@@ -10,7 +10,7 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.domain.DataSource
 import org.julakali.chargeahead.shared.domain.DataSourceDirectory
-import org.julakali.chargeahead.shared.domain.LoadDataSources
+import org.julakali.chargeahead.shared.domain.usecases.LoadDataSourcesInteractor
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -33,7 +33,7 @@ class LicensesViewModelTest {
 
     @Test
     fun `the sources load on open`() = runBlocking<Unit> {
-        val vm = LicensesViewModel(LoadDataSources(directory { listOf(osm) }))
+        val vm = LicensesViewModel(LoadDataSourcesInteractor(directory { listOf(osm) }))
 
         val state = vm.uiState.await { it.dataSources is DataSourcesState.Loaded }
 
@@ -44,7 +44,7 @@ class LicensesViewModelTest {
     fun `a failed load can be retried`() = runBlocking<Unit> {
         var fail = true
         val vm = LicensesViewModel(
-            LoadDataSources(directory { if (fail) error("offline") else listOf(osm) }),
+            LoadDataSourcesInteractor(directory { if (fail) error("offline") else listOf(osm) }),
         )
         vm.uiState.await { it.dataSources == DataSourcesState.Failed }
 

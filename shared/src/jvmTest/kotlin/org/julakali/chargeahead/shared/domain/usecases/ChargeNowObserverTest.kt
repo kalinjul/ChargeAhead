@@ -1,17 +1,30 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.BoundingBox
+import org.julakali.chargeahead.shared.domain.CHARGE_NOW_RELAX_FETCH_FACTOR
+import org.julakali.chargeahead.shared.domain.ChargeFilters
+import org.julakali.chargeahead.shared.domain.ChargeNowResult
+import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.Connector
+import org.julakali.chargeahead.shared.domain.ConnectorType
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MapFilter
+import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.RelaxedFilter
+import org.julakali.chargeahead.shared.domain.SearchArea
+import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class ObserveChargeNowTest {
 
@@ -31,8 +44,8 @@ class ObserveChargeNowTest {
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = store
     }
 
-    private val observe = ObserveChargeNow(repository, settings)
-    private val refresh = RefreshChargeNow(repository, settings)
+    private val observe = ChargeNowObserver(repository, settings)
+    private val refresh = RefreshChargeNowInteractor(repository, settings)
 
     /** [northKm] north of [here]. */
     private fun site(id: String, powerKw: Double, northKm: Double) = ChargeSite(
@@ -48,7 +61,7 @@ class ObserveChargeNowTest {
 
     @Test
     fun `without a position there is no result`() = runBlocking {
-        observe(ObserveChargeNow.Params(position = null))
+        observe(ChargeNowObserver.Params(position = null))
 
         assertNull(await { true })
     }
@@ -57,7 +70,7 @@ class ObserveChargeNowTest {
     fun `the stored sites are ranked nearest first`() = runBlocking {
         store.value = listOf(site("far", 300.0, 5.0), site("near", 300.0, 1.0))
 
-        observe(ObserveChargeNow.Params(here))
+        observe(ChargeNowObserver.Params(here))
 
         assertEquals(listOf("near", "far"), await { it != null }?.candidates?.map { it.site.id })
     }
@@ -66,7 +79,7 @@ class ObserveChargeNowTest {
     fun `sites outside the fetch radius are left out`() = runBlocking {
         store.value = listOf(site("near", 300.0, 1.0), site("elsewhere", 300.0, 500.0))
 
-        observe(ObserveChargeNow.Params(here))
+        observe(ChargeNowObserver.Params(here))
 
         val result = await { it != null }
         assertEquals(listOf("near"), (result!!.candidates + result.more).map { it.site.id })
@@ -76,7 +89,7 @@ class ObserveChargeNowTest {
     @Test
     fun `a filter change re-ranks without a refill`() = runBlocking {
         store.value = listOf(site("hpc", 300.0, 1.0), site("mid", 100.0, 2.0), site("mid2", 100.0, 3.0))
-        observe(ObserveChargeNow.Params(here))
+        observe(ChargeNowObserver.Params(here))
         // Only one site reaches the default minimum power, so the ranking relaxes it.
         assertEquals(listOf(RelaxedFilter.MIN_POWER), await { it != null }?.relaxed)
 
@@ -89,10 +102,10 @@ class ObserveChargeNowTest {
     @Test
     fun `a refill reaches the ranking through the store`() = runBlocking {
         fetched = listOf(site("new", 300.0, 1.0))
-        observe(ObserveChargeNow.Params(here))
+        observe(ChargeNowObserver.Params(here))
         assertTrue(await { it != null }!!.isEmpty)
 
-        refresh(RefreshChargeNow.Params(here)).getOrThrow()
+        refresh(RefreshChargeNowInteractor.Params(here)).getOrThrow()
 
         assertEquals(listOf("new"), await { it?.isEmpty == false }?.candidates?.map { it.site.id })
     }
@@ -102,10 +115,10 @@ class ObserveChargeNowTest {
         settings.setChargeFilters(ChargeFilters(maxDistanceKm = 10.0))
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
 
-        refresh(RefreshChargeNow.Params(here)).getOrThrow()
+        refresh(RefreshChargeNowInteractor.Params(here)).getOrThrow()
 
         val (area, networks) = fetches.single()
-        assertEquals(10.0 * ObserveChargeNow.RELAX_FETCH_FACTOR, area.radiusKm)
+        assertEquals(10.0 * CHARGE_NOW_RELAX_FETCH_FACTOR, area.radiusKm)
         assertEquals(setOf("ionity"), networks)
     }
 }

@@ -7,7 +7,7 @@ import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.Geocoder
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
-import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
+import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
@@ -82,7 +82,7 @@ class SearchViewModelTest {
     /** "Neu planen" reopens the search on the current destination as a pick; typing discards it. */
     @Test
     fun `opening with a prefill shows it as the committed pick`() = runBlocking<Unit> {
-        val viewModel = SearchViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings())
+        val viewModel = SearchViewModel(stubFeature(), DestinationSearchObserver(NoGeocoder, NoLocation), settings())
         viewModel.onOpened(hamburg)
         val opened = viewModel.uiState.await { it.query.isNotEmpty() }
         assertEquals("Hamburg, Hamburg", opened.query)
@@ -95,7 +95,7 @@ class SearchViewModelTest {
 
     @Test
     fun `without a vehicle the state says so`() = runBlocking<Unit> {
-        val viewModel = SearchViewModel(stubFeature(), ObserveDestinationSearch(NoGeocoder, NoLocation), settings())
+        val viewModel = SearchViewModel(stubFeature(), DestinationSearchObserver(NoGeocoder, NoLocation), settings())
         assertFalse(viewModel.uiState.await { true }.hasVehicle)
     }
 

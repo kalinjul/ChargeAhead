@@ -1,7 +1,28 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.BoundingBox
+import org.julakali.chargeahead.shared.domain.ChargeFilters
+import org.julakali.chargeahead.shared.domain.ChargePointState
+import org.julakali.chargeahead.shared.domain.ChargePointStatus
+import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
+import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.Connector
+import org.julakali.chargeahead.shared.domain.ConnectorType
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MAX_MAP_CHARGERS
+import org.julakali.chargeahead.shared.domain.MapCharger
+import org.julakali.chargeahead.shared.domain.MapFilter
+import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.SearchArea
+import org.julakali.chargeahead.shared.domain.SiteAvailability
+import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,11 +31,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class ObserveMapChargersTest {
 
@@ -55,7 +71,7 @@ class ObserveMapChargersTest {
         stored: List<ChargeSite>,
         fetched: List<ChargeSite> = emptyList(),
         configure: suspend PersistentSettingsStore.() -> Unit = {},
-    ): ObserveMapChargers {
+    ): MapChargersObserver {
         runBlocking { settings.configure() }
         val store = MutableStateFlow(stored)
         repository = object : SiteRepository {
@@ -71,10 +87,10 @@ class ObserveMapChargersTest {
                 return store
             }
         }
-        return ObserveMapChargers(repository, statusRepository, settings).also { it(ObserveMapChargers.Params(viewport)) }
+        return MapChargersObserver(repository, statusRepository, settings).also { it(MapChargersObserver.Params(viewport)) }
     }
 
-    private suspend fun ObserveMapChargers.await(matching: (List<MapCharger>) -> Boolean = { true }): List<MapCharger> =
+    private suspend fun MapChargersObserver.await(matching: (List<MapCharger>) -> Boolean = { true }): List<MapCharger> =
         withTimeout(5_000) { flow.first(matching) }
 
     @Test
@@ -127,7 +143,7 @@ class ObserveMapChargersTest {
     @Test
     fun `without a viewport there are no chargers and no fetch`() = runBlocking<Unit> {
         val observe = observer(listOf(site("hpc", "Ionity", 350.0)))
-        observe(ObserveMapChargers.Params(viewport = null))
+        observe(MapChargersObserver.Params(viewport = null))
 
         assertTrue(observe.await { it.isEmpty() }.isEmpty())
         assertTrue(fetchedAreas.isEmpty())
@@ -150,9 +166,9 @@ class ObserveMapChargersTest {
         val observe = observer(many) { setChargeFilters(ChargeFilters(minPowerKw = 50.0)) }
 
         val chargers = observe.await()
-        assertEquals(ObserveMapChargers.MAX_CHARGERS, chargers.size)
+        assertEquals(MAX_MAP_CHARGERS, chargers.size)
         assertEquals(
-            (1..ObserveMapChargers.MAX_CHARGERS).map { "demo:s$it" },
+            (1..MAX_MAP_CHARGERS).map { "demo:s$it" },
             chargers.map { it.site.id },
             "the nearest sites survive, the far ones are dropped",
         )
@@ -179,7 +195,7 @@ class ObserveMapChargersTest {
         val observe = observer(stored = emptyList(), fetched = listOf(site("new", "Ionity", 350.0)))
         observe.await()
 
-        RefreshMapChargers(repository, settings)(RefreshMapChargers.Params(viewport)).getOrThrow()
+        RefreshMapChargersInteractor(repository, settings)(RefreshMapChargersInteractor.Params(viewport)).getOrThrow()
 
         assertEquals(listOf("demo:new"), observe.await { it.isNotEmpty() }.map { it.site.id })
     }
@@ -255,7 +271,7 @@ class ObserveMapChargersTest {
             ),
         )
 
-        RefreshChargerAvailability(repository, statusRepository, settings)(RefreshChargerAvailability.Params(viewport)).getOrThrow()
+        RefreshChargerAvailabilityInteractor(repository, statusRepository, settings)(RefreshChargerAvailabilityInteractor.Params(viewport)).getOrThrow()
 
         assertEquals(listOf(listOf("live-hpc")), refreshedIds.map { it.toList() })
     }

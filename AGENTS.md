@@ -187,7 +187,7 @@ contributor gets the same set.
 - `app-laufen-lassen` — build, install, and drive the phone app on a device
 - `dhu` — the Android Auto Desktop Head Unit for the car surface
 - `viewmodels` — the state-holder pattern every phone screen follows
-- `interactors` — the domain use cases (`Interactor`, `ObserveX`) ViewModels build on
+- `interactors` — the domain use cases (`XInteractor`, `XObserver`) ViewModels build on
 
 **Chris Banes' Kotlin/Compose skills** come from an external marketplace,
 registered in `.claude/settings.json`. Because the source is a third-party
@@ -335,27 +335,28 @@ interface SettingsStore {
     suspend fun removeSavedRoute(id: String)
 }
 
-// Business logic lives in domain use cases, Koin factories in
+// Business logic lives in domain.usecases, Koin factories in
 // chargeStopsModule; ViewModels and car screens only wire them up. Swift
 // goes through the bridges in iosMain. Observers read from a store; a
-// Refresh… interactor only refills that store.
-class ObserveChargeStops : SubjectInteractor<Params, ChargeStops?>   // the corridor list, car and iOS
-class RefreshChargeStops : Interactor<Params, Unit>
-class ObserveMapChargers : SubjectInteractor<Params, List<MapCharger>> // phone map, with live availability
-class RefreshMapChargers : Interactor<Params, Unit>
-class RefreshChargerAvailability : Interactor<Params, Unit>
-class ObserveChargeNow : SubjectInteractor<Params, ChargeNowResult?> // best 3, nearest first; relax ladder: power → networks → distance
-class RefreshChargeNow : Interactor<Params, Unit>
-class ObserveDestinationSearch : SubjectInteractor<Params, DestinationSearch>
-class PlanTrip : Interactor<PlanTrip.Params, TripPlanResult>        // puts the plan into TripStore
-class UpdateArrivalSoc : Interactor<Params, TripPlanResult?>        // stores the level, re-plans the stored trip
-class ToggleSavedRoute : Interactor<Params, Boolean>
-class RefreshNetworks : Interactor<Unit, Unit>
+// Refresh…Interactor only refills that store.
+class ChargeStopsObserver : SubjectInteractor<Params, ChargeStops?>   // the corridor list, car and iOS
+class RefreshChargeStopsInteractor : Interactor<Params, Unit>
+class MapChargersObserver : SubjectInteractor<Params, List<MapCharger>> // phone map, with live availability
+class RefreshMapChargersInteractor : Interactor<Params, Unit>
+class RefreshChargerAvailabilityInteractor : Interactor<Params, Unit>
+class ChargeNowObserver : SubjectInteractor<Params, ChargeNowResult?> // best 3, nearest first; relax ladder: power → networks → distance
+class RefreshChargeNowInteractor : Interactor<Params, Unit>
+class DestinationSearchObserver : SubjectInteractor<Params, DestinationSearch>
+class PlanTripInteractor : Interactor<PlanTripInteractor.Params, TripPlanResult>        // puts the plan into TripStore
+class UpdateArrivalSocInteractor : Interactor<Params, TripPlanResult?>        // stores the level, re-plans the stored trip
+class SaveRouteInteractor : Interactor<Params, Unit>
+class ToggleSavedRouteInteractor : Interactor<Params, Boolean>
+class RefreshNetworksInteractor : Interactor<Unit, Unit>
 ```
 
 **The route is computed once per destination, not once per location
 update.** A planned trip brings its route along (`TripStore`), so
-`ObserveChargeStops` only asks the `RouteEngine` itself when there is no
+`ChargeStopsObserver` only asks the `RouteEngine` itself when there is no
 plan to the destination. `PolylineArea.aheadOf()` trims it at the front as the drive
 progresses — the route itself doesn't change during the drive, only the
 section still ahead does. `RoutedRouteProvider` falls back to the corridor
@@ -380,7 +381,7 @@ class ChargeStopsFeature(locationSource, socSource, ...) {
     fun start(); fun locate(); fun close()
 }
 
-// The corridor list is ObserveChargeStops (domain) over the feature's flows;
+// The corridor list is ChargeStopsObserver (domain) over the feature's flows;
 // CorridorViewModel turns it into this state for iOS. List AND status. Flat
 // instead of sealed, so the type crosses to Swift losslessly.
 data class ChargeStopsState(

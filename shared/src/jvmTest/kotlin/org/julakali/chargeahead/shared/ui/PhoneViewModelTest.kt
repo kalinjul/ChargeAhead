@@ -23,16 +23,16 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.Geocoder
-import org.julakali.chargeahead.shared.domain.ObserveChargeStops
-import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
+import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
+import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.MapCharger
-import org.julakali.chargeahead.shared.domain.ObserveLiveConnectors
-import org.julakali.chargeahead.shared.domain.ObserveMapChargers
-import org.julakali.chargeahead.shared.domain.RefreshLiveConnectors
-import org.julakali.chargeahead.shared.domain.RefreshChargeStops
-import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
-import org.julakali.chargeahead.shared.domain.RefreshMapChargers
+import org.julakali.chargeahead.shared.domain.usecases.LiveConnectorsObserver
+import org.julakali.chargeahead.shared.domain.usecases.MapChargersObserver
+import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeStopsInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -252,11 +252,11 @@ class PhoneViewModelTest {
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })
         return HomeViewModel(
             stubFeature(),
-            ObserveMapChargers(repository, statuses, settings),
-            RefreshMapChargers(repository, settings),
-            RefreshChargerAvailability(repository, statuses, settings),
-            ObserveLiveConnectors(statuses),
-            RefreshLiveConnectors(statuses),
+            MapChargersObserver(repository, statuses, settings),
+            RefreshMapChargersInteractor(repository, settings),
+            RefreshChargerAvailabilityInteractor(repository, statuses, settings),
+            LiveConnectorsObserver(statuses),
+            RefreshLiveConnectorsInteractor(statuses),
             settings,
             locationTimeoutMillis,
         )
@@ -275,8 +275,8 @@ class PhoneViewModelTest {
         val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
         val viewModel = CorridorViewModel(
             feature,
-            ObserveChargeStops(repository, settings, TripStore(), NoRoute, CorridorPlanner()),
-            RefreshChargeStops(repository, settings),
+            ChargeStopsObserver(repository, settings, TripStore(), NoRoute, CorridorPlanner()),
+            RefreshChargeStopsInteractor(repository, settings),
         )
 
         viewModel.uiState.await { it.phase == ChargeStopsState.Phase.WAITING_FOR_LOCATION }

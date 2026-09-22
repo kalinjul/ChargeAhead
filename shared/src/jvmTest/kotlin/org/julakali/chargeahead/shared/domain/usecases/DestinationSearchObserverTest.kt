@@ -1,14 +1,20 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.DestinationSearch
+import org.julakali.chargeahead.shared.domain.Fix
+import org.julakali.chargeahead.shared.domain.Geocoder
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.Place
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class ObserveDestinationSearchTest {
 
@@ -31,7 +37,7 @@ class ObserveDestinationSearchTest {
         override suspend fun currentFix() = Fix(nuremberg, bearingDeg = null, speedMps = null, timestampMillis = 0L)
     }
 
-    private val observe = ObserveDestinationSearch(geocoder, location)
+    private val observe = DestinationSearchObserver(geocoder, location)
 
     private suspend fun await(matching: (DestinationSearch) -> Boolean): DestinationSearch =
         withTimeout(5_000) { observe.flow.first(matching) }
@@ -39,7 +45,7 @@ class ObserveDestinationSearchTest {
     /** "Hauptbahnhof" (main station) is ambiguous without a nearby location. */
     @Test
     fun `the search is biased toward the current position`() = runBlocking {
-        observe(ObserveDestinationSearch.Params("Hauptbahnhof", debounce = false))
+        observe(DestinationSearchObserver.Params("Hauptbahnhof", debounce = false))
 
         assertEquals(listOf(hit), await { !it.searching }.results)
         assertEquals(nuremberg, seenNear)
@@ -47,7 +53,7 @@ class ObserveDestinationSearchTest {
 
     @Test
     fun `a query too short to search on finds nothing and asks no one`() = runBlocking {
-        observe(ObserveDestinationSearch.Params("Ul"))
+        observe(DestinationSearchObserver.Params("Ul"))
 
         val search = await { true }
         assertTrue(search.results.orEmpty().isEmpty() && !search.searching)
@@ -56,16 +62,16 @@ class ObserveDestinationSearchTest {
 
     @Test
     fun `a failed search is told apart from an empty one`() = runBlocking {
-        observe(ObserveDestinationSearch.Params("Funkloch", debounce = false))
+        observe(DestinationSearchObserver.Params("Funkloch", debounce = false))
 
         assertNull(await { !it.searching }.results)
     }
 
     @Test
     fun `typing on only searches for the text it settled on`() = runBlocking {
-        observe(ObserveDestinationSearch.Params("Mün"))
-        observe(ObserveDestinationSearch.Params("Münc"))
-        observe(ObserveDestinationSearch.Params("München"))
+        observe(DestinationSearchObserver.Params("Mün"))
+        observe(DestinationSearchObserver.Params("Münc"))
+        observe(DestinationSearchObserver.Params("München"))
 
         assertEquals("München", await { !it.searching && it.query == "München" }.query)
         assertEquals(listOf("München"), queries)
@@ -73,10 +79,10 @@ class ObserveDestinationSearchTest {
 
     @Test
     fun `the previous results stay while the next query is searched`() = runBlocking {
-        observe(ObserveDestinationSearch.Params("München", debounce = false))
+        observe(DestinationSearchObserver.Params("München", debounce = false))
         await { !it.searching }
 
-        observe(ObserveDestinationSearch.Params("Hamburg"))
+        observe(DestinationSearchObserver.Params("Hamburg"))
 
         assertEquals(listOf(hit), await { it.searching && it.query == "Hamburg" }.results)
     }

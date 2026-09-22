@@ -1,5 +1,12 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.Interactor
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.TripPlanResult
+import org.julakali.chargeahead.shared.domain.TripPlanning
+import org.julakali.chargeahead.shared.domain.TripStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -9,11 +16,11 @@ import kotlinx.coroutines.withContext
  * puts a successful plan into [TripStore] and makes the destination the
  * app-wide one.
  */
-class PlanTrip(
+class PlanTripInteractor(
     private val planner: TripPlanning,
     private val settings: SettingsStore,
     private val store: TripStore,
-) : Interactor<PlanTrip.Params, TripPlanResult>() {
+) : Interactor<PlanTripInteractor.Params, TripPlanResult>() {
 
     /**
      * [startSocPercent] plans with a charge level that isn't persisted;

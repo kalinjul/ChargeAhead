@@ -1,33 +1,34 @@
 ---
 name: interactors
-description: The domain-layer use-case pattern this repository uses — Interactor (one-shot action) and SubjectInteractor (observer, "ObserveX") from Tivi, in org.julakali.chargeahead.shared.domain. Always use this skill when writing or changing a use case, interactor or observer; when a ViewModel calls ChargeStopsFeature or a repository directly, or runs its own mapLatest/flatMapLatest pipeline over settings; when business logic (filtering, ranking, selecting) sits in a ViewModel or a feature class; and when wiring an interactor into Koin or a ViewModel's combine(). Also when someone asks where business logic belongs or how to test it without a ViewModel.
+description: The domain-layer use-case pattern this repository uses — Interactor (one-shot action) and SubjectInteractor (observer, "XObserver") from Tivi, in org.julakali.chargeahead.shared.domain.usecases. Always use this skill when writing or changing a use case, interactor or observer; when a ViewModel calls ChargeStopsFeature or a repository directly, or runs its own mapLatest/flatMapLatest pipeline over settings; when business logic (filtering, ranking, selecting) sits in a ViewModel or a feature class; and when wiring an interactor into Koin or a ViewModel's combine(). Also when someone asks where business logic belongs or how to test it without a ViewModel.
 ---
 
 # Interactors and observers
 
 Business logic the phone UI needs lives in **use cases in `shared` →
-`domain`**, built on the two base classes in
+`domain.usecases`**, built on the two base classes in
 `shared/src/commonMain/kotlin/org/julakali/chargeahead/shared/domain/Interactor.kt`
 (taken from [Tivi](https://github.com/chrisbanes/tivi/blob/main/domain/src/commonMain/kotlin/app/tivi/domain/Interactor.kt)).
 The ViewModel wires them together; it does not select, filter or fetch
 itself.
 
-The worked example is `ObserveMapChargers`, used by `HomeViewModel`.
+The worked example is `MapChargersObserver`, used by `HomeViewModel`.
 
 ## Which base class
 
 | You need…                                     | Base class             | Name          | Example                |
 |-----------------------------------------------|------------------------|---------------|------------------------|
-| a stream the screen shows, driven by input    | `SubjectInteractor<P, T>` | `ObserveX` | `ObserveMapChargers`   |
-| an action that runs once and has an outcome   | `Interactor<P, R>`     | verb phrase   | `PlanTrip`             |
+| a stream the screen shows, driven by input    | `SubjectInteractor<P, T>` | `XObserver` | `MapChargersObserver` |
+| an action that runs once and has an outcome   | `Interactor<P, R>`     | `VerbXInteractor` | `PlanTripInteractor` |
 
 ## The rules
 
-1. **Domain only.** A use case lives in `org.julakali.chargeahead.shared.domain`
+1. **Domain only.** A use case lives in `org.julakali.chargeahead.shared.domain.usecases`
    and depends on ports (`SiteRepository`, `SettingsStore`,
    `ChargePointStatusSource`, …) and domain types. Never on
-   `ChargeStopsFeature`, `core`, `data` or `ui`. Constants and models it
-   needs move into `domain` (as `MIN_DC_POWER_KW` and `MapCharger` did);
+   `ChargeStopsFeature`, `core`, `data` or `ui`. Constants, models and
+   shared helpers it needs live in `domain`, not next to the use case (as
+   `MapCharger`, `DestinationSearch` and `mapChargersIn` do);
    an algorithm too big to move is reached through a port (`TripPlanning`,
    implemented by `core.TripPlanner`).
 2. **Params carry only what the UI knows.** The viewport, a search query, a
@@ -69,7 +70,7 @@ The worked example is `ObserveMapChargers`, used by `HomeViewModel`.
 
 ```kotlin
 class HomeViewModel(
-    private val observeMapChargers: ObserveMapChargers,
+    private val observeMapChargers: MapChargersObserver,
     settings: SettingsStore,
     …
 ) : ViewModel() {
@@ -83,11 +84,11 @@ class HomeViewModel(
 
     init {
         // Without initial params the flow never emits, and combine() with it.
-        observeMapChargers(ObserveMapChargers.Params(viewport = null))
+        observeMapChargers(MapChargersObserver.Params(viewport = null))
     }
 
     fun onViewportChanged(viewport: BoundingBox?) {
-        observeMapChargers(ObserveMapChargers.Params(viewport))
+        observeMapChargers(MapChargersObserver.Params(viewport))
     }
 }
 ```
@@ -97,7 +98,7 @@ An `Interactor` is called from an `on…` event (see `TripViewModel`):
 ```kotlin
 fun onPlanRequested(destination: Destination) {
     viewModelScope.launch {
-        planTrip(PlanTrip.Params(from, destination))
+        planTrip(PlanTripInteractor.Params(from, destination))
             .onSuccess { … }
             .onFailure { events.value = TripEvent.Failed }
     }
@@ -109,8 +110,8 @@ fun onPlanRequested(destination: Destination) {
 
 ## Testing
 
-Use-case tests live in `shared/src/jvmTest/.../domain/` and need no
-ViewModel — see `ObserveMapChargersTest`:
+Use-case tests live in `shared/src/jvmTest/.../domain/usecases/` and need no
+ViewModel — see `MapChargersObserverTest`:
 
 - Fake the ports with an `object : SiteRepository { … }` whose
   `storedSitesIn` returns a `MutableStateFlow` the fake fetch updates; use

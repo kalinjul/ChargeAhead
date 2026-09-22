@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
-import org.julakali.chargeahead.shared.domain.ObserveChargeNow
-import org.julakali.chargeahead.shared.domain.RefreshChargeNow
+import org.julakali.chargeahead.shared.domain.usecases.ChargeNowObserver
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeNowInteractor
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -26,8 +26,8 @@ sealed interface ChargeNowUiState {
 /** "Charge now": ranks what is nearby against the driver's filters, from where the sheet was opened. */
 class ChargeNowViewModel(
     private val feature: ChargeStopsFeature,
-    private val observeChargeNow: ObserveChargeNow,
-    private val refreshChargeNow: RefreshChargeNow,
+    private val observeChargeNow: ChargeNowObserver,
+    private val refreshChargeNow: RefreshChargeNowInteractor,
 ) : ViewModel() {
 
     private var refreshJob: Job? = null
@@ -45,17 +45,17 @@ class ChargeNowViewModel(
     }.stateIn(viewModelScope, WhileUiSubscribed, ChargeNowUiState.NoPosition)
 
     init {
-        observeChargeNow(ObserveChargeNow.Params(position = null))
+        observeChargeNow(ChargeNowObserver.Params(position = null))
     }
 
     /** The sheet was opened: rank from the current position. */
     fun onSheetOpened() {
         val position = feature.currentFix.value?.position
-        observeChargeNow(ObserveChargeNow.Params(position))
+        observeChargeNow(ChargeNowObserver.Params(position))
         refreshJob?.cancel()
         // A failed refill leaves the stored sites to rank.
         refreshJob = position?.let {
-            viewModelScope.launch { refreshChargeNow(RefreshChargeNow.Params(it)) }
+            viewModelScope.launch { refreshChargeNow(RefreshChargeNowInteractor.Params(it)) }
         }
     }
 }

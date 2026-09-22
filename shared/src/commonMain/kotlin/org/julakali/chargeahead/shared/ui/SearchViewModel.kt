@@ -6,7 +6,7 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
+import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.distanceKmTo
@@ -40,7 +40,7 @@ data class SearchUiState(
     val isQueryTooShort: Boolean get() = query.trim().length < MIN_QUERY_LENGTH
 
     companion object {
-        const val MIN_QUERY_LENGTH = ObserveDestinationSearch.MIN_QUERY_LENGTH
+        const val MIN_QUERY_LENGTH = DestinationSearchObserver.MIN_QUERY_LENGTH
     }
 }
 
@@ -67,7 +67,7 @@ fun Double.asKmLabel(): String = when {
 
 class SearchViewModel(
     private val feature: ChargeStopsFeature,
-    private val observeDestinationSearch: ObserveDestinationSearch,
+    private val observeDestinationSearch: DestinationSearchObserver,
     settings: SettingsStore,
 ) : ViewModel() {
 
@@ -114,7 +114,7 @@ class SearchViewModel(
     }
 
     private fun search(query: String) {
-        observeDestinationSearch(ObserveDestinationSearch.Params(query.trim()))
+        observeDestinationSearch(DestinationSearchObserver.Params(query.trim()))
     }
 
     private data class Input(val query: String = "", val pick: Destination? = null)

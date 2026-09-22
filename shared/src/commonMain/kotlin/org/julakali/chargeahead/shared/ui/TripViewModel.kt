@@ -6,13 +6,13 @@ import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.combine
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.PlanTrip
+import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
-import org.julakali.chargeahead.shared.domain.ToggleSavedRoute
+import org.julakali.chargeahead.shared.domain.usecases.ToggleSavedRouteInteractor
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripStore
-import org.julakali.chargeahead.shared.domain.UpdateArrivalSoc
+import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -96,9 +96,9 @@ sealed interface TripEvent {
 /** Planning a trip and everything the result screen shows. */
 class TripViewModel(
     private val feature: ChargeStopsFeature,
-    private val planTrip: PlanTrip,
-    private val updateArrivalSoc: UpdateArrivalSoc,
-    private val toggleSavedRoute: ToggleSavedRoute,
+    private val planTrip: PlanTripInteractor,
+    private val updateArrivalSoc: UpdateArrivalSocInteractor,
+    private val toggleSavedRoute: ToggleSavedRouteInteractor,
     private val tripStore: TripStore,
     private val settings: SettingsStore,
 ) : ViewModel() {
@@ -150,7 +150,7 @@ class TripViewModel(
         viewModelScope.launch {
             // Persisted alongside, so the plan starts at once.
             launch { socPercent?.let { settings.setManualSocPercent(it) } }
-            planTrip(PlanTrip.Params(from, destination, startSocPercent = socPercent))
+            planTrip(PlanTripInteractor.Params(from, destination, startSocPercent = socPercent))
                 .onSuccess(::onPlanned)
                 .onFailure { events.value = TripEvent.NoRoute }
         }
@@ -180,7 +180,7 @@ class TripViewModel(
     fun toggleSaved(summary: String) {
         val current = tripStore.plan.value ?: return
         viewModelScope.launch {
-            toggleSavedRoute(ToggleSavedRoute.Params(current.destination, summary)).onSuccess { saved ->
+            toggleSavedRoute(ToggleSavedRouteInteractor.Params(current.destination, summary)).onSuccess { saved ->
                 events.value = if (saved) TripEvent.RouteSaved else TripEvent.RouteRemoved
             }
         }
@@ -235,7 +235,7 @@ class TripViewModel(
         val from = feature.currentFix.value?.position ?: return
         arrivalSocEditor.value = null
         viewModelScope.launch {
-            updateArrivalSoc(UpdateArrivalSoc.Params(socPercent.toDouble(), from))
+            updateArrivalSoc(UpdateArrivalSocInteractor.Params(socPercent.toDouble(), from))
                 .onSuccess { result -> result?.let(::onPlanned) }
                 .onFailure { events.value = TripEvent.NoRoute }
         }

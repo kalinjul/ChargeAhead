@@ -12,7 +12,7 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.DestinationSearch
-import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
+import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.toDestination
@@ -30,7 +30,7 @@ class DestinationSearchScreen(
     private val settings: SettingsStore,
 ) : Screen(carContext), KoinComponent {
 
-    private val observeDestinationSearch: ObserveDestinationSearch = get()
+    private val observeDestinationSearch: DestinationSearchObserver = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var recents: List<Destination> = emptyList()
@@ -51,7 +51,7 @@ class DestinationSearchScreen(
                 invalidate()
             }
         }
-        observeDestinationSearch(ObserveDestinationSearch.Params(query = ""))
+        observeDestinationSearch(DestinationSearchObserver.Params(query = ""))
     }
 
     override fun onGetTemplate(): Template {
@@ -85,7 +85,7 @@ class DestinationSearchScreen(
     private val callback = object : SearchTemplate.SearchCallback {
         override fun onSearchTextChanged(searchText: String) {
             query = searchText
-            if (searchText.isBlank()) observeDestinationSearch(ObserveDestinationSearch.Params(query = ""))
+            if (searchText.isBlank()) observeDestinationSearch(DestinationSearchObserver.Params(query = ""))
             invalidate()
         }
 
@@ -94,7 +94,7 @@ class DestinationSearchScreen(
             if (searchText.isBlank()) return
 
             submittedQuery = searchText
-            observeDestinationSearch(ObserveDestinationSearch.Params(searchText, debounce = false))
+            observeDestinationSearch(DestinationSearchObserver.Params(searchText, debounce = false))
         }
     }
 
