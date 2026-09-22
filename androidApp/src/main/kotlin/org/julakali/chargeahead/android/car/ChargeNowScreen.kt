@@ -18,8 +18,8 @@ import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.RelaxedFilter
 import org.julakali.chargeahead.shared.domain.Fix
-import org.julakali.chargeahead.shared.domain.ObserveChargeNow
-import org.julakali.chargeahead.shared.domain.RefreshChargeNow
+import org.julakali.chargeahead.shared.domain.usecases.ChargeNowObserver
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeNowInteractor
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -35,8 +35,8 @@ class ChargeNowScreen(
     private val feature: ChargeStopsFeature,
 ) : Screen(carContext), KoinComponent {
 
-    private val observeChargeNow: ObserveChargeNow = get()
-    private val refreshChargeNow: RefreshChargeNow = get()
+    private val observeChargeNow: ChargeNowObserver = get()
+    private val refreshChargeNow: RefreshChargeNowInteractor = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var result: ChargeNowResult? = null
@@ -61,9 +61,9 @@ class ChargeNowScreen(
     }
 
     private suspend fun load(fix: Fix) {
-        observeChargeNow(ObserveChargeNow.Params(fix.position))
+        observeChargeNow(ChargeNowObserver.Params(fix.position))
         // A failed refill leaves the stored sites to rank.
-        refreshChargeNow(RefreshChargeNow.Params(fix.position))
+        refreshChargeNow(RefreshChargeNowInteractor.Params(fix.position))
     }
 
     override fun onGetTemplate(): Template {

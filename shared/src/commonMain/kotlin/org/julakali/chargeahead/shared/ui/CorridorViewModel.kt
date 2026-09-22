@@ -7,8 +7,8 @@ import org.julakali.chargeahead.shared.ChargeStopsState
 import org.julakali.chargeahead.shared.ChargeStopsState.FailureReason
 import org.julakali.chargeahead.shared.ChargeStopsState.Phase
 import org.julakali.chargeahead.shared.domain.ChargeStops
-import org.julakali.chargeahead.shared.domain.ObserveChargeStops
-import org.julakali.chargeahead.shared.domain.RefreshChargeStops
+import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeStopsInteractor
 import org.julakali.chargeahead.shared.domain.RouteStatus
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -18,8 +18,8 @@ import kotlinx.coroutines.launch
 /** The corridor list and its status, as the iOS list screens show it. */
 class CorridorViewModel(
     private val feature: ChargeStopsFeature,
-    private val observeChargeStops: ObserveChargeStops,
-    private val refreshChargeStops: RefreshChargeStops,
+    private val observeChargeStops: ChargeStopsObserver,
+    private val refreshChargeStops: RefreshChargeStopsInteractor,
 ) : ViewModel() {
 
     private val chargeStops: StateFlow<ChargeStops?> =
@@ -51,12 +51,12 @@ class CorridorViewModel(
     }.stateIn(viewModelScope, WhileUiSubscribed, ChargeStopsState())
 
     init {
-        observeChargeStops(ObserveChargeStops.Params(feature.currentFix, feature.currentEnergy))
+        observeChargeStops(ChargeStopsObserver.Params(feature.currentFix, feature.currentEnergy))
     }
 
     /** Discards the stock and searches the current area again. Before the first fix, the first search does that anyway. */
     fun onRefresh() {
         val area = chargeStops.value?.area ?: return
-        viewModelScope.launch { refreshChargeStops(RefreshChargeStops.Params(area)) }
+        viewModelScope.launch { refreshChargeStops(RefreshChargeStopsInteractor.Params(area)) }
     }
 }

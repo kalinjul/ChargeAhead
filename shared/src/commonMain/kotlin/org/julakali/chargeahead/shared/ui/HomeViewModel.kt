@@ -10,12 +10,12 @@ import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.MapCharger
-import org.julakali.chargeahead.shared.domain.ObserveLiveConnectors
-import org.julakali.chargeahead.shared.domain.ObserveMapChargers
+import org.julakali.chargeahead.shared.domain.usecases.LiveConnectorsObserver
+import org.julakali.chargeahead.shared.domain.usecases.MapChargersObserver
 import org.julakali.chargeahead.shared.domain.Reachability
-import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
-import org.julakali.chargeahead.shared.domain.RefreshLiveConnectors
-import org.julakali.chargeahead.shared.domain.RefreshMapChargers
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlinx.coroutines.Job
@@ -52,11 +52,11 @@ data class HomeUiState(
  */
 class HomeViewModel(
     private val feature: ChargeStopsFeature,
-    private val observeMapChargers: ObserveMapChargers,
-    private val refreshMapChargers: RefreshMapChargers,
-    private val refreshChargerAvailability: RefreshChargerAvailability,
-    private val observeLiveConnectors: ObserveLiveConnectors,
-    private val refreshLiveConnectors: RefreshLiveConnectors,
+    private val observeMapChargers: MapChargersObserver,
+    private val refreshMapChargers: RefreshMapChargersInteractor,
+    private val refreshChargerAvailability: RefreshChargerAvailabilityInteractor,
+    private val observeLiveConnectors: LiveConnectorsObserver,
+    private val refreshLiveConnectors: RefreshLiveConnectorsInteractor,
     settings: SettingsStore,
     /** How long the button may spin before the map says something. */
     private val locationTimeoutMillis: Long = DEFAULT_LOCATION_TIMEOUT_MILLIS,
@@ -94,8 +94,8 @@ class HomeViewModel(
     }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
 
     init {
-        observeMapChargers(ObserveMapChargers.Params(viewport = null))
-        observeLiveConnectors(ObserveLiveConnectors.Params(liveStatusId = null))
+        observeMapChargers(MapChargersObserver.Params(viewport = null))
+        observeLiveConnectors(LiveConnectorsObserver.Params(liveStatusId = null))
     }
 
     /** Location permission granted: the pipeline may run. Calling it twice is harmless. */
@@ -126,16 +126,16 @@ class HomeViewModel(
     /** `null` means: zoomed out past the point where markers are useful. */
     fun onViewportChanged(viewport: BoundingBox?) {
         map.update { it.copy(belowMinZoom = viewport == null) }
-        observeMapChargers(ObserveMapChargers.Params(viewport))
+        observeMapChargers(MapChargersObserver.Params(viewport))
         // Latest viewport wins: a pan supersedes the fetch for the previous one.
         refreshJob?.cancel()
         // A failed refill leaves the stored markers and statuses; nothing to tell the driver.
         refreshJob = viewport?.let {
             viewModelScope.launch {
                 // Stored sites get their status right away, the ones the refill adds after it.
-                launch { refreshChargerAvailability(RefreshChargerAvailability.Params(it)) }
-                refreshMapChargers(RefreshMapChargers.Params(it))
-                refreshChargerAvailability(RefreshChargerAvailability.Params(it))
+                launch { refreshChargerAvailability(RefreshChargerAvailabilityInteractor.Params(it)) }
+                refreshMapChargers(RefreshMapChargersInteractor.Params(it))
+                refreshChargerAvailability(RefreshChargerAvailabilityInteractor.Params(it))
             }
         }
     }
@@ -157,16 +157,16 @@ class HomeViewModel(
             )
         }
         val liveStatusId = site.liveStatusId
-        observeLiveConnectors(ObserveLiveConnectors.Params(liveStatusId))
+        observeLiveConnectors(LiveConnectorsObserver.Params(liveStatusId))
         // The viewport's refresh may be a minute old by now; a failure keeps what is shown.
         if (liveStatusId != null) {
-            viewModelScope.launch { refreshLiveConnectors(RefreshLiveConnectors.Params(liveStatusId)) }
+            viewModelScope.launch { refreshLiveConnectors(RefreshLiveConnectorsInteractor.Params(liveStatusId)) }
         }
     }
 
     fun onSelectedStopDismissed() {
         map.update { it.copy(selectedStop = null) }
-        observeLiveConnectors(ObserveLiveConnectors.Params(liveStatusId = null))
+        observeLiveConnectors(LiveConnectorsObserver.Params(liveStatusId = null))
     }
 
     private data class LocationAttempt(

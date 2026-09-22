@@ -1,22 +1,43 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
 import org.julakali.chargeahead.shared.core.CorridorPlanner
+import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.ChargeStops
+import org.julakali.chargeahead.shared.domain.ConnectorType
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.destination
+import org.julakali.chargeahead.shared.domain.EnergyState
+import org.julakali.chargeahead.shared.domain.Fix
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.PolylineArea
+import org.julakali.chargeahead.shared.domain.Reachability
+import org.julakali.chargeahead.shared.domain.Route
+import org.julakali.chargeahead.shared.domain.RouteEngine
+import org.julakali.chargeahead.shared.domain.RouteStatus
+import org.julakali.chargeahead.shared.domain.SearchArea
+import org.julakali.chargeahead.shared.domain.SectorArea
+import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.SoCSourceKind
+import org.julakali.chargeahead.shared.domain.TripPlan
+import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertIs
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class ObserveChargeStopsTest {
 
@@ -91,14 +112,14 @@ class ObserveChargeStopsTest {
     private fun observer(
         repository: SiteRepository,
         router: RouteEngine = FixedRoute(Route(a9, 170.0, 108.0)),
-    ) = ObserveChargeStops(repository, settings, tripStore, router, CorridorPlanner()).also {
-        it(ObserveChargeStops.Params(fixes, energy))
+    ) = ChargeStopsObserver(repository, settings, tripStore, router, CorridorPlanner()).also {
+        it(ChargeStopsObserver.Params(fixes, energy))
     }
 
-    private suspend fun ObserveChargeStops.await(matching: (ChargeStops) -> Boolean = { true }): ChargeStops =
+    private suspend fun ChargeStopsObserver.await(matching: (ChargeStops) -> Boolean = { true }): ChargeStops =
         withTimeout(5_000) { flow.first { it != null && matching(it) }!! }
 
-    private suspend fun ObserveChargeStops.awaitDone(matching: (ChargeStops) -> Boolean = { true }): ChargeStops =
+    private suspend fun ChargeStopsObserver.awaitDone(matching: (ChargeStops) -> Boolean = { true }): ChargeStops =
         await { it.refill != ChargeStops.Refill.RUNNING && matching(it) }
 
     // --- the list ---
@@ -155,7 +176,7 @@ class ObserveChargeStopsTest {
         fixes.value = fix()
         val searched = observe.awaitDone()
 
-        RefreshChargeStops(repository, settings)(RefreshChargeStops.Params(searched.area)).getOrThrow()
+        RefreshChargeStopsInteractor(repository, settings)(RefreshChargeStopsInteractor.Params(searched.area)).getOrThrow()
 
         assertEquals(1, repository.invalidations)
         assertEquals(listOf(searched.area, searched.area), repository.fetched.map { it.first })

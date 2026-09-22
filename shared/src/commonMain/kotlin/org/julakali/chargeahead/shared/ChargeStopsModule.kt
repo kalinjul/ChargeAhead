@@ -21,31 +21,32 @@ import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.CorridorPlanning
 import org.julakali.chargeahead.shared.domain.DataSourceDirectory
 import org.julakali.chargeahead.shared.domain.Geocoder
-import org.julakali.chargeahead.shared.domain.LoadDataSources
+import org.julakali.chargeahead.shared.domain.usecases.LoadDataSourcesInteractor
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.NetworkRepository
-import org.julakali.chargeahead.shared.domain.ObserveChargeNow
-import org.julakali.chargeahead.shared.domain.ObserveChargeStops
-import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
-import org.julakali.chargeahead.shared.domain.ObserveMapChargers
-import org.julakali.chargeahead.shared.domain.PlanTrip
-import org.julakali.chargeahead.shared.domain.RefreshChargeNow
-import org.julakali.chargeahead.shared.domain.RefreshChargeStops
-import org.julakali.chargeahead.shared.domain.ObserveLiveConnectors
-import org.julakali.chargeahead.shared.domain.RefreshChargerAvailability
-import org.julakali.chargeahead.shared.domain.RefreshLiveConnectors
-import org.julakali.chargeahead.shared.domain.RefreshNetworks
-import org.julakali.chargeahead.shared.domain.RefreshMapChargers
+import org.julakali.chargeahead.shared.domain.usecases.ChargeNowObserver
+import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
+import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
+import org.julakali.chargeahead.shared.domain.usecases.MapChargersObserver
+import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeNowInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeStopsInteractor
+import org.julakali.chargeahead.shared.domain.usecases.LiveConnectorsObserver
+import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshNetworksInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.TimeProvider
-import org.julakali.chargeahead.shared.domain.ToggleSavedRoute
+import org.julakali.chargeahead.shared.domain.usecases.SaveRouteInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ToggleSavedRouteInteractor
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripStore
-import org.julakali.chargeahead.shared.domain.UpdateArrivalSoc
+import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.flow.first
 import org.koin.core.Koin
@@ -101,25 +102,26 @@ fun chargeStopsModule(): Module = module {
         val backend = get<BackendConfig>()
         BackendDataSourceDirectory(get(), backend.baseUrl, backend.token)
     }
-    factory { LoadDataSources(get()) }
-    factory { ObserveMapChargers(get(), get(), get()) }
-    factory { RefreshMapChargers(get(), get()) }
-    factory { RefreshChargerAvailability(get(), get(), get()) }
-    factory { ObserveLiveConnectors(get()) }
-    factory { RefreshLiveConnectors(get()) }
-    factory { ObserveChargeNow(get(), get()) }
-    factory { RefreshChargeNow(get(), get()) }
-    factory { ObserveDestinationSearch(get(), get()) }
-    factory { PlanTrip(get(), get(), get()) }
-    factory { UpdateArrivalSoc(get(), get(), get()) }
-    factory { ToggleSavedRoute(get()) }
-    factory { ObserveChargeStops(get(), get(), get(), get(), get()) }
-    factory { RefreshChargeStops(get(), get()) }
+    factory { LoadDataSourcesInteractor(get()) }
+    factory { MapChargersObserver(get(), get(), get()) }
+    factory { RefreshMapChargersInteractor(get(), get()) }
+    factory { RefreshChargerAvailabilityInteractor(get(), get(), get()) }
+    factory { LiveConnectorsObserver(get()) }
+    factory { RefreshLiveConnectorsInteractor(get()) }
+    factory { ChargeNowObserver(get(), get()) }
+    factory { RefreshChargeNowInteractor(get(), get()) }
+    factory { DestinationSearchObserver(get(), get()) }
+    factory { PlanTripInteractor(get(), get(), get()) }
+    factory { UpdateArrivalSocInteractor(get(), get(), get()) }
+    factory { SaveRouteInteractor(get()) }
+    factory { ToggleSavedRouteInteractor(get()) }
+    factory { ChargeStopsObserver(get(), get(), get(), get(), get()) }
+    factory { RefreshChargeStopsInteractor(get(), get()) }
     single<NetworkRepository> {
         val backend = get<BackendConfig>()
         RoomNetworkRepository(BackendNetworkListSource(get(), backend.baseUrl, backend.token), get())
     }
-    factory { RefreshNetworks(get()) }
+    factory { RefreshNetworksInteractor(get()) }
 
     // The phone's feature. Never closed.
     single<ChargeStopsFeature> { getKoin().newChargeStopsFeature(locationSource = get()) }
@@ -138,7 +140,7 @@ fun Koin.newChargeStopsFeature(
     val settingsStore = get<SettingsStore>()
     val time = get<TimeProvider>()
     val database = get<ChargeSiteDatabase>()
-    val refreshNetworks = get<RefreshNetworks>()
+    val refreshNetworks = get<RefreshNetworksInteractor>()
     return ChargeStopsFeature(
         locationSource = locationSource,
         socSource = CombinedSoCSource(

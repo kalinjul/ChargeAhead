@@ -1,5 +1,15 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.ChargeNowRanker
+import org.julakali.chargeahead.shared.domain.ChargeNowResult
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
+import org.julakali.chargeahead.shared.domain.MapFilter
+import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.SubjectInteractor
+import org.julakali.chargeahead.shared.domain.chargeNowArea
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -14,13 +24,13 @@ import kotlinx.coroutines.withContext
  * The best fast chargers around a position among the stored sites, ranked
  * against the driver's filters — and if need be relaxing them.
  *
- * Never fetches: [RefreshChargeNow] refills the store.
+ * Never fetches: [RefreshChargeNowInteractor] refills the store.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class ObserveChargeNow(
+class ChargeNowObserver(
     private val repository: SiteRepository,
     private val settings: SettingsStore,
-) : SubjectInteractor<ObserveChargeNow.Params, ChargeNowResult?>() {
+) : SubjectInteractor<ChargeNowObserver.Params, ChargeNowResult?>() {
 
     /** [position] `null` means: no location yet, and no result. */
     data class Params(val position: LatLon?)
@@ -46,15 +56,6 @@ class ObserveChargeNow(
     }
 
     companion object {
-        const val RELAX_FETCH_FACTOR = 3.0
-        const val MIN_FETCH_RADIUS_KM = 15.0
-
         private val EVERY_DC_SITE = MapFilter(NetworkPreferences(), minPowerKw = MIN_DC_POWER_KW, slowMode = false)
     }
 }
-
-/** Wider than the distance filter, so relaxing the distance has data. */
-internal fun chargeNowArea(position: LatLon, filters: ChargeFilters): SearchArea = SectorArea.circle(
-    position,
-    maxOf(filters.maxDistanceKm * ObserveChargeNow.RELAX_FETCH_FACTOR, ObserveChargeNow.MIN_FETCH_RADIUS_KM),
-)

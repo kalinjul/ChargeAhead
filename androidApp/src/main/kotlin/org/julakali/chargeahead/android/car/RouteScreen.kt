@@ -27,7 +27,7 @@ import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Fix
-import org.julakali.chargeahead.shared.domain.PlanTrip
+import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.TripStore
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -49,7 +49,7 @@ class RouteScreen(
     private val title: String = destination.name,
 ) : Screen(carContext), KoinComponent {
 
-    private val planTrip: PlanTrip = get()
+    private val planTrip: PlanTripInteractor = get()
     private val tripStore: TripStore = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
@@ -80,7 +80,7 @@ class RouteScreen(
 
     private suspend fun plan(fix: Fix) {
         val result = planTrip(
-            PlanTrip.Params(
+            PlanTripInteractor.Params(
                 from = fix.position,
                 destination = destination,
                 startSocPercent = feature.currentEnergy.value?.socPercent,

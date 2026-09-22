@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.julakali.chargeahead.shared.domain.DataSource
-import org.julakali.chargeahead.shared.domain.LoadDataSources
+import org.julakali.chargeahead.shared.domain.usecases.LoadDataSourcesInteractor
 import org.julakali.chargeahead.shared.domain.invoke
 
 sealed interface DataSourcesState {
@@ -24,7 +24,7 @@ data class LicensesUiState(
 
 /** The licence page. The library list is generated into the app and needs no state here. */
 class LicensesViewModel(
-    private val loadDataSources: LoadDataSources,
+    private val loadDataSources: LoadDataSourcesInteractor,
 ) : ViewModel() {
 
     // A one-shot load has no upstream flow to combine.

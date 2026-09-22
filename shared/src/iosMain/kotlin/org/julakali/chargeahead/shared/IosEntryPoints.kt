@@ -7,7 +7,7 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.Place
-import org.julakali.chargeahead.shared.domain.PlanTrip
+import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
@@ -117,7 +117,7 @@ class PlanningBridge(feature: ChargeStopsFeature) {
     private val koin: Koin = requireNotNull(graph) {
         "No graph yet — call createChargeStopsFeature first"
     }
-    private val planTrip: PlanTrip = koin.get()
+    private val planTrip: PlanTripInteractor = koin.get()
     private val viewModels = ViewModelHost()
     private val chargeNowViewModel = viewModels.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
     private val searchViewModel = viewModels.get { SearchViewModel(feature, koin.get(), koin.get()) }
@@ -131,7 +131,7 @@ class PlanningBridge(feature: ChargeStopsFeature) {
         onResult: (TripPlanOutcome) -> Unit,
     ) {
         scope.launch {
-            val outcome = planTrip(PlanTrip.Params(from, destination)).fold(
+            val outcome = planTrip(PlanTripInteractor.Params(from, destination)).fold(
                 onSuccess = { result ->
                     when (result) {
                         is TripPlanResult.Planned -> TripPlanOutcome(result.plan, null)

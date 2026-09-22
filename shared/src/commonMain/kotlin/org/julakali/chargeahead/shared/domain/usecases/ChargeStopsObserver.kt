@@ -1,5 +1,21 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.ChargeStops
+import org.julakali.chargeahead.shared.domain.CorridorPlanning
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.EnergyState
+import org.julakali.chargeahead.shared.domain.Fix
+import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.RefreshPolicy
+import org.julakali.chargeahead.shared.domain.Route
+import org.julakali.chargeahead.shared.domain.RouteEngine
+import org.julakali.chargeahead.shared.domain.RouteStatus
+import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.SubjectInteractor
+import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.cancellableRunCatching
 import org.julakali.chargeahead.shared.logWarning
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -26,14 +42,14 @@ import kotlinx.coroutines.withContext
  * area is refilled from the network; the list comes from the store.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
-class ObserveChargeStops(
+class ChargeStopsObserver(
     private val repository: SiteRepository,
     private val settings: SettingsStore,
     private val tripStore: TripStore,
     private val routeEngine: RouteEngine,
     private val planning: CorridorPlanning,
     private val refreshPolicy: RefreshPolicy = RefreshPolicy(),
-) : SubjectInteractor<ObserveChargeStops.Params, ChargeStops?>() {
+) : SubjectInteractor<ChargeStopsObserver.Params, ChargeStops?>() {
 
     /** The caller's own location and charge: the car's differ from the phone's. */
     data class Params(val fixes: Flow<Fix?>, val energy: Flow<EnergyState?>)

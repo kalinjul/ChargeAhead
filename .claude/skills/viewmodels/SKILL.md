@@ -67,12 +67,12 @@ is fine — that one is multiplatform.
    (`NetworksViewModel` does this).
 10. **Dependencies are app-scoped objects** (`SettingsStore`,
     `ChargeStopsFeature`, `TripStore`) **and domain use cases**
-    (`ObserveMapChargers`, `PlanTrip`). A ViewModel takes what it needs in its
+    (`MapChargersObserver`, `PlanTripInteractor`). A ViewModel takes what it needs in its
     constructor and nothing else — no `Context`, no `Activity`, no
     `CoroutineScope`.
 11. **Business logic goes into a use case, not the ViewModel.** Selecting,
     filtering, ranking and fetching belong in an `Interactor` or an
-    `ObserveX` observer in `domain`; the observer's `flow` is a parameter of
+    `XObserver` in `domain.usecases`; the observer's `flow` is a parameter of
     `combine()`, and `on…` events feed it params. See the `interactors`
     skill.
 

@@ -4,13 +4,13 @@ import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkRepository
-import org.julakali.chargeahead.shared.domain.ObserveChargeNow
-import org.julakali.chargeahead.shared.domain.ObserveChargeStops
-import org.julakali.chargeahead.shared.domain.ObserveDestinationSearch
-import org.julakali.chargeahead.shared.domain.PlanTrip
-import org.julakali.chargeahead.shared.domain.RefreshNetworks
+import org.julakali.chargeahead.shared.domain.usecases.ChargeNowObserver
+import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
+import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
+import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshNetworksInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
-import org.julakali.chargeahead.shared.domain.UpdateArrivalSoc
+import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.flow.Flow
@@ -50,12 +50,12 @@ class ChargeStopsModuleTest {
     @Test
     fun theUseCasesResolve() {
         withGraph { koin ->
-            koin.get<PlanTrip>()
-            koin.get<UpdateArrivalSoc>()
-            koin.get<ObserveChargeNow>()
-            koin.get<ObserveChargeStops>()
-            koin.get<ObserveDestinationSearch>()
-            koin.get<RefreshNetworks>()
+            koin.get<PlanTripInteractor>()
+            koin.get<UpdateArrivalSocInteractor>()
+            koin.get<ChargeNowObserver>()
+            koin.get<ChargeStopsObserver>()
+            koin.get<DestinationSearchObserver>()
+            koin.get<RefreshNetworksInteractor>()
             koin.get<NetworkRepository>()
         }
     }

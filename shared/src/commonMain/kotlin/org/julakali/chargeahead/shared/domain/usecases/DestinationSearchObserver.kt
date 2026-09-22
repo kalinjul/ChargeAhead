@@ -1,24 +1,23 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.DestinationSearch
+import org.julakali.chargeahead.shared.domain.Geocoder
+import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.Place
+import org.julakali.chargeahead.shared.domain.SubjectInteractor
+import org.julakali.chargeahead.shared.domain.cancellableRunCatching
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-
-/** The places found for [query]; [results] `null` means the search itself failed. */
-data class DestinationSearch(
-    val query: String,
-    val results: List<Place>?,
-    val searching: Boolean,
-)
 
 /**
  * Places matching the typed text, biased toward the current position.
  * Debounced, so typing doesn't send a request per keystroke.
  */
-class ObserveDestinationSearch(
+class DestinationSearchObserver(
     private val geocoder: Geocoder,
     private val locationSource: LocationSource,
-) : SubjectInteractor<ObserveDestinationSearch.Params, DestinationSearch>() {
+) : SubjectInteractor<DestinationSearchObserver.Params, DestinationSearch>() {
 
     /** [debounce] off searches right away, for a query the driver submitted. */
     data class Params(val query: String, val debounce: Boolean = true)

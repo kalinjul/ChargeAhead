@@ -15,3 +15,7 @@ data class SavedRoute(
 
 /** Stable identity of a saved route: the position, not the name. */
 fun Destination.routeId(): String = "dest:${position.lat},${position.lon}"
+
+/** This destination as a favourite, named after it. */
+fun Destination.toSavedRoute(summary: String? = null): SavedRoute =
+    SavedRoute(id = routeId(), name = name, destination = this, summary = summary)

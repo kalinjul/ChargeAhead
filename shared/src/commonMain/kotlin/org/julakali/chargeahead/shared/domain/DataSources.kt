@@ -20,11 +20,3 @@ data class DataSource(
 interface DataSourceDirectory {
     suspend fun dataSources(): List<DataSource>
 }
-
-/** The sources for the licence page. */
-class LoadDataSources(
-    private val directory: DataSourceDirectory,
-) : Interactor<Unit, List<DataSource>>() {
-
-    override suspend fun doWork(params: Unit): List<DataSource> = directory.dataSources()
-}

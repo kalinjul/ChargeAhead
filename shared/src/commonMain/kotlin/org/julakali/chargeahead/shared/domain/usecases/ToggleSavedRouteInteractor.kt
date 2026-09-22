@@ -1,11 +1,15 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.Interactor
+import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.toSavedRoute
 import kotlinx.coroutines.flow.first
 
 /** Saves a destination as a favourite route, or removes it again. `true` when it is saved now. */
-class ToggleSavedRoute(
+class ToggleSavedRouteInteractor(
     private val settings: SettingsStore,
-) : Interactor<ToggleSavedRoute.Params, Boolean>() {
+) : Interactor<ToggleSavedRouteInteractor.Params, Boolean>() {
 
     data class Params(val destination: Destination, val summary: String)
 
@@ -17,14 +21,7 @@ class ToggleSavedRoute(
             settings.removeSavedRoute(existing.id)
             return false
         }
-        settings.saveRoute(
-            SavedRoute(
-                id = destination.routeId(),
-                name = destination.name,
-                destination = destination,
-                summary = params.summary,
-            ),
-        )
+        settings.saveRoute(destination.toSavedRoute(params.summary))
         return true
     }
 }

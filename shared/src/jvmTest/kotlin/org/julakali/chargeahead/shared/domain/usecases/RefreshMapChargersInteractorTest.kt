@@ -1,11 +1,18 @@
-package org.julakali.chargeahead.shared.domain
+package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.BoundingBox
+import org.julakali.chargeahead.shared.domain.ChargeFilters
+import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.SearchArea
+import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.ViewportArea
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
-import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
 
 class RefreshMapChargersTest {
 
@@ -15,7 +22,7 @@ class RefreshMapChargersTest {
     private val fetchedAreas = mutableListOf<SearchArea>()
     private val fetchedNetworks = mutableListOf<Set<String>>()
 
-    private val refresh = RefreshMapChargers(
+    private val refresh = RefreshMapChargersInteractor(
         repository = object : SiteRepository {
             override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 fetchedAreas += area
@@ -28,7 +35,7 @@ class RefreshMapChargersTest {
 
     @Test
     fun `fetch uses the strict viewport`() = runBlocking<Unit> {
-        refresh(RefreshMapChargers.Params(viewport)).getOrThrow()
+        refresh(RefreshMapChargersInteractor.Params(viewport)).getOrThrow()
 
         assertEquals(viewport, (fetchedAreas.single() as ViewportArea).boundingBox)
     }
@@ -37,7 +44,7 @@ class RefreshMapChargersTest {
     fun `viewport fetch passes the network selection to the repository`() = runBlocking<Unit> {
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
 
-        refresh(RefreshMapChargers.Params(viewport)).getOrThrow()
+        refresh(RefreshMapChargersInteractor.Params(viewport)).getOrThrow()
 
         assertTrue(
             "fastned" in fetchedNetworks.single(),
@@ -50,14 +57,14 @@ class RefreshMapChargersTest {
         settings.setChargeFilters(ChargeFilters(slowMode = true))
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
 
-        refresh(RefreshMapChargers.Params(viewport)).getOrThrow()
+        refresh(RefreshMapChargersInteractor.Params(viewport)).getOrThrow()
 
         assertEquals(listOf(emptySet()), fetchedNetworks)
     }
 
     @Test
     fun `a failing fetch comes back as a failure`() = runBlocking<Unit> {
-        val failing = RefreshMapChargers(
+        val failing = RefreshMapChargersInteractor(
             repository = object : SiteRepository {
                 override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> =
                     error("offline")
@@ -65,6 +72,6 @@ class RefreshMapChargersTest {
             settings = settings,
         )
 
-        assertTrue(failing(RefreshMapChargers.Params(viewport)).isFailure)
+        assertTrue(failing(RefreshMapChargersInteractor.Params(viewport)).isFailure)
     }
 }

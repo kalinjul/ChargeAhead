@@ -166,6 +166,7 @@ ChargeAhead/
 ├── shared/                        Kotlin Multiplatform
 │   ├── commonMain/
 │   │   ├── domain/                Model + ports (plain Kotlin types, no frameworks)
+│   │   │   └── usecases/          Interactors (*Interactor) + observers (*Observer)
 │   │   ├── core/                  Geo math, range, corridor, dedup
 │   │   ├── data/                  Source adapters, cache, merge
 │   │   ├── settings/              Vehicle profile, network preferences
@@ -195,7 +196,7 @@ flowchart TD
         PH["Phone UI<br/>Compose / SwiftUI"]
     end
     subgraph shared["shared (Kotlin Multiplatform)"]
-        VM["ChargeStopsFeature · ObserveChargeStops<br/>location, charge, corridor list"]
+        VM["ChargeStopsFeature · ChargeStopsObserver<br/>location, charge, corridor list"]
         CORE["core: range · corridor · dedup"]
         DOM["domain: model + ports"]
         DATA["data: sources + cache"]
@@ -635,12 +636,12 @@ use cases (domain)──┘         ▲                        │
 ```
 
 **Use cases.** Business logic a screen needs — selecting, filtering,
-ranking, fetching — lives in `domain` as an `Interactor` (one-shot action)
-or a `SubjectInteractor` observer (`ObserveX`, a stream driven by params),
+ranking, fetching — lives in `domain.usecases` as an `Interactor` (one-shot action, `XInteractor`)
+or a `SubjectInteractor` observer (`XObserver`, a stream driven by params),
 the base classes from Tivi in `domain/Interactor.kt`. An observer takes only
 what the UI knows as params (the viewport) and reads settings and
 repositories itself; the ViewModel puts its `flow` into `combine()`. They
-are Koin `factory` declarations, one per ViewModel. `ObserveMapChargers` is
+are Koin `factory` declarations, one per ViewModel. `MapChargersObserver` is
 the worked example; the rules are in the `interactors` skill. The planned
 trip lives in `TripStore`, a single, so phone and car show the same one.
 
