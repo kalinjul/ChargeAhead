@@ -81,7 +81,7 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import org.julakali.chargeahead.android.R
+import org.julakali.chargeahead.android.R as AppR
 import org.julakali.chargeahead.android.phone.components.AppSheet
 import org.julakali.chargeahead.android.phone.components.AppTopBar
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadTheme
@@ -201,6 +201,7 @@ private fun PhoneApp() {
     }
 
     val planned = tripUi as? TripUiState.Planned
+    val clock = LocalNow.current
 
     // Searching is a UI mode: the bar has focus and the panel is open.
     var searching by rememberSaveable { mutableStateOf(false) }
@@ -411,10 +412,11 @@ private fun PhoneApp() {
                         },
                         tripLineFor = { selected ->
                             planned?.plan?.stops?.firstOrNull { it.site.id == selected.site.id }?.let { stop ->
+                                val now = clock()
                                 context.getString(
                                     R.string.trip_stop_times,
-                                    etaText(stop.arrivalMinutesFromStart),
-                                    etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes),
+                                    etaText(stop.arrivalMinutesFromStart, now),
+                                    etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
                                 )
                             }
                         },
@@ -537,7 +539,7 @@ private fun PhoneApp() {
 
             entry<Licenses> {
                 Page(title = stringResource(R.string.drawer_licenses), onBack = ::pop) { pagePadding ->
-                    LicensesRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                    LicensesRoute(librariesRes = AppR.raw.aboutlibraries, modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
         },

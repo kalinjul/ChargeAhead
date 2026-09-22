@@ -5,7 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
-import org.julakali.chargeahead.android.R
+import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.LatLon
 
 /**

@@ -133,29 +133,11 @@ dependencies {
     implementation(libs.car.app)
     implementation(libs.car.app.projected)
 
-    // Phone UI
+    // Phone UI lives in its own module; the shell here only wires it up.
+    implementation(project(":phone-ui"))
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
-    implementation(libs.koin.android)
-    implementation(libs.koin.androidx.compose)
-    implementation(libs.androidx.navigation3.runtime)
-    implementation(libs.androidx.navigation3.ui)
-    implementation(libs.androidx.lifecycle.viewmodel.navigation3)
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.compose.cache)
-    implementation(libs.aboutlibraries.compose.m3)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    debugImplementation(libs.androidx.compose.ui.tooling)
-
     implementation(libs.play.services.location)
-
-    // Map — the phone shows a labeled placeholder when the key is missing
-    implementation(libs.maps.compose)
-    implementation(libs.play.services.maps)
 }

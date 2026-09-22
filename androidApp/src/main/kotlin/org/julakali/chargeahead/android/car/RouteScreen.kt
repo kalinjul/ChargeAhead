@@ -18,7 +18,7 @@ import androidx.car.app.model.Template
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.PhoneUiVisibility
-import org.julakali.chargeahead.android.R
+import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.core.MapsHandoff

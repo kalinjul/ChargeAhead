@@ -10,7 +10,7 @@ import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
-import org.julakali.chargeahead.android.R
+import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import kotlinx.coroutines.launch
