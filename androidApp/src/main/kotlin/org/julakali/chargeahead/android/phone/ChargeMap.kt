@@ -212,7 +212,7 @@ private val ROUTE_COLOR = Color(0xFF1A73E8)
 const val MIN_CHARGER_ZOOM = 10f
 
 /** Below this the markers are dots; pills would pile up. */
-private const val PILL_ZOOM = 12.5f
+const val PILL_ZOOM = 11f
 private const val BOUNDS_PADDING_PX = 120
 
 /** Status bar, search bar and one row of controls. */

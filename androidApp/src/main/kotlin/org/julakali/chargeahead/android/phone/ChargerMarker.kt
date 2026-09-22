@@ -163,7 +163,7 @@ fun ChargerPill(
                 color = if (outOfOrder) Red else Outline,
                 shape = CircleShape,
             )
-            .padding(start = 6.dp, end = if (availability == null) 6.dp else 3.dp, top = 3.dp, bottom = 3.dp),
+            .padding(start = 6.dp, end = if (availability == null) 6.dp else 4.dp, top = 3.dp, bottom = 3.dp),
     ) {
         Bolts(count = speed.bolts, color = if (outOfOrder) Grey else speed.color)
         if (!label.isNullOrBlank()) {
@@ -181,13 +181,13 @@ fun ChargerPill(
                 text = "${availability.free}/${availability.total}",
                 color = availability.level.color,
                 textColor = if (availability.level == AvailabilityLevel.LOW) TextColor else Color.White,
-                modifier = Modifier.padding(start = 3.dp),
+                modifier = Modifier.padding(start = 4.dp),
             )
             SiteAvailability.OutOfOrder -> AvailabilityChip(
                 text = stringResource(R.string.map_out_of_order_mark),
                 color = Red,
                 textColor = Color.White,
-                modifier = Modifier.padding(start = 3.dp),
+                modifier = Modifier.padding(start = 4.dp),
             )
             null -> Unit
         }
@@ -199,12 +199,12 @@ private fun AvailabilityChip(text: String, color: Color, textColor: Color, modif
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
-            .defaultMinSize(minWidth = 26.dp)
-            .height(18.dp)
+            .defaultMinSize(minWidth = 24.dp)
+            .height(15.dp)
             .background(color, CircleShape)
             .padding(horizontal = 5.dp),
     ) {
-        Text(text = text, color = textColor, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(text = text, color = textColor, fontSize = 10.5.sp, lineHeight = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
 
