@@ -150,7 +150,7 @@ private fun ChargeNowCard(
 ) {
     StationCard(
         rank = rank,
-        badgeColor = operatorColor(candidate.site.operator),
+        badgeColor = operatorColor(candidate.site),
         title = candidate.site.operator ?: candidate.site.name,
         metaLine = stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
         address = ChargeStopFormatter.addressLine(candidate.site),

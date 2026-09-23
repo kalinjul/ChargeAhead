@@ -56,7 +56,7 @@ fun ChargeStopDetailSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(9.dp),
             ) {
-                NetworkDot(operatorColor(stop.site.operator))
+                NetworkDot(operatorColor(stop.site))
                 Text(
                     stop.site.operator ?: stop.site.name,
                     style = MaterialTheme.typography.titleLarge,

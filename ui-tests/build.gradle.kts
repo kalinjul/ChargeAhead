@@ -28,10 +28,11 @@ android {
 
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
-    // Layoutlib renders glyph edges a shade differently per JDK and OS; a
-    // missing line or a shifted chip is still far above this.
+    // 0.1 %: a single recoloured 24dp badge in a sheet-sized image is ~0.3 %,
+    // and CI renders with the same JDK as Studio's JBR, so glyph noise stays
+    // below this.
     screenshotTests {
-        imageDifferenceThreshold = 0.01f
+        imageDifferenceThreshold = 0.001f
     }
 
     testOptions {
