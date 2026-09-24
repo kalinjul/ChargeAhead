@@ -337,7 +337,7 @@ private fun StopRail(
                 selected = selecting && selection.includes(index),
                 selectionShape = selection.spanShape(index),
                 onClick = { if (selecting) onPickPoint(index) else onOpenStop(stop) },
-                dot = { RankBadge(index, operatorColor(stop.site.operator)) },
+                dot = { RankBadge(index, operatorColor(stop.site)) },
             ) {
                 Text(
                     stop.site.operator ?: stop.site.name,
@@ -500,7 +500,7 @@ private fun StopTiles(
                     modifier = Modifier.width(136.dp),
                 ) {
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        RankBadge(index, operatorColor(stop.site.operator))
+                        RankBadge(index, operatorColor(stop.site))
                         Text(
                             stop.site.operator ?: stop.site.name,
                             style = MaterialTheme.typography.titleSmall,

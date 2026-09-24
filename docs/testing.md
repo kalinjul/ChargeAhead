@@ -42,9 +42,12 @@ Goldens live in `ui-tests/src/screenshotTestDebug/reference/`, one PNG per
 reference, actual and diff to
 `ui-tests/build/reports/screenshotTest/preview/debug/index.html`.
 
-Tolerance is 1 % (`imageDifferenceThreshold` in `ui-tests/build.gradle.kts`):
-enough for glyph anti-aliasing differences between JDKs and operating
-systems, far below a missing line or a shifted chip. CI validates on Linux;
+Tolerance is 0.1 % (`imageDifferenceThreshold` in `ui-tests/build.gradle.kts`).
+A single recoloured 24dp badge in a sheet-sized image is about 0.3 %, so
+anything looser lets colour changes of small elements through; CI renders
+with the same JDK as Studio's JBR, which keeps glyph anti-aliasing noise
+below the threshold. If a run ever fails on noise alone, raise it in small
+steps and look at what it starts hiding. CI validates on Linux;
 when a golden changes on purpose, record it locally, look at the diff, commit
 the PNG.
 

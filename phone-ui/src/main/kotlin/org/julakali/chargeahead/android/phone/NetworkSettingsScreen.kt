@@ -117,7 +117,7 @@ fun NetworkSettingsScreen(
                             OperatorPill(
                                 name = network.name,
                                 selected = network.key in uiState.selected,
-                                fill = brandColors[network.key] ?: MaterialTheme.colorScheme.primary,
+                                fill = networkColor(network.key),
                                 onClick = { onNetworkToggled(network.key) },
                             )
                         }
@@ -179,20 +179,3 @@ private fun OperatorPill(
 private fun Color.readableInk(): Color =
     if (luminance() > 0.55f) Color(0xFF202124) else Color.White
 
-/** Brand colours for the networks we recognise, keyed by catalog key. */
-private val brandColors: Map<String, Color> = mapOf(
-    "ionity" to Color(0xFF00C389),
-    "tesla" to Color(0xFFE82127),
-    "enbw" to Color(0xFF1E3A5F),
-    "shell-recharge" to Color(0xFFFBCE07),
-    "allego" to Color(0xFFE3000F),
-    "fastned" to Color(0xFFFFE500),
-    "aral-pulse" to Color(0xFF0060AE),
-    "bp-pulse" to Color(0xFF009E49),
-    "eon-drive" to Color(0xFFE3001B),
-    "totalenergies" to Color(0xFFED1C24),
-    "enel-x" to Color(0xFF26CAD3),
-    "mer" to Color(0xFF00A499),
-    "ewe-go" to Color(0xFF009EE0),
-    "pfalzwerke" to Color(0xFFF39200),
-)

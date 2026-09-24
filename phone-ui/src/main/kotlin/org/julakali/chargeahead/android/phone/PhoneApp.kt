@@ -200,7 +200,7 @@ fun PhoneApp(librariesRes: Int) {
         planned?.plan?.let { plan ->
             RouteOverlay(
                 points = plan.route.points,
-                stops = plan.stops.mapIndexed { index, stop -> RouteStop(index + 1, stop.site.position, stop.site.operator) },
+                stops = plan.stops.mapIndexed { index, stop -> RouteStop(index + 1, stop.site.position, operatorColor(stop.site)) },
                 destination = plan.destination.position,
             )
         }
