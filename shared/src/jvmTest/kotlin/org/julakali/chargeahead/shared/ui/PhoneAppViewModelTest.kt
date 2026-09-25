@@ -4,20 +4,20 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-class ShellViewModelTest {
+class PhoneAppViewModelTest {
 
-    private val viewModel = ShellViewModel()
+    private val viewModel = PhoneAppViewModel()
 
     @Test
     fun `locating without the permission asks for it, then checks the settings once granted`() {
         viewModel.onLocationPermissionChecked(granted = false)
 
         viewModel.onLocateRequested()
-        assertEquals(ShellEvent.RequestLocationPermission, viewModel.event.value)
+        assertEquals(PhoneAppEvent.RequestLocationPermission, viewModel.event.value)
         viewModel.onEventHandled()
 
         viewModel.onLocationPermissionResult(granted = true)
-        assertEquals(ShellEvent.CheckLocationSettings, viewModel.event.value)
+        assertEquals(PhoneAppEvent.CheckLocationSettings, viewModel.event.value)
         assertEquals(true, viewModel.uiState.value.hasLocationPermission)
     }
 
@@ -27,7 +27,7 @@ class ShellViewModelTest {
 
         viewModel.onLocateRequested()
 
-        assertEquals(ShellEvent.CheckLocationSettings, viewModel.event.value)
+        assertEquals(PhoneAppEvent.CheckLocationSettings, viewModel.event.value)
     }
 
     @Test
@@ -62,10 +62,10 @@ class ShellViewModelTest {
 
     @Test
     fun `sheets open and close`() {
-        viewModel.onSheetOpened(ShellSheet.ROUTES)
-        assertEquals(ShellSheet.ROUTES, viewModel.uiState.value.sheet)
+        viewModel.onSheetOpened(PhoneAppSheet.ROUTES)
+        assertEquals(PhoneAppSheet.ROUTES, viewModel.uiState.value.sheet)
 
         viewModel.onSheetDismissed()
-        assertEquals(ShellSheet.NONE, viewModel.uiState.value.sheet)
+        assertEquals(PhoneAppSheet.NONE, viewModel.uiState.value.sheet)
     }
 }

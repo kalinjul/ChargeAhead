@@ -9,7 +9,7 @@ analysis that led here is at the bottom.
 |---|---|---|---|
 | Unit tests | `shared/src/commonTest`, `shared/src/jvmTest` | JVM | Does the planning, formatting and ViewModel logic do the right thing? |
 | Behaviour tests | `ui-tests/src/test` | JVM (Robolectric) | Do the phone screens show the right state and fire the right callbacks? |
-| Shell flow tests | `ui-tests/src/test/.../shell` | JVM (Robolectric) | Does the whole phone shell hold together: search → plan → sheet, X, back order, layout toggle, replan? |
+| PhoneApp flow tests | `ui-tests/src/test/.../phoneapp` | JVM (Robolectric) | Does the whole phone app hold together: search → plan → sheet, X, back order, layout toggle, replan? |
 | Screenshot tests | `ui-tests/src/screenshotTest` | JVM (Layoutlib) | Do the components still look like the approved picture? |
 | Device | by hand | phone / DHU | Map, live data, Android Auto, feel |
 
@@ -23,7 +23,7 @@ pinned through `LocalNow` so trip times don't drift.
   can depend on it.
 - `:ui-tests` — depends on `:phone-ui`, holds both UI layers. Nothing here
   ships in the app.
-- `:androidApp` — the shell (MainActivity), Android Auto, Koin wiring. Has
+- `:androidApp` — MainActivity (hosts `PhoneApp`), Android Auto, Koin wiring. Has
   no tests of its own.
 
 ## Commands
@@ -67,9 +67,9 @@ the PNG.
   because it doesn't emulate 37 yet, and the test JVM opens a few `java.base`
   packages that Robolectric reflects into (`ui-tests/build.gradle.kts`).
 
-## Shell flow tests
+## PhoneApp flow tests
 
-`ShellFlowTest` composes the real `PhoneApp` on the real Koin graph
+`PhoneAppFlowTest` composes the real `PhoneApp` on the real Koin graph
 (`chargeStopsModule`, `sharedUiModule`) with every world-facing port replaced
 in `PhoneAppHarness`: in-memory settings with a test vehicle, one fixed
 location in Hamburg, a geocoder that knows München, a straight-line route
@@ -84,7 +84,7 @@ destination) and a stop's "Navigation starten" `geo:` URI.
 One wart: the Maps SDK's `CameraUpdateFactory` is only initialised by a
 rendering map, which Robolectric has not. The harness installs a no-op
 delegate through the SDK's obfuscated `CameraUpdateFactory.zza`. If a Maps
-SDK update renames that, the shell tests fail at start-up with
+SDK update renames that, the PhoneApp flow tests fail at start-up with
 "CameraUpdateFactory is not initialized" — fix the harness, not the app.
 
 ## Not covered, on purpose

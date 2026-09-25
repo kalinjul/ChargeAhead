@@ -175,7 +175,7 @@ ChargeAhead/
 │   └── iosMain/                   CLLocationManager, Room builder
 ├── androidApp/
 │   ├── car/                       CarAppService, screens, templates
-│   └── phone/MainActivity         The phone shell: back stack, sheets, permission handshake
+│   └── phone/MainActivity         Hosts PhoneApp: back stack, sheets, permission handshake
 ├── phone-ui/                      Compose phone UI as a library: map, search, trip sheet, drawer, resources
 ├── ui-tests/                      Every phone UI test: Robolectric behaviour tests + screenshot goldens
 ├── iosApp/

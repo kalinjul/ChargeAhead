@@ -41,8 +41,8 @@ import org.julakali.chargeahead.shared.ui.DrawerUiState
 import org.julakali.chargeahead.shared.ui.DrawerViewModel
 import org.julakali.chargeahead.shared.ui.HomeViewModel
 import org.julakali.chargeahead.shared.ui.SearchViewModel
-import org.julakali.chargeahead.shared.ui.ShellSheet
-import org.julakali.chargeahead.shared.ui.ShellViewModel
+import org.julakali.chargeahead.shared.ui.PhoneAppSheet
+import org.julakali.chargeahead.shared.ui.PhoneAppViewModel
 import org.julakali.chargeahead.shared.ui.TripEvent
 import org.julakali.chargeahead.shared.ui.TripUiState
 import org.julakali.chargeahead.shared.ui.TripViewModel
@@ -53,20 +53,20 @@ import java.time.LocalTime
 import kotlin.math.roundToInt
 
 /**
- * The phone app shell: wires the map chrome, the page back stack and the
+ * The phone app: wires the map chrome, the page back stack and the
  * sheets together. [librariesRes] is the AboutLibraries JSON, generated in the
  * app module that owns all dependencies.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhoneApp(librariesRes: Int) {
-    val shellViewModel: ShellViewModel = koinViewModel()
+    val phoneAppViewModel: PhoneAppViewModel = koinViewModel()
     val drawerViewModel: DrawerViewModel = koinViewModel()
     val homeViewModel: HomeViewModel = koinViewModel()
     val tripViewModel: TripViewModel = koinViewModel()
     val searchViewModel: SearchViewModel = koinViewModel()
 
-    val shellUi by shellViewModel.uiState.collectAsStateWithLifecycle()
+    val phoneAppUi by phoneAppViewModel.uiState.collectAsStateWithLifecycle()
     val drawerUi by drawerViewModel.uiState.collectAsStateWithLifecycle()
     val tripUi by tripViewModel.uiState.collectAsStateWithLifecycle()
     val searchUi by searchViewModel.uiState.collectAsStateWithLifecycle()
@@ -96,7 +96,7 @@ fun PhoneApp(librariesRes: Int) {
     }
 
     fun closeSearch() {
-        shellViewModel.onSearchClosed()
+        phoneAppViewModel.onSearchClosed()
         focusManager.clearFocus()
         searchViewModel.onClosed()
     }
@@ -105,7 +105,7 @@ fun PhoneApp(librariesRes: Int) {
         if (context.openMapsLink(link)) snackbar.show(scope, context.getString(R.string.trip_maps_sent))
     }
 
-    LocationHandshakeEffects(shellViewModel, onSettled = homeViewModel::onLocateRequested)
+    LocationHandshakeEffects(phoneAppViewModel, onSettled = homeViewModel::onLocateRequested)
 
     TripEventEffect(
         viewModel = tripViewModel,
@@ -118,7 +118,7 @@ fun PhoneApp(librariesRes: Int) {
         onOpenGarage = { openFromRoot(Garage) },
     )
 
-    ShellDrawer(
+    PhoneAppDrawer(
         drawerState = drawerState,
         uiState = drawerUi,
         // The drawer stays open underneath the page.
@@ -127,13 +127,13 @@ fun PhoneApp(librariesRes: Int) {
     ) {
         TripSheetScaffold(
             trip = planned,
-            layout = shellUi.tripLayout,
+            layout = phoneAppUi.tripLayout,
             sheetState = sheetState,
             snackbar = snackbar,
-            onLayoutChanged = shellViewModel::onTripLayoutChanged,
+            onLayoutChanged = phoneAppViewModel::onTripLayoutChanged,
             onReplan = {
                 planned?.let { searchViewModel.onOpened(it.plan.destination) }
-                shellViewModel.onSearchOpened()
+                phoneAppViewModel.onSearchOpened()
             },
             onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
             onSendToMaps = ::sendToMaps,
@@ -142,20 +142,20 @@ fun PhoneApp(librariesRes: Int) {
             // Just the map, built once and kept. Full-screen pages are a
             // separate layer above the drawer (below).
             HomeRoute(
-                hasPermission = shellUi.hasLocationPermission,
+                hasPermission = phoneAppUi.hasLocationPermission,
                 planningInProgress = tripUi is TripUiState.Planning,
                 mode = when {
-                    shellUi.searching -> HomeMode.SEARCHING
+                    phoneAppUi.searching -> HomeMode.SEARCHING
                     planned != null -> HomeMode.TRIP
                     else -> HomeMode.BROWSING
                 },
                 route = remember(planned?.plan) { planned?.plan?.toRouteOverlay() },
                 mapBottomInset = peek,
-                onRequestPermission = shellViewModel::onLocationPermissionRequested,
-                onLocate = shellViewModel::onLocateRequested,
+                onRequestPermission = phoneAppViewModel::onLocationPermissionRequested,
+                onLocate = phoneAppViewModel::onLocateRequested,
                 onSettings = { scope.launch { drawerState.open() } },
-                onChargeNow = { shellViewModel.onSheetOpened(ShellSheet.CHARGE_NOW) },
-                onRoutes = { shellViewModel.onSheetOpened(ShellSheet.ROUTES) },
+                onChargeNow = { phoneAppViewModel.onSheetOpened(PhoneAppSheet.CHARGE_NOW) },
+                onRoutes = { phoneAppViewModel.onSheetOpened(PhoneAppSheet.ROUTES) },
                 onDismissSearch = ::closeSearch,
                 onStopTapped = { index ->
                     planned?.plan?.stops?.getOrNull(index - 1)?.let { homeViewModel.onSiteSelected(it.site) }
@@ -163,7 +163,7 @@ fun PhoneApp(librariesRes: Int) {
                 tripLineFor = { selected -> planned?.plan?.stopLine(context, selected, clock()) },
                 topBar = {
                     val trip = planned
-                    if (trip != null && !shellUi.searching) {
+                    if (trip != null && !phoneAppUi.searching) {
                         DestinationHeader(
                             title = ChargeStopFormatter.label(trip.plan.destination),
                             subtitle = trip.plan.headerLine(),
@@ -173,7 +173,7 @@ fun PhoneApp(librariesRes: Int) {
                         HomeSearchBar(
                             query = searchUi.query,
                             searching = searchUi.searching,
-                            onFocused = shellViewModel::onSearchOpened,
+                            onFocused = phoneAppViewModel::onSearchOpened,
                             onQueryChange = searchViewModel::onQueryChanged,
                             // One tap back to the plain map, whatever was typed or planned.
                             onClear = {
@@ -181,8 +181,8 @@ fun PhoneApp(librariesRes: Int) {
                                 tripViewModel.clear()
                             },
                             focusRequester = focusRequester,
-                            clearable = shellUi.searching,
-                            takeFocus = shellUi.searching,
+                            clearable = phoneAppUi.searching,
+                            takeFocus = phoneAppUi.searching,
                         )
                     }
                 },
@@ -213,12 +213,12 @@ fun PhoneApp(librariesRes: Int) {
         modifier = Modifier.fillMaxSize(),
     )
 
-    ShellSheets(
-        sheet = shellUi.sheet,
-        onDismiss = shellViewModel::onSheetDismissed,
+    PhoneAppSheets(
+        sheet = phoneAppUi.sheet,
+        onDismiss = phoneAppViewModel::onSheetDismissed,
         onNavigate = { position -> sendToMaps(MapsHandoff.navigateUrl(position)) },
         onOpenRoute = { destination ->
-            shellViewModel.onSheetDismissed()
+            phoneAppViewModel.onSheetDismissed()
             // Reopening a route keeps the stored charge level.
             tripViewModel.plan(destination)
         },
@@ -228,14 +228,14 @@ fun PhoneApp(librariesRes: Int) {
     // drawer, search, expanded trip sheet, the trip itself.
     val atRoot = backStack.size == 1
     val sheetExpanded = planned != null && sheetState.currentValue == SheetValue.Expanded
-    val sheetOpen = shellUi.sheet != ShellSheet.NONE
+    val sheetOpen = phoneAppUi.sheet != PhoneAppSheet.NONE
     BackHandler(
-        enabled = sheetOpen || (atRoot && (drawerState.isOpen || shellUi.searching || sheetExpanded || planned != null)),
+        enabled = sheetOpen || (atRoot && (drawerState.isOpen || phoneAppUi.searching || sheetExpanded || planned != null)),
     ) {
         when {
-            sheetOpen -> shellViewModel.onSheetDismissed()
+            sheetOpen -> phoneAppViewModel.onSheetDismissed()
             drawerState.isOpen -> scope.launch { drawerState.close() }
-            shellUi.searching -> closeSearch()
+            phoneAppUi.searching -> closeSearch()
             sheetExpanded -> scope.launch { sheetState.partialExpand() }
             planned != null -> tripViewModel.clear()
         }
@@ -244,7 +244,7 @@ fun PhoneApp(librariesRes: Int) {
 
 /** The settings drawer, from the right edge. */
 @Composable
-private fun ShellDrawer(
+private fun PhoneAppDrawer(
     drawerState: DrawerState,
     uiState: DrawerUiState,
     onOpen: (PhoneDestination) -> Unit,
@@ -273,20 +273,20 @@ private fun ShellDrawer(
 }
 
 @Composable
-private fun ShellSheets(
-    sheet: ShellSheet,
+private fun PhoneAppSheets(
+    sheet: PhoneAppSheet,
     onDismiss: () -> Unit,
     onNavigate: (LatLon) -> Unit,
     onOpenRoute: (Destination) -> Unit,
 ) {
     when (sheet) {
-        ShellSheet.NONE -> Unit
+        PhoneAppSheet.NONE -> Unit
 
-        ShellSheet.CHARGE_NOW -> AppSheet(onDismissRequest = onDismiss) {
+        PhoneAppSheet.CHARGE_NOW -> AppSheet(onDismissRequest = onDismiss) {
             ChargeNowRoute(onNavigate = { candidate -> onNavigate(candidate.site.position) })
         }
 
-        ShellSheet.ROUTES -> AppSheet(onDismissRequest = onDismiss) {
+        PhoneAppSheet.ROUTES -> AppSheet(onDismissRequest = onDismiss) {
             RoutesRoute(onOpen = onOpenRoute)
         }
     }

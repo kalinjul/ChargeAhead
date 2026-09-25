@@ -24,7 +24,7 @@ an error.
 ```
 shared/      Kotlin Multiplatform — domain, formatting, later data layer
 phone-ui/    Compose phone UI as an Android library (+ its resources)
-androidApp/  Android app: CarAppService (Android Auto) + the phone shell (MainActivity)
+androidApp/  Android app: CarAppService (Android Auto) + MainActivity hosting the phone UI
 ui-tests/    Phone UI tests: Robolectric behaviour tests + screenshot goldens (docs/testing.md)
 iosApp/      Swift: CarPlay scene + SwiftUI phone UI
 tools/       Helper scripts (Swift syntax check)

@@ -75,6 +75,6 @@ dependencies {
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.androidx.compose.ui.test.manifest)
     testImplementation(libs.androidx.activity.compose)
-    // The shell test stubs CameraUpdateFactory; the map SDK itself never starts under Robolectric.
+    // The PhoneApp flow test stubs CameraUpdateFactory; the map SDK itself never starts under Robolectric.
     testImplementation(libs.play.services.maps)
 }

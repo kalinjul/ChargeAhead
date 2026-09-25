@@ -37,7 +37,7 @@ import org.julakali.chargeahead.shared.ui.SearchRow
 import org.julakali.chargeahead.shared.ui.SearchUiState
 import org.julakali.chargeahead.shared.ui.asKmLabel
 
-/** The always-present search pill. Focus flips the shell into searching. */
+/** The always-present search pill. Focus switches the app into searching. */
 @Composable
 fun HomeSearchBar(
     query: String,

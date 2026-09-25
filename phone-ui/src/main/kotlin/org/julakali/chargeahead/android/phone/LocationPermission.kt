@@ -13,8 +13,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.julakali.chargeahead.shared.ui.ShellEvent
-import org.julakali.chargeahead.shared.ui.ShellViewModel
+import org.julakali.chargeahead.shared.ui.PhoneAppEvent
+import org.julakali.chargeahead.shared.ui.PhoneAppViewModel
 
 /**
  * The Android half of the location handshake: runs the permission request and
@@ -22,7 +22,7 @@ import org.julakali.chargeahead.shared.ui.ShellViewModel
  * [onSettled] fires once the device settings can serve a location request.
  */
 @Composable
-fun LocationHandshakeEffects(viewModel: ShellViewModel, onSettled: () -> Unit) {
+fun LocationHandshakeEffects(viewModel: PhoneAppViewModel, onSettled: () -> Unit) {
     val context = LocalContext.current
     val event by viewModel.event.collectAsStateWithLifecycle()
     val checkLocationSettings = rememberLocationSettingsCheck(onSettled)
@@ -41,10 +41,10 @@ fun LocationHandshakeEffects(viewModel: ShellViewModel, onSettled: () -> Unit) {
     LaunchedEffect(event) {
         when (event) {
             null -> return@LaunchedEffect
-            ShellEvent.RequestLocationPermission -> permissionLauncher.launch(
+            PhoneAppEvent.RequestLocationPermission -> permissionLauncher.launch(
                 arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
             )
-            ShellEvent.CheckLocationSettings -> checkLocationSettings()
+            PhoneAppEvent.CheckLocationSettings -> checkLocationSettings()
         }
         viewModel.onEventHandled()
     }
