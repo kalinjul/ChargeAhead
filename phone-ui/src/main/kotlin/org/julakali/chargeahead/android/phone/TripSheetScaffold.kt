@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
@@ -28,9 +27,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
@@ -90,14 +90,9 @@ fun TripSheetScaffold(
                 // The sheet's expanded position comes from this content's height, so the
                 // height stays constant; only the inner column follows the visible part.
                 Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
-                    val density = LocalDensity.current
-                    val visibleSheet = runCatching { sheetState.requireOffset() }
-                        .map { offset -> with(density) { (layoutHeightPx - offset).toDp() } }
-                        .getOrDefault(peek)
-                        .coerceAtLeast(peek)
                     // Everything visible lives in this column; the stops take what the
                     // summary leaves, resolved in the same layout pass (no measured lag).
-                    Column(Modifier.fillMaxWidth().height(visibleSheet)) {
+                    Column(Modifier.fillMaxWidth().visibleSheetHeight(sheetState, layoutHeightPx, peek)) {
                         // The handle is the "you can expand this" hint; it folds away with the slide.
                         AnimatedVisibility(
                             visible = expandable,
@@ -155,6 +150,26 @@ fun TripSheetScaffold(
         }
     }
 }
+
+/**
+ * Fixes the height to the part of the sheet that is on screen, at least [peek].
+ * The sheet offset changes every frame while dragging, so it is read in the
+ * layout phase; it has no value until the scaffold has placed its anchors,
+ * which happens after this column is first measured.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+private fun Modifier.visibleSheetHeight(sheetState: SheetState, layoutHeightPx: Int, peek: Dp) =
+    layout { measurable, constraints ->
+        val peekPx = peek.roundToPx()
+        val visible = if (sheetState.hasPartiallyExpandedState) {
+            (layoutHeightPx - sheetState.requireOffset()).roundToInt().coerceAtLeast(peekPx)
+        } else {
+            peekPx
+        }
+        val height = constraints.constrainHeight(visible)
+        val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    }
 
 /** Shown under a saved route's name. */
 private fun TripPlan.summaryLine(context: Context): String =
