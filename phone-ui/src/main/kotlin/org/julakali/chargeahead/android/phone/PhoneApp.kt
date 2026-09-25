@@ -48,7 +48,7 @@ import java.time.LocalTime
 import kotlin.math.roundToInt
 
 /**
- * The phone app: wires the map chrome and the navigator's destinations
+ * The phone app: wires the map screen and the navigator's destinations
  * together. [librariesRes] is the AboutLibraries JSON, generated in the
  * app module that owns all dependencies.
  */
@@ -84,6 +84,10 @@ fun PhoneApp(librariesRes: Int) {
         phoneAppViewModel.onSearchClosed()
         focusManager.clearFocus()
         searchViewModel.onClosed()
+    }
+
+    fun collapseTripSheet() {
+        scope.launch { sheetState.partialExpand() }
     }
 
     fun sendToMaps(link: String) {
@@ -203,30 +207,20 @@ fun PhoneApp(librariesRes: Int) {
         modifier = Modifier.fillMaxSize(),
     )
 
-    // The chrome layer back peels next, or null when back belongs to the back
-    // stack or there is nothing left to peel. Naming the layer keeps the
-    // handler from being enabled for one it then does not close.
-    val chromeLayer = when {
-        !navigator.atRoot -> null
-        drawerState.isOpen -> ChromeLayer.DRAWER
-        phoneAppUi.searching -> ChromeLayer.SEARCH
-        planned != null && sheetState.currentValue == SheetValue.Expanded -> ChromeLayer.TRIP_SHEET
-        planned != null -> ChromeLayer.TRIP
-        else -> null
-    }
-    BackHandler(enabled = chromeLayer != null) {
-        when (chromeLayer) {
-            ChromeLayer.DRAWER -> scope.launch { drawerState.close() }
-            ChromeLayer.SEARCH -> closeSearch()
-            ChromeLayer.TRIP_SHEET -> scope.launch { sheetState.partialExpand() }
-            ChromeLayer.TRIP -> tripViewModel.clear()
-            null -> Unit
-        }
-    }
+    // What back takes away on the map screen, outermost first. No step for the
+    // drawer: ModalNavigationDrawer closes itself on back, and a step here would
+    // take that — and its predictive-back animation — away from it.
+    navigator.ScreenStep(
+        when {
+            drawerState.isOpen -> null
+            phoneAppUi.searching -> ::closeSearch
+            planned != null && sheetState.currentValue == SheetValue.Expanded -> ::collapseTripSheet
+            planned != null -> tripViewModel::clear
+            else -> null
+        },
+    )
+    BackHandler(enabled = navigator.ownsBack) { navigator.back() }
 }
-
-/** What back takes away around the map, outermost first. */
-private enum class ChromeLayer { DRAWER, SEARCH, TRIP_SHEET, TRIP }
 
 /** The settings drawer, from the right edge. */
 @Composable
@@ -245,7 +239,8 @@ private fun PhoneAppDrawer(
             gesturesEnabled = drawerState.isOpen,
             drawerContent = {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+                    // The overload with the state is the one that handles back itself.
+                    ModalDrawerSheet(drawerState, drawerContainerColor = MaterialTheme.colorScheme.surface) {
                         DrawerContent(uiState = uiState, onOpen = onOpen, onFilters = onFilters)
                     }
                 }

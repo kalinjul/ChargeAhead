@@ -669,7 +669,7 @@ an `OverlayScene`, so there is one back stack and not a second state machine
 beside it. The `NavDisplay` carries
 `rememberViewModelStoreNavEntryDecorator()` (lifecycle-viewmodel-navigation3):
 every destination gets its own ViewModelStore, cleared when it leaves the back
-stack. The chrome outside `NavDisplay` — map, search bar, drawer, trip
+stack. What sits outside `NavDisplay` — map, search bar, drawer, trip
 sheet — resolves against the activity, so `SearchViewModel`, `TripViewModel`
 and friends are shared between `PhoneApp` and the composables that draw them.
 Leaf components stay out of it: `DrawerContent` emits a `DrawerTarget`, and

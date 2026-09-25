@@ -42,8 +42,8 @@ fun PhoneNavDisplay(
         backStack = navigator.backStack,
         onBack = navigator::back,
         // Each destination gets its own ViewModelStore, cleared when it leaves
-        // the back stack. The chrome (drawer, map, trip sheet) is outside, so
-        // its ViewModels stay activity-scoped.
+        // the back stack. The map screen around it — drawer, search, trip sheet
+        // — is outside, so its ViewModels stay activity-scoped.
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator(),
