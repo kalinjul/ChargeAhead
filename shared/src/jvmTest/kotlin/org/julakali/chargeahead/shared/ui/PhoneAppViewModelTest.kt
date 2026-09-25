@@ -1,12 +1,14 @@
 package org.julakali.chargeahead.shared.ui
 
+import androidx.lifecycle.SavedStateHandle
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class PhoneAppViewModelTest {
 
-    private val viewModel = PhoneAppViewModel()
+    private val savedState = SavedStateHandle()
+    private val viewModel = PhoneAppViewModel(savedState)
 
     @Test
     fun `locating without the permission asks for it, then checks the settings once granted`() {
@@ -67,5 +69,36 @@ class PhoneAppViewModelTest {
 
         viewModel.onSheetDismissed()
         assertEquals(PhoneAppSheet.NONE, viewModel.uiState.value.sheet)
+    }
+
+    /** #133: search mode, open sheet and trip layout come back after process death. */
+    @Test
+    fun `the saved state restores search mode, sheet and layout`() {
+        viewModel.onSearchOpened()
+        viewModel.onSheetOpened(PhoneAppSheet.CHARGE_NOW)
+        viewModel.onTripLayoutChanged(TripListLayout.TILES)
+
+        val restored = PhoneAppViewModel(savedState).uiState.value
+
+        assertEquals(true, restored.searching)
+        assertEquals(PhoneAppSheet.CHARGE_NOW, restored.sheet)
+        assertEquals(TripListLayout.TILES, restored.tripLayout)
+    }
+
+    @Test
+    fun `the location grant is asked for again instead of being restored`() {
+        viewModel.onLocationPermissionChecked(granted = true)
+
+        assertNull(PhoneAppViewModel(savedState).uiState.value.hasLocationPermission)
+    }
+
+    @Test
+    fun `an unknown persisted name falls back to the default`() {
+        val stale = SavedStateHandle(mapOf("sheet" to "GONE", "tripLayout" to "GONE"))
+
+        val restored = PhoneAppViewModel(stale).uiState.value
+
+        assertEquals(PhoneAppSheet.NONE, restored.sheet)
+        assertEquals(TripListLayout.LIST, restored.tripLayout)
     }
 }
