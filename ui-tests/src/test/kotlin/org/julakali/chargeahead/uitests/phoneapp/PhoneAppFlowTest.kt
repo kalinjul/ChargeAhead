@@ -4,6 +4,7 @@ import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -71,6 +72,14 @@ class PhoneAppFlowTest {
         // The header label is "München, Bayern"; the pills are the browsing tell.
         waitForTextGone(chargeNowPill())
         waitForText("München", substring = true)
+    }
+
+    /** The drawer content stays composed while closed, so displayed is the tell, not existence. */
+    private fun drawerOpen() = compose.onNodeWithText(compose.string(R.string.drawer_car)).isDisplayed()
+
+    private fun openDrawer() {
+        compose.onNodeWithContentDescription(compose.string(R.string.home_settings)).performClick()
+        compose.waitUntil(WAIT_MILLIS) { drawerOpen() }
     }
 
     /** Back goes to the window that has it, which for an open sheet is the sheet's own. */
@@ -169,6 +178,31 @@ class PhoneAppFlowTest {
         compose.onNodeWithText("München").performClick()
         waitForTrip()
         compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).assertIsDisplayed()
+    }
+
+    /** ModalDrawerSheet only handles back when it is given the drawer state. */
+    @Test
+    fun `back closes the drawer`() {
+        launch()
+        openDrawer()
+
+        pressBack()
+
+        compose.waitUntil(WAIT_MILLIS) { !drawerOpen() }
+        compose.onNodeWithText(chargeNowPill()).assertIsDisplayed()
+    }
+
+    @Test
+    fun `back closes the drawer before it touches the trip`() {
+        launch()
+        searchAndPick()
+        waitForTrip()
+        openDrawer()
+
+        pressBack()
+
+        compose.waitUntil(WAIT_MILLIS) { !drawerOpen() }
+        compose.onNodeWithText("München", substring = true).assertIsDisplayed()
     }
 
     @Test
