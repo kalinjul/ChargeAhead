@@ -133,7 +133,7 @@ dependencies {
     implementation(libs.car.app)
     implementation(libs.car.app.projected)
 
-    // Phone UI lives in its own module; the shell here only wires it up.
+    // Phone UI lives in its own module; MainActivity here only wires it up.
     implementation(project(":phone-ui"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)

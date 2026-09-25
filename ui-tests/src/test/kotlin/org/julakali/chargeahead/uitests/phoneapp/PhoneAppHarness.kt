@@ -1,4 +1,4 @@
-package org.julakali.chargeahead.uitests.shell
+package org.julakali.chargeahead.uitests.phoneapp
 
 import android.Manifest
 import android.app.Application

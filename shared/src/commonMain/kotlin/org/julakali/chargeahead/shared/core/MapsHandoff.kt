@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.core
 
+import io.ktor.http.encodeURLParameter
 import org.julakali.chargeahead.shared.domain.LatLon
 
 /**
@@ -43,6 +44,10 @@ object MapsHandoff {
 
     /** Straight to one place, from wherever the driver currently is. */
     fun navigateUrl(target: LatLon): String = directionsUrl(origin = null, destination = target)
+
+    /** A `geo:` URI pinned at [target] and labelled [label], for whichever navigation app the driver uses. */
+    fun geoUri(target: LatLon, label: String): String =
+        "geo:${target.asPlainParam()}?q=${target.asPlainParam()}(${label.encodeURLParameter()})"
 
     private fun LatLon.asParam(): String = "$lat%2C$lon"
 

@@ -66,17 +66,13 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.RankBadge
 import org.julakali.chargeahead.android.phone.components.SocEditDialog
 import org.julakali.chargeahead.android.phone.theme.tabular
-import org.julakali.chargeahead.shared.core.MapsHandoff
-import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.ui.TripListLayout
 import java.time.LocalTime
 import kotlin.math.roundToInt
-
-/** How the stops are laid out in the sheet. Tiles fit the peek and never expand. */
-enum class TripListLayout { LIST, TILES }
 
 /**
  * The planned trip as sheet content: section hint, then the stops as an
@@ -88,7 +84,6 @@ enum class TripListLayout { LIST, TILES }
 @Composable
 fun TripSheetContent(
     plan: TripPlan,
-    startPosition: LatLon?,
     startSocPercent: Double?,
     isSaved: Boolean,
     layout: TripListLayout,
@@ -102,7 +97,7 @@ fun TripSheetContent(
     onPickPoint: (Int) -> Unit,
     onSectionSent: () -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
-    onSendToMaps: (String) -> Unit,
+    onSendToMaps: () -> Unit,
     onToggleSave: () -> Unit,
     onEditStartSoc: () -> Unit,
     onSocInputChange: (String) -> Unit,
@@ -117,14 +112,6 @@ fun TripSheetContent(
     val selecting = selection.selecting
     val selectionA = selection.a
     val selectionB = selection.b
-
-    val pointCount = plan.stops.size + 2
-
-    fun pointPosition(index: Int): LatLon? = when (index) {
-        0 -> startPosition ?: plan.route.points.firstOrNull()
-        pointCount - 1 -> plan.destination.position
-        else -> plan.stops[index - 1].site.position
-    }
 
     // The quick charge-level entry behind the start row. Confirming it re-plans.
     socInput?.let { input ->
@@ -190,19 +177,7 @@ fun TripSheetContent(
             ) {
                 Button(
                     onClick = {
-                        val lo = minOf(selectionA ?: 0, selectionB ?: (pointCount - 1))
-                        val hi = maxOf(selectionA ?: 0, selectionB ?: (pointCount - 1))
-                        val useSelection = selecting && selectionA != null && selectionB != null
-                        val fromIndex = if (useSelection) lo else 0
-                        val toIndex = if (useSelection) hi else pointCount - 1
-                        // The origin stays "my location": with a fixed origin, Maps
-                        // only previews. The section's first point becomes a waypoint.
-                        val url = MapsHandoff.directionsUrl(
-                            origin = null,
-                            destination = pointPosition(toIndex) ?: plan.destination.position,
-                            waypoints = (maxOf(fromIndex, 1) until toIndex).mapNotNull { pointPosition(it) },
-                        )
-                        onSendToMaps(url)
+                        onSendToMaps()
                         onSectionSent()
                     },
                     shape = MaterialTheme.shapes.small,

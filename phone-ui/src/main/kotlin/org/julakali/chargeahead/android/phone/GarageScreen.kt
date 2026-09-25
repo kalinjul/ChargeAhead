@@ -30,8 +30,6 @@ import org.julakali.chargeahead.android.phone.components.SocEditDialog
 import org.julakali.chargeahead.android.phone.components.TickRow
 import org.julakali.chargeahead.android.phone.components.TickStyle
 import org.julakali.chargeahead.android.phone.theme.tabular
-import org.julakali.chargeahead.shared.core.RangeCalculator
-import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.ui.GarageUiState
@@ -139,6 +137,8 @@ fun GarageScreen(
             item {
                 SelectedVehiclePanel(
                     vehicle = selected,
+                    fullRangeKm = uiState.selectedFullRangeKm,
+                    presetConsumption = uiState.selectedPresetConsumption,
                     socPercent = uiState.socPercent,
                     socFromCar = uiState.socFromCar,
                     arrivalSocPercent = uiState.arrivalSocPercent,
@@ -155,6 +155,8 @@ fun GarageScreen(
 @Composable
 private fun SelectedVehiclePanel(
     vehicle: VehicleProfile,
+    fullRangeKm: Double?,
+    presetConsumption: Double?,
     socPercent: Double?,
     socFromCar: Boolean,
     arrivalSocPercent: Double,
@@ -175,13 +177,13 @@ private fun SelectedVehiclePanel(
                 stringResource(R.string.garage_connector) to stringResource(R.string.garage_connector_ccs),
                 stringResource(R.string.garage_range) to stringResource(
                     R.string.garage_range_value,
-                    RangeCalculator.rangeKm(vehicle, socPercent = 100.0, reserveSocPercent = 0.0).roundToInt(),
+                    fullRangeKm?.roundToInt() ?: 0,
                 ),
             ),
         )
 
         // Each slider keeps its drag state inside its own card.
-        ConsumptionCard(vehicle = vehicle, onSelect = onSelect)
+        ConsumptionCard(vehicle = vehicle, presetConsumption = presetConsumption, onSelect = onSelect)
         SocCard(socPercent = socPercent, socFromCar = socFromCar, onSocChange = onSocChange)
         ArrivalSocCard(percent = arrivalSocPercent, onEdit = onArrivalSocEdit)
 
@@ -192,12 +194,11 @@ private fun SelectedVehiclePanel(
 }
 
 @Composable
-private fun ConsumptionCard(vehicle: VehicleProfile, onSelect: (VehicleProfile) -> Unit) {
+private fun ConsumptionCard(vehicle: VehicleProfile, presetConsumption: Double?, onSelect: (VehicleProfile) -> Unit) {
     // Slider commits on release.
     var consumption by remember(vehicle.displayName) {
         mutableStateOf(vehicle.consumptionKwhPer100Km.toFloat())
     }
-    val presetConsumption = remember(vehicle.displayName) { presetConsumptionFor(vehicle.displayName) }
     AppCard {
         Column(modifier = Modifier.padding(13.dp)) {
             Text(
@@ -257,6 +258,3 @@ private fun ArrivalSocCard(percent: Double, onEdit: () -> Unit) {
         }
     }
 }
-
-private fun presetConsumptionFor(displayName: String): Double? =
-    VehicleCatalog.all.firstOrNull { it.name == displayName }?.consumptionKwhPer100Km

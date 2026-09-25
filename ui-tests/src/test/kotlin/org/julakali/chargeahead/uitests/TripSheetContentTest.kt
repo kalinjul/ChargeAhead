@@ -10,7 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.R
-import org.julakali.chargeahead.android.phone.TripListLayout
+import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.etaText
 import org.julakali.chargeahead.shared.domain.PlannedStop
@@ -36,7 +36,7 @@ class TripSheetContentTest {
         var pickedPoint: Int? = null
         var editStartSoc = false
         var editArrivalSoc = false
-        var sentUrl: String? = null
+        var sentToMaps = false
         var sectionSent = false
         var toggledSave = false
         var toggledSelecting = false
@@ -52,7 +52,6 @@ class TripSheetContentTest {
             Box(Modifier.fillMaxSize()) {
                 TripSheetContent(
                     plan = Fixtures.plan,
-                    startPosition = Fixtures.hamburg,
                     startSocPercent = 26.0,
                     isSaved = isSaved,
                     layout = layout,
@@ -63,7 +62,7 @@ class TripSheetContentTest {
                     onPickPoint = { calls.pickedPoint = it },
                     onSectionSent = { calls.sectionSent = true },
                     onOpenStop = { calls.openedStop = it },
-                    onSendToMaps = { calls.sentUrl = it },
+                    onSendToMaps = { calls.sentToMaps = true },
                     onToggleSave = { calls.toggledSave = true },
                     onEditStartSoc = { calls.editStartSoc = true },
                     onSocInputChange = {},
@@ -160,10 +159,10 @@ class TripSheetContentTest {
     }
 
     @Test
-    fun `send to maps hands over a directions url`() {
+    fun `send to maps hands over the trip and ends the section`() {
         val calls = sheet()
         compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
-        assertTrue(calls.sentUrl.orEmpty().startsWith("https://www.google.com/maps/dir/"))
+        assertTrue(calls.sentToMaps)
         assertTrue(calls.sectionSent)
     }
 

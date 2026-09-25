@@ -48,4 +48,12 @@ class MapsHandoffTest {
     fun `navigation uri without stops has no waypoints`() {
         assertEquals("google.navigation:q=48.14,11.58", MapsHandoff.navigationUri(LatLon(48.14, 11.58)))
     }
+
+    @Test
+    fun `geo uri pins the coordinate and encodes the label`() {
+        assertEquals(
+            "geo:48.14,11.58?q=48.14,11.58(EnBW%20M%C3%BCnchen%20%28Nord%29)",
+            MapsHandoff.geoUri(LatLon(48.14, 11.58), "EnBW München (Nord)"),
+        )
+    }
 }

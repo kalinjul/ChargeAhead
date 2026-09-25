@@ -1,7 +1,6 @@
-package org.julakali.chargeahead.uitests.shell
+package org.julakali.chargeahead.uitests.phoneapp
 
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -28,11 +27,11 @@ import org.robolectric.Shadows
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeSite
 
-/** The phone shell end to end, on the faked graph of [PhoneAppHarness]. */
+/** The phone app end to end, on the faked graph of [PhoneAppHarness]. */
 @RunWith(RobolectricTestRunner::class)
 // Robolectric's default screen is 320x470 dp; the trip sheet's peek is a third of that.
 @Config(qualifiers = "w411dp-h891dp-xxhdpi")
-class ShellFlowTest {
+class PhoneAppFlowTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
@@ -58,7 +57,7 @@ class ShellFlowTest {
     private fun waitForTextGone(text: String, substring: Boolean = false) =
         compose.waitUntil(WAIT_MILLIS) { countOf(text, substring) == 0 }
 
-    /** Search "Münch", pick the hit; leaves the shell in trip mode (or the snackbar, without a vehicle). */
+    /** Search "Münch", pick the hit; leaves the app in trip mode (or the snackbar, without a vehicle). */
     private fun searchAndPick() {
         compose.onNodeWithText(searchHint()).performClick()
         compose.onNodeWithText(searchHint()).performTextInput("Münch")
@@ -249,9 +248,7 @@ class ShellFlowTest {
         waitForText(compose.string(R.string.phone_detail_navigate))
         compose.onNodeWithText(compose.string(R.string.phone_detail_navigate)).performClick()
 
-        val url = nextStartedUrl()
-        assertTrue("expected a geo: uri, got $url", url.startsWith("geo:${stop.position.lat},${stop.position.lon}"))
-        assertTrue("the label should name the site: $url", url.contains(Uri.encode(stop.name)))
+        assertEquals(MapsHandoff.geoUri(stop.position, stop.name), nextStartedUrl())
     }
 
     private companion object {

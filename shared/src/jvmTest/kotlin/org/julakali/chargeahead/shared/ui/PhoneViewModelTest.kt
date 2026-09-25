@@ -151,6 +151,8 @@ class PhoneViewModelTest {
         val state = garage.uiState.await { it.selected != null }
         assertEquals(preset.name, state.selected?.displayName)
         assertEquals(listOf(preset.name), state.vehicles.map { it.displayName })
+        assertEquals(preset.consumptionKwhPer100Km, state.selectedPresetConsumption)
+        assertEquals(preset.usableBatteryKwh / preset.consumptionKwhPer100Km * 100, state.selectedFullRangeKm!!, 0.5)
         // Already owned, so the add screen stops offering it.
         assertTrue(addCar.uiState.await { preset !in it.matches }.matches.none { it.name == preset.name })
     }
