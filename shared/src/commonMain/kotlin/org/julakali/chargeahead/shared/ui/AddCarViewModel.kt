@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehiclePreset
+import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +23,8 @@ data class AddCarUiState(
 
 /** The add-car screen: search the catalog, tap to add. */
 class AddCarViewModel(
-    private val settings: SettingsStore,
+    settings: SettingsStore,
+    private val selectVehicle: SelectVehicleInteractor,
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
@@ -48,6 +50,6 @@ class AddCarViewModel(
 
     /** Adds the preset and selects it. */
     fun onPresetAdded(preset: VehiclePreset) {
-        viewModelScope.launch { settings.setVehicle(preset.toProfile()) }
+        viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(preset.toProfile())) }
     }
 }

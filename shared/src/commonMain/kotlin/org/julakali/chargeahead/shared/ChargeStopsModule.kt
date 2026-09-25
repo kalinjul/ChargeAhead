@@ -37,6 +37,11 @@ import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilit
 import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshNetworksInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RemoveSavedRouteInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RenameSavedRouteInteractor
+import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SiteRepository
@@ -47,6 +52,9 @@ import org.julakali.chargeahead.shared.domain.usecases.ToggleSavedRouteInteracto
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripStore
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.flow.first
 import org.koin.core.Koin
@@ -112,9 +120,17 @@ fun chargeStopsModule(): Module = module {
     factory { RefreshChargeNowInteractor(get(), get()) }
     factory { DestinationSearchObserver(get(), get()) }
     factory { PlanTripInteractor(get(), get(), get()) }
-    factory { UpdateArrivalSocInteractor(get(), get(), get()) }
+    factory { UpdateArrivalSocInteractor(get()) }
+    factory { ReplanWithArrivalSocInteractor(get(), get(), get()) }
     factory { SaveRouteInteractor(get()) }
     factory { ToggleSavedRouteInteractor(get()) }
+    factory { RenameSavedRouteInteractor(get()) }
+    factory { RemoveSavedRouteInteractor(get()) }
+    factory { SelectVehicleInteractor(get()) }
+    factory { RemoveVehicleInteractor(get()) }
+    factory { UpdateManualSocInteractor(get()) }
+    factory { UpdateChargeFiltersInteractor(get()) }
+    factory { UpdateNetworksInteractor(get()) }
     factory { ChargeStopsObserver(get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     single<NetworkRepository> {

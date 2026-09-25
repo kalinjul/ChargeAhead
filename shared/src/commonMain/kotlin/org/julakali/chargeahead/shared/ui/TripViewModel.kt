@@ -12,7 +12,8 @@ import org.julakali.chargeahead.shared.domain.usecases.ToggleSavedRouteInteracto
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripStore
-import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -97,13 +98,14 @@ sealed interface TripEvent {
 class TripViewModel(
     private val feature: ChargeStopsFeature,
     private val planTrip: PlanTripInteractor,
-    private val updateArrivalSoc: UpdateArrivalSocInteractor,
+    private val replanWithArrivalSoc: ReplanWithArrivalSocInteractor,
     private val toggleSavedRoute: ToggleSavedRouteInteractor,
+    private val updateManualSoc: UpdateManualSocInteractor,
     private val tripStore: TripStore,
     private val settings: SettingsStore,
 ) : ViewModel() {
 
-    private val isPlanning = combine(planTrip.inProgress, updateArrivalSoc.inProgress) { plan, replan -> plan || replan }
+    private val isPlanning = combine(planTrip.inProgress, replanWithArrivalSoc.inProgress) { plan, replan -> plan || replan }
     private val selection = MutableStateFlow(SectionSelection())
     private val socEditor = MutableStateFlow<String?>(null)
     private val arrivalSocEditor = MutableStateFlow<String?>(null)
@@ -149,7 +151,7 @@ class TripViewModel(
         arrivalSocEditor.value = null
         viewModelScope.launch {
             // Persisted alongside, so the plan starts at once.
-            launch { socPercent?.let { settings.setManualSocPercent(it) } }
+            launch { socPercent?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)) } }
             planTrip(PlanTripInteractor.Params(from, destination, startSocPercent = socPercent))
                 .onSuccess(::onPlanned)
                 .onFailure { events.value = TripEvent.NoRoute }
@@ -235,7 +237,7 @@ class TripViewModel(
         val from = feature.currentFix.value?.position ?: return
         arrivalSocEditor.value = null
         viewModelScope.launch {
-            updateArrivalSoc(UpdateArrivalSocInteractor.Params(socPercent.toDouble(), from))
+            replanWithArrivalSoc(ReplanWithArrivalSocInteractor.Params(socPercent.toDouble(), from))
                 .onSuccess { result -> result?.let(::onPlanned) }
                 .onFailure { events.value = TripEvent.NoRoute }
         }

@@ -3,14 +3,13 @@ package org.julakali.chargeahead.shared.domain.usecases
 import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.SettingsStore
 
-/** Stores how full the battery should still be at the destination. */
-class UpdateArrivalSocInteractor(
+class RemoveVehicleInteractor(
     private val settings: SettingsStore,
-) : Interactor<UpdateArrivalSocInteractor.Params, Unit>() {
+) : Interactor<RemoveVehicleInteractor.Params, Unit>() {
 
-    data class Params(val socPercent: Double)
+    data class Params(val displayName: String)
 
     override suspend fun doWork(params: Params) {
-        settings.setArrivalSocPercent(params.socPercent)
+        settings.removeVehicle(params.displayName)
     }
 }

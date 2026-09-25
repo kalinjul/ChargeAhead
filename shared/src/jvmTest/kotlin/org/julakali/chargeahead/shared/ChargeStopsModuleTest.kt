@@ -9,8 +9,16 @@ import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
 import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshNetworksInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RemoveSavedRouteInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RenameSavedRouteInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.flow.Flow
@@ -52,6 +60,14 @@ class ChargeStopsModuleTest {
         withGraph { koin ->
             koin.get<PlanTripInteractor>()
             koin.get<UpdateArrivalSocInteractor>()
+            koin.get<ReplanWithArrivalSocInteractor>()
+            koin.get<RenameSavedRouteInteractor>()
+            koin.get<RemoveSavedRouteInteractor>()
+            koin.get<SelectVehicleInteractor>()
+            koin.get<RemoveVehicleInteractor>()
+            koin.get<UpdateManualSocInteractor>()
+            koin.get<UpdateChargeFiltersInteractor>()
+            koin.get<UpdateNetworksInteractor>()
             koin.get<ChargeNowObserver>()
             koin.get<ChargeStopsObserver>()
             koin.get<DestinationSearchObserver>()

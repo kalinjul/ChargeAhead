@@ -58,7 +58,16 @@ The worked example is `MapChargersObserver`, used by `HomeViewModel`.
 8. **Koin: `factory`, not `single`.** A `SubjectInteractor` keeps its params
    per instance; two ViewModels sharing one would steer each other. Declare
    it in `chargeStopsModule()` next to its ports.
-9. **Observers are used only in ViewModels — and in car screens.** The
+9. **A `SettingsStore` write from the UI is an interactor.** Reads stay
+   direct — a ViewModel or car screen puts `settings.vehicle` straight into
+   `combine()` — but neither ever calls a setter. One write, one interactor
+   (`SelectVehicleInteractor`, `UpdateManualSocInteractor`,
+   `UpdateNetworksInteractor`, …); an interactor that writes and then does
+   more composes the write one (`ReplanWithArrivalSocInteractor` over
+   `UpdateArrivalSocInteractor`). A `data` source writing back what it
+   observed (`RememberingSoCSource`, `CarHardwareSoCSource`) is not a UI
+   event and keeps its direct write.
+10. **Observers are used only in ViewModels — and in car screens.** The
     Swift bridge or a feature class never calls a `SubjectInteractor` or
     collects its `flow`; it goes through the shared ViewModel for that
     screen and collects its `uiState`, created with `ViewModelHost` and

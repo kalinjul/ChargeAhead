@@ -4,6 +4,8 @@ import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
+import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import androidx.lifecycle.ViewModelProvider
@@ -45,6 +47,9 @@ class NetworksViewModelTest {
     private fun settings() =
         TrackingSettingsStore(PersistentSettingsStore(InMemoryPreferencesDataStore()))
 
+    private fun networksViewModel(settings: SettingsStore, listed: List<Network> = LISTED) =
+        NetworksViewModel(settings, FixedNetworkRepository(listed), UpdateNetworksInteractor(settings))
+
     @Test
     fun `networks that dropped off the list show only while selected`() = runBlocking<Unit> {
         val settings = settings()
@@ -54,7 +59,7 @@ class NetworksViewModelTest {
             Network("ladenetz", "ladenetz.de", rank = null),
         )
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("enbw")))
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(stored))
+        val vm = networksViewModel(settings, stored)
 
         val state = vm.uiState.await { it.networks.isNotEmpty() }
         assertEquals(setOf("kaufland", "enbw"), state.networks.map { it.key }.toSet())
@@ -64,7 +69,7 @@ class NetworksViewModelTest {
     fun `a selected network the list never had shows under its key`() = runBlocking<Unit> {
         val settings = settings()
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("stadtwerke-kiel")))
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         val state = vm.uiState.await { it.networks.isNotEmpty() }
         assertEquals("stadtwerke-kiel", state.networks.first().name, "selected, so on top")
@@ -78,7 +83,7 @@ class NetworksViewModelTest {
     @Test
     fun `toggling stages without touching settings`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         vm.onNetworkToggled("enbw")
 
@@ -90,7 +95,7 @@ class NetworksViewModelTest {
     @Test
     fun `leaving the screen commits the staged selection`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         vm.onNetworkToggled("enbw")
         vm.uiState.await { it.selected == setOf("enbw") }
@@ -105,7 +110,7 @@ class NetworksViewModelTest {
         val settings = SlowSettingsStore(PersistentSettingsStore(InMemoryPreferencesDataStore()))
         val store = ViewModelStore()
         val vm = ViewModelProvider.create(store, viewModelFactory {
-            initializer { NetworksViewModel(settings, FixedNetworkRepository(LISTED)) }
+            initializer { networksViewModel(settings) }
         })[NetworksViewModel::class]
 
         vm.onNetworkToggled("enbw")
@@ -121,7 +126,7 @@ class NetworksViewModelTest {
     @Test
     fun `leaving without an edit writes nothing`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
         vm.uiState.await { it.networks.isNotEmpty() }
 
         vm.onLeave()
@@ -132,7 +137,7 @@ class NetworksViewModelTest {
     @Test
     fun `toggling twice removes the network`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         vm.onNetworkToggled("tesla")
         vm.uiState.await { "tesla" in it.selected }
@@ -145,7 +150,7 @@ class NetworksViewModelTest {
     @Test
     fun `only preferred is on by default and survives a commit`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         assertTrue(vm.uiState.await { it.networks.isNotEmpty() }.onlyPreferred)
 
@@ -161,7 +166,7 @@ class NetworksViewModelTest {
     @Test
     fun `a second visit starts from what was stored`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         vm.onNetworkToggled("enbw")
         vm.uiState.await { it.selected == setOf("enbw") }
@@ -175,7 +180,7 @@ class NetworksViewModelTest {
     @Test
     fun `search filters the catalog by folded name`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         vm.onSearchChanged("ionity")
 
@@ -191,7 +196,7 @@ class NetworksViewModelTest {
     @Test
     fun `clearing search restores the full catalog`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         vm.onSearchChanged("ionity")
         vm.onSearchChanged("")
@@ -207,7 +212,7 @@ class NetworksViewModelTest {
         // top by accident.
         val key = LISTED.last().key
         settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf(key)))
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         val state = vm.uiState.await { it.selected == setOf(key) }
         assertEquals(key, state.networks.first().key)
@@ -217,7 +222,7 @@ class NetworksViewModelTest {
     @Test
     fun `ticking a network does not reshuffle the open list`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
         vm.onEnter()
         val key = LISTED.last().key
 
@@ -231,7 +236,7 @@ class NetworksViewModelTest {
     @Test
     fun `clearing the search floats a network ticked while searching to the top`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
         val network = LISTED.last()
         vm.onEnter()
         vm.uiState.await { it.networks.isNotEmpty() }
@@ -250,7 +255,7 @@ class NetworksViewModelTest {
     @Test
     fun `the next visit floats the newly ticked network to the top`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
         val key = LISTED.last().key
 
         vm.onEnter()
@@ -267,7 +272,7 @@ class NetworksViewModelTest {
     @Test
     fun `unselected networks are alphabetical`() = runBlocking<Unit> {
         val settings = settings()
-        val vm = NetworksViewModel(settings, FixedNetworkRepository(LISTED))
+        val vm = networksViewModel(settings)
 
         val names = vm.uiState.await { it.networks.isNotEmpty() }.networks
             .map { OperatorKey.folded(it.name) }
@@ -281,7 +286,7 @@ class NetworksViewModelTest {
 /** Writes the way DataStore does: only after a hop to another thread. */
 private class SlowSettingsStore(
     private val delegate: PersistentSettingsStore,
-) : org.julakali.chargeahead.shared.domain.SettingsStore by delegate {
+) : SettingsStore by delegate {
 
     override suspend fun setNetworks(preferences: NetworkPreferences) = withContext(Dispatchers.IO) {
         delay(50)
@@ -292,7 +297,7 @@ private class SlowSettingsStore(
 /** Wraps a real SettingsStore to record setNetworks calls for assertion. */
 private class TrackingSettingsStore(
     private val delegate: PersistentSettingsStore,
-) : org.julakali.chargeahead.shared.domain.SettingsStore by delegate {
+) : SettingsStore by delegate {
 
     val saved = mutableListOf<NetworkPreferences>()
 

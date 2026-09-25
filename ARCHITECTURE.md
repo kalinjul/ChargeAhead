@@ -645,6 +645,14 @@ are Koin `factory` declarations, one per ViewModel. `MapChargersObserver` is
 the worked example; the rules are in the `interactors` skill. The planned
 trip lives in `TripStore`, a single, so phone and car show the same one.
 
+A `SettingsStore` write from the UI goes through one of them
+(`SelectVehicleInteractor`, `UpdateManualSocInteractor`, …). ViewModels and
+car screens read the store's flows directly, but never call a setter — that
+keeps one write in one place, testable without a ViewModel and with an
+`inProgress` flag of its own. Data sources that write back what they
+observed (`RememberingSoCSource`, `CarHardwareSoCSource`) still write
+directly.
+
 **Scoping.** `SettingsStore` (`appModule`, androidApp) and the phone's
 `ChargeStopsFeature` and `TripStore` (`chargeStopsModule`, shared) are
 application-scoped Koin singletons — the

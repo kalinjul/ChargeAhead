@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.SavedRoute
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.usecases.RemoveSavedRouteInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RenameSavedRouteInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SaveRouteInteractor
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -19,8 +21,10 @@ data class RoutesUiState(
 
 /** The saved-routes sheet: rename, delete, and make a recent destination a favourite. */
 class RoutesViewModel(
-    private val settings: SettingsStore,
+    settings: SettingsStore,
     private val saveRoute: SaveRouteInteractor,
+    private val renameSavedRoute: RenameSavedRouteInteractor,
+    private val removeSavedRoute: RemoveSavedRouteInteractor,
 ) : ViewModel() {
 
     val uiState: StateFlow<RoutesUiState> = combine(
@@ -31,11 +35,11 @@ class RoutesViewModel(
     }.stateIn(viewModelScope, WhileUiSubscribed, RoutesUiState())
 
     fun onRenamed(route: SavedRoute, name: String) {
-        viewModelScope.launch { settings.renameSavedRoute(route.id, name) }
+        viewModelScope.launch { renameSavedRoute(RenameSavedRouteInteractor.Params(route.id, name)) }
     }
 
     fun onDeleted(route: SavedRoute) {
-        viewModelScope.launch { settings.removeSavedRoute(route.id) }
+        viewModelScope.launch { removeSavedRoute(RemoveSavedRouteInteractor.Params(route.id)) }
     }
 
     /** Turns a recent destination into a favourite, without a summary. */

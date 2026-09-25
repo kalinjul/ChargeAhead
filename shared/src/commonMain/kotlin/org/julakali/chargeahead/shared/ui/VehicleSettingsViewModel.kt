@@ -8,6 +8,8 @@ import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -39,8 +41,10 @@ data class VehicleSettingsUiState(
  * level. Every valid change is written through immediately.
  */
 class VehicleSettingsViewModel(
-    private val settings: SettingsStore,
+    settings: SettingsStore,
     feature: ChargeStopsFeature,
+    private val selectVehicle: SelectVehicleInteractor,
+    private val updateManualSoc: UpdateManualSocInteractor,
 ) : ViewModel() {
 
     // null = untouched, the form mirrors what is stored.
@@ -83,13 +87,13 @@ class VehicleSettingsViewModel(
 
     fun onSocChanged(socInput: String) {
         editForm { it.copy(socInput = socInput) }
-        viewModelScope.launch { settings.setManualSocPercent(socInput.toPercentOrNull()) }
+        viewModelScope.launch { updateManualSoc(UpdateManualSocInteractor.Params(socInput.toPercentOrNull())) }
     }
 
     /** Clears the profile and the form — the driver starts over. */
     fun onVehicleCleared() {
         form.value = Form()
-        viewModelScope.launch { settings.setVehicle(null) }
+        viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(null)) }
     }
 
     private fun edit(change: (Form) -> Form) {
@@ -97,15 +101,12 @@ class VehicleSettingsViewModel(
         // Incomplete input stores no profile.
         val battery = updated.battery.toPositiveDoubleOrNull()
         val consumption = updated.consumption.toPositiveDoubleOrNull()
-        viewModelScope.launch {
-            settings.setVehicle(
-                if (battery == null || consumption == null) {
-                    null
-                } else {
-                    VehicleProfile(updated.name.trim(), battery, consumption, updated.connectors)
-                },
-            )
+        val profile = if (battery == null || consumption == null) {
+            null
+        } else {
+            VehicleProfile(updated.name.trim(), battery, consumption, updated.connectors)
         }
+        viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(profile)) }
     }
 
     private fun editForm(change: (Form) -> Form): Form {
