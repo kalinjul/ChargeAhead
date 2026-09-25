@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.combine
+import org.julakali.chargeahead.shared.core.RangeCalculator
 import org.julakali.chargeahead.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
+import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +30,10 @@ data class GarageUiState(
     val arrivalSocPercent: Double = DEFAULT_ARRIVAL_SOC_PERCENT,
     /** The arrival-level dialog's entry; `null` while it is closed. */
     val arrivalSocInput: String? = null,
+    /** The selected car's range on a full battery, down to 0 %. */
+    val selectedFullRangeKm: Double? = null,
+    /** The catalog consumption, when the selected car was added from a preset. */
+    val selectedPresetConsumption: Double? = null,
 )
 
 /** The garage screen: choose, edit, remove a car. */
@@ -53,6 +59,8 @@ class GarageViewModel(
             socFromCar = energy?.source == SoCSourceKind.CAR_HARDWARE,
             arrivalSocPercent = arrivalSoc,
             arrivalSocInput = arrivalEditor,
+            selectedFullRangeKm = selected?.let { RangeCalculator.rangeKm(it, socPercent = 100.0, reserveSocPercent = 0.0) },
+            selectedPresetConsumption = selected?.let { VehicleCatalog.presetFor(it.displayName)?.consumptionKwhPer100Km },
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, GarageUiState())
 

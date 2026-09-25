@@ -9,7 +9,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
 import org.julakali.chargeahead.android.phone.DestinationHeader
-import org.julakali.chargeahead.android.phone.TripListLayout
+import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.TripSummary
 import org.julakali.chargeahead.android.phone.headerLine
@@ -20,7 +20,6 @@ private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionS
     SheetBox {
         TripSheetContent(
             plan = SamplePlan,
-            startPosition = Hamburg,
             startSocPercent = 80.0,
             isSaved = isSaved,
             layout = layout,

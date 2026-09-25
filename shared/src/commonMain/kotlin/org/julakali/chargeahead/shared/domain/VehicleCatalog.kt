@@ -378,4 +378,6 @@ object VehicleCatalog {
         VehiclePreset("Ora Funky Cat (63 kWh)", 59.3, 16.5, 67.0),                     // CCS, 420 km
         VehiclePreset("Aiways U5", 63.0, 17.0, 90.0)                                   // CCS, 410 km)
     )
+
+    fun presetFor(name: String): VehiclePreset? = all.firstOrNull { it.name == name }
 }

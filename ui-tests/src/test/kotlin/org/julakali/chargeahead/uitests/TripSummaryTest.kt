@@ -7,7 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.R
-import org.julakali.chargeahead.android.phone.TripListLayout
+import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.julakali.chargeahead.android.phone.TripSummary
 import org.junit.Assert.assertTrue
 import org.junit.Rule

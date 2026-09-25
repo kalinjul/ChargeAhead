@@ -1,10 +1,5 @@
 package org.julakali.chargeahead.android.phone
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +27,7 @@ import org.julakali.chargeahead.android.phone.components.Fineprint
 import org.julakali.chargeahead.android.phone.components.NetworkDot
 import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.shared.ChargeStopFormatter
+import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 
@@ -120,7 +116,10 @@ fun ChargeStopDetailSheet(
         }
 
         Button(
-            onClick = { context.startNavigationTo(stop); onDismiss() },
+            onClick = {
+                context.openMapsLink(MapsHandoff.geoUri(stop.site.position, stop.site.name))
+                onDismiss()
+            },
             shape = MaterialTheme.shapes.medium,
             // AppSheet leaves the bottom inset to whatever ends the sheet.
             modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 24.dp),
@@ -133,18 +132,5 @@ fun ChargeStopDetailSheet(
             Spacer(Modifier.width(7.dp))
             Text(stringResource(R.string.phone_detail_navigate))
         }
-    }
-}
-
-/** Navigates by coordinates, labelled with the name. */
-private fun Context.startNavigationTo(stop: ChargeStop) {
-    val position = stop.site.position
-    val label = Uri.encode(stop.site.name)
-    val uri = Uri.parse("geo:${position.lat},${position.lon}?q=${position.lat},${position.lon}($label)")
-
-    try {
-        startActivity(Intent(Intent.ACTION_VIEW, uri))
-    } catch (notFound: ActivityNotFoundException) {
-        Toast.makeText(this, getString(R.string.phone_detail_no_navigation), Toast.LENGTH_LONG).show()
     }
 }

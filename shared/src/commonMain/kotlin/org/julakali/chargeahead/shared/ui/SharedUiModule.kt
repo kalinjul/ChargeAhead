@@ -9,6 +9,7 @@ import org.koin.dsl.module
 fun sharedUiModule(): Module = module {
     // Not viewModelOf: it would try to inject the defaulted timeout parameter.
     viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModelOf(::ShellViewModel)
     viewModelOf(::TripViewModel)
     viewModelOf(::SearchViewModel)
     viewModelOf(::ChargeNowViewModel)

@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.uitests.shell
 
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -249,9 +248,7 @@ class ShellFlowTest {
         waitForText(compose.string(R.string.phone_detail_navigate))
         compose.onNodeWithText(compose.string(R.string.phone_detail_navigate)).performClick()
 
-        val url = nextStartedUrl()
-        assertTrue("expected a geo: uri, got $url", url.startsWith("geo:${stop.position.lat},${stop.position.lon}"))
-        assertTrue("the label should name the site: $url", url.contains(Uri.encode(stop.name)))
+        assertEquals(MapsHandoff.geoUri(stop.position, stop.name), nextStartedUrl())
     }
 
     private companion object {

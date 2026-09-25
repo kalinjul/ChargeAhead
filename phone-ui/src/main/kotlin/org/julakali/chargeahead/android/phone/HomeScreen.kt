@@ -53,7 +53,8 @@ enum class HomeMode { BROWSING, SEARCHING, TRIP }
 /** The map screen with its state holder attached. */
 @Composable
 fun HomeRoute(
-    hasPermission: Boolean,
+    /** `null` until the platform has been asked. */
+    hasPermission: Boolean?,
     planningInProgress: Boolean,
     mode: HomeMode,
     route: RouteOverlay?,
@@ -82,7 +83,7 @@ fun HomeRoute(
 
     // The pipeline may only run once the permission is there.
     LaunchedEffect(hasPermission) {
-        if (hasPermission) viewModel.onLocationPermissionGranted()
+        if (hasPermission == true) viewModel.onLocationPermissionGranted()
     }
 
     HomeScreen(
@@ -119,7 +120,7 @@ fun HomeRoute(
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
-    hasPermission: Boolean,
+    hasPermission: Boolean?,
     planningInProgress: Boolean,
     mode: HomeMode,
     route: RouteOverlay?,
@@ -148,7 +149,7 @@ fun HomeScreen(
                 chargers = if (mode == HomeMode.TRIP) emptyList() else uiState.chargers,
                 route = route,
                 bottomInset = mapBottomInset,
-                hasLocationPermission = hasPermission,
+                hasLocationPermission = hasPermission == true,
                 cameraPositionState = camera,
                 onViewportChanged = onViewportChanged,
                 onChargerTapped = onChargerTapped,
@@ -259,7 +260,7 @@ fun HomeScreen(
             }
         }
 
-        if (!hasPermission) {
+        if (hasPermission == false) {
             Surface(
                 shape = MaterialTheme.shapes.medium,
                 color = MaterialTheme.colorScheme.surface,
