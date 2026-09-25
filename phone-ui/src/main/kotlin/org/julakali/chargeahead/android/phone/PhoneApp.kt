@@ -28,20 +28,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation3.runtime.rememberNavBackStack
-import org.julakali.chargeahead.android.phone.components.AppSheet
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeStop
-import org.julakali.chargeahead.shared.domain.Destination
-import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.DrawerUiState
 import org.julakali.chargeahead.shared.ui.DrawerViewModel
 import org.julakali.chargeahead.shared.ui.HomeViewModel
 import org.julakali.chargeahead.shared.ui.SearchViewModel
-import org.julakali.chargeahead.shared.ui.PhoneAppSheet
 import org.julakali.chargeahead.shared.ui.PhoneAppViewModel
 import org.julakali.chargeahead.shared.ui.TripEvent
 import org.julakali.chargeahead.shared.ui.TripUiState
@@ -53,8 +48,8 @@ import java.time.LocalTime
 import kotlin.math.roundToInt
 
 /**
- * The phone app: wires the map chrome, the page back stack and the
- * sheets together. [librariesRes] is the AboutLibraries JSON, generated in the
+ * The phone app: wires the map screen and the navigator's destinations
+ * together. [librariesRes] is the AboutLibraries JSON, generated in the
  * app module that owns all dependencies.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,22 +78,16 @@ fun PhoneApp(librariesRes: Int) {
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
     val clock = LocalNow.current
-    val backStack = rememberNavBackStack(Home)
-
-    fun pop() {
-        if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
-    }
-
-    // Drawer targets never stack on each other.
-    fun openFromRoot(target: PhoneDestination) {
-        while (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
-        if (target != Home) backStack.add(target)
-    }
+    val navigator = rememberPhoneNavigator()
 
     fun closeSearch() {
         phoneAppViewModel.onSearchClosed()
         focusManager.clearFocus()
         searchViewModel.onClosed()
+    }
+
+    fun collapseTripSheet() {
+        scope.launch { sheetState.partialExpand() }
     }
 
     fun sendToMaps(link: String) {
@@ -115,14 +104,14 @@ fun PhoneApp(librariesRes: Int) {
             closeSearch()
             scope.launch { sheetState.partialExpand() }
         },
-        onOpenGarage = { openFromRoot(Garage) },
+        onOpenGarage = { navigator.openFromRoot(Garage) },
     )
 
     PhoneAppDrawer(
         drawerState = drawerState,
         uiState = drawerUi,
         // The drawer stays open underneath the page.
-        onOpen = ::openFromRoot,
+        onOpen = { target -> navigator.openFromRoot(target.destination) },
         onFilters = drawerViewModel::onFiltersChanged,
     ) {
         TripSheetScaffold(
@@ -139,7 +128,7 @@ fun PhoneApp(librariesRes: Int) {
             onSendToMaps = ::sendToMaps,
             viewModel = tripViewModel,
         ) { peek ->
-            // Just the map, built once and kept. Full-screen pages are a
+            // Just the map, built once and kept. Pages and sheets are a
             // separate layer above the drawer (below).
             HomeRoute(
                 hasPermission = phoneAppUi.hasLocationPermission,
@@ -154,8 +143,8 @@ fun PhoneApp(librariesRes: Int) {
                 onRequestPermission = phoneAppViewModel::onLocationPermissionRequested,
                 onLocate = phoneAppViewModel::onLocateRequested,
                 onSettings = { scope.launch { drawerState.open() } },
-                onChargeNow = { phoneAppViewModel.onSheetOpened(PhoneAppSheet.CHARGE_NOW) },
-                onRoutes = { phoneAppViewModel.onSheetOpened(PhoneAppSheet.ROUTES) },
+                onChargeNow = { navigator.open(ChargeNow) },
+                onRoutes = { navigator.open(Routes) },
                 onDismissSearch = ::closeSearch,
                 onStopTapped = { index ->
                     planned?.plan?.stops?.getOrNull(index - 1)?.let { homeViewModel.onSiteSelected(it.site) }
@@ -204,42 +193,33 @@ fun PhoneApp(librariesRes: Int) {
         }
     }
 
-    PhonePages(
-        backStack = backStack,
+    PhoneNavDisplay(
+        navigator = navigator,
         librariesRes = librariesRes,
         preferredNetworkCount = drawerUi.preferredNetworkCount,
-        onBack = ::pop,
         onCarAdded = { preset -> snackbar.show(scope, context.getString(R.string.garage_added, preset.name)) },
-        modifier = Modifier.fillMaxSize(),
-    )
-
-    PhoneAppSheets(
-        sheet = phoneAppUi.sheet,
-        onDismiss = phoneAppViewModel::onSheetDismissed,
-        onNavigate = { position -> sendToMaps(MapsHandoff.navigateUrl(position)) },
+        onNavigateTo = { position -> sendToMaps(MapsHandoff.navigateUrl(position)) },
         onOpenRoute = { destination ->
-            phoneAppViewModel.onSheetDismissed()
+            navigator.back()
             // Reopening a route keeps the stored charge level.
             tripViewModel.plan(destination)
         },
+        modifier = Modifier.fillMaxSize(),
     )
 
-    // With no page on top, back peels the chrome layer by layer: sheet,
-    // drawer, search, expanded trip sheet, the trip itself.
-    val atRoot = backStack.size == 1
-    val sheetExpanded = planned != null && sheetState.currentValue == SheetValue.Expanded
-    val sheetOpen = phoneAppUi.sheet != PhoneAppSheet.NONE
-    BackHandler(
-        enabled = sheetOpen || (atRoot && (drawerState.isOpen || phoneAppUi.searching || sheetExpanded || planned != null)),
-    ) {
+    // What back takes away on the map screen, outermost first. No step for the
+    // drawer: ModalNavigationDrawer closes itself on back, and a step here would
+    // take that — and its predictive-back animation — away from it.
+    navigator.ScreenStep(
         when {
-            sheetOpen -> phoneAppViewModel.onSheetDismissed()
-            drawerState.isOpen -> scope.launch { drawerState.close() }
-            phoneAppUi.searching -> closeSearch()
-            sheetExpanded -> scope.launch { sheetState.partialExpand() }
-            planned != null -> tripViewModel.clear()
-        }
-    }
+            drawerState.isOpen -> null
+            phoneAppUi.searching -> ::closeSearch
+            planned != null && sheetState.currentValue == SheetValue.Expanded -> ::collapseTripSheet
+            planned != null -> tripViewModel::clear
+            else -> null
+        },
+    )
+    BackHandler(enabled = navigator.ownsBack) { navigator.back() }
 }
 
 /** The settings drawer, from the right edge. */
@@ -247,7 +227,7 @@ fun PhoneApp(librariesRes: Int) {
 private fun PhoneAppDrawer(
     drawerState: DrawerState,
     uiState: DrawerUiState,
-    onOpen: (PhoneDestination) -> Unit,
+    onOpen: (DrawerTarget) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
     content: @Composable () -> Unit,
 ) {
@@ -259,7 +239,8 @@ private fun PhoneAppDrawer(
             gesturesEnabled = drawerState.isOpen,
             drawerContent = {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+                    // The overload with the state is the one that handles back itself.
+                    ModalDrawerSheet(drawerState, drawerContainerColor = MaterialTheme.colorScheme.surface) {
                         DrawerContent(uiState = uiState, onOpen = onOpen, onFilters = onFilters)
                     }
                 }
@@ -268,26 +249,6 @@ private fun PhoneAppDrawer(
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 content()
             }
-        }
-    }
-}
-
-@Composable
-private fun PhoneAppSheets(
-    sheet: PhoneAppSheet,
-    onDismiss: () -> Unit,
-    onNavigate: (LatLon) -> Unit,
-    onOpenRoute: (Destination) -> Unit,
-) {
-    when (sheet) {
-        PhoneAppSheet.NONE -> Unit
-
-        PhoneAppSheet.CHARGE_NOW -> AppSheet(onDismissRequest = onDismiss) {
-            ChargeNowRoute(onNavigate = { candidate -> onNavigate(candidate.site.position) })
-        }
-
-        PhoneAppSheet.ROUTES -> AppSheet(onDismissRequest = onDismiss) {
-            RoutesRoute(onOpen = onOpenRoute)
         }
     }
 }

@@ -660,18 +660,25 @@ ViewModels share them, because two instances would mean two location streams
 and two stores that never see each other's writes. The ViewModels are
 declared in `sharedUiModule` (`shared/ui/SharedUiModule.kt`, so iOS can
 start the same graph later) and resolved with Koin's `koinViewModel()`.
-Navigation is a Navigation3 back stack
-(`androidApp/.../phone/Destinations.kt`) whose `NavDisplay` carries
+Navigation goes through `PhoneNavigator`
+(`phone-ui/.../PhoneNavigator.kt`), the single owner of a Navigation3 back
+stack; nothing else touches it. Its destinations
+(`phone-ui/.../Destinations.kt`) are full-screen pages and, marked as
+`PhoneSheet`, the sheets over the map — `SheetSceneStrategy` draws those as
+an `OverlayScene`, so there is one back stack and not a second state machine
+beside it. The `NavDisplay` carries
 `rememberViewModelStoreNavEntryDecorator()` (lifecycle-viewmodel-navigation3):
-every page gets its own ViewModelStore, cleared when it leaves the back
-stack. The chrome outside `NavDisplay` — map, search bar, drawer, trip
+every destination gets its own ViewModelStore, cleared when it leaves the back
+stack. What sits outside `NavDisplay` — map, search bar, drawer, trip
 sheet — resolves against the activity, so `SearchViewModel`, `TripViewModel`
 and friends are shared between `PhoneApp` and the composables that draw them.
+Leaf components stay out of it: `DrawerContent` emits a `DrawerTarget`, and
+`PhoneApp` decides which destination that is.
 The map is the one screen: the search bar plans directly on a pick, the plan
 shows as a `BottomSheetScaffold` sheet over the same map, and the drawer
 opens from the right.
 
-**What stays in the UI.** Which page is showing, which sheet is open, the
+**What stays in the UI.** Which destination is showing, the
 Android permission handshake, and state that only lives for a gesture (a
 slider mid-drag). Everything that should survive a rotation is in a
 ViewModel — including form text, which is state, not display: "17," is a

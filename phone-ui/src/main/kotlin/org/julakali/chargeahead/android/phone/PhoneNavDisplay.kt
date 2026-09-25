@@ -12,40 +12,45 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
-import androidx.navigation3.runtime.NavBackStack
-import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import org.julakali.chargeahead.android.phone.components.AppTopBar
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 
 /**
- * The full-screen pages, a layer above the drawer. The empty [Home] slot lets
- * the map and drawer show through.
+ * Everything the navigator can open: full-screen pages, and the sheets that
+ * float over the map. The empty [Home] slot lets the map and drawer show through.
  */
 @Composable
-fun PhonePages(
-    backStack: NavBackStack<NavKey>,
+fun PhoneNavDisplay(
+    navigator: PhoneNavigator,
     librariesRes: Int,
     preferredNetworkCount: Int,
-    onBack: () -> Unit,
     onCarAdded: (VehiclePreset) -> Unit,
+    onNavigateTo: (LatLon) -> Unit,
+    onOpenRoute: (Destination) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavDisplay(
-        backStack = backStack,
-        onBack = onBack,
-        // Each page gets its own ViewModelStore, cleared when it leaves the
-        // back stack. The chrome (drawer, map, sheets) is outside, so its
-        // ViewModels stay activity-scoped.
+        backStack = navigator.backStack,
+        onBack = navigator::back,
+        // Each destination gets its own ViewModelStore, cleared when it leaves
+        // the back stack. The map screen around it — drawer, search, trip sheet
+        // — is outside, so its ViewModels stay activity-scoped.
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator(),
         ),
+        // Held across recompositions: NavDisplay recalculates every scene when
+        // the list changes, and strategies compare by identity.
+        sceneStrategies = remember { listOf(SheetSceneStrategy()) },
         transitionSpec = {
             slideInHorizontally(tween(300)) { it } togetherWith fadeOut(tween(300))
         },
@@ -56,20 +61,20 @@ fun PhonePages(
             entry<Home> { }
 
             entry<Garage> {
-                Page(title = stringResource(R.string.garage_title), onBack = onBack) { pagePadding ->
+                Page(title = stringResource(R.string.garage_title), onBack = navigator::back) { pagePadding ->
                     GarageRoute(
-                        onOpenAdvanced = { backStack.add(VehicleEdit) },
-                        onOpenAdd = { backStack.add(AddCar) },
+                        onOpenAdvanced = { navigator.open(VehicleEdit) },
+                        onOpenAdd = { navigator.open(AddCar) },
                         modifier = Modifier.fillMaxSize().padding(pagePadding),
                     )
                 }
             }
 
             entry<AddCar> {
-                Page(title = stringResource(R.string.garage_add_title), onBack = onBack) { pagePadding ->
+                Page(title = stringResource(R.string.garage_add_title), onBack = navigator::back) { pagePadding ->
                     AddCarRoute(
                         onAdded = { preset ->
-                            onBack()
+                            navigator.back()
                             onCarAdded(preset)
                         },
                         modifier = Modifier.fillMaxSize().padding(pagePadding),
@@ -78,7 +83,7 @@ fun PhonePages(
             }
 
             entry<VehicleEdit> {
-                Page(title = stringResource(R.string.phone_settings_title), onBack = onBack) { pagePadding ->
+                Page(title = stringResource(R.string.phone_settings_title), onBack = navigator::back) { pagePadding ->
                     VehicleSettingsRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
@@ -87,28 +92,36 @@ fun PhonePages(
                 Page(
                     title = stringResource(R.string.phone_networks_title),
                     subtitle = networksSummary(preferredNetworkCount),
-                    onBack = onBack,
+                    onBack = navigator::back,
                 ) { pagePadding ->
                     NetworksRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<CarData> {
-                Page(title = stringResource(R.string.cardata_title), onBack = onBack) { pagePadding ->
+                Page(title = stringResource(R.string.cardata_title), onBack = navigator::back) { pagePadding ->
                     CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<Legal> {
-                Page(title = stringResource(R.string.drawer_legal), onBack = onBack) { pagePadding ->
+                Page(title = stringResource(R.string.drawer_legal), onBack = navigator::back) { pagePadding ->
                     LegalScreen(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<Licenses> {
-                Page(title = stringResource(R.string.drawer_licenses), onBack = onBack) { pagePadding ->
+                Page(title = stringResource(R.string.drawer_licenses), onBack = navigator::back) { pagePadding ->
                     LicensesRoute(librariesRes = librariesRes, modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
+            }
+
+            entry<ChargeNow>(metadata = SheetSceneStrategy.sheet()) {
+                ChargeNowRoute(onNavigate = { candidate -> onNavigateTo(candidate.site.position) })
+            }
+
+            entry<Routes>(metadata = SheetSceneStrategy.sheet()) {
+                RoutesRoute(onOpen = onOpenRoute)
             }
         },
         modifier = modifier,

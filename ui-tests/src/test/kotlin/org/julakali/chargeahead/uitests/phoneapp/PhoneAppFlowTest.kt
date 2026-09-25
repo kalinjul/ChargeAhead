@@ -2,7 +2,9 @@ package org.julakali.chargeahead.uitests.phoneapp
 
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.activity.ComponentDialog
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.isDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -24,6 +26,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.Shadows
+import org.robolectric.shadows.ShadowDialog
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeSite
 
@@ -71,7 +74,20 @@ class PhoneAppFlowTest {
         waitForText("München", substring = true)
     }
 
-    private fun pressBack() = compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+    /** The drawer content stays composed while closed, so displayed is the tell, not existence. */
+    private fun drawerOpen() = compose.onNodeWithText(compose.string(R.string.drawer_car)).isDisplayed()
+
+    private fun openDrawer() {
+        compose.onNodeWithContentDescription(compose.string(R.string.home_settings)).performClick()
+        compose.waitUntil(WAIT_MILLIS) { drawerOpen() }
+    }
+
+    /** Back goes to the window that has it, which for an open sheet is the sheet's own. */
+    private fun pressBack() = compose.runOnUiThread {
+        val sheet = ShadowDialog.getLatestDialog() as? ComponentDialog
+        val dispatcher = if (sheet?.isShowing == true) sheet.onBackPressedDispatcher else compose.activity.onBackPressedDispatcher
+        dispatcher.onBackPressed()
+    }
 
     @Test
     fun `typing a destination and picking it plans a trip`() {
@@ -162,6 +178,31 @@ class PhoneAppFlowTest {
         compose.onNodeWithText("München").performClick()
         waitForTrip()
         compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).assertIsDisplayed()
+    }
+
+    /** ModalDrawerSheet only handles back when it is given the drawer state. */
+    @Test
+    fun `back closes the drawer`() {
+        launch()
+        openDrawer()
+
+        pressBack()
+
+        compose.waitUntil(WAIT_MILLIS) { !drawerOpen() }
+        compose.onNodeWithText(chargeNowPill()).assertIsDisplayed()
+    }
+
+    @Test
+    fun `back closes the drawer before it touches the trip`() {
+        launch()
+        searchAndPick()
+        waitForTrip()
+        openDrawer()
+
+        pressBack()
+
+        compose.waitUntil(WAIT_MILLIS) { !drawerOpen() }
+        compose.onNodeWithText("München", substring = true).assertIsDisplayed()
     }
 
     @Test

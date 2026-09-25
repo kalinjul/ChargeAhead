@@ -41,11 +41,14 @@ import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.ui.DrawerUiState
 import kotlin.math.roundToInt
 
+/** What a drawer row asks for; the app decides which destination that is. */
+enum class DrawerTarget { VEHICLE, NETWORKS, LEGAL, LICENSES, CAR_DATA }
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DrawerContent(
     uiState: DrawerUiState,
-    onOpen: (PhoneDestination) -> Unit,
+    onOpen: (DrawerTarget) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
 ) {
     val filters = uiState.filters
@@ -82,7 +85,7 @@ fun DrawerContent(
                 icon = painterResource(R.drawable.ic_car),
                 label = stringResource(R.string.drawer_car),
                 sublabel = uiState.vehicleName ?: stringResource(R.string.drawer_car_none),
-                onClick = { onOpen(Garage) },
+                onClick = { onOpen(DrawerTarget.VEHICLE) },
             )
         }
 
@@ -92,7 +95,7 @@ fun DrawerContent(
                 icon = painterResource(R.drawable.ic_filter),
                 label = stringResource(R.string.drawer_networks),
                 sublabel = networksSummary(uiState.preferredNetworkCount),
-                onClick = { onOpen(Networks) },
+                onClick = { onOpen(DrawerTarget.NETWORKS) },
             )
         }
 
@@ -121,12 +124,12 @@ fun DrawerContent(
             PrefRow(
                 icon = painterResource(R.drawable.ic_info),
                 label = stringResource(R.string.drawer_legal),
-                onClick = { onOpen(Legal) },
+                onClick = { onOpen(DrawerTarget.LEGAL) },
             )
             PrefRow(
                 icon = painterResource(R.drawable.ic_document),
                 label = stringResource(R.string.drawer_licenses),
-                onClick = { onOpen(Licenses) },
+                onClick = { onOpen(DrawerTarget.LICENSES) },
             )
         }
 
@@ -136,7 +139,7 @@ fun DrawerContent(
             PrefRow(
                 icon = painterResource(R.drawable.ic_send),
                 label = stringResource(R.string.drawer_cardata),
-                onClick = { onOpen(CarData) },
+                onClick = { onOpen(DrawerTarget.CAR_DATA) },
             )
         }
     }
