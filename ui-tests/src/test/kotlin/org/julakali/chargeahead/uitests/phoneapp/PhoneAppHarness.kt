@@ -30,6 +30,7 @@ import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.Place
+import org.julakali.chargeahead.shared.domain.PlannedTripStorage
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SearchArea
@@ -105,6 +106,7 @@ class PhoneAppHarness {
         single<ChargePointStatusRepository> { NoStatuses }
         single<DataSourceDirectory> { NoDataSources }
         single<NetworkRepository> { NoNetworks }
+        single<PlannedTripStorage> { PlannedTripStorage.None }
         single { BackendConfig("http://localhost", "token") }
         single { DatabaseFactory(androidContext()) }
     }

@@ -189,7 +189,7 @@ class TripViewModel(
         selection.value = SectionSelection()
         socEditor.value = null
         arrivalSocEditor.value = null
-        tripStore.clear()
+        viewModelScope.launch { tripStore.clear() }
     }
 
     private fun onPlanned(result: TripPlanResult) {

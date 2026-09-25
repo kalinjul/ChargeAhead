@@ -51,6 +51,9 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 # ViewModel, multiplatform: AndroidX publishes this artifact for iOS and JVM
 # too, so the shared ViewModels compile for every target (plans/technical-debts).
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
+# SavedStateHandle, so ViewModel state survives process death. Multiplatform
+# like the ViewModel artifact itself.
+androidx-lifecycle-viewmodel-savedstate = { module = "androidx.lifecycle:lifecycle-viewmodel-savedstate", version.ref = "lifecycle" }
 
 # The backend's wire contract. Served from the backend itself, see
 # settings.gradle.kts.

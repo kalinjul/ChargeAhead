@@ -644,6 +644,9 @@ repositories itself; the ViewModel puts its `flow` into `combine()`. They
 are Koin `factory` declarations, one per ViewModel. `MapChargersObserver` is
 the worked example; the rules are in the `interactors` skill. The planned
 trip lives in `TripStore`, a single, so phone and car show the same one.
+It writes every plan through to a `plannedTrip` row (`PlannedTripStorage`,
+Room) and reads it back when the feature starts, so a trip survives process
+death and a restart. Only dismissing it, or a schema bump, drops it.
 
 A `SettingsStore` write from the UI goes through one of them
 (`SelectVehicleInteractor`, `UpdateManualSocInteractor`, …). ViewModels and
