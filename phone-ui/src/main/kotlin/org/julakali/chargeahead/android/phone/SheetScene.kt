@@ -17,6 +17,10 @@ import org.julakali.chargeahead.android.phone.components.AppSheet
 /**
  * Draws entries marked with [sheet] in an [AppSheet] above whatever sits below
  * them on the back stack, so a sheet is an ordinary destination.
+ *
+ * Back for such an entry does not come from the `NavDisplay` — an overlay is
+ * not its current scene — but from the sheet's own window, which dismisses it
+ * and lands on [onBack].
  */
 class SheetSceneStrategy<T : Any> : SceneStrategy<T> {
 

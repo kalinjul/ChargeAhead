@@ -203,21 +203,30 @@ fun PhoneApp(librariesRes: Int) {
         modifier = Modifier.fillMaxSize(),
     )
 
-    // Only while the back stack is at the map: back then peels the chrome
-    // layer by layer — drawer, search, expanded trip sheet, the trip itself.
-    // A page or sheet on top takes back first and pops itself.
-    val sheetExpanded = planned != null && sheetState.currentValue == SheetValue.Expanded
-    BackHandler(
-        enabled = navigator.atRoot && (drawerState.isOpen || phoneAppUi.searching || sheetExpanded || planned != null),
-    ) {
-        when {
-            drawerState.isOpen -> scope.launch { drawerState.close() }
-            phoneAppUi.searching -> closeSearch()
-            sheetExpanded -> scope.launch { sheetState.partialExpand() }
-            planned != null -> tripViewModel.clear()
+    // The chrome layer back peels next, or null when back belongs to the back
+    // stack or there is nothing left to peel. Naming the layer keeps the
+    // handler from being enabled for one it then does not close.
+    val chromeLayer = when {
+        !navigator.atRoot -> null
+        drawerState.isOpen -> ChromeLayer.DRAWER
+        phoneAppUi.searching -> ChromeLayer.SEARCH
+        planned != null && sheetState.currentValue == SheetValue.Expanded -> ChromeLayer.TRIP_SHEET
+        planned != null -> ChromeLayer.TRIP
+        else -> null
+    }
+    BackHandler(enabled = chromeLayer != null) {
+        when (chromeLayer) {
+            ChromeLayer.DRAWER -> scope.launch { drawerState.close() }
+            ChromeLayer.SEARCH -> closeSearch()
+            ChromeLayer.TRIP_SHEET -> scope.launch { sheetState.partialExpand() }
+            ChromeLayer.TRIP -> tripViewModel.clear()
+            null -> Unit
         }
     }
 }
+
+/** What back takes away around the map, outermost first. */
+private enum class ChromeLayer { DRAWER, SEARCH, TRIP_SHEET, TRIP }
 
 /** The settings drawer, from the right edge. */
 @Composable
