@@ -59,13 +59,4 @@ class PhoneAppViewModelTest {
         viewModel.onTripLayoutChanged(TripListLayout.LIST)
         assertEquals(true, viewModel.uiState.value.tripExpandable)
     }
-
-    @Test
-    fun `sheets open and close`() {
-        viewModel.onSheetOpened(PhoneAppSheet.ROUTES)
-        assertEquals(PhoneAppSheet.ROUTES, viewModel.uiState.value.sheet)
-
-        viewModel.onSheetDismissed()
-        assertEquals(PhoneAppSheet.NONE, viewModel.uiState.value.sheet)
-    }
 }

@@ -2,6 +2,7 @@ package org.julakali.chargeahead.uitests.phoneapp
 
 import android.content.Intent
 import androidx.activity.ComponentActivity
+import androidx.activity.ComponentDialog
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -24,6 +25,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.Shadows
+import org.robolectric.shadows.ShadowDialog
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeSite
 
@@ -71,7 +73,12 @@ class PhoneAppFlowTest {
         waitForText("München", substring = true)
     }
 
-    private fun pressBack() = compose.runOnUiThread { compose.activity.onBackPressedDispatcher.onBackPressed() }
+    /** Back goes to the window that has it, which for an open sheet is the sheet's own. */
+    private fun pressBack() = compose.runOnUiThread {
+        val sheet = ShadowDialog.getLatestDialog() as? ComponentDialog
+        val dispatcher = if (sheet?.isShowing == true) sheet.onBackPressedDispatcher else compose.activity.onBackPressedDispatcher
+        dispatcher.onBackPressed()
+    }
 
     @Test
     fun `typing a destination and picking it plans a trip`() {
