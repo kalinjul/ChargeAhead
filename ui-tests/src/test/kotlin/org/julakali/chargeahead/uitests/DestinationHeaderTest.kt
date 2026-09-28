@@ -21,9 +21,9 @@ class DestinationHeaderTest {
 
     @Test
     fun `title and subtitle are shown`() {
-        compose.setThemedContent { DestinationHeader("München", "790 km · 9 h 0 min · 3 Stopps", onClear = {}, onTitleClick = {}) }
+        compose.setThemedContent { DestinationHeader("München", "790 km · 9h 0m", onClear = {}, onTitleClick = {}) }
         compose.onNodeWithText("München").assertIsDisplayed()
-        compose.onNodeWithText("790 km · 9 h 0 min · 3 Stopps").assertIsDisplayed()
+        compose.onNodeWithText("790 km · 9h 0m").assertIsDisplayed()
     }
 
     @Test

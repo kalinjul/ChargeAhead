@@ -126,7 +126,7 @@ fun DestinationHeaderWithPlanDark() = DestinationHeaderWithPlan()
 fun DestinationHeaderNarrowLongTrip() {
     PreviewScaffold {
         Box(Modifier.width(260.dp).padding(8.dp)) {
-            DestinationHeader(title = "Kiel", subtitle = "873 km · 11h 16min · 5 Stopps", onClear = {}, onTitleClick = {})
+            DestinationHeader(title = "Kiel", subtitle = "873 km · 11h 16m", onClear = {}, onTitleClick = {})
         }
     }
 }

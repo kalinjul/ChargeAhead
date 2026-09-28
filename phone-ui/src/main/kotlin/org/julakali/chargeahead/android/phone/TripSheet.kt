@@ -494,7 +494,7 @@ private fun StopTiles(
     }
 }
 
-/** Charging total, the layout switch and the way back into the search; the numbers sit in the header. */
+/** Stops and charging total, the layout switch and the way back into the search; distance and time sit in the header. */
 @Composable
 fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Unit, onReplan: () -> Unit) {
     Column {
@@ -506,7 +506,10 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
                 .fillMaxWidth(),
         ) {
             Text(
-                stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)),
+                listOf(
+                    pluralStringResource(R.plurals.trip_summary_stops, plan.stops.size, plan.stops.size),
+                    stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)),
+                ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall.tabular,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -546,24 +549,19 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
     }
 }
 
-/** "312 km · 3 h 10 min · 2 Stopps" for the destination header. */
+/** "312 km · 3h 10m" for the destination header. */
 @Composable
 fun TripPlan.headerLine(): String = listOf(
     stringResource(R.string.trip_summary_distance, route.distanceKm.roundToInt()),
-    minutesText(totalMinutes, compact = true),
-    pluralStringResource(R.plurals.trip_summary_stops, stops.size, stops.size),
+    minutesText(totalMinutes),
 ).joinToString(" · ")
 
-/** "9 h 16 min" or "42 min" — durations, not clock times. [compact] drops the inner spaces for the header. */
-fun minutesText(minutes: Double, compact: Boolean = false): String {
+/** "9h 16m" or "42 min" — durations, not clock times; one shape for the header and the sheet. */
+fun minutesText(minutes: Double): String {
     val total = minutes.roundToInt()
     val hours = total / 60
     val rest = total % 60
-    return when {
-        hours > 0 && compact -> "${hours}h ${rest}min"
-        hours > 0 -> "$hours h $rest min"
-        else -> "$rest min"
-    }
+    return if (hours > 0) "${hours}h ${rest}m" else "$rest min"
 }
 
 /** The clock the trip rows read; tests pin it so times don't drift. */
