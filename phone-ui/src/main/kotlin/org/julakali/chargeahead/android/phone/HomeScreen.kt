@@ -239,8 +239,7 @@ fun HomeScreen(
                         )
                     }
                 }
-                if (!searching) {
-                    Spacer(Modifier.width(10.dp))
+                SideButton(visible = !searching, trailingGap = false) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
