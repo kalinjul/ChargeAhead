@@ -12,6 +12,7 @@ import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
+import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.TripStore
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
@@ -217,6 +218,20 @@ class TripViewModel(
     fun onStartSocEditRequested() {
         viewModelScope.launch {
             socEditor.value = settings.manualSocPercent.first()?.roundToInt()?.toString().orEmpty()
+        }
+    }
+
+    /**
+     * "Neu planen": with the car reporting its charge, plan right away from
+     * where we are; otherwise ask for the level first, and the confirm plans.
+     */
+    fun onReplanRequested() {
+        val destination = tripStore.plan.value?.destination ?: return
+        val energy = feature.currentEnergy.value
+        if (energy != null && energy.source != SoCSourceKind.MANUAL) {
+            plan(destination)
+        } else {
+            onStartSocEditRequested()
         }
     }
 

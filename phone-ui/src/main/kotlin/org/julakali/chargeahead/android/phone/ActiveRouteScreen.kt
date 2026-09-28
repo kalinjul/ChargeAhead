@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.julakali.chargeahead.android.phone.components.SocEditDialog
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
@@ -75,8 +76,12 @@ fun ActiveRouteRoute(
             onSectionSent = viewModel::onSectionSent,
             onOpenStop = onOpenStop,
             onSendToMaps = { uiState.mapsUrl?.let(onSendToMaps) },
-            onReplan = viewModel::replan,
+            onReplan = viewModel::onReplanRequested,
             onEnd = viewModel::endTrip,
+            socInput = uiState.socInput,
+            onSocInputChange = viewModel::onSocInputChanged,
+            onSocConfirm = viewModel::onSocConfirmed,
+            onSocDismiss = viewModel::onSocEditDismissed,
             modifier = Modifier.fillMaxSize(),
         )
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
@@ -101,8 +106,25 @@ fun ActiveRouteScreen(
     onReplan: () -> Unit,
     onEnd: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The charge-level prompt before re-planning; `null` while closed. */
+    socInput: String? = null,
+    onSocInputChange: (String) -> Unit = {},
+    onSocConfirm: () -> Unit = {},
+    onSocDismiss: () -> Unit = {},
 ) {
     val plan = trip.plan
+    // Without a car reading, "Neu planen" asks for the level first.
+    socInput?.let { input ->
+        SocEditDialog(
+            value = input,
+            title = stringResource(R.string.soc_dialog_title),
+            confirmLabel = stringResource(R.string.trip_soc_confirm),
+            onValueChange = onSocInputChange,
+            onConfirm = onSocConfirm,
+            onDismiss = onSocDismiss,
+            supportingText = stringResource(R.string.active_route_soc_hint),
+        )
+    }
     Column(modifier) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,

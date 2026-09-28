@@ -38,7 +38,7 @@ class ActiveRouteScreenTest {
         var toggledSelecting = false
     }
 
-    private fun screen(selection: SectionSelection = SectionSelection()): Calls {
+    private fun screen(selection: SectionSelection = SectionSelection(), socInput: String? = null): Calls {
         val calls = Calls()
         compose.setThemedContent {
             Box(Modifier.fillMaxSize()) {
@@ -53,6 +53,7 @@ class ActiveRouteScreenTest {
                     onSendToMaps = { calls.sentToMaps = true },
                     onReplan = { calls.replanned = true },
                     onEnd = { calls.ended = true },
+                    socInput = socInput,
                 )
             }
         }
@@ -95,5 +96,12 @@ class ActiveRouteScreenTest {
         assertTrue(calls.replanned)
         compose.onNodeWithText(compose.string(R.string.active_route_end)).performClick()
         assertTrue(calls.ended)
+    }
+
+    @Test
+    fun `the charge-level prompt says why it is asking`() {
+        screen(socInput = "42")
+        compose.onNodeWithText(compose.string(R.string.soc_dialog_title)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(R.string.active_route_soc_hint)).assertIsDisplayed()
     }
 }

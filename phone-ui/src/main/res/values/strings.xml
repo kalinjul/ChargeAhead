@@ -133,6 +133,7 @@
     <string name="active_route_end">Navigieren beenden</string>
     <string name="active_route_ended">Navigation beendet</string>
     <string name="active_route_replanned">Route von hier neu geplant</string>
+    <string name="active_route_soc_hint">Das Auto meldet keinen Ladestand. Bitte den aktuellen Wert eingeben, damit die Route von hier neu geplant wird.</string>
     <string name="home_settings">Einstellungen</string>
     <string name="home_search_hint">Wohin?</string>
     <string name="home_search_clear">Eingabe löschen</string>
@@ -269,8 +270,6 @@
     <string name="garage_range_value">≈ %1$d km</string>
     <string name="garage_consumption">Dein Verbrauch: %1$s kWh/100 km</string>
     <string name="garage_consumption_hint">Datenblatt sagt %1$s — an die eigene Fahrweise anpassen. Gemeint ist der Wert bei rund 100 km/h; für schnellere oder langsamere Abschnitte rechnet die Planung selbst um.</string>
-    <string name="garage_soc">Ladestand: %1$d %%</string>
-    <string name="garage_soc_unset">Ladestand: nicht eingetragen</string>
     <string name="garage_search">Fahrzeug suchen</string>
     <string name="garage_added">%1$s steht jetzt in der Garage</string>
     <string name="garage_add_title">Auto hinzufügen</string>

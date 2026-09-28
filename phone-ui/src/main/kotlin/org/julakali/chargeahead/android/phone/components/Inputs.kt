@@ -157,6 +157,8 @@ fun SocEditDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     valueRange: ClosedFloatingPointRange<Float> = SOC_RANGE,
+    /** Why the dialog is asking, e.g. the car did not report a level. */
+    supportingText: String? = null,
 ) {
     val percent = value.toIntOrNull()?.takeIf { it.toFloat() in valueRange }
     // The keyboard comes up with the dialog.
@@ -167,6 +169,14 @@ fun SocEditDialog(
         title = { Text(title) },
         text = {
             Column {
+                supportingText?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
+                }
                 OutlinedTextField(
                     value = value,
                     onValueChange = onValueChange,

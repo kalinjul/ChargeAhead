@@ -123,6 +123,7 @@ fun TripSheetContent(
             onValueChange = onSocInputChange,
             onConfirm = onSocConfirm,
             onDismiss = onSocDismiss,
+            supportingText = stringResource(R.string.active_route_soc_hint),
         )
     }
 

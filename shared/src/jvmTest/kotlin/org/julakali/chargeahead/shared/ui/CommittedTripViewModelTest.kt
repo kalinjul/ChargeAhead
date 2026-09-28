@@ -28,6 +28,7 @@ import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlin.test.AfterTest
@@ -52,6 +53,7 @@ class CommittedTripViewModelTest {
     private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
     private val store = TripStore()
     private var plannedFrom: LatLon? = null
+    private var plannedSoc: Double? = null
 
     private fun plan(from: LatLon) = TripPlan(
         route = Route(listOf(from, muenchen.position), distanceKm = 776.0, durationMinutes = 470.0),
@@ -73,6 +75,7 @@ class CommittedTripViewModelTest {
             networks: NetworkPreferences,
         ): TripPlanResult {
             plannedFrom = from
+            plannedSoc = startSocPercent
             return TripPlanResult.Planned(plan(from))
         }
     }
@@ -91,6 +94,7 @@ class CommittedTripViewModelTest {
         planTrip = PlanTripInteractor(planner, settings, store),
         commitTrip = CommitTripInteractor(settings) { 42L },
         endTrip = EndTripInteractor(settings),
+        updateManualSoc = UpdateManualSocInteractor(settings),
         tripStore = store,
     )
 
@@ -151,5 +155,54 @@ class CommittedTripViewModelTest {
         assertTrue(viewModel.uiState.value.mapsUrl!!.contains("48.137"))
         viewModel.onSectionSent()
         assertEquals(SectionSelection(), viewModel.uiState.value.selection)
+    }
+
+    @Test
+    fun `neu planen without a car reading asks for the level, seeded with the stored one`() = runBlocking {
+        commitFromHamburg()
+        settings.setManualSocPercent(47.0)
+        feature.locate()
+        val viewModel = viewModel()
+        viewModel.uiState.first { it.trip != null }
+
+        viewModel.onReplanRequested()
+
+        assertEquals("47", withTimeout(5_000) { viewModel.uiState.first { it.socInput != null } }.socInput)
+        assertNull(plannedFrom, "nothing planned before the level is confirmed")
+    }
+
+    @Test
+    fun `the confirmed level drives the re-plan and is kept`() = runBlocking {
+        commitFromHamburg()
+        feature.locate()
+        val viewModel = viewModel()
+        viewModel.uiState.first { it.trip != null }
+        viewModel.onReplanRequested()
+        withTimeout(5_000) { viewModel.uiState.first { it.socInput != null } }
+
+        viewModel.onSocInputChanged("3")
+        viewModel.onSocInputChanged("35")
+        viewModel.onSocConfirmed()
+        withTimeout(5_000) { viewModel.event.first { it != null } }
+
+        assertEquals(35.0, plannedSoc)
+        assertEquals(35.0, settings.manualSocPercent.first())
+        assertEquals(35.0, settings.committedTrip.first()!!.startSocPercent)
+        assertNull(viewModel.uiState.value.socInput)
+    }
+
+    @Test
+    fun `dismissing the prompt plans nothing`() = runBlocking {
+        commitFromHamburg()
+        feature.locate()
+        val viewModel = viewModel()
+        viewModel.uiState.first { it.trip != null }
+        viewModel.onReplanRequested()
+        withTimeout(5_000) { viewModel.uiState.first { it.socInput != null } }
+
+        viewModel.onSocEditDismissed()
+
+        assertNull(viewModel.uiState.value.socInput)
+        assertNull(plannedFrom)
     }
 }

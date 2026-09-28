@@ -154,21 +154,6 @@ class PhoneAppFlowTest {
     }
 
     @Test
-    fun `neu planen plans the same destination again without opening the search`() {
-        launch()
-        searchAndPick()
-        waitForTrip()
-
-        compose.onNodeWithText(compose.string(R.string.trip_replan)).performClick()
-        compose.waitForIdle()
-
-        // No search panel, the trip header is (still, or again) there.
-        compose.onNodeWithText(searchHint()).assertDoesNotExist()
-        waitForTrip()
-        compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).assertIsDisplayed()
-    }
-
-    @Test
     fun `aktive route is dimmed until a trip was sent, then shows it until navigieren beenden`() {
         launch()
         val pill = compose.string(R.string.home_pill_active_route)

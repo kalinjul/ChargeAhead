@@ -143,8 +143,8 @@ fun PhoneApp(librariesRes: Int) {
             sheetState = sheetState,
             snackbar = snackbar,
             onLayoutChanged = phoneAppViewModel::onTripLayoutChanged,
-            // Same destination, today's settings and charge: no search, just plan again.
-            onReplan = { planned?.let { tripViewModel.plan(it.plan.destination) } },
+            // Same destination, today's settings; the charge level is asked for unless the car reports it.
+            onReplan = tripViewModel::onReplanRequested,
             onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
             // Sending is committing: the plan becomes the active route, whose page is confirmation enough.
             onSendToMaps = { url ->
