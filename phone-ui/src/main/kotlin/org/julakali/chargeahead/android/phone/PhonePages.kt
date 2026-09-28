@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -58,9 +59,9 @@ fun PhonePages(
         transitionSpec = {
             slideInHorizontally(ChargeAheadMotion.page()) { it } togetherWith fadeOut(ChargeAheadMotion.page())
         },
-        popTransitionSpec = {
-            fadeIn(ChargeAheadMotion.page()) togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }
-        },
+        popTransitionSpec = { pageSlideOut() },
+        // Navigation 3 scales and fades on a back gesture by default; the page should just slide, as on a tap.
+        predictivePopTransitionSpec = { _ -> pageSlideOut() },
         entryProvider = entryProvider {
             entry<Home> { }
 
@@ -161,3 +162,7 @@ private fun Page(
         content = content,
     )
 }
+
+/** The page slides off to the right while what was under it shows again. */
+private fun pageSlideOut(): ContentTransform =
+    fadeIn(ChargeAheadMotion.page()) togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }
