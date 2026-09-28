@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,7 +35,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -247,7 +245,7 @@ fun HomeScreen(
                     ) {
                         val bearing = camera.position.bearing
                         if (bearing != 0f) {
-                            RoundIconButton(onClick = {
+                            CompassButton(bearing = { camera.position.bearing }) {
                                 scope.launch {
                                     camera.animate(
                                         CameraUpdateFactory.newCameraPosition(
@@ -255,14 +253,6 @@ fun HomeScreen(
                                         ),
                                     )
                                 }
-                            }) {
-                                Icon(
-                                    imageVector = Icons.Filled.Navigation,
-                                    contentDescription = stringResource(R.string.map_compass),
-                                    tint = Color(0xFFD93025),
-                                    // Counter-rotated to point north. graphicsLayer, so only the draw is invalidated.
-                                    modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -camera.position.bearing },
-                                )
                             }
                         }
                         // A charger source is being asked over the network.

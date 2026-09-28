@@ -97,7 +97,8 @@ fun HomeSearchBar(
     PillContainer(standalone) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = startPadding, end = 6.dp).fillMaxWidth(),
+            // As tall as Material's field, so the pill matches the buttons beside it.
+            modifier = Modifier.defaultMinSize(minHeight = CHROME_HEIGHT).padding(start = startPadding, end = 6.dp).fillMaxWidth(),
         ) {
             AnimatedVisibility(
                 visible = expanded,

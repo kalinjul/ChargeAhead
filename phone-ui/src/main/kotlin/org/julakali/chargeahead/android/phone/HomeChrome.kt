@@ -11,6 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.Icons
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,10 +23,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** The top chrome's height: Material's search field is 56dp, everything beside it matches. */
+/** The bar's height: Material's search field is 56dp; the destination header matches it. */
 val CHROME_HEIGHT = 56.dp
 
-/** Floating circle, as tall as the search bar next to it. */
+/** 46dp floating circle: the bar may be taller, the buttons stay light. */
 @Composable
 fun RoundIconButton(
     onClick: () -> Unit,
@@ -34,7 +38,7 @@ fun RoundIconButton(
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 6.dp,
-        modifier = modifier.size(CHROME_HEIGHT),
+        modifier = modifier.size(46.dp),
     ) {
         Box(contentAlignment = Alignment.Center) { content() }
     }
@@ -87,3 +91,19 @@ fun HomePill(
         }
     }
 }
+
+/** North needle, counter-rotated against the map's [bearing]. Shown only while the map is rotated. */
+@Composable
+fun CompassButton(bearing: () -> Float, onClick: () -> Unit) {
+    RoundIconButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.Filled.Navigation,
+            contentDescription = stringResource(R.string.map_compass),
+            tint = CompassRed,
+            // graphicsLayer, so a turning map only invalidates the draw.
+            modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -bearing() },
+        )
+    }
+}
+
+private val CompassRed = Color(0xFFD93025)
