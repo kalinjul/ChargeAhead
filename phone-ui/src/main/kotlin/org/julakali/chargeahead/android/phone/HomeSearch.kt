@@ -43,7 +43,7 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.TopAppBar
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.layout.onSizeChanged
@@ -186,14 +186,11 @@ fun HomeSearchBar(
 fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, onTitleClick: () -> Unit, standalone: Boolean = true) {
     PillContainer(standalone) {
         // Material's subtitle app bar is still expressive-only in 1.4.0, so the title slot stacks both lines.
-        CenterAlignedTopAppBar(
+        TopAppBar(
             title = {
                 // A clickable surface, so the tap ripples like any other Material button.
                 Surface(onClick = onTitleClick, shape = CircleShape, color = Color.Transparent) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
+                    Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                         Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(
                             subtitle,
@@ -220,7 +217,7 @@ fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, onTi
             // Same height as the search bar it fades into, so the slot doesn't grow mid-fade.
             expandedHeight = CHROME_HEIGHT,
             windowInsets = WindowInsets(0),
-            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
         )
     }
 }
