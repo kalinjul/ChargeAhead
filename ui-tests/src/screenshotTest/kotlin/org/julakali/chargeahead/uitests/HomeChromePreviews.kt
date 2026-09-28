@@ -14,6 +14,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
+import org.julakali.chargeahead.android.phone.CompassButton
 import org.julakali.chargeahead.android.phone.HintChip
 import org.julakali.chargeahead.android.phone.HomePill
 import org.julakali.chargeahead.android.phone.R
@@ -59,10 +60,10 @@ fun HomePillsChargeNowAndFavorites() {
 @PreviewTest
 @Preview(showBackground = true)
 @Composable
-fun RoundIconButtonWithBadge() {
+fun RoundIconButtonMenu() {
     PreviewScaffold {
         Box(Modifier.padding(12.dp)) {
-            RoundIconButton(onClick = {}, badge = true) {
+            RoundIconButton(onClick = {}) {
                 RoundIcon(painterResource(R.drawable.ic_filter), contentDescription = "Filter")
             }
         }
@@ -103,3 +104,14 @@ fun StationCardChargeNowDark() = StationCardChargeNow()
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun HintChipPlainDark() = HintChipPlain()
+
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun CompassButtonRotated() {
+    PreviewScaffold {
+        Box(Modifier.padding(12.dp)) {
+            CompassButton(bearing = { 45f }, onClick = {})
+        }
+    }
+}

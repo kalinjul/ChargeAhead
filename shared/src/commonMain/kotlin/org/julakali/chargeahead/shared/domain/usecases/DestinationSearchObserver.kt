@@ -35,7 +35,7 @@ class DestinationSearchObserver(
         emit(DestinationSearch(query, previous, searching = true))
         if (params.debounce) delay(DEBOUNCE_MILLIS)
         val near = cancellableRunCatching { locationSource.currentFix() }.getOrNull()?.position
-        val results = cancellableRunCatching { geocoder.search(query, near) }.getOrNull()
+        val results = cancellableRunCatching { geocoder.search(query, near, limit = RESULT_LIMIT) }.getOrNull()
         previous = results
         emit(DestinationSearch(query, results, searching = false))
     }
@@ -45,5 +45,8 @@ class DestinationSearchObserver(
         const val MIN_QUERY_LENGTH = 3
 
         const val DEBOUNCE_MILLIS = 600L
+
+        /** Same-named places are common ("Bremen" is five towns); the list scrolls, so ask for more than fit. */
+        const val RESULT_LIMIT = 10
     }
 }

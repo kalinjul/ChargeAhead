@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -44,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -232,14 +232,15 @@ fun TripSheetContent(
             }
         }
 
+        val slide = ChargeAheadMotion.spatial<IntOffset>()
+        val fade = ChargeAheadMotion.effects<Float>()
         AnimatedContent(
             targetState = layout,
             transitionSpec = {
                 // Tiles come in from the right, the list from the left; both fill the same box.
                 val forward = targetState == TripListLayout.TILES
-                val slide = tween<IntOffset>(LAYOUT_SLIDE_MILLIS)
-                (slideInHorizontally(slide) { if (forward) it else -it } + fadeIn(tween(LAYOUT_SLIDE_MILLIS)))
-                    .togetherWith(slideOutHorizontally(slide) { if (forward) -it else it } + fadeOut(tween(LAYOUT_SLIDE_MILLIS)))
+                (slideInHorizontally(slide) { if (forward) it else -it } + fadeIn(fade))
+                    .togetherWith(slideOutHorizontally(slide) { if (forward) -it else it } + fadeOut(fade))
             },
             contentAlignment = Alignment.TopStart,
             label = "trip list layout",
@@ -549,16 +550,20 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
 @Composable
 fun TripPlan.headerLine(): String = listOf(
     stringResource(R.string.trip_summary_distance, route.distanceKm.roundToInt()),
-    minutesText(totalMinutes),
+    minutesText(totalMinutes, compact = true),
     pluralStringResource(R.plurals.trip_summary_stops, stops.size, stops.size),
 ).joinToString(" · ")
 
-/** "9 h 16 min" or "42 min" — durations, not clock times. */
-fun minutesText(minutes: Double): String {
+/** "9 h 16 min" or "42 min" — durations, not clock times. [compact] drops the inner spaces for the header. */
+fun minutesText(minutes: Double, compact: Boolean = false): String {
     val total = minutes.roundToInt()
     val hours = total / 60
     val rest = total % 60
-    return if (hours > 0) "$hours h $rest min" else "$rest min"
+    return when {
+        hours > 0 && compact -> "${hours}h ${rest}min"
+        hours > 0 -> "$hours h $rest min"
+        else -> "$rest min"
+    }
 }
 
 /** The clock the trip rows read; tests pin it so times don't drift. */
@@ -576,7 +581,6 @@ fun tripPeekHeight(): Dp = (LocalConfiguration.current.screenHeightDp / 3).dp
 
 private val RAIL_WIDTH = 36.dp
 
-const val LAYOUT_SLIDE_MILLIS = 240
 private val DOT_SIZE = 28.dp
 private val ROW_PADDING = 10.dp
 

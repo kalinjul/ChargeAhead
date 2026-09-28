@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings shapes</title>
+<style>
+  :root { --bg: #F1F3F4; --surface: #fff; --text: #202124; --muted: #5F6368; --faint: #80868B; --line: #DADCE0; --primary: #1A73E8; --primary-bg: #E8F0FE; --green: #188038; --red: #D93025; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-block: 28px; padding-inline: 20px; background: var(--bg); color: var(--text); font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .intro { color: var(--muted); max-width: 66ch; margin: 0 0 24px; }
+  .row { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+  .option { width: 300px; }
+  .option h2 { font-size: 15px; font-weight: 500; margin: 0 0 2px; }
+  .option p { color: var(--muted); margin: 0 0 12px; font-size: 13px; min-height: 6.5em; }
+  .phone { width: 300px; height: 620px; border-radius: 26px; position: relative; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,.14);
+    background: repeating-linear-gradient(0deg, #D5DED4 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, #D5DED4 0 1px, transparent 1px 40px), #E3EBE2; }
+  .phone::before { content: ""; position: absolute; inset: 0; background: linear-gradient(28deg, transparent 0 49%, #C9D6EA 49% 52.5%, transparent 52.5%); }
+  .abs { position: absolute; }
+  .bar { left: 12px; top: 14px; right: 66px; height: 44px; background: var(--surface); border-radius: 999px; box-shadow: 0 3px 8px rgba(0,0,0,.12); display: flex; align-items: center; gap: 10px; padding: 0 14px; color: var(--faint); }
+  .round { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); box-shadow: 0 3px 8px rgba(0,0,0,.12); display: grid; place-items: center; color: var(--muted); font-size: 18px; }
+  .settings { right: 12px; top: 14px; }
+  .burger { width: 18px; height: 12px; display: flex; flex-direction: column; justify-content: space-between; }
+  .burger i { display: block; height: 2px; background: var(--muted); border-radius: 1px; }
+  .scrim { inset: 0; background: rgba(0,0,0,.32); }
+
+  /* shared content pieces */
+  .h { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--faint); font-weight: 700; margin: 14px 0 6px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); font-weight: 500; }
+  .item:first-child { border-top: 0; }
+  .item .ic { width: 18px; height: 18px; border-radius: 4px; background: var(--primary-bg); }
+  .item .chev { margin-left: auto; color: var(--faint); }
+  .item .sub { font-weight: 400; color: var(--muted); font-size: 12px; margin-left: auto; }
+  .slider { height: 4px; background: var(--line); border-radius: 2px; position: relative; margin: 8px 0 2px; }
+  .slider::after { content: ""; position: absolute; left: 0; width: 45%; height: 100%; background: var(--primary); border-radius: 2px; }
+  .slider::before { content: ""; position: absolute; left: 45%; top: -6px; width: 16px; height: 16px; border-radius: 50%; background: var(--primary); transform: translateX(-50%); }
+  .toggle { margin-left: auto; width: 34px; height: 18px; border-radius: 9px; background: var(--line); position: relative; }
+  .toggle::after { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+  .filter { padding: 12px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+  .filter:first-child { border-top: 0; }
+  .filter b { font-weight: 500; }
+  .filter .v { float: right; color: var(--muted); }
+  .flex { display: flex; align-items: center; }
+
+  /* A: page */
+  .a .page { inset: 0; background: var(--bg); padding: 0 14px; }
+  .a .top { height: 56px; display: flex; align-items: center; gap: 14px; font-size: 17px; font-weight: 800; margin: 0 -14px 4px; padding: 0 14px; background: var(--surface); border-bottom: 1px solid var(--line); }
+
+  /* B: sheet */
+  .b .sheet { left: 0; right: 0; bottom: 0; height: 440px; background: var(--bg); border-radius: 22px 22px 0 0; padding: 8px 14px 0; }
+  .b .handle { width: 32px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 6px; }
+
+  /* C: end drawer */
+  .c .drawer { top: 0; bottom: 0; right: 0; width: 250px; background: var(--bg); padding: 16px 14px; box-shadow: -4px 0 20px rgba(0,0,0,.18); }
+  .c .drawer .title { font-size: 17px; font-weight: 800; margin: 6px 0 4px; }
+
+  .verdict { margin-top: 26px; max-width: 72ch; color: var(--muted); }
+  .verdict strong { color: var(--text); }
+</style>
+</head>
+<body>
+<h1>Settings shapes</h1>
+<p class="intro">Same content in all three: the three filters (Mindestleistung, AC-Modus, Max. Entfernung) as a card, then Auto, Netzwerke, Über ChargeAhead, Impressum, Lizenzen as rows. Opened from the burger top-right.</p>
+
+<div class="row">
+
+<section class="option a">
+  <h2>A · Settings page</h2>
+  <p>The burger pushes a page onto the back stack like Garage and Netzwerke already are. Top bar with back arrow, predictive back for free, no custom code. The map is gone while you're in it, which for settings is fine.</p>
+  <div class="phone">
+    <div class="abs page">
+      <div class="top"><span>←</span>Einstellungen</div>
+      <div class="h">Filter</div>
+      <div class="card">
+        <div class="filter"><b>Mindestleistung</b><span class="v">150 kW</span><div class="slider"></div></div>
+        <div class="filter flex"><b>AC-Modus</b><span class="toggle"></span></div>
+        <div class="filter"><b>Max. Entfernung (Jetzt laden)</b><span class="v">25 km</span><div class="slider"></div></div>
+      </div>
+      <div class="h">Einstellungen</div>
+      <div class="card">
+        <div class="item"><span class="ic"></span>Auto<span class="sub">Tesla Model 3 · 26 %</span></div>
+        <div class="item"><span class="ic"></span>Netzwerke<span class="sub">4 ausgewählt</span></div>
+      </div>
+      <div class="h">Über</div>
+      <div class="card">
+        <div class="item">Über ChargeAhead<span class="chev">›</span></div>
+        <div class="item">Impressum &amp; Datenschutz<span class="chev">›</span></div>
+        <div class="item">Lizenzen<span class="chev">›</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="option b">
+  <h2>B · Settings sheet</h2>
+  <p>A modal bottom sheet like Jetzt laden. The map stays visible, filter changes apply live underneath. Six rows plus filters make it tall, so it scrolls; opening Auto or Netzwerke pushes a page from inside the sheet.</p>
+  <div class="phone">
+    <div class="abs bar">🔍 Wohin?</div><div class="abs round settings"><span class="burger"><i></i><i></i><i></i></span></div>
+    <div class="abs scrim"></div>
+    <div class="abs sheet">
+      <div class="handle"></div>
+      <div class="h" style="margin-top:4px">Filter</div>
+      <div class="card">
+        <div class="filter"><b>Mindestleistung</b><span class="v">150 kW</span><div class="slider"></div></div>
+        <div class="filter flex"><b>AC-Modus</b><span class="toggle"></span></div>
+        <div class="filter"><b>Max. Entfernung (Jetzt laden)</b><span class="v">25 km</span><div class="slider"></div></div>
+      </div>
+      <div class="h">Einstellungen</div>
+      <div class="card">
+        <div class="item"><span class="ic"></span>Auto<span class="sub">Tesla Model 3</span></div>
+        <div class="item"><span class="ic"></span>Netzwerke<span class="sub">4 ausgewählt</span></div>
+        <div class="item">Über ChargeAhead<span class="chev">›</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="option c">
+  <h2>C · End-side drawer, done properly</h2>
+  <p>What you have today, minus the RTL trick: a custom panel on the end edge with a scrim and swipe-to-dismiss. Same look, ~40 lines of our own gesture and animation code to maintain.</p>
+  <div class="phone">
+    <div class="abs bar">🔍 Wohin?</div><div class="abs round settings"><span class="burger"><i></i><i></i><i></i></span></div>
+    <div class="abs scrim"></div>
+    <div class="abs drawer">
+      <div class="title">Einstellungen</div>
+      <div class="h">Filter</div>
+      <div class="card">
+        <div class="filter"><b>Mindestleistung</b><span class="v">150 kW</span><div class="slider"></div></div>
+        <div class="filter flex"><b>AC-Modus</b><span class="toggle"></span></div>
+        <div class="filter"><b>Max. Entfernung</b><span class="v">25 km</span><div class="slider"></div></div>
+      </div>
+      <div class="h">Einstellungen</div>
+      <div class="card">
+        <div class="item"><span class="ic"></span>Auto</div>
+        <div class="item"><span class="ic"></span>Netzwerke</div>
+        <div class="item">Über ChargeAhead</div>
+        <div class="item">Impressum</div>
+        <div class="item">Lizenzen</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<p class="verdict"><strong>Recommendation: A.</strong> Settings are a place you go to, not a thing you glance at; a page is what every other destination in this app already is, and it deletes the RTL wrapper instead of replacing it with custom gesture code. B if you consider the filters the main event. C only if the drawer look itself is the point.</p>
+</body>
+</html>

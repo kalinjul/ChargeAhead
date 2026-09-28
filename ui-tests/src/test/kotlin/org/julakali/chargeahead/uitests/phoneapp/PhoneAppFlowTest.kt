@@ -149,17 +149,16 @@ class PhoneAppFlowTest {
     }
 
     @Test
-    fun `neu planen reopens the search with the destination picked`() {
+    fun `neu planen plans the same destination again without opening the search`() {
         launch()
         searchAndPick()
         waitForTrip()
 
         compose.onNodeWithText(compose.string(R.string.trip_replan)).performClick()
+        compose.waitForIdle()
 
-        // The bar holds the picked label, the panel exactly that one row.
-        waitForText("München, Bayern")
-        compose.waitUntil(WAIT_MILLIS) { countOf("München") == 1 }
-        compose.onNodeWithText("München").performClick()
+        // No search panel, the trip header is (still, or again) there.
+        compose.onNodeWithText(searchHint()).assertDoesNotExist()
         waitForTrip()
         compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).assertIsDisplayed()
     }

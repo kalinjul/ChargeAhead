@@ -21,7 +21,7 @@ class DestinationHeaderTest {
 
     @Test
     fun `title and subtitle are shown`() {
-        compose.setThemedContent { DestinationHeader("München", "790 km · 9 h 0 min · 3 Stopps", onClear = {}) }
+        compose.setThemedContent { DestinationHeader("München", "790 km · 9 h 0 min · 3 Stopps", onClear = {}, onTitleClick = {}) }
         compose.onNodeWithText("München").assertIsDisplayed()
         compose.onNodeWithText("790 km · 9 h 0 min · 3 Stopps").assertIsDisplayed()
     }
@@ -29,8 +29,16 @@ class DestinationHeaderTest {
     @Test
     fun `the x drops the trip`() {
         var cleared = false
-        compose.setThemedContent { DestinationHeader("München", "", onClear = { cleared = true }) }
+        compose.setThemedContent { DestinationHeader("München", "", onClear = { cleared = true }, onTitleClick = {}) }
         compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).performClick()
         assertTrue(cleared)
+    }
+
+    @Test
+    fun `tapping the title asks for the destination`() {
+        var flown = false
+        compose.setThemedContent { DestinationHeader("München", "", onClear = {}, onTitleClick = { flown = true }) }
+        compose.onNodeWithText("München").performClick()
+        assertTrue(flown)
     }
 }

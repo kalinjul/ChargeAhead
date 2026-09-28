@@ -1,7 +1,5 @@
 package org.julakali.chargeahead.android.phone
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -13,6 +11,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.Icons
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,33 +23,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** 46dp floating circle; [badge] is the "filters customized" dot. */
+/** The bar's height: Material's search field is 56dp; the destination header matches it. */
+val CHROME_HEIGHT = 56.dp
+
+/** 46dp floating circle: the bar may be taller, the buttons stay light. */
 @Composable
 fun RoundIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    badge: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier) {
-        Surface(
-            onClick = onClick,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp),
-        ) {
-            Box(contentAlignment = Alignment.Center) { content() }
-        }
-        if (badge) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .size(11.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
-            )
-        }
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 6.dp,
+        modifier = modifier.size(46.dp),
+    ) {
+        Box(contentAlignment = Alignment.Center) { content() }
     }
 }
 
@@ -98,3 +91,19 @@ fun HomePill(
         }
     }
 }
+
+/** North needle, counter-rotated against the map's [bearing]. Shown only while the map is rotated. */
+@Composable
+fun CompassButton(bearing: () -> Float, onClick: () -> Unit) {
+    RoundIconButton(onClick = onClick) {
+        Icon(
+            imageVector = Icons.Filled.Navigation,
+            contentDescription = stringResource(R.string.map_compass),
+            tint = CompassRed,
+            // graphicsLayer, so a turning map only invalidates the draw.
+            modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -bearing() },
+        )
+    }
+}
+
+private val CompassRed = Color(0xFFD93025)
