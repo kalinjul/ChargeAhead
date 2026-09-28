@@ -1,5 +1,11 @@
 package org.julakali.chargeahead.android.phone
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -170,7 +176,9 @@ fun HomeScreen(
             )
         }
 
-        // Bar + settings on one line, the map controls hanging under the settings icon.
+        // Burger, bar, locate on one line. While searching the sides fold away and
+        // the bar takes the whole width; compass and loading spinner hang on the right.
+        val searching = mode == HomeMode.SEARCHING
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -179,57 +187,19 @@ fun HomeScreen(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.weight(1f)) { topBar() }
-                RoundIconButton(onClick = onSettings, badge = uiState.filtersCustomized) {
-                    Icon(
-                        Icons.Outlined.Menu,
-                        contentDescription = stringResource(R.string.home_settings),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
-            Row(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    when {
-                        mode == HomeMode.SEARCHING -> topPanel()
-                        // Location is running and getting nowhere.
-                        uiState.locationUnavailable -> HintChip(
-                            stringResource(R.string.phone_status_location_unavailable),
-                            MaterialTheme.colorScheme.error,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SideButton(visible = !searching, trailingGap = true) {
+                    RoundIconButton(onClick = onSettings, badge = uiState.filtersCustomized) {
+                        Icon(
+                            Icons.Outlined.Menu,
+                            contentDescription = stringResource(R.string.home_settings),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                 }
-                Spacer(Modifier.width(10.dp))
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    val bearing = camera.position.bearing
-                    if (bearing != 0f) {
-                        RoundIconButton(onClick = {
-                            scope.launch {
-                                camera.animate(
-                                    CameraUpdateFactory.newCameraPosition(
-                                        CameraPosition.Builder(camera.position).bearing(0f).tilt(0f).build(),
-                                    ),
-                                )
-                            }
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.Navigation,
-                                contentDescription = stringResource(R.string.map_compass),
-                                tint = Color(0xFFD93025),
-                                // Counter-rotated to point north. graphicsLayer, so only the draw is invalidated.
-                                modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -camera.position.bearing },
-                            )
-                        }
-                    }
+                Box(Modifier.weight(1f)) { topBar() }
+                SideButton(visible = !searching, trailingGap = false) {
                     RoundIconButton(onClick = {
                         // With a position, center on it; otherwise ask for a fix.
                         val target = uiState.position
@@ -254,13 +224,58 @@ fun HomeScreen(
                             )
                         }
                     }
-                    // A charger source is being asked over the network.
-                    if (uiState.loadingSites) {
-                        CircularProgressIndicator(
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
+                }
+            }
+            Row(Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    when {
+                        searching -> topPanel()
+                        // Location is running and getting nowhere.
+                        uiState.locationUnavailable -> HintChip(
+                            stringResource(R.string.phone_status_location_unavailable),
+                            MaterialTheme.colorScheme.error,
                         )
+                    }
+                }
+                if (!searching) {
+                    Spacer(Modifier.width(10.dp))
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(46.dp),
+                    ) {
+                        val bearing = camera.position.bearing
+                        if (bearing != 0f) {
+                            RoundIconButton(onClick = {
+                                scope.launch {
+                                    camera.animate(
+                                        CameraUpdateFactory.newCameraPosition(
+                                            CameraPosition.Builder(camera.position).bearing(0f).tilt(0f).build(),
+                                        ),
+                                    )
+                                }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Filled.Navigation,
+                                    contentDescription = stringResource(R.string.map_compass),
+                                    tint = Color(0xFFD93025),
+                                    // Counter-rotated to point north. graphicsLayer, so only the draw is invalidated.
+                                    modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -camera.position.bearing },
+                                )
+                            }
+                        }
+                        // A charger source is being asked over the network.
+                        if (uiState.loadingSites) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -342,3 +357,21 @@ fun HomeScreen(
         }
     }
 }
+
+/** A button beside the bar that folds away sideways, so the bar can grow into its place. */
+@Composable
+private fun SideButton(visible: Boolean, trailingGap: Boolean, content: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(SIDE_FADE_MILLIS)) + expandHorizontally(tween(SIDE_FADE_MILLIS)),
+        exit = fadeOut(tween(SIDE_FADE_MILLIS)) + shrinkHorizontally(tween(SIDE_FADE_MILLIS)),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (!trailingGap) Spacer(Modifier.width(10.dp))
+            content()
+            if (trailingGap) Spacer(Modifier.width(10.dp))
+        }
+    }
+}
+
+private const val SIDE_FADE_MILLIS = 220

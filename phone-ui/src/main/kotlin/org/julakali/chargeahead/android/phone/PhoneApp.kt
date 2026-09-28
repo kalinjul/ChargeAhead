@@ -25,8 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.rememberNavBackStack
 import org.julakali.chargeahead.android.phone.components.AppSheet
@@ -175,14 +173,11 @@ fun PhoneApp(librariesRes: Int) {
                             searching = searchUi.searching,
                             onFocused = phoneAppViewModel::onSearchOpened,
                             onQueryChange = searchViewModel::onQueryChanged,
-                            // One tap back to the plain map, whatever was typed or planned.
-                            onClear = {
-                                closeSearch()
-                                tripViewModel.clear()
-                            },
+                            onClear = { searchViewModel.onQueryChanged("") },
                             focusRequester = focusRequester,
-                            clearable = phoneAppUi.searching,
                             takeFocus = phoneAppUi.searching,
+                            expanded = phoneAppUi.searching,
+                            onBack = ::closeSearch,
                         )
                     }
                 },
@@ -251,25 +246,17 @@ private fun PhoneAppDrawer(
     onFilters: (ChargeFilters) -> Unit,
     content: @Composable () -> Unit,
 ) {
-    // Material's drawer only knows the start edge; in RTL that edge is the right.
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            // Open only via the settings icon: the edge swipe fights the map's pan gesture.
-            gesturesEnabled = drawerState.isOpen,
-            drawerContent = {
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
-                        DrawerContent(uiState = uiState, onOpen = onOpen, onFilters = onFilters)
-                    }
-                }
-            },
-        ) {
-            CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                content()
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        // Open only via the burger: the edge swipe fights the map's pan gesture.
+        gesturesEnabled = drawerState.isOpen,
+        drawerContent = {
+            ModalDrawerSheet(drawerContainerColor = MaterialTheme.colorScheme.surface) {
+                DrawerContent(uiState = uiState, onOpen = onOpen, onFilters = onFilters)
             }
-        }
-    }
+        },
+        content = content,
+    )
 }
 
 @Composable
