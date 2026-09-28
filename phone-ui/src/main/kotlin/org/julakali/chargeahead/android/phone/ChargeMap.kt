@@ -242,6 +242,9 @@ private fun ChargeBadge(color: Color, content: @Composable () -> Unit) {
 private val FALLBACK_CENTER = LatLon(50.11, 8.68)
 const val HOME_ZOOM = 11f
 
+/** The locate button: about 3.5 km to either side on a phone, close enough to read the pills. */
+const val LOCATE_ZOOM = 14f
+
 /** Below this, no chargers load. */
 const val MIN_CHARGER_ZOOM = 10f
 

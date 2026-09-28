@@ -208,7 +208,7 @@ fun HomeScreen(
                         if (target == null) {
                             onLocate()
                         } else {
-                            scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) }
+                            scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), LOCATE_ZOOM)) }
                         }
                     }) {
                         if (uiState.searchingLocation) {
