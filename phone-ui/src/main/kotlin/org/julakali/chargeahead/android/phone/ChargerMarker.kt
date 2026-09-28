@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionContext
 import androidx.compose.runtime.Stable
@@ -160,24 +161,25 @@ fun ChargerPill(
 ) {
     val outOfOrder = availability is SiteAvailability.OutOfOrder
     val level = (availability as? SiteAvailability.Live)?.level
+    val p = pillPalette()
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
             .height(IntrinsicSize.Min)
-            .border(width = if (outOfOrder) 2.dp else 1.dp, color = if (outOfOrder) Red else Outline, shape = CircleShape)
+            .border(width = if (outOfOrder) 2.dp else 1.dp, color = if (outOfOrder) p.red else p.outline, shape = CircleShape)
             .clip(CircleShape)
-            .background(Color.White),
+            .background(p.surface),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 3.dp, bottom = 3.dp),
         ) {
-            Bolts(count = speed.bolts, color = if (outOfOrder) Grey else speed.color)
+            Bolts(count = speed.bolts, color = if (outOfOrder) p.grey else p.speedColor(speed), halo = p.surface)
             if (!label.isNullOrBlank()) {
                 Text(
                     text = label,
-                    color = TextColor,
+                    color = p.text,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -190,13 +192,13 @@ fun ChargerPill(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxHeight()
-                    .background(level?.tint ?: RedTint)
+                    .background(level?.let(p::tint) ?: p.redTint)
                     .padding(start = 6.dp, end = 8.dp),
             ) {
                 when (availability) {
                     is SiteAvailability.Live -> Text(
                         text = "${availability.free}/${availability.total}",
-                        color = level?.strong ?: Red,
+                        color = level?.let(p::strong) ?: p.red,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -204,7 +206,7 @@ fun ChargerPill(
                     SiteAvailability.OutOfOrder -> Icon(
                         Icons.Outlined.Block,
                         contentDescription = stringResource(R.string.map_out_of_order),
-                        tint = Red,
+                        tint = p.red,
                         modifier = Modifier.size(14.dp),
                     )
                 }
@@ -220,24 +222,25 @@ fun ChargerPill(
 @Composable
 fun ChargerDot(speed: ChargeSpeed, availability: SiteAvailability?, modifier: Modifier = Modifier) {
     val outOfOrder = availability is SiteAvailability.OutOfOrder
+    val p = pillPalette()
     val fill = when (availability) {
-        is SiteAvailability.Live -> availability.level.color
-        SiteAvailability.OutOfOrder -> Grey
-        null -> speed.color
+        is SiteAvailability.Live -> p.levelColor(availability.level)
+        SiteAvailability.OutOfOrder -> p.grey
+        null -> p.speedColor(speed)
     }
     Box(
         modifier
             .size(15.dp)
-            .background(Color.White, CircleShape)
-            .border(if (outOfOrder) 2.dp else 1.dp, if (outOfOrder) Red else Outline, CircleShape)
+            .background(p.surface, CircleShape)
+            .border(if (outOfOrder) 2.dp else 1.dp, if (outOfOrder) p.red else p.outline, CircleShape)
             .padding(if (outOfOrder) 3.dp else 2.dp)
             .background(fill, CircleShape),
     )
 }
 
-/** Overlapping bolts; each one's white halo cuts a visible edge into the one before. */
+/** Overlapping bolts; each one's halo in the pill colour cuts a visible edge into the one before. */
 @Composable
-private fun Bolts(count: Int, color: Color) {
+private fun Bolts(count: Int, color: Color, halo: Color) {
     val bolt = painterResource(R.drawable.ic_bolt)
     Box {
         repeat(count) { i ->
@@ -245,51 +248,85 @@ private fun Bolts(count: Int, color: Color) {
                 contentAlignment = Alignment.Center,
                 modifier = Modifier.padding(start = 6.dp * i).size(14.dp),
             ) {
-                Icon(bolt, contentDescription = null, tint = Color.White, modifier = Modifier.requiredSize(17.dp))
+                Icon(bolt, contentDescription = null, tint = halo, modifier = Modifier.requiredSize(17.dp))
                 Icon(bolt, contentDescription = null, tint = color, modifier = Modifier.size(14.dp))
             }
         }
     }
 }
 
-private val ChargeSpeed.color: Color
-    get() = when (this) {
-        ChargeSpeed.SLOW -> Red
-        ChargeSpeed.MEDIUM -> Amber
-        ChargeSpeed.FAST, ChargeSpeed.ULTRA, ChargeSpeed.HYPER -> Green
-    }
-
-private val AvailabilityLevel.color: Color
-    get() = when (this) {
-        AvailabilityLevel.GOOD -> Green
-        AvailabilityLevel.LOW -> Amber
-        AvailabilityLevel.NONE -> Red
-    }
-
 private const val MAX_CACHED_PILLS = 128
 
-private val Red = Color(0xFFD93025)
-private val Amber = Color(0xFFF9AB00)
-private val Green = Color(0xFF188038)
-private val Grey = Color(0xFF9AA0A6)
-private val Outline = Color(0xFFDADCE0)
-private val TextColor = Color(0xFF202124)
-private val RedTint = Color(0xFFFCE8E6)
+/** The pill's colours, one set per theme; read from the theme at render time. */
+private data class PillPalette(
+    val surface: Color,
+    val outline: Color,
+    val text: Color,
+    val grey: Color,
+    val red: Color,
+    val amber: Color,
+    val green: Color,
+    val redTint: Color,
+    val greenTint: Color,
+    val amberTint: Color,
+    val amberStrong: Color,
+)
 
-private val AvailabilityLevel.tint: Color
-    get() = when (this) {
-        AvailabilityLevel.GOOD -> Color(0xFFE6F4EA)
-        AvailabilityLevel.LOW -> Color(0xFFFEF7E0)
-        AvailabilityLevel.NONE -> RedTint
-    }
+private val LightPill = PillPalette(
+    surface = Color.White,
+    outline = Color(0xFFDADCE0),
+    text = Color(0xFF202124),
+    grey = Color(0xFF9AA0A6),
+    red = Color(0xFFD93025),
+    amber = Color(0xFFF9AB00),
+    green = Color(0xFF188038),
+    redTint = Color(0xFFFCE8E6),
+    greenTint = Color(0xFFE6F4EA),
+    amberTint = Color(0xFFFEF7E0),
+    amberStrong = Color(0xFFB06000),
+)
 
-/** Text on the tint: green, a darker amber for contrast, red. */
-private val AvailabilityLevel.strong: Color
-    get() = when (this) {
-        AvailabilityLevel.GOOD -> Green
-        AvailabilityLevel.LOW -> Color(0xFFB06000)
-        AvailabilityLevel.NONE -> Red
-    }
+private val DarkPill = PillPalette(
+    surface = Color(0xFF2A2B2F),
+    outline = Color(0xFF5F6368),
+    text = Color(0xFFE8EAED),
+    grey = Color(0xFF80868B),
+    red = Color(0xFFF28B82),
+    amber = Color(0xFFFDD663),
+    green = Color(0xFF81C995),
+    redTint = Color(0xFF4A2521),
+    greenTint = Color(0xFF1E3B2A),
+    amberTint = Color(0xFF3D2F0A),
+    amberStrong = Color(0xFFFDD663),
+)
+
+@Composable
+private fun pillPalette(): PillPalette = if (isSystemInDarkTheme()) DarkPill else LightPill
+
+private fun PillPalette.speedColor(speed: ChargeSpeed): Color = when (speed) {
+    ChargeSpeed.SLOW -> red
+    ChargeSpeed.MEDIUM -> amber
+    ChargeSpeed.FAST, ChargeSpeed.ULTRA, ChargeSpeed.HYPER -> green
+}
+
+private fun PillPalette.levelColor(level: AvailabilityLevel): Color = when (level) {
+    AvailabilityLevel.GOOD -> green
+    AvailabilityLevel.LOW -> amber
+    AvailabilityLevel.NONE -> red
+}
+
+private fun PillPalette.tint(level: AvailabilityLevel): Color = when (level) {
+    AvailabilityLevel.GOOD -> greenTint
+    AvailabilityLevel.LOW -> amberTint
+    AvailabilityLevel.NONE -> redTint
+}
+
+/** Text on the tint: green, a darker amber for contrast on light, red. */
+private fun PillPalette.strong(level: AvailabilityLevel): Color = when (level) {
+    AvailabilityLevel.GOOD -> green
+    AvailabilityLevel.LOW -> amberStrong
+    AvailabilityLevel.NONE -> red
+}
 
 @Preview(showBackground = true, backgroundColor = 0xFFE8EAED)
 @Composable

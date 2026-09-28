@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.uitests
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -86,3 +87,19 @@ fun StationCardChargeNow() {
         }
     }
 }
+
+// Dark theme: the same components under UI_MODE_NIGHT_YES.
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun HomePillsChargeNowAndFavoritesDark() = HomePillsChargeNowAndFavorites()
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun StationCardChargeNowDark() = StationCardChargeNow()
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun HintChipPlainDark() = HintChipPlain()

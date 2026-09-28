@@ -60,8 +60,8 @@ fun TickRow(
         }
         val scheme = MaterialTheme.colorScheme
         val (container, borderColor, iconTint) = when {
-            tick == TickStyle.DELETE -> Triple(scheme.errorContainer, Color(0xFFF2B8B2), scheme.error)
-            tick == TickStyle.ADD -> Triple(scheme.primaryContainer, Color(0xFFA8C7FA), scheme.primary)
+            tick == TickStyle.DELETE -> Triple(scheme.errorContainer, ChargeAheadColors.deleteOutline, scheme.error)
+            tick == TickStyle.ADD -> Triple(scheme.primaryContainer, ChargeAheadColors.sectionOutline, scheme.primary)
             checked -> Triple(scheme.primary, scheme.primary, scheme.onPrimary)
             else -> Triple(Color.Transparent, scheme.outlineVariant, Color.Transparent)
         }

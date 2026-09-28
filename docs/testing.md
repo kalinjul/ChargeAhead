@@ -63,6 +63,10 @@ the PNG.
   fed from `Fixtures.kt`. Trip rows need
   `CompositionLocalProvider(LocalNow provides { LocalTime.of(14, 30) })`.
   Renaming a preview function orphans its golden; re-record.
+- Dark theme: the app follows the system, so the components that carry
+  colour have a `...Dark` twin with `uiMode = UI_MODE_NIGHT_YES`. The preview
+  scaffold wraps content in a `Surface` like the app's sheets do, otherwise
+  titles fall back to black on dark.
 - Robolectric runs SDK 35 (`ui-tests/src/test/resources/robolectric.properties`)
   because it doesn't emulate 37 yet, and the test JVM opens a few `java.base`
   packages that Robolectric reflects into (`ui-tests/build.gradle.kts`).

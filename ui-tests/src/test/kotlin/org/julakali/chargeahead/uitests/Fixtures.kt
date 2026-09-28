@@ -102,7 +102,7 @@ typealias ComposeRule = AndroidComposeTestRule<ActivityScenarioRule<ComponentAct
 fun ComposeRule.setThemedContent(content: @Composable () -> Unit) {
     setContent {
         CompositionLocalProvider(LocalNow provides { Fixtures.now }) {
-            ChargeAheadTheme(content)
+            ChargeAheadTheme(content = content)
         }
     }
 }
