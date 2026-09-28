@@ -61,10 +61,10 @@ class ActiveRouteScreenTest {
     }
 
     @Test
-    fun `the header sums the trip up and every stop is listed`() {
+    fun `the summary card sums the trip up and every stop is listed`() {
         screen()
-        // Once in the header, once as the destination row.
-        compose.onAllNodesWithText("München").assertCountEquals(2)
+        // The page bar carries the name; here only the destination row does.
+        compose.onAllNodesWithText("München").assertCountEquals(1)
         compose.onNodeWithText("790 km · 9h 0m · 3 Stopps").assertIsDisplayed()
         Fixtures.plan.stops.forEach { stop ->
             compose.onNodeWithText(stop.site.operator!!, substring = true).assertIsDisplayed()

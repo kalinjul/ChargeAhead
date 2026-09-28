@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.ui.Modifier
@@ -38,6 +41,8 @@ fun PhonePages(
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: (String) -> Unit,
     onTripEnded: () -> Unit,
+    /** The committed destination's name, the active route page's title. */
+    activeRouteTitle: String?,
     modifier: Modifier = Modifier,
 ) {
     NavDisplay(
@@ -104,7 +109,7 @@ fun PhonePages(
             }
 
             entry<ActiveRoute> {
-                Page(title = stringResource(R.string.active_route_title), onBack = onBack) { pagePadding ->
+                Page(title = activeRouteTitle ?: stringResource(R.string.active_route_title), onBack = onBack) { pagePadding ->
                     ActiveRouteRoute(
                         onOpenStop = onOpenStop,
                         onSendToMaps = onSendToMaps,
@@ -137,6 +142,7 @@ fun PhonePages(
  * One page of the back stack: a full-screen, opaque Scaffold with its own top
  * bar, so predictive back scales the whole page.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Page(
     title: String,
@@ -146,9 +152,12 @@ private fun Page(
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
-        modifier = modifier.fillMaxSize(),
-        topBar = { AppTopBar(title = title, onBack = onBack, subtitle = subtitle, actions = actions) },
+        modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
+        topBar = {
+            AppTopBar(title = title, onBack = onBack, subtitle = subtitle, actions = actions, scrollBehavior = scrollBehavior)
+        },
         content = content,
     )
 }

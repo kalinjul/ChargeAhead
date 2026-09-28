@@ -7,17 +7,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -27,7 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.julakali.chargeahead.android.phone.components.SocEditDialog
@@ -126,26 +130,60 @@ fun ActiveRouteScreen(
         )
     }
     Column(modifier) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 12.dp),
+        // The trip on one card: totals, arrival, and what one does to the trip itself.
+        ElevatedCard(
+            shape = RoundedCornerShape(20.dp),
+            // White in light; in dark the default low container sinks into the page.
+            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
         ) {
-            Text(
-                plan.destination.name,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                listOf(
-                    stringResource(R.string.trip_summary_distance, plan.route.distanceKm.roundToInt()),
-                    minutesText(plan.totalMinutes),
-                    pluralStringResource(R.plurals.trip_summary_stops, plan.stops.size, plan.stops.size),
-                ).joinToString(" · "),
-                style = MaterialTheme.typography.bodyMedium.tabular,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
+            Column(Modifier.padding(16.dp)) {
+                Text(
+                    listOf(
+                        stringResource(R.string.trip_summary_distance, plan.route.distanceKm.roundToInt()),
+                        minutesText(plan.totalMinutes),
+                        pluralStringResource(R.plurals.trip_summary_stops, plan.stops.size, plan.stops.size),
+                    ).joinToString(" · "),
+                    style = MaterialTheme.typography.titleMedium.tabular,
+                    maxLines = 1,
+                )
+                Text(
+                    stringResource(R.string.trip_arr, etaText(plan.totalMinutes, LocalNow.current()), plan.arrivalSocPercent.roundToInt()),
+                    style = MaterialTheme.typography.bodyMedium.tabular,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                ) {
+                    // Half a card each: the labels need the room Material's default padding eats.
+                    FilledTonalButton(
+                        onClick = onReplan,
+                        enabled = !planning,
+                        shape = MaterialTheme.shapes.small,
+                        contentPadding = CARD_BUTTON_PADDING,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        if (planning) {
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
+                        } else {
+                            Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(14.dp))
+                        }
+                        Text(stringResource(R.string.trip_replan), maxLines = 1, modifier = Modifier.padding(start = 6.dp))
+                    }
+                    OutlinedButton(
+                        onClick = onEnd,
+                        shape = MaterialTheme.shapes.small,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                        contentPadding = CARD_BUTTON_PADDING,
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.active_route_end), maxLines = 1)
+                    }
+                }
+            }
         }
         TripSheetContent(
             plan = plan,
@@ -170,32 +208,7 @@ fun ActiveRouteScreen(
             socEditable = false,
             modifier = Modifier.weight(1f),
         )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp).navigationBarsPadding(),
-        ) {
-            OutlinedButton(
-                onClick = onReplan,
-                enabled = !planning,
-                shape = MaterialTheme.shapes.small,
-                modifier = Modifier.weight(1f),
-            ) {
-                if (planning) {
-                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
-                } else {
-                    Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(14.dp))
-                }
-                Text(stringResource(R.string.trip_replan), maxLines = 1, modifier = Modifier.padding(start = 6.dp))
-            }
-            OutlinedButton(
-                onClick = onEnd,
-                shape = MaterialTheme.shapes.small,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(stringResource(R.string.active_route_end), maxLines = 1)
-            }
-        }
     }
 }
+
+private val CARD_BUTTON_PADDING = PaddingValues(horizontal = 8.dp, vertical = 10.dp)

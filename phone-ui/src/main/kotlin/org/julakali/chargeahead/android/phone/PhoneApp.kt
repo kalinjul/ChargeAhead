@@ -227,6 +227,7 @@ fun PhoneApp(librariesRes: Int) {
         onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
         onSendToMaps = ::sendToMaps,
         onTripEnded = { snackbar.show(scope, context.getString(R.string.active_route_ended)) },
+        activeRouteTitle = committedUi.trip?.plan?.destination?.name,
         modifier = Modifier.fillMaxSize(),
     )
 
