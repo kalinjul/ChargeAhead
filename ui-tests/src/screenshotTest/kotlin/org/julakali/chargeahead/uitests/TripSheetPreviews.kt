@@ -17,12 +17,11 @@ import org.julakali.chargeahead.android.phone.headerLine
 import org.julakali.chargeahead.shared.ui.SectionSelection
 
 @Composable
-private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionSelection(), isSaved: Boolean = false) {
+private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionSelection()) {
     SheetBox {
         TripSheetContent(
             plan = SamplePlan,
             startSocPercent = 80.0,
-            isSaved = isSaved,
             layout = layout,
             selection = selection,
             socInput = null,
@@ -32,7 +31,6 @@ private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionS
             onSectionSent = {},
             onOpenStop = {},
             onSendToMaps = {},
-            onToggleSave = {},
             onEditStartSoc = {},
             onSocInputChange = {},
             onSocConfirm = {},
@@ -53,7 +51,7 @@ fun TripSheetList() = Sheet(TripListLayout.LIST)
 @PreviewTest
 @Preview(showBackground = true)
 @Composable
-fun TripSheetListSectionPicked() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2), isSaved = true)
+fun TripSheetListSectionPicked() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2))
 
 @PreviewTest
 @Preview(showBackground = true)
@@ -107,7 +105,7 @@ fun TripSheetListDark() = Sheet(TripListLayout.LIST)
 @PreviewTest
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun TripSheetListSectionPickedDark() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2), isSaved = true)
+fun TripSheetListSectionPickedDark() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2))
 
 @PreviewTest
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)

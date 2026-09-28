@@ -59,7 +59,6 @@ fun TripSheetScaffold(
     viewModel: TripViewModel = koinViewModel(),
     content: @Composable (peek: Dp) -> Unit,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
     val expandable = layout == TripListLayout.LIST
@@ -121,7 +120,6 @@ fun TripSheetScaffold(
                         TripSheetContent(
                             plan = trip.plan,
                             startSocPercent = trip.startSocPercent,
-                            isSaved = trip.isSaved,
                             layout = layout,
                             selection = trip.selection,
                             socInput = trip.socInput,
@@ -131,7 +129,6 @@ fun TripSheetScaffold(
                             onSectionSent = viewModel::onSectionSent,
                             onOpenStop = onOpenStop,
                             onSendToMaps = { onSendToMaps(trip.mapsUrl) },
-                            onToggleSave = { viewModel.toggleSaved(trip.plan.summaryLine(context)) },
                             onEditStartSoc = viewModel::onStartSocEditRequested,
                             onSocInputChange = viewModel::onStartSocInputChanged,
                             onSocConfirm = viewModel::onStartSocConfirmed,
@@ -170,8 +167,3 @@ private fun Modifier.visibleSheetHeight(sheetState: SheetState, layoutHeightPx: 
         val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
         layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
-
-/** Shown under a saved route's name. */
-private fun TripPlan.summaryLine(context: Context): String =
-    context.getString(R.string.trip_summary_distance, route.distanceKm.roundToInt()) + " · " +
-        context.resources.getQuantityString(R.plurals.trip_summary_stops, stops.size, stops.size)

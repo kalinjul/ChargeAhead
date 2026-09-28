@@ -29,3 +29,6 @@ data object Legal : PhoneDestination
 
 @Serializable
 data object Licenses : PhoneDestination
+
+@Serializable
+data object ActiveRoute : PhoneDestination

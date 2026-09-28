@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,6 +35,9 @@ fun PhonePages(
     preferredNetworkCount: Int,
     onBack: () -> Unit,
     onCarAdded: (VehiclePreset) -> Unit,
+    onOpenStop: (PlannedStop) -> Unit,
+    onSendToMaps: (String) -> Unit,
+    onTripEnded: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NavDisplay(
@@ -96,6 +100,20 @@ fun PhonePages(
             entry<CarData> {
                 Page(title = stringResource(R.string.cardata_title), onBack = onBack) { pagePadding ->
                     CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                }
+            }
+
+            entry<ActiveRoute> {
+                Page(title = stringResource(R.string.active_route_title), onBack = onBack) { pagePadding ->
+                    ActiveRouteRoute(
+                        onOpenStop = onOpenStop,
+                        onSendToMaps = onSendToMaps,
+                        onEnded = {
+                            onBack()
+                            onTripEnded()
+                        },
+                        modifier = Modifier.fillMaxSize().padding(pagePadding),
+                    )
                 }
             }
 

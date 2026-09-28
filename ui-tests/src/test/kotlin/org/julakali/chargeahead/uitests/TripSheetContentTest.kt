@@ -38,14 +38,12 @@ class TripSheetContentTest {
         var editArrivalSoc = false
         var sentToMaps = false
         var sectionSent = false
-        var toggledSave = false
         var toggledSelecting = false
     }
 
     private fun sheet(
         layout: TripListLayout = TripListLayout.LIST,
         selection: SectionSelection = SectionSelection(),
-        isSaved: Boolean = false,
     ): Calls {
         val calls = Calls()
         compose.setThemedContent {
@@ -53,7 +51,6 @@ class TripSheetContentTest {
                 TripSheetContent(
                     plan = Fixtures.plan,
                     startSocPercent = 26.0,
-                    isSaved = isSaved,
                     layout = layout,
                     selection = selection,
                     socInput = null,
@@ -63,7 +60,6 @@ class TripSheetContentTest {
                     onSectionSent = { calls.sectionSent = true },
                     onOpenStop = { calls.openedStop = it },
                     onSendToMaps = { calls.sentToMaps = true },
-                    onToggleSave = { calls.toggledSave = true },
                     onEditStartSoc = { calls.editStartSoc = true },
                     onSocInputChange = {},
                     onSocConfirm = {},
@@ -167,13 +163,6 @@ class TripSheetContentTest {
     }
 
     @Test
-    fun `the heart toggles saving`() {
-        val calls = sheet()
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_save)).performClick()
-        assertTrue(calls.toggledSave)
-    }
-
-    @Test
     fun `the section button toggles selecting`() {
         val calls = sheet()
         compose.onNodeWithText(compose.string(R.string.trip_select_section)).performClick()
@@ -211,6 +200,5 @@ class TripSheetContentTest {
         sheet(layout = TripListLayout.TILES)
         compose.onNodeWithText(compose.string(R.string.trip_send_maps)).assertIsDisplayed()
         compose.onNodeWithText(compose.string(R.string.trip_select_section)).assertIsDisplayed()
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_save)).assertIsDisplayed()
     }
 }

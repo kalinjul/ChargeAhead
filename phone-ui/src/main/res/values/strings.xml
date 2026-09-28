@@ -128,7 +128,11 @@
     <!-- Phone: map home -->
     <string name="common_back">Zurück</string>
     <string name="home_pill_charge_now">Jetzt laden</string>
-    <string name="home_pill_favorites">Favoriten</string>
+    <string name="home_pill_active_route">Aktive Route</string>
+    <string name="active_route_title">Aktive Route</string>
+    <string name="active_route_end">Navigieren beenden</string>
+    <string name="active_route_ended">Navigation beendet</string>
+    <string name="active_route_replanned">Route von hier neu geplant</string>
     <string name="home_settings">Einstellungen</string>
     <string name="home_search_hint">Wohin?</string>
     <string name="home_search_clear">Eingabe löschen</string>

@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Navigation
@@ -79,12 +80,23 @@ fun HomePill(
     onClick: () -> Unit,
     iconTint: Color = contentColor,
     contentDescription: String? = null,
+    enabled: Boolean = true,
 ) {
-    Surface(onClick = onClick, shape = CircleShape, color = containerColor, contentColor = contentColor, shadowElevation = 6.dp) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = CircleShape,
+        color = containerColor,
+        contentColor = contentColor,
+        shadowElevation = 6.dp,
+    ) {
+        // Only the content dims; a translucent pill would drag its shadow along.
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(9.dp),
-            modifier = Modifier.padding(horizontal = if (text != null) 21.dp else 15.dp, vertical = 14.dp),
+            modifier = Modifier
+                .alpha(if (enabled) 1f else DISABLED_ALPHA)
+                .padding(horizontal = if (text != null) 21.dp else 15.dp, vertical = 14.dp),
         ) {
             Icon(icon, contentDescription = contentDescription, tint = iconTint, modifier = Modifier.size(18.dp))
             text?.let { Text(it, style = MaterialTheme.typography.labelLarge.copy(fontSize = 15.sp)) }
@@ -107,3 +119,6 @@ fun CompassButton(bearing: () -> Float, onClick: () -> Unit) {
 }
 
 private val CompassRed = Color(0xFFD93025)
+
+/** Material's disabled content emphasis. */
+private const val DISABLED_ALPHA = 0.38f

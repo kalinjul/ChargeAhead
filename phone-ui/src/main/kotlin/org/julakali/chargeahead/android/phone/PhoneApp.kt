@@ -37,7 +37,6 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeStop
-import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.DrawerUiState
@@ -49,6 +48,7 @@ import org.julakali.chargeahead.shared.ui.PhoneAppSheet
 import org.julakali.chargeahead.shared.ui.PhoneAppViewModel
 import org.julakali.chargeahead.shared.ui.TripEvent
 import org.julakali.chargeahead.shared.ui.TripUiState
+import org.julakali.chargeahead.shared.ui.CommittedTripViewModel
 import org.julakali.chargeahead.shared.ui.TripViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -69,11 +69,13 @@ fun PhoneApp(librariesRes: Int) {
     val homeViewModel: HomeViewModel = koinViewModel()
     val tripViewModel: TripViewModel = koinViewModel()
     val searchViewModel: SearchViewModel = koinViewModel()
+    val committedTripViewModel: CommittedTripViewModel = koinViewModel()
 
     val phoneAppUi by phoneAppViewModel.uiState.collectAsStateWithLifecycle()
     val drawerUi by drawerViewModel.uiState.collectAsStateWithLifecycle()
     val tripUi by tripViewModel.uiState.collectAsStateWithLifecycle()
     val searchUi by searchViewModel.uiState.collectAsStateWithLifecycle()
+    val committedUi by committedTripViewModel.uiState.collectAsStateWithLifecycle()
     val planned = tripUi as? TripUiState.Planned
 
     val context = LocalContext.current
@@ -125,6 +127,7 @@ fun PhoneApp(librariesRes: Int) {
             scope.launch { sheetState.partialExpand() }
         },
         onOpenGarage = { openFromRoot(Garage) },
+        onCommitted = { openFromRoot(ActiveRoute) },
     )
 
     PhoneAppDrawer(
@@ -143,7 +146,10 @@ fun PhoneApp(librariesRes: Int) {
             // Same destination, today's settings and charge: no search, just plan again.
             onReplan = { planned?.let { tripViewModel.plan(it.plan.destination) } },
             onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
-            onSendToMaps = ::sendToMaps,
+            // Sending is committing: the plan becomes the active route, whose page is confirmation enough.
+            onSendToMaps = { url ->
+                if (context.openMapsLink(url)) tripViewModel.commit()
+            },
             viewModel = tripViewModel,
         ) { peek ->
             // Just the map, built once and kept. Full-screen pages are a
@@ -163,12 +169,15 @@ fun PhoneApp(librariesRes: Int) {
                 onLocate = phoneAppViewModel::onLocateRequested,
                 onSettings = { scope.launch { drawerState.open() } },
                 onChargeNow = { phoneAppViewModel.onSheetOpened(PhoneAppSheet.CHARGE_NOW) },
-                onRoutes = { phoneAppViewModel.onSheetOpened(PhoneAppSheet.ROUTES) },
+                activeRouteEnabled = committedUi.trip != null,
+                onActiveRoute = { openFromRoot(ActiveRoute) },
                 onDismissSearch = ::closeSearch,
                 onStopTapped = { index ->
                     planned?.plan?.stops?.getOrNull(index - 1)?.let { homeViewModel.onSiteSelected(it.site) }
                 },
-                tripLineFor = { selected -> planned?.plan?.stopLine(context, selected, clock()) },
+                tripLineFor = { selected ->
+                    (planned?.plan ?: committedUi.trip?.plan)?.stopLine(context, selected, clock())
+                },
                 topBar = { flyTo ->
                     val trip = planned
                     // Header and bar swap with Material's fade-through instead of a hard cut.
@@ -215,6 +224,9 @@ fun PhoneApp(librariesRes: Int) {
         preferredNetworkCount = drawerUi.preferredNetworkCount,
         onBack = ::pop,
         onCarAdded = { preset -> snackbar.show(scope, context.getString(R.string.garage_added, preset.name)) },
+        onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
+        onSendToMaps = ::sendToMaps,
+        onTripEnded = { snackbar.show(scope, context.getString(R.string.active_route_ended)) },
         modifier = Modifier.fillMaxSize(),
     )
 
@@ -222,11 +234,6 @@ fun PhoneApp(librariesRes: Int) {
         sheet = phoneAppUi.sheet,
         onDismiss = phoneAppViewModel::onSheetDismissed,
         onNavigate = { position -> sendToMaps(MapsHandoff.navigateUrl(position)) },
-        onOpenRoute = { destination ->
-            phoneAppViewModel.onSheetDismissed()
-            // Reopening a route keeps the stored charge level.
-            tripViewModel.plan(destination)
-        },
     )
 
     // With no page on top, back peels the chrome layer by layer: sheet,
@@ -274,17 +281,12 @@ private fun PhoneAppSheets(
     sheet: PhoneAppSheet,
     onDismiss: () -> Unit,
     onNavigate: (LatLon) -> Unit,
-    onOpenRoute: (Destination) -> Unit,
 ) {
     when (sheet) {
         PhoneAppSheet.NONE -> Unit
 
         PhoneAppSheet.CHARGE_NOW -> AppSheet(onDismissRequest = onDismiss) {
             ChargeNowRoute(onNavigate = { candidate -> onNavigate(candidate.site.position) })
-        }
-
-        PhoneAppSheet.ROUTES -> AppSheet(onDismissRequest = onDismiss) {
-            RoutesRoute(onOpen = onOpenRoute)
         }
     }
 }
@@ -298,6 +300,7 @@ private fun TripEventEffect(
     scope: CoroutineScope,
     onPlanReady: () -> Unit,
     onOpenGarage: () -> Unit,
+    onCommitted: () -> Unit,
 ) {
     val context = LocalContext.current
     val event by viewModel.event.collectAsStateWithLifecycle()
@@ -318,8 +321,7 @@ private fun TripEventEffect(
                 context.getString(R.string.plan_failed_no_charger, current.afterKm.roundToInt()),
             )
             TripEvent.NoRoute -> snackbar.show(scope, context.getString(R.string.plan_failed_no_route))
-            TripEvent.RouteSaved -> snackbar.show(scope, context.getString(R.string.trip_saved))
-            TripEvent.RouteRemoved -> snackbar.show(scope, context.getString(R.string.trip_unsaved))
+            TripEvent.TripCommitted -> onCommitted()
         }
         viewModel.onEventHandled()
     }

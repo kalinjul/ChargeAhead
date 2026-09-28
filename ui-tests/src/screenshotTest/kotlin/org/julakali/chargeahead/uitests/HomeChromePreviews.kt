@@ -34,7 +34,7 @@ fun HintChipPlain() {
 @PreviewTest
 @Preview(showBackground = true)
 @Composable
-fun HomePillsChargeNowAndFavorites() {
+fun HomePillsChargeNowAndActiveRoute() {
     PreviewScaffold {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(12.dp)) {
             HomePill(
@@ -46,11 +46,11 @@ fun HomePillsChargeNowAndFavorites() {
                 onClick = {},
             )
             HomePill(
-                text = "Favoriten",
-                icon = painterResource(R.drawable.ic_heart),
+                text = "Aktive Route",
+                icon = painterResource(R.drawable.ic_route),
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                iconTint = MaterialTheme.colorScheme.error,
+                iconTint = MaterialTheme.colorScheme.primary,
                 onClick = {},
             )
         }
@@ -89,11 +89,31 @@ fun StationCardChargeNow() {
     }
 }
 
+/** Nothing committed yet: the pill is there, but dimmed and not clickable. */
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun HomePillActiveRouteDisabled() {
+    PreviewScaffold {
+        Box(Modifier.padding(12.dp)) {
+            HomePill(
+                text = "Aktive Route",
+                icon = painterResource(R.drawable.ic_route),
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                iconTint = MaterialTheme.colorScheme.primary,
+                enabled = false,
+                onClick = {},
+            )
+        }
+    }
+}
+
 // Dark theme: the same components under UI_MODE_NIGHT_YES.
 @PreviewTest
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun HomePillsChargeNowAndFavoritesDark() = HomePillsChargeNowAndFavorites()
+fun HomePillsChargeNowAndActiveRouteDark() = HomePillsChargeNowAndActiveRoute()
 
 @PreviewTest
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)

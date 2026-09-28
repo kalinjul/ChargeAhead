@@ -86,7 +86,6 @@ import kotlin.math.roundToInt
 fun TripSheetContent(
     plan: TripPlan,
     startSocPercent: Double?,
-    isSaved: Boolean,
     layout: TripListLayout,
     // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
     selection: SectionSelection,
@@ -99,7 +98,6 @@ fun TripSheetContent(
     onSectionSent: () -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: () -> Unit,
-    onToggleSave: () -> Unit,
     onEditStartSoc: () -> Unit,
     onSocInputChange: (String) -> Unit,
     onSocConfirm: () -> Unit,
@@ -109,6 +107,8 @@ fun TripSheetContent(
     onArrivalSocConfirm: () -> Unit,
     onArrivalSocDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    /** The start and destination rows open their charge-level editors; off on the active route. */
+    socEditable: Boolean = true,
 ) {
     val selecting = selection.selecting
     val selectionA = selection.a
@@ -213,22 +213,6 @@ fun TripSheetContent(
                         ),
                     )
                 }
-                Surface(
-                    onClick = onToggleSave,
-                    shape = MaterialTheme.shapes.small,
-                    color = if (isSaved) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (isSaved) ChargeAheadColors.deleteOutline else MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.size(width = 44.dp, height = 40.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painterResource(if (isSaved) R.drawable.ic_heart_filled else R.drawable.ic_heart),
-                            contentDescription = stringResource(R.string.trip_save),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
             }
         }
 
@@ -255,6 +239,7 @@ fun TripSheetContent(
                     onOpenStop = onOpenStop,
                     onEditStartSoc = onEditStartSoc,
                     onEditArrivalSoc = onEditArrivalSoc,
+                    socEditable = socEditable,
                     modifier = Modifier.fillMaxSize(),
                 )
                 TripListLayout.TILES -> StopTiles(
@@ -282,10 +267,12 @@ private fun StopRail(
     onOpenStop: (PlannedStop) -> Unit,
     onEditStartSoc: () -> Unit,
     onEditArrivalSoc: () -> Unit,
+    socEditable: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
     val last = plan.stops.size + 1
+    val pen = if (socEditable) painterResource(R.drawable.ic_pen) else null
     val now = LocalNow.current()
 
     LazyColumn(modifier = modifier.padding(horizontal = 16.dp)) {
@@ -295,9 +282,9 @@ private fun StopRail(
                 last = last,
                 selected = selecting && selection.includes(0),
                 selectionShape = selection.spanShape(0),
-                onClick = { if (selecting) onPickPoint(0) else onEditStartSoc() },
+                onClick = { if (selecting) onPickPoint(0) else if (socEditable) onEditStartSoc() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
-                trailing = painterResource(R.drawable.ic_pen),
+                trailing = pen,
                 trailingDescription = stringResource(R.string.trip_soc_edit),
             ) {
                 Text(stringResource(R.string.trip_start), style = MaterialTheme.typography.titleSmall)
@@ -346,9 +333,9 @@ private fun StopRail(
                 last = last,
                 selected = selecting && selection.includes(last),
                 selectionShape = selection.spanShape(last),
-                onClick = { if (selecting) onPickPoint(last) else onEditArrivalSoc() },
+                onClick = { if (selecting) onPickPoint(last) else if (socEditable) onEditArrivalSoc() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
-                trailing = painterResource(R.drawable.ic_pen),
+                trailing = pen,
                 trailingDescription = stringResource(R.string.trip_arrival_soc_edit),
             ) {
                 Text(
