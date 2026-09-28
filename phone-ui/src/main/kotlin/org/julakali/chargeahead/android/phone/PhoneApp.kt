@@ -140,10 +140,8 @@ fun PhoneApp(librariesRes: Int) {
             sheetState = sheetState,
             snackbar = snackbar,
             onLayoutChanged = phoneAppViewModel::onTripLayoutChanged,
-            onReplan = {
-                planned?.let { searchViewModel.onOpened(it.plan.destination) }
-                phoneAppViewModel.onSearchOpened()
-            },
+            // Same destination, today's settings and charge: no search, just plan again.
+            onReplan = { planned?.let { tripViewModel.plan(it.plan.destination) } },
             onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
             onSendToMaps = ::sendToMaps,
             viewModel = tripViewModel,
