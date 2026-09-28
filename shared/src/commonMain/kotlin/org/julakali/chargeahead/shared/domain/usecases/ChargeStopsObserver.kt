@@ -13,7 +13,7 @@ import org.julakali.chargeahead.shared.domain.RouteStatus
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
-import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.cancellableRunCatching
 import org.julakali.chargeahead.shared.logWarning
@@ -45,7 +45,7 @@ import kotlinx.coroutines.withContext
 class ChargeStopsObserver(
     private val repository: SiteRepository,
     private val settings: SettingsStore,
-    private val tripStore: TripStore,
+    private val trips: TripRepository,
     private val routeEngine: RouteEngine,
     private val planning: CorridorPlanning,
     private val refreshPolicy: RefreshPolicy = RefreshPolicy(),
@@ -65,7 +65,7 @@ class ChargeStopsObserver(
     )
 
     override fun createObservable(params: Params): Flow<ChargeStops?> {
-        val routes = settings.destination.distinctUntilChanged().flatMapLatest { routeTo(it, params.fixes) }
+        val routes = trips.state.map { it.destination }.distinctUntilChanged().flatMapLatest { routeTo(it, params.fixes) }
         return combine(
             params.fixes,
             settings.vehicle,
@@ -86,8 +86,9 @@ class ChargeStopsObserver(
 
     private fun routeTo(destination: Destination?, fixes: Flow<Fix?>): Flow<RouteState> {
         if (destination == null) return flowOf(RouteState(null, null, RouteStatus.NONE))
-        // A planned trip to the destination brings its route along, so it's fetched only once.
-        return tripStore.plan
+        // A planned or committed trip to the destination brings its route along, so it's fetched only once.
+        return trips.state
+            .map { it.planned ?: it.committed?.plan }
             .map { plan -> plan?.route?.takeIf { plan.destination.position == destination.position } }
             .distinctUntilChanged()
             .flatMapLatest { planned ->

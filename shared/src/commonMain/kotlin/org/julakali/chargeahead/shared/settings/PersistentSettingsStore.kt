@@ -13,6 +13,8 @@ import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.TripState
+import org.julakali.chargeahead.shared.data.LegacyTripSource
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
@@ -39,7 +41,7 @@ import kotlinx.serialization.json.Json
  */
 class PersistentSettingsStore(
     private val dataStore: DataStore<Preferences>,
-) : SettingsStore {
+) : SettingsStore, LegacyTripSource {
 
     // Only for the initial values; afterwards the StateFlows are the truth.
     private val initial: Preferences = runBlocking { dataStore.data.first() }
@@ -120,30 +122,33 @@ class PersistentSettingsStore(
             .orEmpty()
             .mapNotNull { it.toProfileOrNull() }
 
-    private val storedDestinations = readDestinations()
-    private val mutableDestination = MutableStateFlow(storedDestinations.firstOrNull { it.current }?.toDomain())
-    override val destination: StateFlow<Destination?> = mutableDestination.asStateFlow()
-
-    private val mutableRecent = MutableStateFlow(storedDestinations.map(StoredDestination::toDomain))
+    private val mutableRecent = MutableStateFlow(readDestinations().map(StoredDestination::toDomain))
     override val recentDestinations: StateFlow<List<Destination>> = mutableRecent.asStateFlow()
 
-    override suspend fun setDestination(destination: Destination?) = write {
-        val previous = mutableRecent.value
-        val updated = if (destination == null) {
-            previous
-        } else {
-            // Newest first, duplicates removed, length capped.
-            (listOf(destination) + previous.filterNot { it.position == destination.position })
-                .take(MAX_RECENT_DESTINATIONS)
-        }
-
-        putJson(
-            KEY_DESTINATIONS,
-            updated.takeIf { it.isNotEmpty() }
-                ?.map { StoredDestination(it.name, it.position.lat, it.position.lon, it == destination, it.address) },
-        )
+    override suspend fun addRecentDestination(destination: Destination) = write {
+        // Newest first, duplicates removed, length capped.
+        val updated = (listOf(destination) + mutableRecent.value.filterNot { it.position == destination.position })
+            .take(MAX_RECENT_DESTINATIONS)
+        putJson(KEY_DESTINATIONS, updated.map { StoredDestination(it.name, it.position.lat, it.position.lon, address = it.address) })
         mutableRecent.value = updated
-        mutableDestination.value = destination
+    }
+
+    // TODO drop once no install has a trip left under the settings keys
+    override suspend fun legacyTrip(): TripState? {
+        val preferences = dataStore.data.first()
+        val committed = preferences.getJson<CommittedTrip>(KEY_COMMITTED_TRIP)
+        val destination = preferences.getJson<List<StoredDestination>>(KEY_DESTINATIONS)
+            ?.firstOrNull { it.current }
+            ?.toDomain()
+            ?: committed?.plan?.destination
+            ?: return null
+        return TripState(destination = destination, committed = committed)
+    }
+
+    override suspend fun clearLegacyTrip() = write {
+        putJson<CommittedTrip>(KEY_COMMITTED_TRIP, null)
+        val destinations = getJson<List<StoredDestination>>(KEY_DESTINATIONS)
+        putJson(KEY_DESTINATIONS, destinations?.map { it.copy(current = false) })
     }
 
     private val mutableNetworks = MutableStateFlow(readNetworks())
@@ -180,19 +185,6 @@ class PersistentSettingsStore(
     private fun readFilters(): ChargeFilters {
         val stored = initial.getJson<StoredFilters>(KEY_CHARGE_FILTERS) ?: return ChargeFilters()
         return ChargeFilters(stored.minPowerKw, stored.maxDistanceKm)
-    }
-
-    private val mutableCommittedTrip = MutableStateFlow(initial.getJson<CommittedTrip>(KEY_COMMITTED_TRIP))
-    override val committedTrip: StateFlow<CommittedTrip?> = mutableCommittedTrip.asStateFlow()
-
-    override suspend fun commitTrip(trip: CommittedTrip) = write {
-        putJson(KEY_COMMITTED_TRIP, trip)
-        mutableCommittedTrip.value = trip
-    }
-
-    override suspend fun clearCommittedTrip() = write {
-        putJson<CommittedTrip>(KEY_COMMITTED_TRIP, null)
-        mutableCommittedTrip.value = null
     }
 
     private val mutableCarData = MutableStateFlow(readCarData())
@@ -332,7 +324,7 @@ class PersistentSettingsStore(
         val name: String,
         val lat: Double,
         val lon: Double,
-        /** Exactly one is the current destination; the rest are just history. */
+        /** Written by older builds for the destination that is now in the trip state. */
         val current: Boolean = false,
         val address: String? = null,
     ) {

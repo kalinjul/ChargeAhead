@@ -1,41 +1,100 @@
 package org.julakali.chargeahead.shared.data
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
-import org.julakali.chargeahead.shared.db.ChargeSiteDatabase
-import org.julakali.chargeahead.shared.db.PlannedTripEntity
 import org.julakali.chargeahead.shared.domain.Address
 import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PlannedStop
-import org.julakali.chargeahead.shared.domain.PlannedTripStorage
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteSegment
 import org.julakali.chargeahead.shared.domain.TripPlan
+import org.julakali.chargeahead.shared.domain.TripState
+import org.julakali.chargeahead.shared.domain.TripStorage
 
-/** The planned trip as a JSON row in the app's database. */
-class RoomTripStorage(private val database: ChargeSiteDatabase) : PlannedTripStorage {
+/** Trip state that older builds kept among the settings. */
+interface LegacyTripSource {
+    suspend fun legacyTrip(): TripState?
 
-    override suspend fun read(): TripPlan? {
-        val raw = database.plannedTrip().load() ?: return null
+    suspend fun clearLegacyTrip()
+}
+
+/**
+ * The trip state as one JSON entry in its own file, so a write replaces all
+ * of it at once. Takes over [legacy]'s trip when nothing is stored yet.
+ */
+class DataStoreTripStorage(
+    private val dataStore: DataStore<Preferences>,
+    private val legacy: LegacyTripSource? = null,
+) : TripStorage {
+
+    override suspend fun read(): TripState? {
+        val raw = dataStore.data.first()[KEY_STATE] ?: return takeLegacy()
         // A payload from an older or newer build costs the trip, not the launch.
-        return runCatching { json.decodeFromString<StoredTrip>(raw).toDomain() }.getOrNull()
+        return runCatching { json.decodeFromString<StoredTripState>(raw).toDomain() }.getOrNull()
     }
 
-    override suspend fun write(plan: TripPlan?) {
-        val dao = database.plannedTrip()
-        if (plan == null) dao.clear() else dao.save(PlannedTripEntity(plan = json.encodeToString(plan.toStored())))
+    override suspend fun write(state: TripState) {
+        val raw = json.encodeToString(state.toStored())
+        dataStore.edit { it[KEY_STATE] = raw }
+    }
+
+    // Written here before it is cleared there, so a crash in between loses nothing.
+    private suspend fun takeLegacy(): TripState? {
+        val taken = legacy?.legacyTrip() ?: return null
+        write(taken)
+        legacy.clearLegacyTrip()
+        return taken
     }
 
     private companion object {
+        val KEY_STATE = stringPreferencesKey("trip.state")
+
         // coerceInputValues turns an enum name this version doesn't know into
         // the property's default, as in the type converters.
         val json = Json { coerceInputValues = true; ignoreUnknownKeys = true }
     }
 }
+
+@Serializable
+private data class StoredTripState(
+    val destination: StoredDestination? = null,
+    val planned: StoredTrip? = null,
+    val committed: StoredCommittedTrip? = null,
+)
+
+@Serializable
+private data class StoredCommittedTrip(
+    val plan: StoredTrip,
+    val startSocPercent: Double? = null,
+    val committedAtEpochMillis: Long,
+)
+
+private fun TripState.toStored() = StoredTripState(
+    destination = destination?.toStored(),
+    planned = planned?.toStored(),
+    committed = committed?.let { StoredCommittedTrip(it.plan.toStored(), it.startSocPercent, it.committedAtEpochMillis) },
+)
+
+/** Throws on a payload the domain types reject — a route of one point, say. */
+private fun StoredTripState.toDomain() = TripState(
+    destination = destination?.toDomain(),
+    planned = planned?.toDomain(),
+    committed = committed?.let { CommittedTrip(it.plan.toDomain(), it.startSocPercent, it.committedAtEpochMillis) },
+)
+
+private fun Destination.toStored() = StoredDestination(name, position.lat, position.lon, address)
+
+private fun StoredDestination.toDomain() = Destination(name, LatLon(lat, lon), address)
 
 @Serializable
 private data class StoredPoint(val lat: Double, val lon: Double)
@@ -110,7 +169,7 @@ private fun TripPlan.toStored() = StoredTrip(
         durationMinutes = route.durationMinutes,
         segments = route.segments.map { StoredSegment(it.fromKm, it.distanceKm, it.durationMinutes) },
     ),
-    destination = StoredDestination(destination.name, destination.position.lat, destination.position.lon, destination.address),
+    destination = destination.toStored(),
     stops = stops.map { stop ->
         StoredStop(
             site = stop.site.toStored(),
@@ -147,7 +206,6 @@ private fun ChargeSite.toStored() = StoredSite(
     networkKey = networkKey,
 )
 
-/** Throws on a payload the domain types reject — a route of one point, say. */
 private fun StoredTrip.toDomain() = TripPlan(
     route = Route(
         points = route.points.map { LatLon(it.lat, it.lon) },
@@ -155,7 +213,7 @@ private fun StoredTrip.toDomain() = TripPlan(
         durationMinutes = route.durationMinutes,
         segments = route.segments.map { RouteSegment(it.fromKm, it.distanceKm, it.durationMinutes) },
     ),
-    destination = Destination(destination.name, LatLon(destination.lat, destination.lon), destination.address),
+    destination = destination.toDomain(),
     stops = stops.map { stop ->
         PlannedStop(
             site = stop.site.toDomain(),

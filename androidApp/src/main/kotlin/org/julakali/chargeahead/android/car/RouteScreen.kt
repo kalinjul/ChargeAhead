@@ -28,10 +28,11 @@ import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
-import org.julakali.chargeahead.shared.domain.SettingsStore
-import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.TripRepository
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import org.koin.core.component.KoinComponent
@@ -53,8 +54,7 @@ class RouteScreen(
 ) : Screen(carContext), KoinComponent {
 
     private val planTrip: PlanTripInteractor = get()
-    private val tripStore: TripStore = get()
-    private val settings: SettingsStore = get()
+    private val trips: TripRepository = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
     private var plan: TripPlan? = null
@@ -66,7 +66,7 @@ class RouteScreen(
     init {
         if (activeRoute) {
             lifecycleScope.launch {
-                settings.committedTrip.collect { committed ->
+                trips.state.map { it.committed }.distinctUntilChanged().collect { committed ->
                     if (committed == null) {
                         screenManager.pop()
                     } else {
@@ -78,7 +78,7 @@ class RouteScreen(
         } else {
             lifecycleScope.launch {
                 // Also a trip the phone plans to the same destination.
-                tripStore.plan.collect { stored ->
+                trips.state.map { it.planned }.distinctUntilChanged().collect { stored ->
                     plan = stored?.takeIf { it.destination.position == destination.position }
                     invalidate()
                 }

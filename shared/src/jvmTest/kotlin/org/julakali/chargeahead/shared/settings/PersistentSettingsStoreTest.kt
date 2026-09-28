@@ -127,55 +127,43 @@ class PersistentSettingsStoreTest {
         )
     }
 
-    // --- Destination and destination history ---
+    // --- Destination history ---
 
     private val munich = Destination("München Hauptbahnhof", LatLon(48.1407, 11.5569))
     private val nuremberg = Destination("Nürnberg Hauptbahnhof", LatLon(49.4457, 11.0823))
 
     @Test
-    fun withoutADestination_theCorridorApplies() {
+    fun theHistoryStartsEmpty() {
         val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
-        assertNull(store.destination.value)
         assertTrue(store.recentDestinations.value.isEmpty())
     }
 
     @Test
-    fun aDestination_survivesARestart() = runBlocking {
+    fun theHistory_survivesARestart() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        PersistentSettingsStore(storage).setDestination(munich)
+        PersistentSettingsStore(storage).addRecentDestination(munich)
 
-        assertEquals(munich, PersistentSettingsStore(storage).destination.value)
+        assertEquals(listOf(munich), PersistentSettingsStore(storage).recentDestinations.value)
     }
 
     @Test
-    fun aDestinationEndsUpInHistory() = runBlocking {
+    fun theNewestDestinationComesFirst() = runBlocking {
         val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
-        store.setDestination(munich)
-        store.setDestination(nuremberg)
+        store.addRecentDestination(munich)
+        store.addRecentDestination(nuremberg)
 
         assertEquals(listOf(nuremberg, munich), store.recentDestinations.value)
-    }
-
-    @Test
-    fun deletingADestination_keepsTheHistory() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        store.setDestination(munich)
-
-        store.setDestination(null)
-
-        assertNull(store.destination.value)
-        assertEquals(listOf(munich), store.recentDestinations.value)
     }
 
     @Test
     fun theSameDestinationTwice_appearsOnlyOnceInHistory() = runBlocking {
         val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
-        store.setDestination(munich)
-        store.setDestination(nuremberg)
-        store.setDestination(munich)
+        store.addRecentDestination(munich)
+        store.addRecentDestination(nuremberg)
+        store.addRecentDestination(munich)
 
         assertEquals(listOf(munich, nuremberg), store.recentDestinations.value)
     }
@@ -185,7 +173,7 @@ class PersistentSettingsStoreTest {
         val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
 
         repeat(12) { i ->
-            store.setDestination(Destination("Ziel $i", LatLon(48.0 + i * 0.1, 11.0)))
+            store.addRecentDestination(Destination("Ziel $i", LatLon(48.0 + i * 0.1, 11.0)))
         }
 
         assertEquals(8, store.recentDestinations.value.size)
@@ -197,16 +185,16 @@ class PersistentSettingsStoreTest {
         // Place names may contain commas, quotes, and line breaks.
         val storage = InMemoryPreferencesDataStore()
         val tricky = Destination("St. Peter-Ording, \"Nord\"; Zeile\nZwei", LatLon(54.3, 8.6))
-        PersistentSettingsStore(storage).setDestination(tricky)
+        PersistentSettingsStore(storage).addRecentDestination(tricky)
 
-        assertEquals(tricky, PersistentSettingsStore(storage).destination.value)
+        assertEquals(listOf(tricky), PersistentSettingsStore(storage).recentDestinations.value)
     }
 
     @Test
     fun theAddress_survivesSavingInTheHistory() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
         val club = Destination("Uebel und Gefährlich", LatLon(53.556, 9.968), "Feldstraße 66, 20359 Hamburg")
-        PersistentSettingsStore(storage).setDestination(club)
+        PersistentSettingsStore(storage).addRecentDestination(club)
 
         assertEquals(listOf(club), PersistentSettingsStore(storage).recentDestinations.value)
     }
@@ -248,7 +236,6 @@ class PersistentSettingsStoreTest {
 
         val store = PersistentSettingsStore(broken)
 
-        assertNull(store.destination.value)
         assertTrue(store.recentDestinations.value.isEmpty())
     }
 }

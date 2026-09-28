@@ -7,8 +7,6 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.isDisplayed
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.flow.first
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
@@ -196,7 +194,7 @@ class PhoneAppFlowTest {
         compose.onNodeWithText(compose.string(R.string.active_route_end)).performClick()
         waitForTextGone(compose.string(R.string.active_route_end))
         compose.onNodeWithText(pill).assertIsNotEnabled()
-        assertNull(runBlocking { harness.settings.committedTrip.first() })
+        assertNull(harness.trips.state.value.committed)
     }
 
     /** ModalDrawerSheet only handles back when it is given the drawer state. */

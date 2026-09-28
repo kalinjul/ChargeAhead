@@ -60,6 +60,6 @@ class ChargeSession : Session(), KoinComponent {
             }
         })
 
-        return CarHomeScreen(carContext, feature, settings, permissions)
+        return CarHomeScreen(carContext, feature, settings, get(), permissions)
     }
 }

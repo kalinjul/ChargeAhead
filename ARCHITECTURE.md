@@ -643,10 +643,13 @@ what the UI knows as params (the viewport) and reads settings and
 repositories itself; the ViewModel puts its `flow` into `combine()`. They
 are Koin `factory` declarations, one per ViewModel. `MapChargersObserver` is
 the worked example; the rules are in the `interactors` skill. The planned
-trip lives in `TripStore`, a single, so phone and car show the same one.
-It writes every plan through to a `plannedTrip` row (`PlannedTripStorage`,
-Room) and reads it back when the feature starts, so a trip survives process
-death and a restart. Only dismissing it, or a schema bump, drops it.
+trip state — destination, the planned trip on the map and the committed
+trip sent to Maps — lives in `TripRepository`, a single, so phone and car
+show the same one. Each transition (`TripState.planned`, `committed`,
+`planDismissed`, `ended`) is one write of the whole state to its own
+DataStore file (`DataStoreTripStorage`), read back when the feature starts,
+so a trip survives process death, a restart and a cache schema bump. Only
+the trip interactors write it.
 
 A `SettingsStore` write from the UI goes through one of them
 (`SelectVehicleInteractor`, `UpdateManualSocInteractor`, …). ViewModels and
@@ -657,7 +660,7 @@ observed (`RememberingSoCSource`, `CarHardwareSoCSource`) still write
 directly.
 
 **Scoping.** `SettingsStore` (`appModule`, androidApp) and the phone's
-`ChargeStopsFeature` and `TripStore` (`chargeStopsModule`, shared) are
+`ChargeStopsFeature` and `TripRepository` (`chargeStopsModule`, shared) are
 application-scoped Koin singletons — the
 ViewModels share them, because two instances would mean two location streams
 and two stores that never see each other's writes. The ViewModels are

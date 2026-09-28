@@ -15,6 +15,7 @@ import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
@@ -43,6 +44,7 @@ class ChargeStopsModuleTest {
                     single<LocationSource> { fakeLocationSource }
                     single<SettingsStore> { PersistentSettingsStore(InMemoryPreferencesDataStore()) }
                     single { DatabaseFactory() }
+                    single<TripStorage> { TripStorage.None }
                     single { BackendConfig("https://backend.invalid", "token") }
                 },
                 chargeStopsModule(),

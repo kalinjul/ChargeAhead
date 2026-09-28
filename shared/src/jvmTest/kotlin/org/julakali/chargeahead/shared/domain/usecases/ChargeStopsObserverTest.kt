@@ -20,7 +20,8 @@ import org.julakali.chargeahead.shared.domain.SectorArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.TripPlan
-import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
@@ -60,7 +61,11 @@ class ObserveChargeStopsTest {
     )
 
     private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-    private val tripStore = TripStore()
+    private val trips = TripRepository()
+
+    private suspend fun setDestination(destination: Destination?) {
+        trips.update { it.copy(destination = destination) }
+    }
     private val fixes = MutableStateFlow<Fix?>(null)
     private val energy = MutableStateFlow<EnergyState?>(null)
 
@@ -112,7 +117,7 @@ class ObserveChargeStopsTest {
     private fun observer(
         repository: SiteRepository,
         router: RouteEngine = FixedRoute(Route(a9, 170.0, 108.0)),
-    ) = ChargeStopsObserver(repository, settings, tripStore, router, CorridorPlanner()).also {
+    ) = ChargeStopsObserver(repository, settings, trips, router, CorridorPlanner()).also {
         it(ChargeStopsObserver.Params(fixes, energy))
     }
 
@@ -309,7 +314,7 @@ class ObserveChargeStopsTest {
         fixes.value = fix(nuremberg)
         observe.await()
 
-        settings.setDestination(munich)
+        setDestination(munich)
 
         val searched = observe.await { it.routeStatus == RouteStatus.ACTIVE }
         assertEquals(2.0, assertIs<PolylineArea>(searched.area).bufferKm)
@@ -325,7 +330,7 @@ class ObserveChargeStopsTest {
         suspend fun await(matching: (ChargeStops) -> Boolean) =
             withTimeout(5_000) { latest.first { it != null && matching(it) }!! }
         fixes.value = fix(nuremberg, timestampMillis = 0L)
-        settings.setDestination(munich)
+        setDestination(munich)
         val atStart = await { it.routeStatus == RouteStatus.ACTIVE }.area.radiusKm
 
         fixes.value = fix(a9[1], timestampMillis = 100_000L)
@@ -341,8 +346,21 @@ class ObserveChargeStopsTest {
     fun `a planned trip to the destination brings its route along`() = runBlocking<Unit> {
         val router = FixedRoute(null)
         val route = Route(a9, 170.0, 108.0)
-        tripStore.store(TripPlan(route, munich, emptyList(), driveMinutes = 108.0, chargeMinutes = 0.0, arrivalSocPercent = 40.0))
-        settings.setDestination(munich)
+        val plan = TripPlan(route, munich, emptyList(), driveMinutes = 108.0, chargeMinutes = 0.0, arrivalSocPercent = 40.0)
+        trips.update { it.planned(munich, plan) }
+        val observe = observer(FakeRepository(emptyList()), router)
+
+        fixes.value = fix(nuremberg)
+
+        assertIs<PolylineArea>(observe.await { it.routeStatus == RouteStatus.ACTIVE }.area)
+        assertEquals(0, router.calls)
+    }
+
+    @Test
+    fun `a committed trip to the destination brings its route along`() = runBlocking<Unit> {
+        val router = FixedRoute(null)
+        val plan = TripPlan(Route(a9, 170.0, 108.0), munich, emptyList(), driveMinutes = 108.0, chargeMinutes = 0.0, arrivalSocPercent = 40.0)
+        trips.update { it.committed(CommittedTrip(plan, startSocPercent = 60.0, committedAtEpochMillis = 0L)) }
         val observe = observer(FakeRepository(emptyList()), router)
 
         fixes.value = fix(nuremberg)
@@ -353,12 +371,12 @@ class ObserveChargeStopsTest {
 
     @Test
     fun `clearing the destination switches back to the direction of travel`() = runBlocking<Unit> {
-        settings.setDestination(munich)
+        setDestination(munich)
         val observe = observer(FakeRepository(emptyList()))
         fixes.value = fix(nuremberg)
         observe.await { it.routeStatus == RouteStatus.ACTIVE }
 
-        settings.setDestination(null)
+        setDestination(null)
 
         val searched = observe.await { it.routeStatus == RouteStatus.NONE }
         assertIs<SectorArea>(searched.area)
@@ -371,7 +389,7 @@ class ObserveChargeStopsTest {
         val broken = object : RouteEngine {
             override suspend fun route(from: LatLon, to: LatLon): Route? = throw IllegalStateException("Funkloch")
         }
-        settings.setDestination(munich)
+        setDestination(munich)
         val observe = observer(FakeRepository(emptyList()), broken)
 
         fixes.value = fix(nuremberg)
@@ -383,7 +401,7 @@ class ObserveChargeStopsTest {
 
     @Test
     fun `without a road connection the corridor remains`() = runBlocking<Unit> {
-        settings.setDestination(munich)
+        setDestination(munich)
         val observe = observer(FakeRepository(emptyList()), FixedRoute(null))
 
         fixes.value = fix(nuremberg)
@@ -394,7 +412,7 @@ class ObserveChargeStopsTest {
     /** Routing only works once it's known where the trip starts; a stored destination survives a restart. */
     @Test
     fun `a destination set before the first fix is routed from it`() = runBlocking<Unit> {
-        settings.setDestination(munich)
+        setDestination(munich)
         val observe = observer(FakeRepository(emptyList()))
 
         fixes.value = fix(nuremberg)

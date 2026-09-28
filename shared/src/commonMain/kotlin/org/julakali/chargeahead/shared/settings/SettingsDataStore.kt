@@ -16,6 +16,9 @@ import okio.Path.Companion.toPath
 /** Settings file name, the same on every platform. */
 const val SETTINGS_DATASTORE_FILE = "settings.preferences_pb"
 
+/** The trip state's file name, the same on every platform. */
+const val TRIP_DATASTORE_FILE = "trip.preferences_pb"
+
 /**
  * The settings file at [path]. At most one per file and process: DataStore
  * refuses a second active instance on the same file.
