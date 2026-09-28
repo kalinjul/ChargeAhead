@@ -10,8 +10,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -22,6 +23,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -32,6 +34,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -156,19 +159,27 @@ fun HomeGoogleMap(
     // large loaded set doesn't cost a recomposition per marker per frame.
     var shownCompact by remember { mutableStateOf(compactMarkers) }
     val tierAlpha = remember { Animatable(1f) }
+    val fade = ChargeAheadMotion.effects<Float>()
     var fadeBounds by remember { mutableStateOf<LatLngBounds?>(null) }
     LaunchedEffect(compactMarkers) {
         if (shownCompact == compactMarkers) return@LaunchedEffect
         fadeBounds = cameraPositionState.projection?.visibleRegion?.latLngBounds
-        tierAlpha.animateTo(0f, tween(TIER_FADE_OUT_MILLIS))
+        tierAlpha.animateTo(0f, fade)
         shownCompact = compactMarkers
-        tierAlpha.animateTo(1f, tween(TIER_FADE_IN_MILLIS))
+        tierAlpha.animateTo(1f, fade)
         fadeBounds = null
     }
 
+    val context = LocalContext.current
+    val darkMap = isSystemInDarkTheme()
+    val mapStyle = remember(darkMap) {
+        if (darkMap) MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark) else null
+    }
+    val routeColor = MaterialTheme.colorScheme.primary
+
     GoogleMap(
         cameraPositionState = cameraPositionState,
-        properties = MapProperties(isMyLocationEnabled = hasLocationPermission),
+        properties = MapProperties(isMyLocationEnabled = hasLocationPermission, mapStyleOptions = mapStyle),
         onMapLoaded = { mapLoaded = true },
         // The bar on top and the trip sheet below cover the map; a route must fit between them.
         contentPadding = PaddingValues(top = TOP_CHROME_HEIGHT, bottom = bottomInset),
@@ -192,7 +203,7 @@ fun HomeGoogleMap(
         }
         if (route != null) {
             if (routeLatLngs.size >= 2) {
-                Polyline(points = routeLatLngs, color = ROUTE_COLOR, width = 14f)
+                Polyline(points = routeLatLngs, color = routeColor, width = 14f)
             }
             route.stops.forEach { stop ->
                 key(stop.index) {
@@ -230,15 +241,15 @@ private fun ChargeBadge(color: Color, content: @Composable () -> Unit) {
 /** Frankfurt, shown before the first fix. */
 private val FALLBACK_CENTER = LatLon(50.11, 8.68)
 const val HOME_ZOOM = 11f
-private val ROUTE_COLOR = Color(0xFF1A73E8)
+
+/** The locate button: about 3.5 km to either side on a phone, close enough to read the pills. */
+const val LOCATE_ZOOM = 14f
 
 /** Below this, no chargers load. */
 const val MIN_CHARGER_ZOOM = 10f
 
 /** Below this the markers are dots; pills would pile up. */
 const val PILL_ZOOM = 11f
-private const val TIER_FADE_OUT_MILLIS = 140
-private const val TIER_FADE_IN_MILLIS = 220
 private const val BOUNDS_PADDING_PX = 120
 
 /** Status bar, search bar and one row of controls. */

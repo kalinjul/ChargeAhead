@@ -10,7 +10,7 @@ import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
-import org.julakali.chargeahead.shared.domain.SavedRoute
+import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.VehicleProfile
@@ -182,43 +182,18 @@ class PersistentSettingsStore(
         return ChargeFilters(stored.minPowerKw, stored.maxDistanceKm)
     }
 
-    private val mutableSavedRoutes = MutableStateFlow(readSavedRoutes())
-    override val savedRoutes: StateFlow<List<SavedRoute>> = mutableSavedRoutes.asStateFlow()
+    private val mutableCommittedTrip = MutableStateFlow(initial.getJson<CommittedTrip>(KEY_COMMITTED_TRIP))
+    override val committedTrip: StateFlow<CommittedTrip?> = mutableCommittedTrip.asStateFlow()
 
-    override suspend fun saveRoute(route: SavedRoute) = write {
-        writeSavedRoutes(listOf(route) + mutableSavedRoutes.value.filterNot { it.id == route.id })
+    override suspend fun commitTrip(trip: CommittedTrip) = write {
+        putJson(KEY_COMMITTED_TRIP, trip)
+        mutableCommittedTrip.value = trip
     }
 
-    override suspend fun renameSavedRoute(id: String, name: String) = write {
-        writeSavedRoutes(mutableSavedRoutes.value.map { if (it.id == id) it.copy(name = name) else it })
+    override suspend fun clearCommittedTrip() = write {
+        putJson<CommittedTrip>(KEY_COMMITTED_TRIP, null)
+        mutableCommittedTrip.value = null
     }
-
-    override suspend fun removeSavedRoute(id: String) = write {
-        writeSavedRoutes(mutableSavedRoutes.value.filterNot { it.id == id })
-    }
-
-    private fun MutablePreferences.writeSavedRoutes(routes: List<SavedRoute>) {
-        putJson(
-            KEY_SAVED_ROUTES,
-            routes.takeIf { it.isNotEmpty() }?.map {
-                StoredSavedRoute(
-                    id = it.id,
-                    name = it.name,
-                    destName = it.destination.name,
-                    lat = it.destination.position.lat,
-                    lon = it.destination.position.lon,
-                    summary = it.summary,
-                    destAddress = it.destination.address,
-                )
-            },
-        )
-        mutableSavedRoutes.value = routes
-    }
-
-    private fun readSavedRoutes(): List<SavedRoute> =
-        initial.getJson<List<StoredSavedRoute>>(KEY_SAVED_ROUTES)
-            .orEmpty()
-            .map { SavedRoute(it.id, it.name, Destination(it.destName, LatLon(it.lat, it.lon), it.destAddress), it.summary) }
 
     private val mutableCarData = MutableStateFlow(readCarData())
     override val carDebugData: StateFlow<List<CarDataPoint>> = mutableCarData.asStateFlow()
@@ -338,17 +313,6 @@ class PersistentSettingsStore(
     )
 
     @Serializable
-    private data class StoredSavedRoute(
-        val id: String,
-        val name: String,
-        val destName: String,
-        val lat: Double,
-        val lon: Double,
-        val summary: String? = null,
-        val destAddress: String? = null,
-    )
-
-    @Serializable
     private data class StoredCarData(
         val kind: String,
         val status: String,
@@ -394,14 +358,14 @@ class PersistentSettingsStore(
         private const val KEY_MANUAL_SOC = "energy.manualSocPercent"
         private const val KEY_ARRIVAL_SOC = "energy.arrivalSocPercent"
         private const val KEY_CHARGE_FILTERS = "filters.charge"
-        private const val KEY_SAVED_ROUTES = "routes.saved"
+        private const val KEY_COMMITTED_TRIP = "trip.committed"
         private const val KEY_CAR_DEBUG = "car.debugData"
 
         /** Every key the store has ever written; what a migration copies. */
         val ALL_KEYS: Set<String> = setOf(
             KEY_DESTINATIONS, KEY_SOC_DIAGNOSTICS, KEY_ONLY_PREFERRED, KEY_PREFERRED_NETWORKS,
             KEY_NAME, KEY_BATTERY_KWH, KEY_CONSUMPTION, KEY_CONNECTORS, KEY_DC_PEAK, KEY_GARAGE,
-            KEY_MANUAL_SOC, KEY_ARRIVAL_SOC, KEY_CHARGE_FILTERS, KEY_SAVED_ROUTES, KEY_CAR_DEBUG,
+            KEY_MANUAL_SOC, KEY_ARRIVAL_SOC, KEY_CHARGE_FILTERS, KEY_COMMITTED_TRIP, KEY_CAR_DEBUG,
         )
     }
 }

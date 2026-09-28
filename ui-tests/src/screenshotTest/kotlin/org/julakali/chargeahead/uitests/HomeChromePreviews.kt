@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.uitests
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
+import org.julakali.chargeahead.android.phone.CompassButton
 import org.julakali.chargeahead.android.phone.HintChip
 import org.julakali.chargeahead.android.phone.HomePill
 import org.julakali.chargeahead.android.phone.R
@@ -32,7 +34,7 @@ fun HintChipPlain() {
 @PreviewTest
 @Preview(showBackground = true)
 @Composable
-fun HomePillsChargeNowAndFavorites() {
+fun HomePillsChargeNowAndActiveRoute() {
     PreviewScaffold {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(12.dp)) {
             HomePill(
@@ -44,11 +46,11 @@ fun HomePillsChargeNowAndFavorites() {
                 onClick = {},
             )
             HomePill(
-                text = "Favoriten",
-                icon = painterResource(R.drawable.ic_heart),
+                text = "Aktive Route",
+                icon = painterResource(R.drawable.ic_route),
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
-                iconTint = MaterialTheme.colorScheme.error,
+                iconTint = MaterialTheme.colorScheme.primary,
                 onClick = {},
             )
         }
@@ -58,10 +60,10 @@ fun HomePillsChargeNowAndFavorites() {
 @PreviewTest
 @Preview(showBackground = true)
 @Composable
-fun RoundIconButtonWithBadge() {
+fun RoundIconButtonMenu() {
     PreviewScaffold {
         Box(Modifier.padding(12.dp)) {
-            RoundIconButton(onClick = {}, badge = true) {
+            RoundIconButton(onClick = {}) {
                 RoundIcon(painterResource(R.drawable.ic_filter), contentDescription = "Filter")
             }
         }
@@ -83,6 +85,53 @@ fun StationCardChargeNow() {
                 onSend = {},
                 sendContentDescription = "Zu Ionity navigieren",
             )
+        }
+    }
+}
+
+/** Nothing committed yet: the pill is there, but dimmed and not clickable. */
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun HomePillActiveRouteDisabled() {
+    PreviewScaffold {
+        Box(Modifier.padding(12.dp)) {
+            HomePill(
+                text = "Aktive Route",
+                icon = painterResource(R.drawable.ic_route),
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                iconTint = MaterialTheme.colorScheme.primary,
+                enabled = false,
+                onClick = {},
+            )
+        }
+    }
+}
+
+// Dark theme: the same components under UI_MODE_NIGHT_YES.
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun HomePillsChargeNowAndActiveRouteDark() = HomePillsChargeNowAndActiveRoute()
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun StationCardChargeNowDark() = StationCardChargeNow()
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun HintChipPlainDark() = HintChipPlain()
+
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun CompassButtonRotated() {
+    PreviewScaffold {
+        Box(Modifier.padding(12.dp)) {
+            CompassButton(bearing = { 45f }, onClick = {})
         }
     }
 }

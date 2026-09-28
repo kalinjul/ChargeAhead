@@ -111,8 +111,8 @@ interface SettingsStore {
     /** Hard limits for the phone flows (planning, "charge now"). */
     val chargeFilters: Flow<ChargeFilters>
 
-    /** Routes kept under a chosen name, newest first. */
-    val savedRoutes: Flow<List<SavedRoute>>
+    /** The trip sent to Maps last; `null` once ended. */
+    val committedTrip: Flow<CommittedTrip?>
 
     /** The outcome of the last attempt to read the charge level from the vehicle. */
     val socDiagnostics: Flow<SoCDiagnostics?>
@@ -134,9 +134,8 @@ interface SettingsStore {
 
     suspend fun setChargeFilters(filters: ChargeFilters)
 
-    suspend fun saveRoute(route: SavedRoute)
-    suspend fun renameSavedRoute(id: String, name: String)
-    suspend fun removeSavedRoute(id: String)
+    suspend fun commitTrip(trip: CommittedTrip)
+    suspend fun clearCommittedTrip()
 
     /** Sets the destination and adds it to the history. `null` clears the destination. */
     suspend fun setDestination(destination: Destination?)

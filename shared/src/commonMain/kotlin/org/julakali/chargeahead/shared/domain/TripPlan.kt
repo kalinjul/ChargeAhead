@@ -1,6 +1,9 @@
 package org.julakali.chargeahead.shared.domain
 
+import kotlinx.serialization.Serializable
+
 /** One planned charging stop along a trip. */
+@Serializable
 data class PlannedStop(
     val site: ChargeSite,
     /** Position along the route, measured from the start. */
@@ -25,6 +28,7 @@ data class PlannedStop(
     val arrivalMinutesFromStart: Double get() = etaMinutesFromStart - chargeMinutes - stopMinutes
 }
 
+@Serializable
 data class TripPlan(
     val route: Route,
     val destination: Destination,

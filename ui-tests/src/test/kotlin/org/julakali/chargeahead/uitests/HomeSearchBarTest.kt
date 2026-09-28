@@ -34,6 +34,8 @@ class HomeSearchBarTest {
         takeFocus: Boolean = false,
         onQueryChange: (String) -> Unit = {},
         onClear: () -> Unit = {},
+        expanded: Boolean = false,
+        onBack: () -> Unit = {},
     ) = compose.setThemedContent {
         HomeSearchBar(
             query = query,
@@ -44,6 +46,8 @@ class HomeSearchBarTest {
             focusRequester = remember { FocusRequester() },
             clearable = clearable,
             takeFocus = takeFocus,
+            expanded = expanded,
+            onBack = onBack,
         )
     }
 
@@ -95,5 +99,25 @@ class HomeSearchBarTest {
     fun `takeFocus puts the cursor into the field`() {
         bar(takeFocus = true)
         compose.onNode(hasSetTextAction()).assertIsFocused()
+    }
+
+    @Test
+    fun `expanded shows a back arrow that calls onBack`() {
+        var backs = 0
+        bar(expanded = true, onBack = { backs++ })
+        compose.onNodeWithContentDescription(compose.string(R.string.home_search_back)).performClick()
+        assertEquals(1, backs)
+    }
+
+    @Test
+    fun `collapsed has no back arrow`() {
+        bar()
+        compose.onNodeWithContentDescription(compose.string(R.string.home_search_back)).assertDoesNotExist()
+    }
+
+    @Test
+    fun `expanded without a query shows no x, the arrow is the way out`() {
+        bar(expanded = true, clearable = true)
+        compose.onNodeWithContentDescription(compose.string(R.string.home_search_clear)).assertDoesNotExist()
     }
 }

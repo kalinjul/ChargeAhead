@@ -1,5 +1,10 @@
 package org.julakali.chargeahead.android.phone
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +20,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
-import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -23,13 +28,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -41,6 +46,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import kotlinx.coroutines.launch
 import org.julakali.chargeahead.android.phone.R
+import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.MapCharger
@@ -65,17 +71,17 @@ fun HomeRoute(
     onLocate: () -> Unit,
     onSettings: () -> Unit,
     onChargeNow: () -> Unit,
-    onRoutes: () -> Unit,
+    /** The committed trip's page; the pill is dimmed while there is none. */
+    activeRouteEnabled: Boolean,
+    onActiveRoute: () -> Unit,
     /** A tap on the map while the results panel is open. */
     onDismissSearch: () -> Unit,
     /** A numbered route marker was tapped, 1-based. */
     onStopTapped: (Int) -> Unit,
     /** Arrival and departure for a selected site that is a planned stop. */
     tripLineFor: (ChargeStop) -> String?,
-    /** Search bar or destination header. */
-    topBar: @Composable () -> Unit,
-    /** Results while searching. */
-    topPanel: @Composable () -> Unit,
+    /** Material's docked search bar with the hits inside, or the destination header. Gets a fly-to for the map. */
+    topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
@@ -99,11 +105,11 @@ fun HomeRoute(
         onLocate = onLocate,
         onSettings = onSettings,
         onChargeNow = onChargeNow,
-        onRoutes = onRoutes,
+        activeRouteEnabled = activeRouteEnabled,
+        onActiveRoute = onActiveRoute,
         onDismissSearch = onDismissSearch,
         onStopTapped = onStopTapped,
         topBar = topBar,
-        topPanel = topPanel,
         modifier = modifier,
     )
 
@@ -131,11 +137,11 @@ fun HomeScreen(
     onLocate: () -> Unit,
     onSettings: () -> Unit,
     onChargeNow: () -> Unit,
-    onRoutes: () -> Unit,
+    activeRouteEnabled: Boolean,
+    onActiveRoute: () -> Unit,
     onDismissSearch: () -> Unit,
     onStopTapped: (Int) -> Unit,
-    topBar: @Composable () -> Unit,
-    topPanel: @Composable () -> Unit,
+    topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val camera = rememberHomeCamera(uiState.position)
@@ -169,7 +175,9 @@ fun HomeScreen(
             )
         }
 
-        // Bar + settings on one line, the map controls hanging under the settings icon.
+        // Burger, bar, locate on one line. While searching the sides fold away and
+        // Material's docked bar takes the whole width; compass and spinner hang on the right.
+        val searching = mode == HomeMode.SEARCHING
         Column(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -178,59 +186,29 @@ fun HomeScreen(
                 .fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.weight(1f)) { topBar() }
-                RoundIconButton(onClick = onSettings, badge = uiState.filtersCustomized) {
-                    RoundIcon(painterResource(R.drawable.ic_filter), stringResource(R.string.home_settings))
-                }
-            }
-            Row(Modifier.fillMaxWidth()) {
-                Column(
-                    Modifier.weight(1f),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    when {
-                        mode == HomeMode.SEARCHING -> topPanel()
-                        // Location is running and getting nowhere.
-                        uiState.locationUnavailable -> HintChip(
-                            stringResource(R.string.phone_status_location_unavailable),
-                            MaterialTheme.colorScheme.error,
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SideButton(visible = !searching, trailingGap = true) {
+                    RoundIconButton(onClick = onSettings) {
+                        Icon(
+                            Icons.Outlined.Menu,
+                            contentDescription = stringResource(R.string.home_settings),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                 }
-                Spacer(Modifier.width(10.dp))
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    val bearing = camera.position.bearing
-                    if (bearing != 0f) {
-                        RoundIconButton(onClick = {
-                            scope.launch {
-                                camera.animate(
-                                    CameraUpdateFactory.newCameraPosition(
-                                        CameraPosition.Builder(camera.position).bearing(0f).tilt(0f).build(),
-                                    ),
-                                )
-                            }
-                        }) {
-                            Icon(
-                                imageVector = Icons.Filled.Navigation,
-                                contentDescription = stringResource(R.string.map_compass),
-                                tint = Color(0xFFD93025),
-                                // Counter-rotated to point north. graphicsLayer, so only the draw is invalidated.
-                                modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -camera.position.bearing },
-                            )
-                        }
-                    }
+                // Material's bar brings its own panel; the slot renders the whole thing.
+                Box(Modifier.weight(1f)) {
+                    topBar { target -> scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) } }
+                }
+                SideButton(visible = !searching, trailingGap = false) {
                     RoundIconButton(onClick = {
                         // With a position, center on it; otherwise ask for a fix.
                         val target = uiState.position
                         if (target == null) {
                             onLocate()
                         } else {
-                            scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) }
+                            scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), LOCATE_ZOOM)) }
                         }
                     }) {
                         if (uiState.searchingLocation) {
@@ -248,13 +226,49 @@ fun HomeScreen(
                             )
                         }
                     }
-                    // A charger source is being asked over the network.
-                    if (uiState.loadingSites) {
-                        CircularProgressIndicator(
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp),
+                }
+            }
+            Row(Modifier.fillMaxWidth()) {
+                Column(
+                    Modifier.weight(1f),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    when {
+                        searching -> Unit
+                        // Location is running and getting nowhere.
+                        uiState.locationUnavailable -> HintChip(
+                            stringResource(R.string.phone_status_location_unavailable),
+                            MaterialTheme.colorScheme.error,
                         )
+                    }
+                }
+                SideButton(visible = !searching, trailingGap = false) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(46.dp),
+                    ) {
+                        val bearing = camera.position.bearing
+                        if (bearing != 0f) {
+                            CompassButton(bearing = { camera.position.bearing }) {
+                                scope.launch {
+                                    camera.animate(
+                                        CameraUpdateFactory.newCameraPosition(
+                                            CameraPosition.Builder(camera.position).bearing(0f).tilt(0f).build(),
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                        // A charger source is being asked over the network.
+                        if (uiState.loadingSites) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
             }
@@ -324,15 +338,32 @@ fun HomeScreen(
                         onClick = onChargeNow,
                     )
                     HomePill(
-                        text = stringResource(R.string.home_pill_favorites),
-                        icon = painterResource(R.drawable.ic_heart),
+                        text = stringResource(R.string.home_pill_active_route),
+                        icon = painterResource(R.drawable.ic_route),
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface,
-                        iconTint = MaterialTheme.colorScheme.error,
-                        onClick = onRoutes,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        enabled = activeRouteEnabled,
+                        onClick = onActiveRoute,
                     )
                 }
             }
+        }
+    }
+}
+
+/** A button beside the bar that folds away sideways, so the bar can grow into its place. */
+@Composable
+private fun SideButton(visible: Boolean, trailingGap: Boolean, content: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(ChargeAheadMotion.effects()) + expandHorizontally(ChargeAheadMotion.spatial()),
+        exit = fadeOut(ChargeAheadMotion.effects()) + shrinkHorizontally(ChargeAheadMotion.spatial()),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (!trailingGap) Spacer(Modifier.width(10.dp))
+            content()
+            if (trailingGap) Spacer(Modifier.width(10.dp))
         }
     }
 }

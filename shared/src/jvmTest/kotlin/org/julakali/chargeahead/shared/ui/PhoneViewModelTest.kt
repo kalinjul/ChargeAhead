@@ -36,7 +36,6 @@ import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInterac
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
-import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -92,7 +91,6 @@ class PhoneViewModelTest {
             settings,
             stubFeature(),
             SelectVehicleInteractor(settings),
-            UpdateManualSocInteractor(settings),
         )
 
         viewModel.onNameChanged("Testwagen")
@@ -121,7 +119,6 @@ class PhoneViewModelTest {
             settings,
             stubFeature(),
             SelectVehicleInteractor(settings),
-            UpdateManualSocInteractor(settings),
         )
 
         viewModel.onNameChanged("Testwagen")
@@ -138,10 +135,8 @@ class PhoneViewModelTest {
         val addCar = AddCarViewModel(settings, SelectVehicleInteractor(settings))
         val garage = GarageViewModel(
             settings,
-            stubFeature(),
             SelectVehicleInteractor(settings),
             RemoveVehicleInteractor(settings),
-            UpdateManualSocInteractor(settings),
             UpdateArrivalSocInteractor(settings),
         )
 

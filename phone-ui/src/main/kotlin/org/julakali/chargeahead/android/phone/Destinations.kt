@@ -37,7 +37,7 @@ data object Licenses : PhoneDestination
 data object ChargeNow : PhoneSheet
 
 @Serializable
-data object Routes : PhoneSheet
+data object ActiveRoute : PhoneDestination
 
 val DrawerTarget.destination: PhoneDestination
     get() = when (this) {

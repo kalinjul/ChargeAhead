@@ -2,9 +2,6 @@ package org.julakali.chargeahead.shared.settings
 
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ConnectorType
-import org.julakali.chargeahead.shared.domain.Destination
-import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.SavedRoute
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -12,7 +9,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class GarageAndRoutesSettingsTest {
+class GarageSettingsTest {
 
     private fun profile(name: String) = VehicleProfile(
         displayName = name,
@@ -118,31 +115,5 @@ class GarageAndRoutesSettingsTest {
         val reloaded = PersistentSettingsStore(storage)
         assertEquals(300.0, reloaded.chargeFilters.value.minPowerKw)
         assertEquals(2.5, reloaded.chargeFilters.value.maxDistanceKm)
-    }
-
-    @Test
-    fun `saved routes keep order and rename and removal work`() = runBlocking<Unit> {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val muenchen = SavedRoute("r1", "Amsterdam → München", Destination("München", LatLon(48.14, 11.58)), "660 km · 2 Stopps")
-        val hamburg = SavedRoute("r2", "Oma in Hamburg", Destination("Hamburg", LatLon(53.55, 9.99)))
-
-        store.saveRoute(muenchen)
-        store.saveRoute(hamburg)
-        assertEquals(listOf("r2", "r1"), store.savedRoutes.value.map { it.id })
-
-        store.renameSavedRoute("r1", "Wiesn-Tour")
-        assertEquals("Wiesn-Tour", store.savedRoutes.value.first { it.id == "r1" }.name)
-
-        store.removeSavedRoute("r2")
-        assertEquals(listOf("r1"), store.savedRoutes.value.map { it.id })
-    }
-
-    @Test
-    fun `a saved route keeps its destination address`() = runBlocking<Unit> {
-        val storage = InMemoryPreferencesDataStore()
-        val route = SavedRoute("r1", "Konzert", Destination("Uebel und Gefährlich", LatLon(53.556, 9.968), "Feldstraße 66, 20359 Hamburg"))
-        PersistentSettingsStore(storage).saveRoute(route)
-
-        assertEquals(listOf(route), PersistentSettingsStore(storage).savedRoutes.value)
     }
 }

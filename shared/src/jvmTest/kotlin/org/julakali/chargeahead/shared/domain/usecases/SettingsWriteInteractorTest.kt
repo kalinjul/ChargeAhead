@@ -85,17 +85,4 @@ class SettingsWriteInteractorTest {
 
         assertEquals(preferences, settings.networks.first())
     }
-
-    @Test
-    fun `a saved route can be renamed and removed`() = runBlocking {
-        val destination = Destination("München", LatLon(48.14, 11.58))
-        SaveRouteInteractor(settings)(SaveRouteInteractor.Params(destination)).getOrThrow()
-        val id = settings.savedRoutes.first().single().id
-
-        RenameSavedRouteInteractor(settings)(RenameSavedRouteInteractor.Params(id, "Heimweg")).getOrThrow()
-        assertEquals("Heimweg", settings.savedRoutes.first().single().name)
-
-        RemoveSavedRouteInteractor(settings)(RemoveSavedRouteInteractor.Params(id)).getOrThrow()
-        assertEquals(emptyList(), settings.savedRoutes.first())
-    }
 }

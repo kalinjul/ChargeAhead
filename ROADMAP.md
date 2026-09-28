@@ -35,8 +35,8 @@ drawing — the map-SDK decision below remains open, everything else works:
 map-first home, an always-present search bar that plans on a pick (since
 2026-09-21; the trip itself is a sheet over the map) with charging stops from
 the shared `TripPlanner`, "Jetzt laden" (best chargers nearby with an auto-relax filter
-ladder), garage with vehicle presets and consumption slider, saved routes,
-and Google-Maps hand-off for the whole route, a section, or a single stop.
+ladder), garage with vehicle presets and consumption slider, the active
+route (the trip last sent to Maps, kept until ended), and Google-Maps hand-off for the whole route, a section, or a single stop.
 iOS has the core screens (home, plan, charge now, trip, stop detail); the
 garage view is still Android-only.
 
@@ -192,3 +192,7 @@ Still open:
    good enough is for practice to decide.
 9. **Play Store approval** — POI apps go through a separate review against
    the Car App Quality Guidelines. Plan for this before M4.
+10. **From plans to committed trips** — the app watches a committed trip
+    and re-plans charging when the charge or the position drifts, handing
+    the result to Maps; saved routes were dropped for it on 2026-09-28.
+    See `docs/2026-09-22-committed-trip-roadmap.md`.

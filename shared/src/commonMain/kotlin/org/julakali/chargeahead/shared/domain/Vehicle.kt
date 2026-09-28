@@ -34,6 +34,9 @@ data class EnergyState(
     val observedAtMillis: Long,
 )
 
+/** A level the vehicle itself reported, as opposed to one the driver typed. */
+val EnergyState?.reportedByCar: Boolean get() = this != null && source != SoCSourceKind.MANUAL
+
 /** Share of the battery that's never planned into range calculations. */
 const val DEFAULT_RESERVE_SOC_PERCENT = 10.0
 

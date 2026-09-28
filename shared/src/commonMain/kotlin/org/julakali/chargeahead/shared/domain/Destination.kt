@@ -1,6 +1,9 @@
 package org.julakali.chargeahead.shared.domain
 
+import kotlinx.serialization.Serializable
+
 /** The destination, as the driver set it. */
+@Serializable
 data class Destination(
     val name: String,
     val position: LatLon,

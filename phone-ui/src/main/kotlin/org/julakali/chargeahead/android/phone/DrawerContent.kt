@@ -87,10 +87,6 @@ fun DrawerContent(
                 sublabel = uiState.vehicleName ?: stringResource(R.string.drawer_car_none),
                 onClick = { onOpen(DrawerTarget.VEHICLE) },
             )
-        }
-
-        Column {
-            SectionLabel(stringResource(R.string.drawer_filters))
             PrefRow(
                 icon = painterResource(R.drawable.ic_filter),
                 label = stringResource(R.string.drawer_networks),

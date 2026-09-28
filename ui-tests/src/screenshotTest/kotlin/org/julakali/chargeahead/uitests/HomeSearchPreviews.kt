@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.uitests
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -9,6 +10,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
+import org.julakali.chargeahead.android.phone.HomeDockedSearchBar
 import org.julakali.chargeahead.android.phone.HomeSearchBar
 import org.julakali.chargeahead.android.phone.SearchResultsPanel
 import org.julakali.chargeahead.shared.domain.Destination
@@ -24,7 +26,7 @@ private fun Framed(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun Bar(query: String, searching: Boolean = false, clearable: Boolean = false) {
+private fun Bar(query: String, searching: Boolean = false, clearable: Boolean = false, expanded: Boolean = false) {
     Framed {
         HomeSearchBar(
             query = query,
@@ -34,6 +36,7 @@ private fun Bar(query: String, searching: Boolean = false, clearable: Boolean = 
             onClear = {},
             focusRequester = FocusRequester(),
             clearable = clearable,
+            expanded = expanded,
         )
     }
 }
@@ -57,6 +60,16 @@ fun HomeSearchBarSearching() = Bar(query = "München", searching = true)
 @Preview(showBackground = true)
 @Composable
 fun HomeSearchBarClearable() = Bar(query = "", clearable = true)
+
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun HomeSearchBarExpanded() = Bar(query = "München", expanded = true)
+
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun HomeSearchBarExpandedEmpty() = Bar(query = "", expanded = true)
 
 private fun row(title: String, detail: String?, distanceKm: Double?, recent: Boolean) = SearchRow(
     destination = Destination(name = title, position = LatLon(48.1, 11.5), address = detail),
@@ -117,5 +130,52 @@ fun SearchResultsFailed() {
 fun SearchResultsEmpty() {
     Framed {
         SearchResultsPanel(uiState = SearchUiState(query = "Xyzzyplonk"), onPick = {})
+    }
+}
+
+// Dark theme: the same components under UI_MODE_NIGHT_YES.
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun HomeSearchBarWithQueryDark() = Bar(query = "München Marienplatz")
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun HomeSearchBarExpandedDark() = Bar(query = "München", expanded = true)
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun SearchResultsHitsDark() = SearchResultsHits()
+
+// Material's DockedSearchBar path, for comparison with the custom pill.
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun DockedSearchBarCollapsed() {
+    Framed {
+        HomeDockedSearchBar(query = "", searching = false, expanded = false, onExpandedChange = {}, onQueryChange = {}, onClear = {}) {}
+    }
+}
+
+@PreviewTest
+@Preview(showBackground = true, heightDp = 520)
+@Composable
+fun DockedSearchBarExpandedWithHits() {
+    Framed {
+        HomeDockedSearchBar(query = "Münch", searching = false, expanded = true, onExpandedChange = {}, onQueryChange = {}, onClear = {}) {
+            SearchResultsPanel(
+                uiState = SearchUiState(
+                    query = "Münch",
+                    rows = listOf(
+                        row("München", "Bayern, Deutschland", 612.3, recent = false),
+                        row("Münchberg", "Bayern, Deutschland", 487.0, recent = false),
+                    ),
+                ),
+                onPick = {},
+                standalone = false,
+            )
+        }
     }
 }

@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.uitests
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -80,3 +81,34 @@ fun ChargerDotStates() {
         }
     }
 }
+
+// Dark theme: the same components under UI_MODE_NIGHT_YES.
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun ChargerPillLiveGoodDark() = Pill(ChargeSpeed.HYPER, "Ionity", LiveGood)
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun ChargerPillLiveLowDark() = Pill(ChargeSpeed.ULTRA, "Aral pulse", LiveLow)
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun ChargerPillLiveNoneDark() = Pill(ChargeSpeed.MEDIUM, "EnBW", LiveNone)
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun ChargerPillOutOfOrderDark() = Pill(ChargeSpeed.FAST, "EWE Go", SiteAvailability.OutOfOrder)
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun ChargerPillOneBoltNoLiveDark() = Pill(ChargeSpeed.FAST, "EnBW", null)
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun ChargerDotStatesDark() = ChargerDotStates()

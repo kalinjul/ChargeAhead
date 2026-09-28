@@ -10,7 +10,7 @@
 
     <string name="car_home_enter_destination">Ziel eingeben</string>
     <string name="car_home_charge_now">Jetzt laden</string>
-    <string name="car_home_no_favorites">Noch keine Favoriten — Routen lassen sich am Telefon speichern.</string>
+    <string name="car_home_active_route">Aktive Route</string>
 
     <string name="car_search_empty">Keine Treffer. Am besten mit Ort suchen, z. B. „Hbf Kiel“.</string>
     <string name="car_search_submit_hint">Zum Suchen unten auf der Tastatur die Lupe drücken.</string>
@@ -69,10 +69,10 @@
     <string name="phone_connectors_heading">Steckertypen, die das Fahrzeug annimmt</string>
     <string name="phone_connectors_hint">Nichts ausgewählt heißt: nicht filtern.</string>
     <string name="phone_error_positive_number">Bitte eine Zahl größer als null eintragen.</string>
-    <string name="phone_error_percent">Bitte einen Wert zwischen 0 und 100 eintragen.</string>
     <string name="phone_settings_missing">Ohne Fahrzeug und Ladestand wird die Erreichbarkeit nicht berechnet — die Liste zeigt dann nur Entfernungen.</string>
     <string name="phone_action_delete_vehicle">Fahrzeug löschen</string>
     <string name="phone_soc_source_car">Ladestand kommt aus dem Fahrzeug</string>
+    <string name="phone_soc_source_stored">Kein Ladestand vom Fahrzeug. Der Wert stammt aus der letzten Eingabe beim Planen.</string>
 
     <!-- Destination -->
     <string name="phone_action_destination">Ziel</string>
@@ -128,10 +128,16 @@
     <!-- Phone: map home -->
     <string name="common_back">Zurück</string>
     <string name="home_pill_charge_now">Jetzt laden</string>
-    <string name="home_pill_favorites">Favoriten</string>
+    <string name="home_pill_active_route">Aktive Route</string>
+    <string name="active_route_title">Aktive Route</string>
+    <string name="active_route_end">Navigieren beenden</string>
+    <string name="active_route_ended">Navigation beendet</string>
+    <string name="active_route_replanned">Route von hier neu geplant</string>
+    <string name="soc_dialog_car_silent">Das Auto meldet keinen Ladestand. Bitte den aktuellen Wert eingeben, damit die Route von hier neu geplant wird.</string>
     <string name="home_settings">Einstellungen</string>
-    <string name="home_search_hint">Wohin?</string>
+    <string name="home_search_hint">Wohin soll\'s gehen?</string>
     <string name="home_search_clear">Eingabe löschen</string>
+    <string name="home_search_back">Suche schließen</string>
     <string name="home_trip_clear">Route verwerfen</string>
     <string name="plan_vehicle_missing_action">Auto anlegen</string>
     <string name="home_no_position">Kein Standort — Ortung und Freigabe prüfen</string>
@@ -163,7 +169,6 @@
     <!-- Phone: drawer -->
     <string name="drawer_preferences">Einstellungen</string>
     <string name="drawer_car">Auto</string>
-    <string name="drawer_filters">Filter</string>
     <string name="drawer_networks">Netzwerke</string>
     <string name="drawer_min_power">Mindestleistung</string>
     <string name="drawer_slow_mode">AC-Modus</string>
@@ -218,9 +223,6 @@
     <string name="trip_send_stop">%1$s an Maps senden</string>
     <string name="trip_summary_charging">%1$s laden</string>
     <string name="trip_section_hint_second">Jetzt den Endpunkt antippen</string>
-    <string name="trip_save">Route speichern</string>
-    <string name="trip_saved">Route gespeichert — unter ♥ zu finden</string>
-    <string name="trip_unsaved">Aus den Favoriten entfernt</string>
     <string name="trip_start">Start</string>
     <string name="trip_destination">Ziel</string>
     <string name="trip_maps_sent">An Google Maps übergeben</string>
@@ -248,20 +250,8 @@
     <string name="cn_navigate">Navigation starten zu %1$s</string>
     <string name="cn_more">Mehr in der Nähe</string>
 
-    <!-- Phone: saved routes -->
-    <string name="routes_title">Deine Routen</string>
-    <string name="routes_saved">Gespeichert</string>
-    <string name="routes_recent">Zuletzt</string>
-    <string name="routes_empty">Noch nichts gespeichert — das Herz an einer Route antippen.</string>
-    <string name="routes_rename">Umbenennen</string>
-    <string name="routes_delete">Löschen</string>
-    <string name="routes_save_recent">Als Favorit speichern</string>
-    <string name="routes_rename_title">Route umbenennen</string>
-    <string name="routes_ok">Speichern</string>
-    <string name="routes_cancel">Abbrechen</string>
-
     <!-- Phone: garage -->
-    <string name="garage_title">Auto</string>
+    <string name="garage_title">Garage</string>
     <string name="garage_your_cars">Deine Autos</string>
     <string name="garage_add">Auto hinzufügen …</string>
     <string name="garage_delete">Auto entfernen …</string>
@@ -277,8 +267,6 @@
     <string name="garage_range_value">≈ %1$d km</string>
     <string name="garage_consumption">Dein Verbrauch: %1$s kWh/100 km</string>
     <string name="garage_consumption_hint">Datenblatt sagt %1$s — an die eigene Fahrweise anpassen. Gemeint ist der Wert bei rund 100 km/h; für schnellere oder langsamere Abschnitte rechnet die Planung selbst um.</string>
-    <string name="garage_soc">Ladestand: %1$d %%</string>
-    <string name="garage_soc_unset">Ladestand: nicht eingetragen</string>
     <string name="garage_search">Fahrzeug suchen</string>
     <string name="garage_added">%1$s steht jetzt in der Garage</string>
     <string name="garage_add_title">Auto hinzufügen</string>

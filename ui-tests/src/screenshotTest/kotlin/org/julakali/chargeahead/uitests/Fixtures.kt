@@ -3,6 +3,8 @@ package org.julakali.chargeahead.uitests
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
@@ -89,8 +91,11 @@ val SamplePlan = TripPlan(
 @Composable
 fun PreviewScaffold(content: @Composable () -> Unit) {
     ChargeAheadTheme {
-        CompositionLocalProvider(LocalNow provides { FixedNow }) {
-            content()
+        // Like the app's sheets and pages: a Surface sets the content colour for the theme.
+        Surface(color = MaterialTheme.colorScheme.surface) {
+            CompositionLocalProvider(LocalNow provides { FixedNow }) {
+                content()
+            }
         }
     }
 }

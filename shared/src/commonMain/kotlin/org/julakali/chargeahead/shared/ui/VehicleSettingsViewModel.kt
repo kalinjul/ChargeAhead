@@ -6,10 +6,9 @@ import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
-import org.julakali.chargeahead.shared.domain.SoCSourceKind
+import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
-import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -27,13 +26,13 @@ data class VehicleSettingsUiState(
     val battery: String = "",
     val consumption: String = "",
     val connectors: Set<ConnectorType> = emptySet(),
+    /** The stored level, shown only; the car or the planning dialogs set it. */
     val socInput: String = "",
     val socFromCar: Boolean = false,
     val diagnostics: SoCDiagnostics? = null,
 ) {
     val batteryInvalid: Boolean get() = battery.isNotBlank() && battery.toPositiveDoubleOrNull() == null
     val consumptionInvalid: Boolean get() = consumption.isNotBlank() && consumption.toPositiveDoubleOrNull() == null
-    val socInvalid: Boolean get() = socInput.isNotBlank() && socInput.toPercentOrNull() == null
 }
 
 /**
@@ -44,7 +43,6 @@ class VehicleSettingsViewModel(
     settings: SettingsStore,
     feature: ChargeStopsFeature,
     private val selectVehicle: SelectVehicleInteractor,
-    private val updateManualSoc: UpdateManualSocInteractor,
 ) : ViewModel() {
 
     // null = untouched, the form mirrors what is stored.
@@ -62,15 +60,14 @@ class VehicleSettingsViewModel(
             battery = vehicle?.usableBatteryKwh?.asInput().orEmpty(),
             consumption = vehicle?.consumptionKwhPer100Km?.asInput().orEmpty(),
             connectors = vehicle?.acceptedConnectors ?: emptySet(),
-            socInput = socPercent?.asInput().orEmpty(),
         )
         VehicleSettingsUiState(
             name = edited.name,
             battery = edited.battery,
             consumption = edited.consumption,
             connectors = edited.connectors,
-            socInput = edited.socInput,
-            socFromCar = energy?.source == SoCSourceKind.CAR_HARDWARE,
+            socInput = socPercent?.asInput().orEmpty(),
+            socFromCar = energy.reportedByCar,
             diagnostics = diagnostics,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, VehicleSettingsUiState())
@@ -83,11 +80,6 @@ class VehicleSettingsViewModel(
 
     fun onConnectorToggled(type: ConnectorType, accepted: Boolean) = edit {
         it.copy(connectors = if (accepted) it.connectors + type else it.connectors - type)
-    }
-
-    fun onSocChanged(socInput: String) {
-        editForm { it.copy(socInput = socInput) }
-        viewModelScope.launch { updateManualSoc(UpdateManualSocInteractor.Params(socInput.toPercentOrNull())) }
     }
 
     /** Clears the profile and the form — the driver starts over. */
@@ -116,7 +108,7 @@ class VehicleSettingsViewModel(
     }
 
     private fun currentFromStore(): Form = uiState.value.let {
-        Form(it.name, it.battery, it.consumption, it.connectors, it.socInput)
+        Form(it.name, it.battery, it.consumption, it.connectors)
     }
 
     private data class Form(
@@ -124,16 +116,12 @@ class VehicleSettingsViewModel(
         val battery: String = "",
         val consumption: String = "",
         val connectors: Set<ConnectorType> = emptySet(),
-        val socInput: String = "",
     )
 }
 
 /** Accepts the German decimal comma. */
 internal fun String.toPositiveDoubleOrNull(): Double? =
     replace(',', '.').trim().toDoubleOrNull()?.takeIf { it > 0.0 }
-
-internal fun String.toPercentOrNull(): Double? =
-    replace(',', '.').trim().toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
 
 /** One decimal at most, whole numbers without the ".0". */
 internal fun Double.asInput(): String {

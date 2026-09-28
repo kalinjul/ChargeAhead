@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -44,6 +43,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.RankBadge
 import org.julakali.chargeahead.android.phone.components.SocEditDialog
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
@@ -73,6 +74,24 @@ import org.julakali.chargeahead.shared.ui.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import java.time.LocalTime
 import kotlin.math.roundToInt
+
+/** The charge-level editors behind the trip's start and destination rows. */
+class SocEditing(
+    /** The start-level editor's input; `null` while closed. */
+    val socInput: String?,
+    /** The arrival-level editor's input; `null` while closed. */
+    val arrivalSocInput: String?,
+    /** The start-level editor opened because "Neu planen" had no car reading; the dialog says so. */
+    val askedForReplan: Boolean,
+    val onEditStartSoc: () -> Unit,
+    val onSocInputChange: (String) -> Unit,
+    val onSocConfirm: () -> Unit,
+    val onSocDismiss: () -> Unit,
+    val onEditArrivalSoc: () -> Unit,
+    val onArrivalSocInputChange: (String) -> Unit,
+    val onArrivalSocConfirm: () -> Unit,
+    val onArrivalSocDismiss: () -> Unit,
+)
 
 /**
  * The planned trip as sheet content: section hint, then the stops as an
@@ -85,28 +104,16 @@ import kotlin.math.roundToInt
 fun TripSheetContent(
     plan: TripPlan,
     startSocPercent: Double?,
-    isSaved: Boolean,
     layout: TripListLayout,
     // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
     selection: SectionSelection,
-    // The quick charge-level entry on the start row: `null` while closed.
-    socInput: String?,
-    // The same on the destination row, for the level to arrive with.
-    arrivalSocInput: String?,
     onToggleSelecting: () -> Unit,
     onPickPoint: (Int) -> Unit,
     onSectionSent: () -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: () -> Unit,
-    onToggleSave: () -> Unit,
-    onEditStartSoc: () -> Unit,
-    onSocInputChange: (String) -> Unit,
-    onSocConfirm: () -> Unit,
-    onSocDismiss: () -> Unit,
-    onEditArrivalSoc: () -> Unit,
-    onArrivalSocInputChange: (String) -> Unit,
-    onArrivalSocConfirm: () -> Unit,
-    onArrivalSocDismiss: () -> Unit,
+    /** The charge-level editors behind the start and destination rows; `null` makes both rows read-only. */
+    socEditing: SocEditing?,
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
@@ -114,32 +121,34 @@ fun TripSheetContent(
     val selectionB = selection.b
 
     // The quick charge-level entry behind the start row. Confirming it re-plans.
-    socInput?.let { input ->
+    socEditing?.socInput?.let { input ->
         SocEditDialog(
             value = input,
             title = stringResource(R.string.soc_dialog_title),
             confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = onSocInputChange,
-            onConfirm = onSocConfirm,
-            onDismiss = onSocDismiss,
+            onValueChange = socEditing.onSocInputChange,
+            onConfirm = socEditing.onSocConfirm,
+            onDismiss = socEditing.onSocDismiss,
+            supportingText = if (socEditing.askedForReplan) stringResource(R.string.soc_dialog_car_silent) else null,
         )
     }
 
     // The level to arrive with, edited on the destination row. Confirming re-plans.
-    arrivalSocInput?.let { input ->
+    socEditing?.arrivalSocInput?.let { input ->
         SocEditDialog(
             value = input,
             title = stringResource(R.string.garage_arrival_title),
             confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = onArrivalSocInputChange,
-            onConfirm = onArrivalSocConfirm,
-            onDismiss = onArrivalSocDismiss,
+            onValueChange = socEditing.onArrivalSocInputChange,
+            onConfirm = socEditing.onArrivalSocConfirm,
+            onDismiss = socEditing.onArrivalSocDismiss,
             valueRange = ARRIVAL_SOC_RANGE.first.toFloat()..ARRIVAL_SOC_RANGE.last.toFloat(),
         )
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (selecting) {
+            val sectionOutline = ChargeAheadColors.sectionOutline
             val bothPicked = selectionA != null && selectionB != null
             val hint = if (selectionA != null && !bothPicked) {
                 stringResource(R.string.trip_section_hint_second)
@@ -153,7 +162,7 @@ fun TripSheetContent(
                     .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.extraSmall)
                     .drawBehind {
                         drawRoundRect(
-                            color = Color(0xFFA8C7FA),
+                            color = sectionOutline,
                             style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f))),
                             cornerRadius = CornerRadius(8.dp.toPx()),
                         )
@@ -211,33 +220,18 @@ fun TripSheetContent(
                         ),
                     )
                 }
-                Surface(
-                    onClick = onToggleSave,
-                    shape = MaterialTheme.shapes.small,
-                    color = if (isSaved) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (isSaved) Color(0xFFF2B8B2) else MaterialTheme.colorScheme.outlineVariant),
-                    modifier = Modifier.size(width = 44.dp, height = 40.dp),
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            painterResource(if (isSaved) R.drawable.ic_heart_filled else R.drawable.ic_heart),
-                            contentDescription = stringResource(R.string.trip_save),
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
-                }
             }
         }
 
+        val slide = ChargeAheadMotion.spatial<IntOffset>()
+        val fade = ChargeAheadMotion.effects<Float>()
         AnimatedContent(
             targetState = layout,
             transitionSpec = {
                 // Tiles come in from the right, the list from the left; both fill the same box.
                 val forward = targetState == TripListLayout.TILES
-                val slide = tween<IntOffset>(LAYOUT_SLIDE_MILLIS)
-                (slideInHorizontally(slide) { if (forward) it else -it } + fadeIn(tween(LAYOUT_SLIDE_MILLIS)))
-                    .togetherWith(slideOutHorizontally(slide) { if (forward) -it else it } + fadeOut(tween(LAYOUT_SLIDE_MILLIS)))
+                (slideInHorizontally(slide) { if (forward) it else -it } + fadeIn(fade))
+                    .togetherWith(slideOutHorizontally(slide) { if (forward) -it else it } + fadeOut(fade))
             },
             contentAlignment = Alignment.TopStart,
             label = "trip list layout",
@@ -250,8 +244,7 @@ fun TripSheetContent(
                     selection = selection,
                     onPickPoint = onPickPoint,
                     onOpenStop = onOpenStop,
-                    onEditStartSoc = onEditStartSoc,
-                    onEditArrivalSoc = onEditArrivalSoc,
+                    socEditing = socEditing,
                     modifier = Modifier.fillMaxSize(),
                 )
                 TripListLayout.TILES -> StopTiles(
@@ -277,12 +270,12 @@ private fun StopRail(
     selection: SectionSelection,
     onPickPoint: (Int) -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
-    onEditStartSoc: () -> Unit,
-    onEditArrivalSoc: () -> Unit,
+    socEditing: SocEditing?,
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
     val last = plan.stops.size + 1
+    val pen = socEditing?.let { painterResource(R.drawable.ic_pen) }
     val now = LocalNow.current()
 
     LazyColumn(modifier = modifier.padding(horizontal = 16.dp)) {
@@ -292,9 +285,9 @@ private fun StopRail(
                 last = last,
                 selected = selecting && selection.includes(0),
                 selectionShape = selection.spanShape(0),
-                onClick = { if (selecting) onPickPoint(0) else onEditStartSoc() },
+                onClick = { if (selecting) onPickPoint(0) else socEditing?.onEditStartSoc?.invoke() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
-                trailing = painterResource(R.drawable.ic_pen),
+                trailing = pen,
                 trailingDescription = stringResource(R.string.trip_soc_edit),
             ) {
                 Text(stringResource(R.string.trip_start), style = MaterialTheme.typography.titleSmall)
@@ -343,9 +336,9 @@ private fun StopRail(
                 last = last,
                 selected = selecting && selection.includes(last),
                 selectionShape = selection.spanShape(last),
-                onClick = { if (selecting) onPickPoint(last) else onEditArrivalSoc() },
+                onClick = { if (selecting) onPickPoint(last) else socEditing?.onEditArrivalSoc?.invoke() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
-                trailing = painterResource(R.drawable.ic_pen),
+                trailing = pen,
                 trailingDescription = stringResource(R.string.trip_arrival_soc_edit),
             ) {
                 Text(
@@ -491,7 +484,7 @@ private fun StopTiles(
     }
 }
 
-/** Charging total, the layout switch and the way back into the search; the numbers sit in the header. */
+/** Stops and charging total, the layout switch and the way back into the search; distance and time sit in the header. */
 @Composable
 fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Unit, onReplan: () -> Unit) {
     Column {
@@ -503,7 +496,10 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
                 .fillMaxWidth(),
         ) {
             Text(
-                stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)),
+                listOf(
+                    pluralStringResource(R.plurals.trip_summary_stops, plan.stops.size, plan.stops.size),
+                    stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)),
+                ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall.tabular,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -543,20 +539,19 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
     }
 }
 
-/** "312 km · 3 h 10 min · 2 Stopps" for the destination header. */
+/** "312 km · 3h 10m" for the destination header. */
 @Composable
 fun TripPlan.headerLine(): String = listOf(
     stringResource(R.string.trip_summary_distance, route.distanceKm.roundToInt()),
     minutesText(totalMinutes),
-    pluralStringResource(R.plurals.trip_summary_stops, stops.size, stops.size),
 ).joinToString(" · ")
 
-/** "9 h 16 min" or "42 min" — durations, not clock times. */
+/** "9h 16m" or "42 min" — durations, not clock times; one shape for the header and the sheet. */
 fun minutesText(minutes: Double): String {
     val total = minutes.roundToInt()
     val hours = total / 60
     val rest = total % 60
-    return if (hours > 0) "$hours h $rest min" else "$rest min"
+    return if (hours > 0) "${hours}h ${rest}m" else "$rest min"
 }
 
 /** The clock the trip rows read; tests pin it so times don't drift. */
@@ -574,7 +569,6 @@ fun tripPeekHeight(): Dp = (LocalConfiguration.current.screenHeightDp / 3).dp
 
 private val RAIL_WIDTH = 36.dp
 
-const val LAYOUT_SLIDE_MILLIS = 240
 private val DOT_SIZE = 28.dp
 private val ROW_PADDING = 10.dp
 

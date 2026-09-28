@@ -27,9 +27,10 @@ class TripSummaryTest {
     ) = compose.setThemedContent { TripSummary(Fixtures.plan, layout, onToggleLayout, onReplan) }
 
     @Test
-    fun `the charging total is shown`() {
+    fun `the stop count and the charging total are shown`() {
         summary()
-        compose.onNodeWithText(compose.string(R.string.trip_summary_charging, "1 h 15 min")).assertIsDisplayed()
+        val charging = compose.string(R.string.trip_summary_charging, "1h 15m")
+        compose.onNodeWithText("3 Stopps · $charging").assertIsDisplayed()
     }
 
     @Test

@@ -1,6 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -20,8 +20,9 @@ import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import org.julakali.chargeahead.android.phone.components.AppTopBar
-import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 
 /**
@@ -35,7 +36,11 @@ fun PhoneNavDisplay(
     preferredNetworkCount: Int,
     onCarAdded: (VehiclePreset) -> Unit,
     onNavigateTo: (LatLon) -> Unit,
-    onOpenRoute: (Destination) -> Unit,
+    onOpenStop: (PlannedStop) -> Unit,
+    onSendToMaps: (String) -> Unit,
+    onTripEnded: () -> Unit,
+    /** The committed destination's name, the active route page's title. */
+    activeRouteTitle: String?,
     modifier: Modifier = Modifier,
 ) {
     NavDisplay(
@@ -52,11 +57,11 @@ fun PhoneNavDisplay(
         // the list changes, and strategies compare by identity.
         sceneStrategies = remember { listOf(SheetSceneStrategy()) },
         transitionSpec = {
-            slideInHorizontally(tween(300)) { it } togetherWith fadeOut(tween(300))
+            slideInHorizontally(ChargeAheadMotion.page()) { it } togetherWith fadeOut(ChargeAheadMotion.page())
         },
-        popTransitionSpec = {
-            fadeIn(tween(300)) togetherWith slideOutHorizontally(tween(300)) { it }
-        },
+        popTransitionSpec = { pageSlideOut() },
+        // Navigation 3 scales and fades on a back gesture by default; the page should just slide, as on a tap.
+        predictivePopTransitionSpec = { _ -> pageSlideOut() },
         entryProvider = entryProvider {
             entry<Home> { }
 
@@ -104,6 +109,20 @@ fun PhoneNavDisplay(
                 }
             }
 
+            entry<ActiveRoute> {
+                Page(title = activeRouteTitle ?: stringResource(R.string.active_route_title), onBack = navigator::back) { pagePadding ->
+                    ActiveRouteRoute(
+                        onOpenStop = onOpenStop,
+                        onSendToMaps = onSendToMaps,
+                        onEnded = {
+                            navigator.back()
+                            onTripEnded()
+                        },
+                        modifier = Modifier.fillMaxSize().padding(pagePadding),
+                    )
+                }
+            }
+
             entry<Legal> {
                 Page(title = stringResource(R.string.drawer_legal), onBack = navigator::back) { pagePadding ->
                     LegalScreen(modifier = Modifier.fillMaxSize().padding(pagePadding))
@@ -119,10 +138,6 @@ fun PhoneNavDisplay(
             entry<ChargeNow>(metadata = SheetSceneStrategy.sheet()) {
                 ChargeNowRoute(onNavigate = { candidate -> onNavigateTo(candidate.site.position) })
             }
-
-            entry<Routes>(metadata = SheetSceneStrategy.sheet()) {
-                RoutesRoute(onOpen = onOpenRoute)
-            }
         },
         modifier = modifier,
     )
@@ -130,7 +145,7 @@ fun PhoneNavDisplay(
 
 /**
  * One page of the back stack: a full-screen, opaque Scaffold with its own top
- * bar, so predictive back scales the whole page.
+ * bar, so a back gesture moves the whole page.
  */
 @Composable
 private fun Page(
@@ -147,3 +162,7 @@ private fun Page(
         content = content,
     )
 }
+
+/** The page slides off to the right while what was under it shows again. */
+private fun pageSlideOut(): ContentTransform =
+    fadeIn(ChargeAheadMotion.page()) togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }

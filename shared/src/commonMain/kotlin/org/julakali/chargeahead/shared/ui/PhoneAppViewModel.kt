@@ -1,10 +1,11 @@
 package org.julakali.chargeahead.shared.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 
 enum class TripListLayout { LIST, TILES }
 
@@ -28,9 +29,9 @@ sealed interface PhoneAppEvent {
 }
 
 /** Everything around the map: search mode, trip layout, location handshake. */
-class PhoneAppViewModel : ViewModel() {
+class PhoneAppViewModel(private val savedState: SavedStateHandle) : ViewModel() {
 
-    private val state = MutableStateFlow(PhoneAppUiState())
+    private val state = MutableStateFlow(savedState.restoredUiState())
     private val events = MutableStateFlow<PhoneAppEvent?>(null)
 
     // Set when the location button had to ask for the permission first.
@@ -42,7 +43,7 @@ class PhoneAppViewModel : ViewModel() {
 
     /** The grant can change outside the app, so the platform reports it on every resume. */
     fun onLocationPermissionChecked(granted: Boolean) {
-        state.update { it.copy(hasLocationPermission = granted) }
+        update { it.copy(hasLocationPermission = granted) }
     }
 
     fun onLocationPermissionRequested() {
@@ -50,7 +51,7 @@ class PhoneAppViewModel : ViewModel() {
     }
 
     fun onLocationPermissionResult(granted: Boolean) {
-        state.update { it.copy(hasLocationPermission = granted) }
+        update { it.copy(hasLocationPermission = granted) }
         if (granted && locateAfterPermission) events.value = PhoneAppEvent.CheckLocationSettings
         locateAfterPermission = false
     }
@@ -66,18 +67,42 @@ class PhoneAppViewModel : ViewModel() {
     }
 
     fun onSearchOpened() {
-        state.update { it.copy(searching = true) }
+        update { it.copy(searching = true) }
     }
 
     fun onSearchClosed() {
-        state.update { it.copy(searching = false) }
+        update { it.copy(searching = false) }
     }
 
     fun onTripLayoutChanged(layout: TripListLayout) {
-        state.update { it.copy(tripLayout = layout) }
+        update { it.copy(tripLayout = layout) }
     }
 
     fun onEventHandled() {
         events.value = null
     }
+
+    private fun update(transform: (PhoneAppUiState) -> PhoneAppUiState) {
+        savedState.store(state.updateAndGet(transform))
+    }
 }
+
+private const val KEY_SEARCHING = "searching"
+private const val KEY_TRIP_LAYOUT = "tripLayout"
+
+// The location grant stays out: the platform re-checks it on every resume,
+// and a stale "granted" would skip the check.
+private fun SavedStateHandle.restoredUiState() = PhoneAppUiState(
+    searching = get<Boolean>(KEY_SEARCHING) ?: false,
+    tripLayout = enum(KEY_TRIP_LAYOUT, TripListLayout.LIST),
+)
+
+private fun SavedStateHandle.store(state: PhoneAppUiState) {
+    this[KEY_SEARCHING] = state.searching
+    this[KEY_TRIP_LAYOUT] = state.tripLayout.name
+}
+
+// Enums travel as their name: the multiplatform SavedState only carries
+// primitives, and an unknown name falls back instead of throwing.
+private inline fun <reified T : Enum<T>> SavedStateHandle.enum(key: String, default: T): T =
+    get<String>(key)?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default

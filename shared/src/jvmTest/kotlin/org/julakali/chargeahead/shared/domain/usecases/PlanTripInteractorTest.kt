@@ -11,7 +11,6 @@ import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripStore
 import org.julakali.chargeahead.shared.domain.VehicleProfile
-import org.julakali.chargeahead.shared.domain.routeId
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlin.test.Test
@@ -123,16 +122,5 @@ class PlanTripTest {
         assertNull(result)
         assertEquals(25.0, settings.arrivalSocPercent.first())
         assertEquals(emptyList(), calls)
-    }
-
-    @Test
-    fun `toggling a route saves it, and a second toggle removes it`() = runBlocking {
-        val toggle = ToggleSavedRouteInteractor(settings)
-
-        assertEquals(true, toggle(ToggleSavedRouteInteractor.Params(munich, "170 km")).getOrThrow())
-        assertEquals(listOf(munich.routeId()), settings.savedRoutes.first().map { it.id })
-
-        assertEquals(false, toggle(ToggleSavedRouteInteractor.Params(munich, "170 km")).getOrThrow())
-        assertEquals(emptyList(), settings.savedRoutes.first())
     }
 }
