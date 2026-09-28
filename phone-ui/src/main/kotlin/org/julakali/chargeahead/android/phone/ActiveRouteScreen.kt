@@ -20,7 +20,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedCard
 import androidx.compose.runtime.LaunchedEffect
@@ -82,6 +81,7 @@ fun ActiveRouteRoute(
             onSendToMaps = { uiState.mapsUrl?.let(onSendToMaps) },
             onReplan = viewModel::onReplanRequested,
             onEnd = viewModel::endTrip,
+            canReplan = uiState.canReplan,
             socInput = uiState.socInput,
             onSocInputChange = viewModel::onSocInputChanged,
             onSocConfirm = viewModel::onSocConfirmed,
@@ -110,6 +110,8 @@ fun ActiveRouteScreen(
     onReplan: () -> Unit,
     onEnd: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Off without a position to plan from. */
+    canReplan: Boolean = true,
     /** The charge-level prompt before re-planning; `null` while closed. */
     socInput: String? = null,
     onSocInputChange: (String) -> Unit = {},
@@ -126,13 +128,13 @@ fun ActiveRouteScreen(
             onValueChange = onSocInputChange,
             onConfirm = onSocConfirm,
             onDismiss = onSocDismiss,
-            supportingText = stringResource(R.string.active_route_soc_hint),
+            supportingText = stringResource(R.string.soc_dialog_car_silent),
         )
     }
     Column(modifier) {
         // The trip on one card: totals, arrival, and what one does to the trip itself.
         ElevatedCard(
-            shape = RoundedCornerShape(20.dp),
+            shape = MaterialTheme.shapes.large,
             // White in light; in dark the default low container sinks into the page.
             colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
@@ -161,17 +163,17 @@ fun ActiveRouteScreen(
                     // Half a card each: the labels need the room Material's default padding eats.
                     FilledTonalButton(
                         onClick = onReplan,
-                        enabled = !planning,
+                        enabled = canReplan && !planning,
                         shape = MaterialTheme.shapes.small,
                         contentPadding = CARD_BUTTON_PADDING,
                         modifier = Modifier.weight(1f),
                     ) {
                         if (planning) {
-                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
+                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(ButtonDefaults.IconSize))
                         } else {
-                            Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(14.dp))
+                            Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         }
-                        Text(stringResource(R.string.trip_replan), maxLines = 1, modifier = Modifier.padding(start = 6.dp))
+                        Text(stringResource(R.string.trip_replan), maxLines = 1, modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
                     }
                     OutlinedButton(
                         onClick = onEnd,
@@ -190,25 +192,16 @@ fun ActiveRouteScreen(
             startSocPercent = trip.startSocPercent,
             layout = TripListLayout.LIST,
             selection = selection,
-            socInput = null,
-            arrivalSocInput = null,
             onToggleSelecting = onToggleSelecting,
             onPickPoint = onPickPoint,
             onSectionSent = onSectionSent,
             onOpenStop = onOpenStop,
             onSendToMaps = onSendToMaps,
-            onEditStartSoc = {},
-            onSocInputChange = {},
-            onSocConfirm = {},
-            onSocDismiss = {},
-            onEditArrivalSoc = {},
-            onArrivalSocInputChange = {},
-            onArrivalSocConfirm = {},
-            onArrivalSocDismiss = {},
-            socEditable = false,
+            socEditing = null,
             modifier = Modifier.weight(1f),
         )
     }
 }
 
+/** Material's 24dp sides would cut "Navigieren beenden" on a phone-wide card split in two. */
 private val CARD_BUTTON_PADDING = PaddingValues(horizontal = 8.dp, vertical = 10.dp)

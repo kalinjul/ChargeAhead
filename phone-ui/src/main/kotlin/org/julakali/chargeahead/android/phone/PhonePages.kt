@@ -12,9 +12,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.ui.Modifier
@@ -141,9 +138,8 @@ fun PhonePages(
 
 /**
  * One page of the back stack: a full-screen, opaque Scaffold with its own top
- * bar, so predictive back scales the whole page.
+ * bar, so a back gesture moves the whole page.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun Page(
     title: String,
@@ -153,12 +149,9 @@ private fun Page(
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     Scaffold(
-        modifier = modifier.fillMaxSize().nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            AppTopBar(title = title, onBack = onBack, subtitle = subtitle, actions = actions, scrollBehavior = scrollBehavior)
-        },
+        modifier = modifier.fillMaxSize(),
+        topBar = { AppTopBar(title = title, onBack = onBack, subtitle = subtitle, actions = actions) },
         content = content,
     )
 }

@@ -25,6 +25,8 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -77,6 +79,9 @@ fun PhoneApp(librariesRes: Int) {
     val searchUi by searchViewModel.uiState.collectAsStateWithLifecycle()
     val committedUi by committedTripViewModel.uiState.collectAsStateWithLifecycle()
     val planned = tripUi as? TripUiState.Planned
+    // Kept past "Navigieren beenden", so the page keeps its name while it slides out.
+    var activeRouteTitle by remember { mutableStateOf<String?>(null) }
+    committedUi.trip?.plan?.destination?.name?.let { activeRouteTitle = it }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -175,8 +180,10 @@ fun PhoneApp(librariesRes: Int) {
                 onStopTapped = { index ->
                     planned?.plan?.stops?.getOrNull(index - 1)?.let { homeViewModel.onSiteSelected(it.site) }
                 },
+                // A stop opened from the active route page belongs to the committed plan, not to one being looked at.
                 tripLineFor = { selected ->
-                    (planned?.plan ?: committedUi.trip?.plan)?.stopLine(context, selected, clock())
+                    val plan = if (backStack.lastOrNull() == ActiveRoute) committedUi.trip?.plan else planned?.plan
+                    plan?.stopLine(context, selected, clock())
                 },
                 topBar = { flyTo ->
                     val trip = planned
@@ -227,7 +234,7 @@ fun PhoneApp(librariesRes: Int) {
         onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
         onSendToMaps = ::sendToMaps,
         onTripEnded = { snackbar.show(scope, context.getString(R.string.active_route_ended)) },
-        activeRouteTitle = committedUi.trip?.plan?.destination?.name,
+        activeRouteTitle = activeRouteTitle,
         modifier = Modifier.fillMaxSize(),
     )
 

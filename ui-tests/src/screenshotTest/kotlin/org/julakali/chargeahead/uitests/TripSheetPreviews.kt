@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
 import org.julakali.chargeahead.android.phone.DestinationHeader
 import org.julakali.chargeahead.shared.ui.TripListLayout
+import org.julakali.chargeahead.android.phone.SocEditing
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.TripSummary
 import org.julakali.chargeahead.android.phone.headerLine
@@ -24,21 +25,12 @@ private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionS
             startSocPercent = 80.0,
             layout = layout,
             selection = selection,
-            socInput = null,
-            arrivalSocInput = null,
             onToggleSelecting = {},
             onPickPoint = {},
             onSectionSent = {},
             onOpenStop = {},
             onSendToMaps = {},
-            onEditStartSoc = {},
-            onSocInputChange = {},
-            onSocConfirm = {},
-            onSocDismiss = {},
-            onEditArrivalSoc = {},
-            onArrivalSocInputChange = {},
-            onArrivalSocConfirm = {},
-            onArrivalSocDismiss = {},
+            socEditing = SocEditing(null, null, false, {}, {}, {}, {}, {}, {}, {}, {}),
         )
     }
 }

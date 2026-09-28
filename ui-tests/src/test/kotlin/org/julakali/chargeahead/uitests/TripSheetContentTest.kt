@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ui.TripListLayout
+import org.julakali.chargeahead.android.phone.SocEditing
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.etaText
 import org.julakali.chargeahead.shared.domain.PlannedStop
@@ -53,21 +54,24 @@ class TripSheetContentTest {
                     startSocPercent = 26.0,
                     layout = layout,
                     selection = selection,
-                    socInput = null,
-                    arrivalSocInput = null,
                     onToggleSelecting = { calls.toggledSelecting = true },
                     onPickPoint = { calls.pickedPoint = it },
                     onSectionSent = { calls.sectionSent = true },
                     onOpenStop = { calls.openedStop = it },
                     onSendToMaps = { calls.sentToMaps = true },
-                    onEditStartSoc = { calls.editStartSoc = true },
-                    onSocInputChange = {},
-                    onSocConfirm = {},
-                    onSocDismiss = {},
-                    onEditArrivalSoc = { calls.editArrivalSoc = true },
-                    onArrivalSocInputChange = {},
-                    onArrivalSocConfirm = {},
-                    onArrivalSocDismiss = {},
+                    socEditing = SocEditing(
+                        socInput = null,
+                        arrivalSocInput = null,
+                        askedForReplan = false,
+                        onEditStartSoc = { calls.editStartSoc = true },
+                        onSocInputChange = {},
+                        onSocConfirm = {},
+                        onSocDismiss = {},
+                        onEditArrivalSoc = { calls.editArrivalSoc = true },
+                        onArrivalSocInputChange = {},
+                        onArrivalSocConfirm = {},
+                        onArrivalSocDismiss = {},
+                    ),
                 )
             }
         }

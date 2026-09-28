@@ -113,14 +113,15 @@ fun VehicleSettingsScreen(
         }
 
         // Read-only: the car sets it, or the charge-level dialogs when planning.
-        NumberField(
+        OutlinedTextField(
             value = uiState.socInput,
             onValueChange = {},
-            label = stringResource(R.string.phone_field_soc),
-            isError = false,
-            errorText = "",
+            readOnly = true,
             enabled = false,
-            modifier = Modifier.padding(top = 16.dp),
+            label = { Text(stringResource(R.string.phone_field_soc)) },
+            suffix = { Text("%") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         )
         Fineprint(
             text = stringResource(if (uiState.socFromCar) R.string.phone_soc_source_car else R.string.phone_soc_source_stored),

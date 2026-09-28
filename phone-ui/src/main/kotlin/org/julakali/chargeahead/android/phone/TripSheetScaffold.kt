@@ -1,6 +1,5 @@
 package org.julakali.chargeahead.android.phone
 
-import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandVertically
@@ -28,12 +27,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.shared.domain.PlannedStop
-import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.julakali.chargeahead.shared.ui.TripUiState
 import org.julakali.chargeahead.shared.ui.TripViewModel
@@ -122,21 +119,24 @@ fun TripSheetScaffold(
                             startSocPercent = trip.startSocPercent,
                             layout = layout,
                             selection = trip.selection,
-                            socInput = trip.socInput,
-                            arrivalSocInput = trip.arrivalSocInput,
                             onToggleSelecting = viewModel::onSectionSelectingToggled,
                             onPickPoint = viewModel::onSectionPointPicked,
                             onSectionSent = viewModel::onSectionSent,
                             onOpenStop = onOpenStop,
                             onSendToMaps = { onSendToMaps(trip.mapsUrl) },
-                            onEditStartSoc = viewModel::onStartSocEditRequested,
-                            onSocInputChange = viewModel::onStartSocInputChanged,
-                            onSocConfirm = viewModel::onStartSocConfirmed,
-                            onSocDismiss = viewModel::onStartSocEditDismissed,
-                            onEditArrivalSoc = viewModel::onArrivalSocEditRequested,
-                            onArrivalSocInputChange = viewModel::onArrivalSocInputChanged,
-                            onArrivalSocConfirm = viewModel::onArrivalSocConfirmed,
-                            onArrivalSocDismiss = viewModel::onArrivalSocEditDismissed,
+                            socEditing = SocEditing(
+                                socInput = trip.socInput,
+                                arrivalSocInput = trip.arrivalSocInput,
+                                askedForReplan = trip.socAskedForReplan,
+                                onEditStartSoc = viewModel::onStartSocEditRequested,
+                                onSocInputChange = viewModel::onStartSocInputChanged,
+                                onSocConfirm = viewModel::onStartSocConfirmed,
+                                onSocDismiss = viewModel::onStartSocEditDismissed,
+                                onEditArrivalSoc = viewModel::onArrivalSocEditRequested,
+                                onArrivalSocInputChange = viewModel::onArrivalSocInputChanged,
+                                onArrivalSocConfirm = viewModel::onArrivalSocConfirmed,
+                                onArrivalSocDismiss = viewModel::onArrivalSocEditDismissed,
+                            ),
                             modifier = Modifier.weight(1f),
                         )
                     }

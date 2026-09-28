@@ -75,6 +75,24 @@ import org.julakali.chargeahead.shared.ui.TripListLayout
 import java.time.LocalTime
 import kotlin.math.roundToInt
 
+/** The charge-level editors behind the trip's start and destination rows. */
+class SocEditing(
+    /** The start-level editor's input; `null` while closed. */
+    val socInput: String?,
+    /** The arrival-level editor's input; `null` while closed. */
+    val arrivalSocInput: String?,
+    /** The start-level editor opened because "Neu planen" had no car reading; the dialog says so. */
+    val askedForReplan: Boolean,
+    val onEditStartSoc: () -> Unit,
+    val onSocInputChange: (String) -> Unit,
+    val onSocConfirm: () -> Unit,
+    val onSocDismiss: () -> Unit,
+    val onEditArrivalSoc: () -> Unit,
+    val onArrivalSocInputChange: (String) -> Unit,
+    val onArrivalSocConfirm: () -> Unit,
+    val onArrivalSocDismiss: () -> Unit,
+)
+
 /**
  * The planned trip as sheet content: section hint, then the stops as an
  * itinerary rail (or a tile row), the send actions at the end.
@@ -89,53 +107,41 @@ fun TripSheetContent(
     layout: TripListLayout,
     // Selectable points along the trip: 0 = start, 1..n = stops, n+1 = destination.
     selection: SectionSelection,
-    // The quick charge-level entry on the start row: `null` while closed.
-    socInput: String?,
-    // The same on the destination row, for the level to arrive with.
-    arrivalSocInput: String?,
     onToggleSelecting: () -> Unit,
     onPickPoint: (Int) -> Unit,
     onSectionSent: () -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: () -> Unit,
-    onEditStartSoc: () -> Unit,
-    onSocInputChange: (String) -> Unit,
-    onSocConfirm: () -> Unit,
-    onSocDismiss: () -> Unit,
-    onEditArrivalSoc: () -> Unit,
-    onArrivalSocInputChange: (String) -> Unit,
-    onArrivalSocConfirm: () -> Unit,
-    onArrivalSocDismiss: () -> Unit,
+    /** The charge-level editors behind the start and destination rows; `null` makes both rows read-only. */
+    socEditing: SocEditing?,
     modifier: Modifier = Modifier,
-    /** The start and destination rows open their charge-level editors; off on the active route. */
-    socEditable: Boolean = true,
 ) {
     val selecting = selection.selecting
     val selectionA = selection.a
     val selectionB = selection.b
 
     // The quick charge-level entry behind the start row. Confirming it re-plans.
-    socInput?.let { input ->
+    socEditing?.socInput?.let { input ->
         SocEditDialog(
             value = input,
             title = stringResource(R.string.soc_dialog_title),
             confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = onSocInputChange,
-            onConfirm = onSocConfirm,
-            onDismiss = onSocDismiss,
-            supportingText = stringResource(R.string.active_route_soc_hint),
+            onValueChange = socEditing.onSocInputChange,
+            onConfirm = socEditing.onSocConfirm,
+            onDismiss = socEditing.onSocDismiss,
+            supportingText = if (socEditing.askedForReplan) stringResource(R.string.soc_dialog_car_silent) else null,
         )
     }
 
     // The level to arrive with, edited on the destination row. Confirming re-plans.
-    arrivalSocInput?.let { input ->
+    socEditing?.arrivalSocInput?.let { input ->
         SocEditDialog(
             value = input,
             title = stringResource(R.string.garage_arrival_title),
             confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = onArrivalSocInputChange,
-            onConfirm = onArrivalSocConfirm,
-            onDismiss = onArrivalSocDismiss,
+            onValueChange = socEditing.onArrivalSocInputChange,
+            onConfirm = socEditing.onArrivalSocConfirm,
+            onDismiss = socEditing.onArrivalSocDismiss,
             valueRange = ARRIVAL_SOC_RANGE.first.toFloat()..ARRIVAL_SOC_RANGE.last.toFloat(),
         )
     }
@@ -238,9 +244,7 @@ fun TripSheetContent(
                     selection = selection,
                     onPickPoint = onPickPoint,
                     onOpenStop = onOpenStop,
-                    onEditStartSoc = onEditStartSoc,
-                    onEditArrivalSoc = onEditArrivalSoc,
-                    socEditable = socEditable,
+                    socEditing = socEditing,
                     modifier = Modifier.fillMaxSize(),
                 )
                 TripListLayout.TILES -> StopTiles(
@@ -266,14 +270,12 @@ private fun StopRail(
     selection: SectionSelection,
     onPickPoint: (Int) -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
-    onEditStartSoc: () -> Unit,
-    onEditArrivalSoc: () -> Unit,
-    socEditable: Boolean,
+    socEditing: SocEditing?,
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
     val last = plan.stops.size + 1
-    val pen = if (socEditable) painterResource(R.drawable.ic_pen) else null
+    val pen = socEditing?.let { painterResource(R.drawable.ic_pen) }
     val now = LocalNow.current()
 
     LazyColumn(modifier = modifier.padding(horizontal = 16.dp)) {
@@ -283,7 +285,7 @@ private fun StopRail(
                 last = last,
                 selected = selecting && selection.includes(0),
                 selectionShape = selection.spanShape(0),
-                onClick = { if (selecting) onPickPoint(0) else if (socEditable) onEditStartSoc() },
+                onClick = { if (selecting) onPickPoint(0) else socEditing?.onEditStartSoc?.invoke() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
                 trailing = pen,
                 trailingDescription = stringResource(R.string.trip_soc_edit),
@@ -334,7 +336,7 @@ private fun StopRail(
                 last = last,
                 selected = selecting && selection.includes(last),
                 selectionShape = selection.spanShape(last),
-                onClick = { if (selecting) onPickPoint(last) else if (socEditable) onEditArrivalSoc() },
+                onClick = { if (selecting) onPickPoint(last) else socEditing?.onEditArrivalSoc?.invoke() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
                 trailing = pen,
                 trailingDescription = stringResource(R.string.trip_arrival_soc_edit),

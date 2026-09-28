@@ -102,6 +102,6 @@ class ActiveRouteScreenTest {
     fun `the charge-level prompt says why it is asking`() {
         screen(socInput = "42")
         compose.onNodeWithText(compose.string(R.string.soc_dialog_title)).assertIsDisplayed()
-        compose.onNodeWithText(compose.string(R.string.active_route_soc_hint)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(R.string.soc_dialog_car_silent)).assertIsDisplayed()
     }
 }
