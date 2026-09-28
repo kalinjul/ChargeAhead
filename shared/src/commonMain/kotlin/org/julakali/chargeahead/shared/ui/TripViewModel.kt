@@ -9,7 +9,7 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
-import org.julakali.chargeahead.shared.domain.usecases.ToggleSavedRouteInteractor
+import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripStore
@@ -34,8 +34,6 @@ sealed interface TripUiState {
 
     data class Planned(
         val plan: TripPlan,
-        /** The route is in the driver's favourites. */
-        val isSaved: Boolean,
         val startPosition: LatLon?,
         val startSocPercent: Double?,
         val selection: SectionSelection = SectionSelection(),
@@ -115,9 +113,8 @@ sealed interface TripEvent {
 
     data object NoRoute : TripEvent
 
-    data object RouteSaved : TripEvent
-
-    data object RouteRemoved : TripEvent
+    /** The plan went to Maps and is the committed trip now. */
+    data object TripCommitted : TripEvent
 }
 
 /** Planning a trip and everything the result screen shows. */
@@ -125,7 +122,7 @@ class TripViewModel(
     private val feature: ChargeStopsFeature,
     private val planTrip: PlanTripInteractor,
     private val replanWithArrivalSoc: ReplanWithArrivalSocInteractor,
-    private val toggleSavedRoute: ToggleSavedRouteInteractor,
+    private val commitTrip: CommitTripInteractor,
     private val updateManualSoc: UpdateManualSocInteractor,
     private val tripStore: TripStore,
     private val settings: SettingsStore,
@@ -145,16 +142,14 @@ class TripViewModel(
         selection,
         socEditor,
         arrivalSocEditor,
-        settings.savedRoutes,
         settings.manualSocPercent,
         feature.currentFix,
-    ) { plan, planning, sectionSelection, socInput, arrivalSocInput, saved, socPercent, fix ->
+    ) { plan, planning, sectionSelection, socInput, arrivalSocInput, socPercent, fix ->
         when {
             planning -> TripUiState.Planning
             plan == null -> TripUiState.NoPlan
             else -> TripUiState.Planned(
                 plan = plan,
-                isSaved = saved.any { it.destination.position == plan.destination.position },
                 startPosition = fix?.position,
                 startSocPercent = socPercent,
                 selection = sectionSelection,
@@ -202,14 +197,15 @@ class TripViewModel(
     }
 
     /**
-     * Saves the current plan's destination as a favourite, or removes it
-     * again. [summary] comes from the caller's resources.
+     * The plan just went to Maps: it becomes the committed trip and leaves the
+     * home screen, which goes back to browsing.
      */
-    fun toggleSaved(summary: String) {
-        val current = tripStore.plan.value ?: return
+    fun commit() {
+        val current = uiState.value as? TripUiState.Planned ?: return
         viewModelScope.launch {
-            toggleSavedRoute(ToggleSavedRouteInteractor.Params(current.destination, summary)).onSuccess { saved ->
-                events.value = if (saved) TripEvent.RouteSaved else TripEvent.RouteRemoved
+            commitTrip(CommitTripInteractor.Params(current.plan, current.startSocPercent)).onSuccess {
+                clear()
+                events.value = TripEvent.TripCommitted
             }
         }
     }

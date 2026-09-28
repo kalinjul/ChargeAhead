@@ -37,6 +37,8 @@ import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilit
 import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshNetworksInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
+import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveSavedRouteInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
@@ -122,6 +124,8 @@ fun chargeStopsModule(): Module = module {
     factory { PlanTripInteractor(get(), get(), get()) }
     factory { UpdateArrivalSocInteractor(get()) }
     factory { ReplanWithArrivalSocInteractor(get(), get(), get()) }
+    factory { CommitTripInteractor(get(), get()) }
+    factory { EndTripInteractor(get()) }
     factory { SaveRouteInteractor(get()) }
     factory { ToggleSavedRouteInteractor(get()) }
     factory { RenameSavedRouteInteractor(get()) }
