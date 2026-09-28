@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -181,7 +182,12 @@ fun HomeScreen(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Box(Modifier.weight(1f)) { topBar() }
                 RoundIconButton(onClick = onSettings, badge = uiState.filtersCustomized) {
-                    RoundIcon(painterResource(R.drawable.ic_filter), stringResource(R.string.home_settings))
+                    Icon(
+                        Icons.Outlined.Menu,
+                        contentDescription = stringResource(R.string.home_settings),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp),
+                    )
                 }
             }
             Row(Modifier.fillMaxWidth()) {
