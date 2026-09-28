@@ -38,6 +38,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.layout.onSizeChanged
@@ -176,37 +182,40 @@ fun HomeSearchBar(
 
 /** Replaces the bar while a trip is shown. */
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, standalone: Boolean = true) {
     PillContainer(standalone) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.defaultMinSize(minHeight = CHROME_HEIGHT).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp).fillMaxWidth(),
-        ) {
-            Icon(
-                painterResource(R.drawable.ic_route),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp),
-            )
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    subtitle,
-                    style = MaterialTheme.typography.bodySmall.tabular,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-            IconButton(onClick = onClear) {
-                Icon(
-                    painterResource(R.drawable.ic_remove),
-                    contentDescription = stringResource(R.string.home_trip_clear),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-        }
+        // Material's subtitle app bar is still expressive-only in 1.4.0, so the title slot stacks both lines.
+        CenterAlignedTopAppBar(
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodyMedium.tabular,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        // "873 km · 11h 16min · 5 Stopps" wants the whole width; a step down beats a cut.
+                        autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp, stepSize = 0.5.sp),
+                    )
+                }
+            },
+            actions = {
+                IconButton(onClick = onClear) {
+                    Icon(
+                        painterResource(R.drawable.ic_remove),
+                        contentDescription = stringResource(R.string.home_trip_clear),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            },
+            // Same height as the search bar it fades into, so the slot doesn't grow mid-fade.
+            expandedHeight = CHROME_HEIGHT,
+            windowInsets = WindowInsets(0),
+            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.Transparent),
+        )
     }
 }
 

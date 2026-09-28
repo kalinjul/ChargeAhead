@@ -174,12 +174,13 @@ fun PhoneApp(librariesRes: Int) {
                     // Header and bar swap with Material's fade-through instead of a hard cut.
                     AnimatedContent(
                         targetState = trip != null && !phoneAppUi.searching,
-                        transitionSpec = { fadeIn(ChargeAheadMotion.effects()) togetherWith fadeOut(ChargeAheadMotion.effects()) },
+                        transitionSpec = { fadeIn(ChargeAheadMotion.fadeThroughIn()) togetherWith fadeOut(ChargeAheadMotion.fadeThroughOut()) },
                         label = "top slot",
                     ) { showHeader ->
                     if (showHeader && trip != null) {
                         DestinationHeader(
-                            title = ChargeStopFormatter.label(trip.plan.destination),
+                            // The short name (town, or street and number), not the full label.
+                            title = trip.plan.destination.name,
                             subtitle = trip.plan.headerLine(),
                             onClear = tripViewModel::clear,
                             // Material's bar brings its own surface, the header has to bring one too.

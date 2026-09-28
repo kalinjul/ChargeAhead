@@ -1,6 +1,5 @@
 package org.julakali.chargeahead.android.phone
 
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -12,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
@@ -47,10 +47,10 @@ fun PhonePages(
             rememberViewModelStoreNavEntryDecorator(),
         ),
         transitionSpec = {
-            slideInHorizontally(tween(300)) { it } togetherWith fadeOut(tween(300))
+            slideInHorizontally(ChargeAheadMotion.page()) { it } togetherWith fadeOut(ChargeAheadMotion.page())
         },
         popTransitionSpec = {
-            fadeIn(tween(300)) togetherWith slideOutHorizontally(tween(300)) { it }
+            fadeIn(ChargeAheadMotion.page()) togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }
         },
         entryProvider = entryProvider {
             entry<Home> { }

@@ -118,3 +118,15 @@ fun TripSheetTilesDark() = Sheet(TripListLayout.TILES)
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun DestinationHeaderWithPlanDark() = DestinationHeaderWithPlan()
+
+/** A phone's header width with a long trip line: the subtitle steps down instead of being cut. */
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun DestinationHeaderNarrowLongTrip() {
+    PreviewScaffold {
+        Box(Modifier.width(260.dp).padding(8.dp)) {
+            DestinationHeader(title = "Kiel", subtitle = "873 km · 11h 16min · 5 Stopps", onClear = {})
+        }
+    }
+}

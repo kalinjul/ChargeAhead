@@ -4,7 +4,6 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +14,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -140,12 +140,12 @@ private fun OperatorPill(
     // Fill and ink crossfade together.
     val container by animateColorAsState(
         targetValue = if (selected) fill else scheme.surfaceVariant,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = ChargeAheadMotion.effects(),
         label = "pillContainer",
     )
     val content by animateColorAsState(
         targetValue = if (selected) fill.readableInk() else scheme.onSurface,
-        animationSpec = tween(durationMillis = 200),
+        animationSpec = ChargeAheadMotion.effects(),
         label = "pillContent",
     )
     // A tap dents the pill in and springs it back. Driven off the click, not the press state.
