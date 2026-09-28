@@ -38,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.graphics.Color
@@ -46,7 +47,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBar
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
@@ -96,15 +96,20 @@ fun HomeSearchBar(
     val startPadding by animateDpAsState(if (expanded) 4.dp else 16.dp, ChargeAheadMotion.spatial(), label = "search bar start")
     // Centred pill ↔ start-aligned field: the text is laid out at the start and slid by an
     // offset that shrinks to zero, so nothing gets re-measured or clipped on the way.
+    // Centred on the whole pill, not the field, so an x or spinner at the end doesn't nudge it.
     val centring by animateFloatAsState(if (expanded) 0f else 1f, ChargeAheadMotion.spatial(), label = "search text centring")
-    var fieldWidthPx by remember { mutableIntStateOf(0) }
+    var pillWidthPx by remember { mutableIntStateOf(0) }
     var contentWidthPx by remember { mutableIntStateOf(0) }
 
     PillContainer(standalone) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             // As tall as Material's field, so the pill matches the buttons beside it.
-            modifier = Modifier.defaultMinSize(minHeight = CHROME_HEIGHT).padding(start = startPadding, end = 6.dp).fillMaxWidth(),
+            modifier = Modifier
+                .onSizeChanged { pillWidthPx = it.width }
+                .defaultMinSize(minHeight = CHROME_HEIGHT)
+                .padding(start = startPadding, end = 6.dp)
+                .fillMaxWidth(),
         ) {
             AnimatedVisibility(
                 visible = expanded,
@@ -131,8 +136,12 @@ fun HomeSearchBar(
                     Box(
                         Modifier
                             .fillMaxWidth()
-                            .onSizeChanged { fieldWidthPx = it.width }
-                            .offset { IntOffset((((fieldWidthPx - contentWidthPx) / 2f) * centring).roundToInt().coerceAtLeast(0), 0) },
+                            .offset {
+                                // The field starts after the row's start padding and its own; collapsed, nothing sits before it.
+                                val fieldLeft = (startPadding + FIELD_PADDING).toPx()
+                                val centredLeft = (pillWidthPx - contentWidthPx) / 2f
+                                IntOffset(((centredLeft - fieldLeft) * centring).roundToInt().coerceAtLeast(0), 0)
+                            },
                         contentAlignment = Alignment.CenterStart,
                     ) {
                         if (query.isEmpty()) {
@@ -149,7 +158,7 @@ fun HomeSearchBar(
                 },
                 modifier = Modifier
                     .weight(1f)
-                    .padding(horizontal = 10.dp, vertical = 14.dp)
+                    .padding(horizontal = FIELD_PADDING, vertical = 14.dp)
                     .focusRequester(focusRequester)
                     .onFocusChanged { if (it.isFocused) onFocused() },
             )
@@ -360,3 +369,5 @@ fun HomeDockedSearchBar(
 
 /** Six result rows; the list scrolls for the rest. */
 private val DOCKED_RESULTS_HEIGHT = 64.dp * 6
+
+private val FIELD_PADDING = 10.dp
