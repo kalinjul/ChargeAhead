@@ -4,8 +4,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -13,12 +18,44 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Colors that have no slot in the M3 scheme. */
-object ChargeAheadColors {
-    val faint = Color(0xFF80868B)
+/** Colors that have no slot in the M3 scheme, one set per theme. */
+@Immutable
+data class ChargeAheadExtras(
+    val faint: Color,
+    /** Dashed outline of a picked section and the "add" tick. */
+    val sectionOutline: Color,
+    /** Outline of the saved-route button and the "delete" tick. */
+    val deleteOutline: Color,
     // Reserved for the trip summary's delay badge once traffic data exists.
-    val trafficBg = Color(0xFFFEF7E0)
-    val trafficText = Color(0xFFB06000)
+    val trafficBg: Color,
+    val trafficText: Color,
+)
+
+private val LightExtras = ChargeAheadExtras(
+    faint = Color(0xFF80868B),
+    sectionOutline = Color(0xFFA8C7FA),
+    deleteOutline = Color(0xFFF2B8B2),
+    trafficBg = Color(0xFFFEF7E0),
+    trafficText = Color(0xFFB06000),
+)
+
+private val DarkExtras = ChargeAheadExtras(
+    faint = Color(0xFF80868B),
+    sectionOutline = Color(0xFF4A6FA5),
+    deleteOutline = Color(0xFF8C4A45),
+    trafficBg = Color(0xFF3D2F0A),
+    trafficText = Color(0xFFFDD663),
+)
+
+val LocalChargeAheadExtras = staticCompositionLocalOf { LightExtras }
+
+/** The current theme's off-scheme colours. */
+object ChargeAheadColors {
+    val faint: Color @Composable get() = LocalChargeAheadExtras.current.faint
+    val sectionOutline: Color @Composable get() = LocalChargeAheadExtras.current.sectionOutline
+    val deleteOutline: Color @Composable get() = LocalChargeAheadExtras.current.deleteOutline
+    val trafficBg: Color @Composable get() = LocalChargeAheadExtras.current.trafficBg
+    val trafficText: Color @Composable get() = LocalChargeAheadExtras.current.trafficText
 }
 
 /** Tabular figures for times and distances. */
@@ -57,6 +94,39 @@ private val MockupScheme = lightColorScheme(
     surfaceContainerHighest = Color(0xFFF1F3F4),
 )
 
+// Dark grey surfaces, Google's dark-mode accents; not an inversion of the light scheme.
+private val DarkScheme = darkColorScheme(
+    primary = Color(0xFF8AB4F8),
+    onPrimary = Color(0xFF062E6F),
+    primaryContainer = Color(0xFF283C5C),
+    onPrimaryContainer = Color(0xFFD2E3FC),
+    secondary = Color(0xFF9AA0A6),
+    onSecondary = Color(0xFF202124),
+    secondaryContainer = Color(0xFF283C5C),
+    onSecondaryContainer = Color(0xFFD2E3FC),
+    tertiary = Color(0xFF81C995),
+    onTertiary = Color(0xFF0D3B1E),
+    tertiaryContainer = Color(0xFF1E3B2A),
+    onTertiaryContainer = Color(0xFF81C995),
+    error = Color(0xFFF28B82),
+    onError = Color(0xFF3C1F1D),
+    errorContainer = Color(0xFF3C1F1D),
+    onErrorContainer = Color(0xFFF28B82),
+    background = Color(0xFF121212),
+    onBackground = Color(0xFFE8EAED),
+    surface = Color(0xFF1E1F22),
+    onSurface = Color(0xFFE8EAED),
+    surfaceVariant = Color(0xFF2A2B2F),
+    onSurfaceVariant = Color(0xFF9AA0A6),
+    outline = Color(0xFF5F6368),
+    outlineVariant = Color(0xFF3C4043),
+    surfaceContainerLowest = Color(0xFF121212),
+    surfaceContainerLow = Color(0xFF1E1F22),
+    surfaceContainer = Color(0xFF232428),
+    surfaceContainerHigh = Color(0xFF2A2B2F),
+    surfaceContainerHighest = Color(0xFF303134),
+)
+
 private val Sans = FontFamily.SansSerif
 
 // Bold and tight for titles, small and quiet for meta.
@@ -89,11 +159,13 @@ private val MockupShapes = Shapes(
 )
 
 @Composable
-fun ChargeAheadTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = MockupScheme,
-        typography = MockupTypography,
-        shapes = MockupShapes,
-        content = content,
-    )
+fun ChargeAheadTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalChargeAheadExtras provides if (darkTheme) DarkExtras else LightExtras) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkScheme else MockupScheme,
+            typography = MockupTypography,
+            shapes = MockupShapes,
+            content = content,
+        )
+    }
 }

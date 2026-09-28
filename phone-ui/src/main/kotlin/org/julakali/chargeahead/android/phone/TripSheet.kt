@@ -65,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.RankBadge
 import org.julakali.chargeahead.android.phone.components.SocEditDialog
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
@@ -140,6 +141,7 @@ fun TripSheetContent(
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (selecting) {
+            val sectionOutline = ChargeAheadColors.sectionOutline
             val bothPicked = selectionA != null && selectionB != null
             val hint = if (selectionA != null && !bothPicked) {
                 stringResource(R.string.trip_section_hint_second)
@@ -153,7 +155,7 @@ fun TripSheetContent(
                     .background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.extraSmall)
                     .drawBehind {
                         drawRoundRect(
-                            color = Color(0xFFA8C7FA),
+                            color = sectionOutline,
                             style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f))),
                             cornerRadius = CornerRadius(8.dp.toPx()),
                         )
@@ -215,7 +217,7 @@ fun TripSheetContent(
                     onClick = onToggleSave,
                     shape = MaterialTheme.shapes.small,
                     color = if (isSaved) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, if (isSaved) Color(0xFFF2B8B2) else MaterialTheme.colorScheme.outlineVariant),
+                    border = BorderStroke(1.dp, if (isSaved) ChargeAheadColors.deleteOutline else MaterialTheme.colorScheme.outlineVariant),
                     modifier = Modifier.size(width = 44.dp, height = 40.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {

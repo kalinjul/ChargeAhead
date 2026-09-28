@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.uitests
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -119,3 +120,14 @@ fun SearchResultsEmpty() {
         SearchResultsPanel(uiState = SearchUiState(query = "Xyzzyplonk"), onPick = {})
     }
 }
+
+// Dark theme: the same components under UI_MODE_NIGHT_YES.
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun HomeSearchBarWithQueryDark() = Bar(query = "München Marienplatz")
+
+@PreviewTest
+@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun SearchResultsHitsDark() = SearchResultsHits()
