@@ -46,7 +46,6 @@ class HomeScreenTest {
             onDismissSearch = {},
             onStopTapped = {},
             topBar = { Text("top bar") },
-            topPanel = { Text("top panel") },
         )
     }
 
@@ -68,12 +67,6 @@ class HomeScreenTest {
         home(mode = HomeMode.TRIP)
         compose.onNodeWithText(compose.string(R.string.home_pill_charge_now)).assertDoesNotExist()
         compose.onNodeWithText(compose.string(R.string.home_pill_favorites)).assertDoesNotExist()
-    }
-
-    @Test
-    fun `searching shows the top panel`() {
-        home(mode = HomeMode.SEARCHING)
-        compose.onNodeWithText("top panel").assertIsDisplayed()
     }
 
     @Test

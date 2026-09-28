@@ -79,10 +79,8 @@ fun HomeRoute(
     onStopTapped: (Int) -> Unit,
     /** Arrival and departure for a selected site that is a planned stop. */
     tripLineFor: (ChargeStop) -> String?,
-    /** Search bar or destination header. */
+    /** Material's docked search bar with the hits inside, or the destination header. */
     topBar: @Composable () -> Unit,
-    /** Results while searching. */
-    topPanel: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
@@ -110,7 +108,6 @@ fun HomeRoute(
         onDismissSearch = onDismissSearch,
         onStopTapped = onStopTapped,
         topBar = topBar,
-        topPanel = topPanel,
         modifier = modifier,
     )
 
@@ -142,7 +139,6 @@ fun HomeScreen(
     onDismissSearch: () -> Unit,
     onStopTapped: (Int) -> Unit,
     topBar: @Composable () -> Unit,
-    topPanel: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val camera = rememberHomeCamera(uiState.position)
@@ -177,7 +173,7 @@ fun HomeScreen(
         }
 
         // Burger, bar, locate on one line. While searching the sides fold away and
-        // the bar takes the whole width; compass and loading spinner hang on the right.
+        // Material's docked bar takes the whole width; compass and spinner hang on the right.
         val searching = mode == HomeMode.SEARCHING
         Column(
             modifier = Modifier
@@ -189,7 +185,7 @@ fun HomeScreen(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SideButton(visible = !searching, trailingGap = true) {
-                    RoundIconButton(onClick = onSettings, badge = uiState.filtersCustomized) {
+                    RoundIconButton(onClick = onSettings) {
                         Icon(
                             Icons.Outlined.Menu,
                             contentDescription = stringResource(R.string.home_settings),
@@ -198,6 +194,7 @@ fun HomeScreen(
                         )
                     }
                 }
+                // Material's bar brings its own panel; the slot renders the whole thing.
                 Box(Modifier.weight(1f)) { topBar() }
                 SideButton(visible = !searching, trailingGap = false) {
                     RoundIconButton(onClick = {
@@ -233,7 +230,7 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     when {
-                        searching -> topPanel()
+                        searching -> Unit
                         // Location is running and getting nowhere.
                         uiState.locationUnavailable -> HintChip(
                             stringResource(R.string.phone_status_location_unavailable),

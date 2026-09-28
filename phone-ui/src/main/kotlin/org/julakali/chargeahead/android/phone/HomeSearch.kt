@@ -1,21 +1,20 @@
 package org.julakali.chargeahead.android.phone
 
 import androidx.compose.foundation.clickable
-import androidx.compose.ui.BiasAlignment
 import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.expandHorizontally
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -26,7 +25,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.SearchBarDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,6 +38,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import kotlin.math.roundToInt
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.core.animateFloatAsState
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
@@ -69,15 +81,20 @@ fun HomeSearchBar(
     /** Full width with a back arrow and start-aligned text; collapsed it is a centred pill. */
     expanded: Boolean = false,
     onBack: () -> Unit = {},
+    /** Own pill surface, or bare rows inside the home screen's search panel. */
+    standalone: Boolean = true,
 ) {
     LaunchedEffect(takeFocus) {
         if (takeFocus) focusRequester.requestFocus()
     }
-    // Centred pill ↔ start-aligned field: the text glides with the bar instead of jumping.
-    val bias by animateFloatAsState(if (expanded) -1f else 0f, ChargeAheadMotion.spatial(), label = "search text bias")
     val startPadding by animateDpAsState(if (expanded) 4.dp else 16.dp, ChargeAheadMotion.spatial(), label = "search bar start")
+    // Centred pill ↔ start-aligned field: the text is laid out at the start and slid by an
+    // offset that shrinks to zero, so nothing gets re-measured or clipped on the way.
+    val centring by animateFloatAsState(if (expanded) 0f else 1f, ChargeAheadMotion.spatial(), label = "search text centring")
+    var fieldWidthPx by remember { mutableIntStateOf(0) }
+    var contentWidthPx by remember { mutableIntStateOf(0) }
 
-    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp) {
+    PillContainer(standalone) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = startPadding, end = 6.dp).fillMaxWidth(),
@@ -102,20 +119,25 @@ fun HomeSearchBar(
                 // BasicTextField's cursor defaults to black, invisible on the dark bar.
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                onTextLayout = { if (query.isNotEmpty()) contentWidthPx = it.size.width },
                 decorationBox = { inner ->
-                    // The field itself is only as wide as its text, so the bias can move it.
-                    Box(Modifier.fillMaxWidth(), contentAlignment = BiasAlignment(horizontalBias = bias, verticalBias = 0f)) {
-                        Box(Modifier.width(IntrinsicSize.Min)) {
-                            if (query.isEmpty()) {
-                                Text(
-                                    stringResource(R.string.home_search_hint),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = ChargeAheadColors.faint,
-                                    maxLines = 1,
-                                )
-                            }
-                            inner()
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .onSizeChanged { fieldWidthPx = it.width }
+                            .offset { IntOffset((((fieldWidthPx - contentWidthPx) / 2f) * centring).roundToInt().coerceAtLeast(0), 0) },
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (query.isEmpty()) {
+                            Text(
+                                stringResource(R.string.home_search_hint),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = ChargeAheadColors.faint,
+                                maxLines = 1,
+                                onTextLayout = { contentWidthPx = it.size.width },
+                            )
                         }
+                        inner()
                     }
                 },
                 modifier = Modifier
@@ -130,12 +152,21 @@ fun HomeSearchBar(
                     modifier = Modifier.padding(end = 10.dp).size(18.dp),
                 )
                 query.isNotEmpty() || (clearable && !expanded) -> IconButton(onClick = onClear) {
-                    Icon(
-                        painterResource(R.drawable.ic_remove),
-                        contentDescription = stringResource(R.string.home_search_clear),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    // Next to Material's arrow the thin drawable looks off; match the glyph.
+                    if (expanded) {
+                        Icon(
+                            Icons.Outlined.Close,
+                            contentDescription = stringResource(R.string.home_search_clear),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        Icon(
+                            painterResource(R.drawable.ic_remove),
+                            contentDescription = stringResource(R.string.home_search_clear),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         }
@@ -144,12 +175,12 @@ fun HomeSearchBar(
 
 /** Replaces the bar while a trip is shown. */
 @Composable
-fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit) {
-    Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp) {
+fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, standalone: Boolean = true) {
+    PillContainer(standalone) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp).fillMaxWidth(),
+            modifier = Modifier.defaultMinSize(minHeight = CHROME_HEIGHT).padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp).fillMaxWidth(),
         ) {
             Icon(
                 painterResource(R.drawable.ic_route),
@@ -180,19 +211,32 @@ fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit) {
 
 /** Recents or hits under the bar. */
 @Composable
-fun SearchResultsPanel(uiState: SearchUiState, onPick: (SearchRow) -> Unit, modifier: Modifier = Modifier) {
-    Surface(
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.colorScheme.surface,
-        shadowElevation = 6.dp,
-        modifier = modifier.fillMaxWidth(),
-    ) {
+fun SearchResultsPanel(
+    uiState: SearchUiState,
+    onPick: (SearchRow) -> Unit,
+    modifier: Modifier = Modifier,
+    /** Own card surface, or the list filling the home screen's search panel. */
+    standalone: Boolean = true,
+) {
+    val container: @Composable (@Composable () -> Unit) -> Unit = { content ->
+        if (standalone) {
+            Surface(
+                shape = MaterialTheme.shapes.medium,
+                color = MaterialTheme.colorScheme.surface,
+                shadowElevation = 6.dp,
+                modifier = modifier.fillMaxWidth(),
+            ) { content() }
+        } else {
+            Box(modifier.fillMaxSize()) { content() }
+        }
+    }
+    container {
         when {
             uiState.failed -> Message(stringResource(R.string.plan_search_failed), error = true)
             uiState.rows.isEmpty() && !uiState.isQueryTooShort && !uiState.searching ->
                 Message(stringResource(R.string.plan_no_results))
             uiState.rows.isEmpty() -> Unit
-            else -> LazyColumn(modifier = Modifier.heightIn(max = 360.dp)) {
+            else -> LazyColumn(modifier = if (standalone) Modifier.heightIn(max = 360.dp) else Modifier.fillMaxSize()) {
                 items(uiState.rows, key = { "${it.destination.position}${it.title}" }) { row ->
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -245,3 +289,60 @@ private fun Message(text: String, error: Boolean = false) {
         modifier = Modifier.padding(14.dp),
     )
 }
+
+/** The pill's own surface when it stands alone on the map; nothing when it sits inside the search panel. */
+@Composable
+private fun PillContainer(standalone: Boolean, content: @Composable () -> Unit) {
+    if (standalone) {
+        Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp) { content() }
+    } else {
+        content()
+    }
+}
+
+/**
+ * Material's own pill-to-panel search: the field expands into a docked panel with
+ * [results] inside, transition, elevation and back handling included.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun HomeDockedSearchBar(
+    query: String,
+    searching: Boolean,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onQueryChange: (String) -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+    results: @Composable () -> Unit,
+) {
+    val focusRequester = remember { FocusRequester() }
+    DockedSearchBar(
+        // Our field inside Material's panel: centred placeholder that glides to the start.
+        inputField = {
+            HomeSearchBar(
+                query = query,
+                searching = searching,
+                onFocused = { onExpandedChange(true) },
+                onQueryChange = onQueryChange,
+                onClear = onClear,
+                focusRequester = focusRequester,
+                takeFocus = expanded,
+                expanded = expanded,
+                onBack = { onExpandedChange(false) },
+                standalone = false,
+            )
+        },
+        expanded = expanded,
+        onExpandedChange = onExpandedChange,
+        modifier = modifier,
+        // Same lift as the custom pill, so the two compare on equal footing.
+        colors = SearchBarDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
+        shadowElevation = 6.dp,
+    ) {
+        Box(Modifier.fillMaxWidth().height(DOCKED_RESULTS_HEIGHT)) { results() }
+    }
+}
+
+/** Six result rows; the list scrolls for the rest. */
+private val DOCKED_RESULTS_HEIGHT = 64.dp * 6

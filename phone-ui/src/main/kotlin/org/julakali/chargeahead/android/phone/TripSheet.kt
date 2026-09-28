@@ -550,16 +550,20 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
 @Composable
 fun TripPlan.headerLine(): String = listOf(
     stringResource(R.string.trip_summary_distance, route.distanceKm.roundToInt()),
-    minutesText(totalMinutes),
+    minutesText(totalMinutes, compact = true),
     pluralStringResource(R.plurals.trip_summary_stops, stops.size, stops.size),
 ).joinToString(" · ")
 
-/** "9 h 16 min" or "42 min" — durations, not clock times. */
-fun minutesText(minutes: Double): String {
+/** "9 h 16 min" or "42 min" — durations, not clock times. [compact] drops the inner spaces for the header. */
+fun minutesText(minutes: Double, compact: Boolean = false): String {
     val total = minutes.roundToInt()
     val hours = total / 60
     val rest = total % 60
-    return if (hours > 0) "$hours h $rest min" else "$rest min"
+    return when {
+        hours > 0 && compact -> "${hours}h ${rest}min"
+        hours > 0 -> "$hours h $rest min"
+        else -> "$rest min"
+    }
 }
 
 /** The clock the trip rows read; tests pin it so times don't drift. */

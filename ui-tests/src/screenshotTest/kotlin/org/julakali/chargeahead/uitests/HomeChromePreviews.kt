@@ -59,10 +59,10 @@ fun HomePillsChargeNowAndFavorites() {
 @PreviewTest
 @Preview(showBackground = true)
 @Composable
-fun RoundIconButtonWithBadge() {
+fun RoundIconButtonMenu() {
     PreviewScaffold {
         Box(Modifier.padding(12.dp)) {
-            RoundIconButton(onClick = {}, badge = true) {
+            RoundIconButton(onClick = {}) {
                 RoundIcon(painterResource(R.drawable.ic_filter), contentDescription = "Filter")
             }
         }

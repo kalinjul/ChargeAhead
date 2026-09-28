@@ -1,7 +1,5 @@
 package org.julakali.chargeahead.android.phone
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -21,33 +19,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** 46dp floating circle; [badge] is the "filters customized" dot. */
+/** The top chrome's height: Material's search field is 56dp, everything beside it matches. */
+val CHROME_HEIGHT = 56.dp
+
+/** Floating circle, as tall as the search bar next to it. */
 @Composable
 fun RoundIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    badge: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    Box(modifier) {
-        Surface(
-            onClick = onClick,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 6.dp,
-            modifier = Modifier.size(46.dp),
-        ) {
-            Box(contentAlignment = Alignment.Center) { content() }
-        }
-        if (badge) {
-            Box(
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .size(11.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape),
-            )
-        }
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surface,
+        shadowElevation = 6.dp,
+        modifier = modifier.size(CHROME_HEIGHT),
+    ) {
+        Box(contentAlignment = Alignment.Center) { content() }
     }
 }
 

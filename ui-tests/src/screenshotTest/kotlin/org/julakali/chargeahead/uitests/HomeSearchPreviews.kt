@@ -10,6 +10,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
+import org.julakali.chargeahead.android.phone.HomeDockedSearchBar
 import org.julakali.chargeahead.android.phone.HomeSearchBar
 import org.julakali.chargeahead.android.phone.SearchResultsPanel
 import org.julakali.chargeahead.shared.domain.Destination
@@ -147,3 +148,34 @@ fun HomeSearchBarExpandedDark() = Bar(query = "München", expanded = true)
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun SearchResultsHitsDark() = SearchResultsHits()
+
+// Material's DockedSearchBar path, for comparison with the custom pill.
+@PreviewTest
+@Preview(showBackground = true)
+@Composable
+fun DockedSearchBarCollapsed() {
+    Framed {
+        HomeDockedSearchBar(query = "", searching = false, expanded = false, onExpandedChange = {}, onQueryChange = {}, onClear = {}) {}
+    }
+}
+
+@PreviewTest
+@Preview(showBackground = true, heightDp = 520)
+@Composable
+fun DockedSearchBarExpandedWithHits() {
+    Framed {
+        HomeDockedSearchBar(query = "Münch", searching = false, expanded = true, onExpandedChange = {}, onQueryChange = {}, onClear = {}) {
+            SearchResultsPanel(
+                uiState = SearchUiState(
+                    query = "Münch",
+                    rows = listOf(
+                        row("München", "Bayern, Deutschland", 612.3, recent = false),
+                        row("Münchberg", "Bayern, Deutschland", 487.0, recent = false),
+                    ),
+                ),
+                onPick = {},
+                standalone = false,
+            )
+        }
+    }
+}
