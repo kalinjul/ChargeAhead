@@ -38,8 +38,8 @@ import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
 
 /**
- * The garage: pick, add, remove vehicles; adjust consumption and charge level
- * for the selected one.
+ * The garage: pick, add, remove vehicles; adjust consumption and arrival
+ * level for the selected one.
  */
 @Composable
 fun GarageRoute(
@@ -53,7 +53,6 @@ fun GarageRoute(
         uiState = uiState,
         onSelect = viewModel::onVehicleSelected,
         onRemove = viewModel::onVehicleRemoved,
-        onSocChange = viewModel::onSocChanged,
         onArrivalSocEdit = viewModel::onArrivalSocEditRequested,
         onArrivalSocInputChange = viewModel::onArrivalSocInputChanged,
         onArrivalSocConfirm = viewModel::onArrivalSocConfirmed,
@@ -69,7 +68,6 @@ fun GarageScreen(
     uiState: GarageUiState,
     onSelect: (VehicleProfile) -> Unit,
     onRemove: (String) -> Unit,
-    onSocChange: (Double) -> Unit,
     onArrivalSocEdit: () -> Unit,
     onArrivalSocInputChange: (String) -> Unit,
     onArrivalSocConfirm: () -> Unit,
@@ -139,11 +137,8 @@ fun GarageScreen(
                     vehicle = selected,
                     fullRangeKm = uiState.selectedFullRangeKm,
                     presetConsumption = uiState.selectedPresetConsumption,
-                    socPercent = uiState.socPercent,
-                    socFromCar = uiState.socFromCar,
                     arrivalSocPercent = uiState.arrivalSocPercent,
                     onSelect = onSelect,
-                    onSocChange = onSocChange,
                     onArrivalSocEdit = onArrivalSocEdit,
                     onOpenAdvanced = onOpenAdvanced,
                 )
@@ -157,11 +152,8 @@ private fun SelectedVehiclePanel(
     vehicle: VehicleProfile,
     fullRangeKm: Double?,
     presetConsumption: Double?,
-    socPercent: Double?,
-    socFromCar: Boolean,
     arrivalSocPercent: Double,
     onSelect: (VehicleProfile) -> Unit,
-    onSocChange: (Double) -> Unit,
     onArrivalSocEdit: () -> Unit,
     onOpenAdvanced: () -> Unit,
 ) {
@@ -184,7 +176,6 @@ private fun SelectedVehiclePanel(
 
         // Each slider keeps its drag state inside its own card.
         ConsumptionCard(vehicle = vehicle, presetConsumption = presetConsumption, onSelect = onSelect)
-        SocCard(socPercent = socPercent, socFromCar = socFromCar, onSocChange = onSocChange)
         ArrivalSocCard(percent = arrivalSocPercent, onEdit = onArrivalSocEdit)
 
         TextButton(onClick = onOpenAdvanced) {
@@ -217,30 +208,6 @@ private fun ConsumptionCard(vehicle: VehicleProfile, presetConsumption: Double?,
             presetConsumption?.let { spec ->
                 Fineprint(stringResource(R.string.garage_consumption_hint, spec.oneDecimal()))
             }
-        }
-    }
-}
-
-@Composable
-private fun SocCard(socPercent: Double?, socFromCar: Boolean, onSocChange: (Double) -> Unit) {
-    var soc by remember(socPercent == null) { mutableStateOf((socPercent ?: 80.0).toFloat()) }
-    AppCard {
-        Column(modifier = Modifier.padding(13.dp)) {
-            Text(
-                if (socPercent == null && !socFromCar) {
-                    stringResource(R.string.garage_soc_unset)
-                } else {
-                    stringResource(R.string.garage_soc, soc.roundToInt())
-                },
-                style = MaterialTheme.typography.titleSmall.tabular,
-            )
-            AppSlider(
-                value = soc,
-                onValueChange = { soc = it.roundToInt().toFloat() },
-                onValueChangeFinished = { onSocChange(soc.toDouble()) },
-                valueRange = 0f..100f,
-                enabled = !socFromCar,
-            )
         }
     }
 }

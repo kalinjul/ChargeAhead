@@ -45,7 +45,6 @@ fun VehicleSettingsRoute(
         onBatteryChange = viewModel::onBatteryChanged,
         onConsumptionChange = viewModel::onConsumptionChanged,
         onConnectorToggle = viewModel::onConnectorToggled,
-        onSocChange = viewModel::onSocChanged,
         onClear = viewModel::onVehicleCleared,
         modifier = modifier,
     )
@@ -58,7 +57,6 @@ fun VehicleSettingsScreen(
     onBatteryChange: (String) -> Unit,
     onConsumptionChange: (String) -> Unit,
     onConnectorToggle: (ConnectorType, Boolean) -> Unit,
-    onSocChange: (String) -> Unit,
     onClear: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -114,20 +112,19 @@ fun VehicleSettingsScreen(
             }
         }
 
+        // Read-only: the car sets it, or the charge-level dialogs when planning.
         NumberField(
             value = uiState.socInput,
-            onValueChange = onSocChange,
+            onValueChange = {},
             label = stringResource(R.string.phone_field_soc),
-            isError = uiState.socInvalid,
-            errorText = stringResource(R.string.phone_error_percent),
-            enabled = !uiState.socFromCar,
+            isError = false,
+            errorText = "",
+            enabled = false,
             modifier = Modifier.padding(top = 16.dp),
         )
-        if (uiState.socFromCar) {
-            Fineprint(
-                text = stringResource(R.string.phone_soc_source_car),
-            )
-        }
+        Fineprint(
+            text = stringResource(if (uiState.socFromCar) R.string.phone_soc_source_car else R.string.phone_soc_source_stored),
+        )
 
         CarHardwareStatus(
             diagnostics = uiState.diagnostics,
