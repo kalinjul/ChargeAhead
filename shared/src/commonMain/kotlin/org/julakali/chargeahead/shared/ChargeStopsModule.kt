@@ -12,6 +12,7 @@ import org.julakali.chargeahead.shared.data.BackendRouteEngine
 import org.julakali.chargeahead.shared.data.CombinedSoCSource
 import org.julakali.chargeahead.shared.data.ManualSoCSource
 import org.julakali.chargeahead.shared.data.MergingSiteRepository
+import org.julakali.chargeahead.shared.data.RoomTripStorage
 import org.julakali.chargeahead.shared.data.RoomNetworkRepository
 import org.julakali.chargeahead.shared.data.TiledSiteRepository
 import org.julakali.chargeahead.shared.data.createHttpClient
@@ -25,6 +26,7 @@ import org.julakali.chargeahead.shared.domain.usecases.LoadDataSourcesInteractor
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.NetworkRepository
+import org.julakali.chargeahead.shared.domain.PlannedTripStorage
 import org.julakali.chargeahead.shared.domain.usecases.ChargeNowObserver
 import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
 import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
@@ -98,7 +100,8 @@ fun chargeStopsModule(): Module = module {
     }
 
     single<TripPlanning> { TripPlanner(get(), get()) }
-    single { TripStore() }
+    single<PlannedTripStorage> { RoomTripStorage(get()) }
+    single { TripStore(get()) }
     single<CorridorPlanning> { CorridorPlanner() }
     single<ChargePointStatusRepository> {
         val backend = get<BackendConfig>()
@@ -153,6 +156,7 @@ fun Koin.newChargeStopsFeature(
     val time = get<TimeProvider>()
     val database = get<ChargeSiteDatabase>()
     val refreshNetworks = get<RefreshNetworksInteractor>()
+    val tripStore = get<TripStore>()
     return ChargeStopsFeature(
         locationSource = locationSource,
         socSource = CombinedSoCSource(
@@ -164,6 +168,7 @@ fun Koin.newChargeStopsFeature(
                 val keys = settingsStore.networks.first().preferredOperators
                 pruneCache(database, keys, time.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
             }
+            runCatching { tripStore.restore() }
             refreshNetworks(Unit)
         },
     )
