@@ -47,13 +47,15 @@ class RouteScreen(
     private val feature: ChargeStopsFeature,
     private val destination: Destination,
     private val title: String = destination.name,
+    /** The active route as the phone sent it; shown as is until the driver asks for a fresh plan. */
+    private val storedPlan: TripPlan? = null,
 ) : Screen(carContext), KoinComponent {
 
     private val planTrip: PlanTripInteractor = get()
     private val tripStore: TripStore = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var plan: TripPlan? = null
+    private var plan: TripPlan? = storedPlan
     private var planning = false
 
     /** Why the last planning attempt found no plan; `null` after a success. */
@@ -63,7 +65,9 @@ class RouteScreen(
         lifecycleScope.launch {
             // Also a trip the phone plans to the same destination.
             tripStore.plan.collect { stored ->
-                plan = stored?.takeIf { it.destination.position == destination.position }
+                val matching = stored?.takeIf { it.destination.position == destination.position }
+                // The stored plan stays until a plan of our own replaces it.
+                if (matching != null || storedPlan == null) plan = matching
                 invalidate()
             }
         }
@@ -73,8 +77,10 @@ class RouteScreen(
                 invalidate()
             }
         }
-        lifecycleScope.launch {
-            plan(feature.currentFix.filterNotNull().first())
+        if (storedPlan == null) {
+            lifecycleScope.launch {
+                plan(feature.currentFix.filterNotNull().first())
+            }
         }
     }
 
