@@ -169,7 +169,6 @@
     <!-- Phone: drawer -->
     <string name="drawer_preferences">Einstellungen</string>
     <string name="drawer_car">Auto</string>
-    <string name="drawer_filters">Filter</string>
     <string name="drawer_networks">Netzwerke</string>
     <string name="drawer_min_power">Mindestleistung</string>
     <string name="drawer_slow_mode">AC-Modus</string>
@@ -254,7 +253,7 @@
     <!-- Phone: saved routes -->
 
     <!-- Phone: garage -->
-    <string name="garage_title">Auto</string>
+    <string name="garage_title">Garage</string>
     <string name="garage_your_cars">Deine Autos</string>
     <string name="garage_add">Auto hinzufügen …</string>
     <string name="garage_delete">Auto entfernen …</string>
