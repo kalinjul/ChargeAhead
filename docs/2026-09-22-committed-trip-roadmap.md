@@ -95,11 +95,14 @@ Testing: none of this runs on Robolectric. The decision logic lives in
 1. Decision logic in `shared`, unit-tested: progress along the route,
    next-stop reachability, re-plan events.
 2. Committed trip state and the prompt on the phone, foreground only.
+   The state half is done (2026-09-28): "An Maps senden" commits, the
+   "Aktive Route" page and the car home show the stored plan, "Neu planen"
+   re-plans on request. The prompt waits for item 1.
 3. The car session as loop host — no Play declaration needed, and the car
    is the real target.
 4. The phone foreground service, once the logic has proven itself in the car.
 5. Remove saved routes: Favoriten pill, routes sheet, heart, `SavedRoute`
-   storage.
+   storage. Done 2026-09-28, together with item 2.
 
 Prerequisite: PR #126 (`ui-tests`) merged, so the work builds on one branch
 and the shell flow tests cover the commit and prompt flows from the start.

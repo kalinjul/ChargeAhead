@@ -1,6 +1,6 @@
 # Committed Trip Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** "An Maps senden" commits the planned trip. The committed trip survives a restart as it was sent, has its own full-screen view behind an "Aktive Route" button, drives the car's home screen, and replaces saved routes (Favoriten) entirely.
 
@@ -47,9 +47,9 @@ suspend fun commitTrip(trip: CommittedTrip)
 suspend fun clearCommittedTrip()
 ```
 
-- [ ] Failing test: commit a trip built from the fixtures, read it back from a second store over the same datastore, clear it, read null.
-- [ ] Implement; `./gradlew :shared:jvmTest` green.
-- [ ] Commit: `feat: settings remember the committed trip, plan and all`.
+- [x] Failing test: commit a trip built from the fixtures, read it back from a second store over the same datastore, clear it, read null.
+- [x] Implement; `./gradlew :shared:jvmTest` green.
+- [x] Commit: `feat: settings remember the committed trip, plan and all`.
 
 ### Task 2: Interactors and view models
 
@@ -73,34 +73,34 @@ fun replan()      // PlanTripInteractor from the current fix, then commit the re
 fun endTrip()
 ```
 
-- [ ] Failing tests: replan stores a new plan; endTrip clears; mapsUrl follows the selection.
-- [ ] Implement, register in Koin, `./gradlew :shared:jvmTest` green.
-- [ ] Commit: `feat: committing, re-planning and ending a trip in shared`.
+- [x] Failing tests: replan stores a new plan; endTrip clears; mapsUrl follows the selection.
+- [x] Implement, register in Koin, `./gradlew :shared:jvmTest` green.
+- [x] Commit: `feat: committing, re-planning and ending a trip in shared`.
 
 ### Task 3: Phone — sending commits, the active route page, the pill
 
 **Files:** `Destinations.kt` (`ActiveRoute`), `PhonePages.kt` (entry), `ActiveRouteScreen.kt` (new: `ActiveRouteRoute` + `ActiveRouteScreen`), `TripSheet.kt` (drop `isSaved`/`onToggleSave` and the heart; `socEditable` flag for the rail), `TripSheetScaffold.kt`, `HomeScreen.kt` / `HomeChrome.kt` (`HomePill(enabled)`, pill "Aktive Route" with `ic_route`), `PhoneApp.kt` (commit on send, open the page on `TripCommitted`, `PhoneAppSheet.ROUTES` gone), `strings.xml`.
 
-- [ ] Failing tests: `ActiveRouteScreenTest` (header, stops, buttons fire), `HomeScreenTest` (pill disabled/enabled), `PhoneAppFlowTest` (`an maps senden commits: the page opens, back lands on browsing, aktive route reopens it, navigieren beenden disables the pill`).
-- [ ] Implement. Screenshots: `ActiveRoute` previews, pill previews.
-- [ ] `./gradlew testAll` green, PNGs re-recorded and eyeballed.
-- [ ] Commit: `feat: an maps senden commits the trip; aktive route shows it on its own page`.
+- [x] Failing tests: `ActiveRouteScreenTest` (header, stops, buttons fire), `HomeScreenTest` (pill disabled/enabled), `PhoneAppFlowTest` (`an maps senden commits: the page opens, back lands on browsing, aktive route reopens it, navigieren beenden disables the pill`).
+- [x] Implement. Screenshots: `ActiveRoute` previews, pill previews.
+- [x] `./gradlew testAll` green, PNGs re-recorded and eyeballed.
+- [x] Commit: `feat: an maps senden commits the trip; aktive route shows it on its own page`.
 
 ### Task 4: Car — the committed trip on the home screen
 
 **Files:** `car/CarHomeScreen.kt`, `car/RouteScreen.kt` (optional stored plan, shown without planning), `strings.xml` (`car_home_active_route`).
 
-- [ ] Implement; `./gradlew :androidApp:assembleDebug`. DHU check is Raphael's.
-- [ ] Commit: `feat: the car home offers the active route instead of favourites`.
+- [x] Implement; `./gradlew :androidApp:assembleDebug`. DHU check is Raphael's (still open).
+- [x] Commit: `feat: the car home offers the active route instead of favourites`.
 
 ### Task 5: Remove saved routes for good
 
 **Files:** delete `SavedRoute.kt`, the four saved-route interactors, `RoutesViewModel.kt`, `RoutesSheet.kt`, `ic_heart*.xml`; strip `Ports.kt`, `PersistentSettingsStore.kt`, `ChargeStopsModule.kt`, `SharedUiModule.kt`, strings, tests (`GarageAndRoutesSettingsTest` → `GarageSettingsTest`, module tests), `ROADMAP.md`, `docs/2026-09-07-phone-ui-design.md` mentions.
 
-- [ ] `grep -rn "SavedRoute\|savedRoute\|Favorit\|favorit\|ic_heart"` over sources and docs is empty except the roadmap's history note.
-- [ ] `./gradlew testAll` green. Commit: `chore: saved routes are gone; recents and the active route cover it`.
+- [x] `grep -rn "SavedRoute\|savedRoute\|Favorit\|favorit\|ic_heart"` over sources and docs is empty except the roadmap's history note.
+- [x] `./gradlew testAll` green. Commit: `chore: saved routes are gone; recents and the active route cover it`.
 
 ### Task 6: Docs and PR
 
-- [ ] Roadmap "Order of work": items 2 and 5 done; item 1 (decision logic) next.
+- [x] Roadmap "Order of work": items 2 and 5 done; item 1 (decision logic) next.
 - [ ] PR: `to verify:` plan a trip, An Maps senden, come back: Aktive Route page; back, kill the app, reopen: pill enabled, page shows the same stops; Navigieren beenden: pill disabled; Android Auto: "Aktive Route" row.
