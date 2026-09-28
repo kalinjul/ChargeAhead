@@ -93,7 +93,7 @@ fun TripSummaryTiles() {
 fun DestinationHeaderWithPlan() {
     PreviewScaffold {
         Box(Modifier.width(400.dp).padding(8.dp)) {
-            DestinationHeader(title = SamplePlan.destination.name, subtitle = SamplePlan.headerLine(), onClear = {})
+            DestinationHeader(title = SamplePlan.destination.name, subtitle = SamplePlan.headerLine(), onClear = {}, onTitleClick = {})
         }
     }
 }
@@ -126,7 +126,7 @@ fun DestinationHeaderWithPlanDark() = DestinationHeaderWithPlan()
 fun DestinationHeaderNarrowLongTrip() {
     PreviewScaffold {
         Box(Modifier.width(260.dp).padding(8.dp)) {
-            DestinationHeader(title = "Kiel", subtitle = "873 km · 11h 16min · 5 Stopps", onClear = {})
+            DestinationHeader(title = "Kiel", subtitle = "873 km · 11h 16min · 5 Stopps", onClear = {}, onTitleClick = {})
         }
     }
 }

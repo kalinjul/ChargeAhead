@@ -183,22 +183,28 @@ fun HomeSearchBar(
 /** Replaces the bar while a trip is shown. */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, standalone: Boolean = true) {
+fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, onTitleClick: () -> Unit, standalone: Boolean = true) {
     PillContainer(standalone) {
         // Material's subtitle app bar is still expressive-only in 1.4.0, so the title slot stacks both lines.
         CenterAlignedTopAppBar(
             title = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodyMedium.tabular,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        // "873 km · 11h 16min · 5 Stopps" wants the whole width; a step down beats a cut.
-                        autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp, stepSize = 0.5.sp),
-                    )
+                // A clickable surface, so the tap ripples like any other Material button.
+                Surface(onClick = onTitleClick, shape = CircleShape, color = Color.Transparent) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodyMedium.tabular,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            // "873 km · 11h 16min · 5 Stopps" wants the whole width; a step down beats a cut.
+                            autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp, stepSize = 0.5.sp),
+                        )
+                    }
                 }
             },
             actions = {

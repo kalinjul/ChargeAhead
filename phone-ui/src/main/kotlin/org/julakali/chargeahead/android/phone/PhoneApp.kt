@@ -169,7 +169,7 @@ fun PhoneApp(librariesRes: Int) {
                     planned?.plan?.stops?.getOrNull(index - 1)?.let { homeViewModel.onSiteSelected(it.site) }
                 },
                 tripLineFor = { selected -> planned?.plan?.stopLine(context, selected, clock()) },
-                topBar = {
+                topBar = { flyTo ->
                     val trip = planned
                     // Header and bar swap with Material's fade-through instead of a hard cut.
                     AnimatedContent(
@@ -183,6 +183,7 @@ fun PhoneApp(librariesRes: Int) {
                             title = trip.plan.destination.name,
                             subtitle = trip.plan.headerLine(),
                             onClear = tripViewModel::clear,
+                            onTitleClick = { flyTo(trip.plan.destination.position) },
                             // Material's bar brings its own surface, the header has to bring one too.
                             standalone = true,
                         )

@@ -46,6 +46,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import kotlinx.coroutines.launch
 import org.julakali.chargeahead.android.phone.R
+import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.MapCharger
@@ -77,8 +78,8 @@ fun HomeRoute(
     onStopTapped: (Int) -> Unit,
     /** Arrival and departure for a selected site that is a planned stop. */
     tripLineFor: (ChargeStop) -> String?,
-    /** Material's docked search bar with the hits inside, or the destination header. */
-    topBar: @Composable () -> Unit,
+    /** Material's docked search bar with the hits inside, or the destination header. Gets a fly-to for the map. */
+    topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
@@ -136,7 +137,7 @@ fun HomeScreen(
     onRoutes: () -> Unit,
     onDismissSearch: () -> Unit,
     onStopTapped: (Int) -> Unit,
-    topBar: @Composable () -> Unit,
+    topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val camera = rememberHomeCamera(uiState.position)
@@ -193,7 +194,9 @@ fun HomeScreen(
                     }
                 }
                 // Material's bar brings its own panel; the slot renders the whole thing.
-                Box(Modifier.weight(1f)) { topBar() }
+                Box(Modifier.weight(1f)) {
+                    topBar { target -> scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) } }
+                }
                 SideButton(visible = !searching, trailingGap = false) {
                     RoundIconButton(onClick = {
                         // With a position, center on it; otherwise ask for a fix.
