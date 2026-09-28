@@ -71,7 +71,9 @@ fun HomeRoute(
     onLocate: () -> Unit,
     onSettings: () -> Unit,
     onChargeNow: () -> Unit,
-    onRoutes: () -> Unit,
+    /** The committed trip's page; the pill is dimmed while there is none. */
+    activeRouteEnabled: Boolean,
+    onActiveRoute: () -> Unit,
     /** A tap on the map while the results panel is open. */
     onDismissSearch: () -> Unit,
     /** A numbered route marker was tapped, 1-based. */
@@ -103,7 +105,8 @@ fun HomeRoute(
         onLocate = onLocate,
         onSettings = onSettings,
         onChargeNow = onChargeNow,
-        onRoutes = onRoutes,
+        activeRouteEnabled = activeRouteEnabled,
+        onActiveRoute = onActiveRoute,
         onDismissSearch = onDismissSearch,
         onStopTapped = onStopTapped,
         topBar = topBar,
@@ -134,7 +137,8 @@ fun HomeScreen(
     onLocate: () -> Unit,
     onSettings: () -> Unit,
     onChargeNow: () -> Unit,
-    onRoutes: () -> Unit,
+    activeRouteEnabled: Boolean,
+    onActiveRoute: () -> Unit,
     onDismissSearch: () -> Unit,
     onStopTapped: (Int) -> Unit,
     topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
@@ -204,7 +208,7 @@ fun HomeScreen(
                         if (target == null) {
                             onLocate()
                         } else {
-                            scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) }
+                            scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), LOCATE_ZOOM)) }
                         }
                     }) {
                         if (uiState.searchingLocation) {
@@ -334,12 +338,13 @@ fun HomeScreen(
                         onClick = onChargeNow,
                     )
                     HomePill(
-                        text = stringResource(R.string.home_pill_favorites),
-                        icon = painterResource(R.drawable.ic_heart),
+                        text = stringResource(R.string.home_pill_active_route),
+                        icon = painterResource(R.drawable.ic_route),
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface,
-                        iconTint = MaterialTheme.colorScheme.error,
-                        onClick = onRoutes,
+                        iconTint = MaterialTheme.colorScheme.primary,
+                        enabled = activeRouteEnabled,
+                        onClick = onActiveRoute,
                     )
                 }
             }

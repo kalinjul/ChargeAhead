@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Destination header</title>
+<style>
+  :root { --bg: #F1F3F4; --surface: #fff; --text: #202124; --muted: #5F6368; --faint: #80868B; --line: #DADCE0; --primary: #1A73E8; --primary-bg: #E8F0FE; --green: #188038; --red: #D93025; --ionity: #00C389; --enbw: #1E3A5F; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-block: 28px; padding-inline: 20px; background: var(--bg); color: var(--text); font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .intro { color: var(--muted); max-width: 70ch; margin: 0 0 24px; }
+  .row { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+  .option { width: 300px; }
+  .option h2 { font-size: 15px; font-weight: 500; margin: 0 0 2px; }
+  .option p { color: var(--muted); margin: 0 0 12px; font-size: 13px; min-height: 8.5em; }
+  .phone { width: 300px; height: 520px; border-radius: 26px; position: relative; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,.14);
+    background: repeating-linear-gradient(0deg, #D5DED4 0 1px, transparent 1px 40px), repeating-linear-gradient(90deg, #D5DED4 0 1px, transparent 1px 40px), #E3EBE2; }
+  .phone::before { content: ""; position: absolute; inset: 0; background: linear-gradient(28deg, transparent 0 49%, #C9D6EA 49% 52.5%, transparent 52.5%); }
+  /* the planned route */
+  .phone::after { content: ""; position: absolute; left: 60px; top: 300px; width: 190px; height: 6px; background: var(--primary); border-radius: 3px; transform: rotate(-52deg); transform-origin: left center; }
+  .abs { position: absolute; }
+  .round { width: 44px; height: 44px; border-radius: 50%; background: var(--surface); box-shadow: 0 3px 8px rgba(0,0,0,.12); display: grid; place-items: center; color: var(--muted); font-size: 18px; z-index: 2; }
+  .burger { left: 12px; top: 14px; }
+  .burger i, .burger i::before, .burger i::after { display: block; width: 18px; height: 2px; background: var(--muted); border-radius: 1px; content: ""; position: relative; }
+  .burger i::before { top: -6px; } .burger i::after { top: 4px; }
+  .locate { right: 12px; top: 14px; }
+  .locate span { width: 14px; height: 14px; border: 2px solid var(--muted); border-radius: 50%; display: block; position: relative; }
+  .locate span::after { content: ""; position: absolute; inset: 3px; background: var(--muted); border-radius: 50%; }
+  .stop { position: absolute; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; box-shadow: 0 1px 3px rgba(0,0,0,.3); z-index: 1; }
+  .s1 { left: 108px; top: 232px; background: var(--ionity); } .s2 { left: 160px; top: 168px; background: var(--enbw); }
+  .dest { position: absolute; left: 196px; top: 132px; width: 14px; height: 14px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--red); border: 2px solid #fff; z-index: 1; }
+
+  /* header slot: between burger and locate */
+  .slot { position: absolute; left: 66px; right: 66px; top: 14px; z-index: 3; }
+  .pill { background: var(--surface); border-radius: 999px; box-shadow: 0 3px 8px rgba(0,0,0,.12); min-height: 44px; display: flex; align-items: center; padding: 0 6px 0 14px; gap: 8px; }
+  .x { margin-left: auto; width: 32px; height: 32px; display: grid; place-items: center; color: var(--muted); font-size: 18px; flex: none; }
+  .t { font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .glyph { width: 18px; height: 18px; color: var(--primary); flex: none; }
+  .glyph svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .below { position: absolute; left: 12px; right: 12px; top: 66px; z-index: 3; display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { background: var(--surface); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--text); box-shadow: 0 2px 6px rgba(0,0,0,.12); display: flex; align-items: center; gap: 5px; }
+  .chip.on { background: var(--primary-bg); color: var(--primary); font-weight: 500; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* trip sheet peek */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 150px; background: var(--surface); border-radius: 22px 22px 0 0; box-shadow: 0 -4px 16px rgba(0,0,0,.12); padding: 8px 14px 0; z-index: 3; }
+  .handle { width: 32px; height: 4px; border-radius: 2px; background: var(--line); margin: 0 auto 10px; }
+  .sheet .stats { display: flex; gap: 14px; font-size: 13px; margin-bottom: 8px; }
+  .sheet .stats b { display: block; font-size: 16px; font-weight: 500; }
+  .sheet .stats span { color: var(--muted); font-size: 11px; }
+  .card { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .card .badge { width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; flex: none; }
+  .card small { color: var(--muted); display: block; font-size: 11px; }
+  .card .eta { margin-left: auto; color: var(--muted); font-size: 12px; text-align: right; }
+
+  .verdict { margin-top: 26px; max-width: 76ch; color: var(--muted); line-height: 1.45; }
+  .verdict strong { color: var(--text); }
+</style>
+</head>
+<body>
+<h1>Destination header</h1>
+<p class="intro">Same trip everywhere: München, 776 km, 8h 54min, 3 Stopps, Ankunft 18:42. The slot between burger and locate is 44dp tall on every option unless noted; what differs is what goes into it and what, if anything, moves out of it. The trip sheet peek at the bottom is today's.</p>
+
+<div class="row">
+
+<section class="option">
+  <h2>0 · Today</h2>
+  <p>Two lines in the search bar's pill, x on the right. Reads as a search bar that got stuck, and the second line has to shrink to fit "5 Stopps". Here for comparison.</p>
+  <div class="phone">
+    <div class="abs round burger"><i></i></div><div class="abs round locate"><span></span></div>
+    <div class="slot"><div class="pill" style="padding-left:16px"><div><div class="t">München</div><div class="sub">776 km · 8h 54min · 3 Stopps</div></div><div class="x">✕</div></div></div>
+    <div class="stop s1">1</div><div class="stop s2">2</div><div class="dest"></div>
+    <div class="sheet"><div class="handle"></div><div class="stats"><div><b>776 km</b><span>Strecke</span></div><div><b>8h 54min</b><span>Fahrzeit</span></div><div><b>18:42</b><span>Ankunft</span></div></div>
+      <div class="card"><span class="badge" style="background:var(--ionity)">1</span><div>Ionity Kassel<small>32 % → 80 % · 24 min</small></div><div class="eta">13:10</div></div></div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>A · Route field</h2>
+  <p>The slot stays a one-line field, like a search bar that now holds a committed destination: route glyph, "München", x. The numbers leave the bar and become chips under it, where Maps puts its filter chips. Chips can grow later (Ankunft, Ladestand, Nächster Stopp) without touching the bar.</p>
+  <div class="phone">
+    <div class="abs round burger"><i></i></div><div class="abs round locate"><span></span></div>
+    <div class="slot"><div class="pill"><span class="glyph"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/></svg></span><div class="t" style="font-size:15px">München</div><div class="x">✕</div></div></div>
+    <div class="below"><span class="chip">776 km</span><span class="chip">8h 54min</span><span class="chip">3 Stopps</span><span class="chip">Ankunft 18:42</span></div>
+    <div class="stop s1">1</div><div class="stop s2">2</div><div class="dest"></div>
+    <div class="sheet"><div class="handle"></div><div class="stats"><div><b>776 km</b><span>Strecke</span></div><div><b>8h 54min</b><span>Fahrzeit</span></div><div><b>18:42</b><span>Ankunft</span></div></div>
+      <div class="card"><span class="badge" style="background:var(--ionity)">1</span><div>Ionity Kassel<small>32 % → 80 % · 24 min</small></div><div class="eta">13:10</div></div></div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>B · Route field, sheet owns the numbers</h2>
+  <p>Same one-line field as A, no chips. The distance, time and stops already live in the trip sheet's header; the bar only says <em>where</em>. Least chrome, and the map under the bar stays free. The bar becomes a plain "you are on a trip to X" indicator.</p>
+  <div class="phone">
+    <div class="abs round burger"><i></i></div><div class="abs round locate"><span></span></div>
+    <div class="slot"><div class="pill"><span class="glyph"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/></svg></span><div class="t" style="font-size:15px">München</div><div class="x">✕</div></div></div>
+    <div class="stop s1">1</div><div class="stop s2">2</div><div class="dest"></div>
+    <div class="sheet"><div class="handle"></div><div class="stats"><div><b>776 km</b><span>Strecke</span></div><div><b>8h 54min</b><span>Fahrzeit</span></div><div><b>3</b><span>Stopps</span></div><div><b>18:42</b><span>Ankunft</span></div></div>
+      <div class="card"><span class="badge" style="background:var(--ionity)">1</span><div>Ionity Kassel<small>32 % → 80 % · 24 min</small></div><div class="eta">13:10</div></div></div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>C · Split pill</h2>
+  <p>One line, two halves: the destination on the left, a tinted segment on the right with the one number that matters at a glance, the stops, and the x. Like the two-tone charger pills on the map, so it reads as "ours". Tap left flies to the destination, tap right expands the sheet.</p>
+  <div class="phone">
+    <div class="abs round burger"><i></i></div><div class="abs round locate"><span></span></div>
+    <div class="slot"><div class="pill" style="padding:0; overflow:hidden"><div class="t" style="padding:0 14px; flex:1; font-size:15px">München</div><div style="background:var(--primary-bg); color:var(--primary); font-weight:500; font-size:13px; height:44px; display:flex; align-items:center; padding:0 4px 0 12px; gap:4px"><span>3 Stopps</span><div class="x" style="color:var(--primary)">✕</div></div></div></div>
+    <div class="stop s1">1</div><div class="stop s2">2</div><div class="dest"></div>
+    <div class="sheet"><div class="handle"></div><div class="stats"><div><b>776 km</b><span>Strecke</span></div><div><b>8h 54min</b><span>Fahrzeit</span></div><div><b>18:42</b><span>Ankunft</span></div></div>
+      <div class="card"><span class="badge" style="background:var(--ionity)">1</span><div>Ionity Kassel<small>32 % → 80 % · 24 min</small></div><div class="eta">13:10</div></div></div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>D · Next stop</h2>
+  <p>Two lines like today, but the second line is the thing a driver needs, not the trip totals: the next stop and how far. A thin progress line along the bottom of the pill shows how much of the trip is behind you. This is the committed-trip version, and only makes sense once the loop exists.</p>
+  <div class="phone">
+    <div class="abs round burger"><i></i></div><div class="abs round locate"><span></span></div>
+    <div class="slot"><div class="pill" style="padding-left:14px; position:relative; overflow:hidden"><span class="glyph"><svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h6a3 3 0 0 0 0-6h-4a3 3 0 0 1 0-6h6"/></svg></span><div><div class="t">München</div><div class="sub"><span class="dot" style="background:var(--ionity)"></span> Ionity Kassel · 82 km · 13:10</div></div><div class="x">✕</div><div style="position:absolute; left:0; bottom:0; height:3px; width:34%; background:var(--primary)"></div></div></div>
+    <div class="stop s1">1</div><div class="stop s2">2</div><div class="dest"></div>
+    <div class="sheet"><div class="handle"></div><div class="stats"><div><b>776 km</b><span>Strecke</span></div><div><b>8h 54min</b><span>Fahrzeit</span></div><div><b>18:42</b><span>Ankunft</span></div></div>
+      <div class="card"><span class="badge" style="background:var(--ionity)">1</span><div>Ionity Kassel<small>32 % → 80 % · 24 min</small></div><div class="eta">13:10</div></div></div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>E · Directions card</h2>
+  <p>What Maps does when you ask for directions: a card with two rows, from and to, connected by a dotted line. Taller (88dp), pushes the map down, but it answers "from where, to where" without a second glance and has room for a swap or a "von hier" later. The numbers stay in the sheet.</p>
+  <div class="phone">
+    <div class="abs round burger"><i></i></div><div class="abs round locate"><span></span></div>
+    <div class="slot"><div class="pill" style="border-radius:16px; padding:8px 6px 8px 14px; align-items:stretch; gap:10px">
+      <div style="display:flex; flex-direction:column; align-items:center; padding-top:8px"><span class="dot" style="background:var(--muted); width:9px; height:9px"></span><span style="flex:1; border-left:2px dotted var(--line); margin:3px 0"></span><span class="dot" style="background:var(--red); width:9px; height:9px"></span></div>
+      <div style="display:flex; flex-direction:column; justify-content:space-between; flex:1; min-width:0"><div class="sub" style="font-size:13px; color:var(--text)">Dein Standort</div><div class="t" style="font-size:15px">München</div></div>
+      <div class="x" style="align-self:center">✕</div>
+    </div></div>
+    <div class="stop s1">1</div><div class="stop s2">2</div><div class="dest"></div>
+    <div class="sheet"><div class="handle"></div><div class="stats"><div><b>776 km</b><span>Strecke</span></div><div><b>8h 54min</b><span>Fahrzeit</span></div><div><b>3</b><span>Stopps</span></div><div><b>18:42</b><span>Ankunft</span></div></div>
+      <div class="card"><span class="badge" style="background:var(--ionity)">1</span><div>Ionity Kassel<small>32 % → 80 % · 24 min</small></div><div class="eta">13:10</div></div></div>
+  </div>
+</section>
+
+</div>
+
+<p class="verdict"><strong>Recommendation: B now, D once the trip is committed and the loop runs.</strong> The bar feels wrong today because it tries to be a summary and a search bar at once. Give the bar one job, saying where you are going, and let the sheet keep the totals it already shows; that is what makes the slot feel level with the search bar it replaces. When the committed trip exists, the second line comes back with something the totals cannot give: the next stop. A is the same idea with the totals kept visible, at the price of chips over the map. C is the cheapest way to keep one number in the bar without a second line. E is the honest Maps clone; taller than the search bar, so the swap animation stops being a fade in place.</p>
+</body>
+</html>

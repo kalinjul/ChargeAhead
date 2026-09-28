@@ -198,7 +198,7 @@ fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, onTi
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            // "873 km · 11h 16min · 5 Stopps" wants the whole width; a step down beats a cut.
+                            // A long trip line wants the whole width on a narrow phone; a step down beats a cut.
                             autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp, stepSize = 0.5.sp),
                         )
                     }

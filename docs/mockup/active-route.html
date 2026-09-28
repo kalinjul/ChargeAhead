@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Active route</title>
+<style>
+  :root { --bg: #F1F3F4; --surface: #fff; --text: #202124; --muted: #5F6368; --faint: #80868B; --line: #DADCE0; --primary: #1A73E8; --primary-bg: #E8F0FE; --green: #188038; --red: #D93025; --ionity: #00C389; --enbw: #1E3A5F; --aral: #0060AE; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-block: 28px; padding-inline: 20px; background: var(--bg); color: var(--text); font-family: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 14px; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .intro { color: var(--muted); max-width: 72ch; margin: 0 0 24px; }
+  .row { display: flex; flex-wrap: wrap; gap: 26px; align-items: flex-start; }
+  .option { width: 300px; }
+  .option h2 { font-size: 15px; font-weight: 500; margin: 0 0 2px; }
+  .option p { color: var(--muted); margin: 0 0 12px; font-size: 13px; min-height: 9.5em; }
+  .phone { width: 300px; height: 600px; border-radius: 26px; position: relative; overflow: hidden; background: var(--surface); box-shadow: 0 8px 28px rgba(0,0,0,.14); display: flex; flex-direction: column; }
+  .bar { height: 56px; display: flex; align-items: center; gap: 4px; padding: 0 4px; flex: none; }
+  .bar .ic { width: 48px; height: 48px; display: grid; place-items: center; color: var(--muted); font-size: 20px; flex: none; }
+  .bar .ttl { flex: 1; text-align: center; min-width: 0; }
+  .bar .ttl b { display: block; font-weight: 500; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar .ttl small { display: block; color: var(--muted); font-size: 11px; }
+  .bar.left .ttl { text-align: left; padding-left: 4px; }
+  .content { flex: 1; overflow: hidden; position: relative; }
+  .h2 { text-align: center; padding: 4px 24px 10px; }
+  .h2 b { display: block; font-weight: 500; font-size: 16px; }
+  .h2 small { color: var(--muted); font-size: 13px; }
+  .rail { padding: 0 16px; }
+  .r { display: flex; gap: 12px; position: relative; padding: 10px 0; border-bottom: 1px solid #F1F3F4; }
+  .r:last-child { border-bottom: 0; }
+  .r::before { content: ""; position: absolute; left: 11px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+  .r.first::before { top: 20px; } .r.last::before { bottom: auto; height: 20px; }
+  .dot { width: 24px; height: 24px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font-size: 11px; font-weight: 700; position: relative; z-index: 1; box-shadow: 0 0 0 3px var(--surface); }
+  .dot.sq { border-radius: 4px; width: 14px; height: 14px; margin: 5px; box-shadow: 0 0 0 3px var(--surface); }
+  .dot.sm { width: 14px; height: 14px; margin: 5px; }
+  .r .t { min-width: 0; }
+  .r .t b { display: block; font-weight: 500; font-size: 14px; }
+  .r .t small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .actions { flex: none; padding: 10px 16px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .btnrow { display: flex; gap: 8px; }
+  .btn { flex: 1; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500; font-size: 14px; white-space: nowrap; }
+  .btn.fill { background: var(--primary); color: #fff; }
+  .btn.out { border: 1px solid var(--line); color: var(--text); }
+  .btn.text { color: var(--primary); height: 36px; }
+  .btn.text.red { color: var(--red); }
+  .btn.tonal { background: var(--primary-bg); color: var(--primary); }
+  .chips { display: flex; gap: 6px; justify-content: center; padding: 0 16px 10px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; font-size: 12px; color: var(--text); display: flex; gap: 5px; align-items: center; }
+  .chip.on { background: var(--primary-bg); border-color: var(--primary-bg); color: var(--primary); font-weight: 500; }
+  .fab { position: absolute; right: 16px; bottom: 16px; height: 56px; padding: 0 20px 0 16px; border-radius: 16px; background: var(--primary); color: #fff; display: flex; align-items: center; gap: 10px; font-weight: 500; box-shadow: 0 4px 12px rgba(26,115,232,.4); }
+  .menu { position: absolute; right: 8px; top: 52px; background: var(--surface); border-radius: 6px; box-shadow: 0 4px 14px rgba(0,0,0,.2); padding: 6px 0; z-index: 3; }
+  .menu div { padding: 10px 16px; font-size: 14px; white-space: nowrap; }
+  .menu div.red { color: var(--red); }
+  .endrow { padding: 14px 16px 0 52px; }
+  .card { margin: 4px 16px 10px; background: var(--bg); border-radius: 14px; padding: 12px 14px; }
+  .card b { display: block; font-weight: 500; font-size: 16px; }
+  .card .meta { color: var(--muted); font-size: 12px; margin: 2px 0 8px; }
+  .card .links { display: flex; gap: 18px; font-size: 13px; font-weight: 500; }
+  .card .links span { color: var(--primary); }
+  .card .links span.red { color: var(--red); }
+  .bottombar { flex: none; height: 64px; background: var(--bg); display: flex; align-items: center; gap: 4px; padding: 0 6px; }
+  .bottombar .ic { width: 48px; height: 48px; display: grid; place-items: center; color: var(--muted); font-size: 19px; }
+  .bottombar .ic.red { color: var(--red); }
+  .bottombar .spacer { flex: 1; }
+  .bottombar .fab { position: static; height: 48px; border-radius: 12px; box-shadow: none; }
+  .verdict { margin-top: 26px; max-width: 78ch; color: var(--muted); line-height: 1.45; }
+  .verdict strong { color: var(--text); }
+</style>
+</head>
+<body>
+<h1>Active route</h1>
+<p class="intro">Same trip in every frame: München, 776 km, 8h 54m, three stops. What varies: where the title goes (today it is said twice, "Aktive Route" in the bar and "München" underneath), and where the four actions live: send to Maps, pick a section, plan anew, stop navigating.</p>
+
+<div class="row">
+
+<section class="option">
+  <h2>0 · Today</h2>
+  <p>Two titles stacked, then a filled + outlined row and two text buttons under it. Functional, four buttons in two rows at the bottom, and the page name says nothing the second line doesn't.</p>
+  <div class="phone">
+    <div class="bar"><span class="ic">←</span><span class="ttl"><b>Aktive Route</b></span><span class="ic"></span></div>
+    <div class="content">
+      <div class="h2"><b>München</b><small>776 km · 8h 54m · 3 Stopps</small></div>
+      <div class="rail">
+        <div class="r first"><span class="dot sm" style="background:var(--green)"></span><span class="t"><b>Start</b><small>Ladestand: 80 %</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--ionity)">1</span><span class="t"><b>Ionity</b><small>350 kW | 24% - 78%<br>Ankunft 16:08 | Abfahrt 16:30</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--enbw)">2</span><span class="t"><b>EnBW</b><small>300 kW | 18% - 80%<br>Ankunft 18:50 | Abfahrt 19:17</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--aral)">3</span><span class="t"><b>Aral pulse</b><small>300 kW | 21% - 65%</small></span></div>
+        <div class="r last"><span class="dot sq" style="background:var(--red)"></span><span class="t"><b>München</b><small>an 23:24 · 15 %</small></span></div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="btnrow"><span class="btn fill">⚑ An Maps senden</span><span class="btn out">Abschnitt wählen</span></div>
+      <div class="btnrow"><span class="btn text">⇅ Neu planen</span><span class="btn text red">Navigieren beenden</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>A · Title in the bar, one action row</h2>
+  <p>The app bar says München with the totals as its subtitle; the page needs no second heading. "Neu planen" is the bar's refresh action, "Navigieren beenden" sits in the overflow menu behind ⋮ (shown open). The bottom keeps the trip sheet's row, so the two views feel like the same thing.</p>
+  <div class="phone">
+    <div class="bar"><span class="ic">←</span><span class="ttl"><b>München</b><small>776 km · 8h 54m · 3 Stopps</small></span><span class="ic">⟳</span><span class="ic">⋮</span></div>
+    <div class="menu"><div class="red">Navigieren beenden</div></div>
+    <div class="content">
+      <div class="rail" style="padding-top:6px">
+        <div class="r first"><span class="dot sm" style="background:var(--green)"></span><span class="t"><b>Start</b><small>Ladestand: 80 %</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--ionity)">1</span><span class="t"><b>Ionity</b><small>350 kW | 24% - 78%<br>Ankunft 16:08 | Abfahrt 16:30</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--enbw)">2</span><span class="t"><b>EnBW</b><small>300 kW | 18% - 80%<br>Ankunft 18:50 | Abfahrt 19:17</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--aral)">3</span><span class="t"><b>Aral pulse</b><small>300 kW | 21% - 65%<br>Ankunft 21:13 | Abfahrt 21:31</small></span></div>
+        <div class="r last"><span class="dot sq" style="background:var(--red)"></span><span class="t"><b>München</b><small>an 23:24 · 15 %</small></span></div>
+      </div>
+    </div>
+    <div class="actions"><div class="btnrow"><span class="btn fill">⚑ An Maps senden</span><span class="btn out">Abschnitt wählen</span></div></div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>B · Summary card with its own actions</h2>
+  <p>Bar keeps "Aktive Route". Under it a tonal card owns the trip: destination, totals, and the two things you do to the trip as text links inside the card. The bottom row is then only about Maps. Reads as "the trip" (card) and "what to send" (bottom).</p>
+  <div class="phone">
+    <div class="bar"><span class="ic">←</span><span class="ttl"><b>Aktive Route</b></span><span class="ic"></span></div>
+    <div class="content">
+      <div class="card"><b>München</b><div class="meta">776 km · 8h 54m · 3 Stopps · an 23:24</div><div class="links"><span>⇅ Neu planen</span><span class="red">Navigieren beenden</span></div></div>
+      <div class="rail">
+        <div class="r first"><span class="dot sm" style="background:var(--green)"></span><span class="t"><b>Start</b><small>Ladestand: 80 %</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--ionity)">1</span><span class="t"><b>Ionity</b><small>350 kW | 24% - 78%<br>Ankunft 16:08 | Abfahrt 16:30</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--enbw)">2</span><span class="t"><b>EnBW</b><small>300 kW | 18% - 80%<br>Ankunft 18:50 | Abfahrt 19:17</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--aral)">3</span><span class="t"><b>Aral pulse</b><small>300 kW | 21% - 65%</small></span></div>
+        <div class="r last"><span class="dot sq" style="background:var(--red)"></span><span class="t"><b>München</b><small>an 23:24 · 15 %</small></span></div>
+      </div>
+    </div>
+    <div class="actions"><div class="btnrow"><span class="btn fill">⚑ An Maps senden</span><span class="btn out">Abschnitt wählen</span></div></div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>C · Bottom app bar</h2>
+  <p>Material's BottomAppBar: icon actions on the left (pick section, plan anew, end in red), the one primary action as its FAB. Title and totals in the top bar. Everything secondary is an icon, so the page is calm, at the price of learning three icons.</p>
+  <div class="phone">
+    <div class="bar"><span class="ic">←</span><span class="ttl"><b>München</b><small>776 km · 8h 54m · 3 Stopps</small></span><span class="ic"></span></div>
+    <div class="content">
+      <div class="rail" style="padding-top:6px">
+        <div class="r first"><span class="dot sm" style="background:var(--green)"></span><span class="t"><b>Start</b><small>Ladestand: 80 %</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--ionity)">1</span><span class="t"><b>Ionity</b><small>350 kW | 24% - 78%<br>Ankunft 16:08 | Abfahrt 16:30</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--enbw)">2</span><span class="t"><b>EnBW</b><small>300 kW | 18% - 80%<br>Ankunft 18:50 | Abfahrt 19:17</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--aral)">3</span><span class="t"><b>Aral pulse</b><small>300 kW | 21% - 65%<br>Ankunft 21:13 | Abfahrt 21:31</small></span></div>
+        <div class="r last"><span class="dot sq" style="background:var(--red)"></span><span class="t"><b>München</b><small>an 23:24 · 15 %</small></span></div>
+      </div>
+    </div>
+    <div class="bottombar"><span class="ic" title="Abschnitt wählen">⌗</span><span class="ic" title="Neu planen">⟳</span><span class="ic red" title="Navigieren beenden">⏹</span><span class="spacer"></span><span class="fab">⚑ An Maps senden</span></div>
+  </div>
+</section>
+
+<section class="option">
+  <h2>D · Ending is the last row</h2>
+  <p>Title and totals in the bar, section picking as the bar's action. "An Maps senden" is an extended FAB floating over the list. "Neu planen" and "Navigieren beenden" are not buttons at all: they are the two rows after the destination, where the itinerary ends. Scroll to the end, decide what happens next.</p>
+  <div class="phone">
+    <div class="bar"><span class="ic">←</span><span class="ttl"><b>München</b><small>776 km · 8h 54m · 3 Stopps</small></span><span class="ic">⌗</span></div>
+    <div class="content">
+      <div class="rail" style="padding-top:6px">
+        <div class="r first"><span class="dot sm" style="background:var(--green)"></span><span class="t"><b>Start</b><small>Ladestand: 80 %</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--ionity)">1</span><span class="t"><b>Ionity</b><small>350 kW | 24% - 78%<br>Ankunft 16:08 | Abfahrt 16:30</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--enbw)">2</span><span class="t"><b>EnBW</b><small>300 kW | 18% - 80%</small></span></div>
+        <div class="r"><span class="dot" style="background:var(--aral)">3</span><span class="t"><b>Aral pulse</b><small>300 kW | 21% - 65%</small></span></div>
+        <div class="r last"><span class="dot sq" style="background:var(--red)"></span><span class="t"><b>München</b><small>an 23:24 · 15 %</small></span></div>
+      </div>
+      <div class="endrow"><div style="display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); color:var(--primary); font-weight:500">⇅ Neu planen<small style="color:var(--muted); font-weight:400; margin-left:auto">von hier</small></div><div style="display:flex; gap:12px; align-items:center; padding:10px 0; border-top:1px solid var(--line); color:var(--red); font-weight:500">⏹ Navigieren beenden</div></div>
+      <div class="fab">⚑ An Maps senden</div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<p class="verdict"><strong>Recommendation: A.</strong> It removes the double title by making the bar say what the page is about, it keeps the bottom row identical to the trip sheet so nothing new has to be learned, and it puts the two rare actions where Material puts rare actions: refresh in the bar, the destructive one behind the overflow. Every piece is a stock component the app already uses (AppTopBar with subtitle, its actions slot, a DropdownMenu). B if you want the totals to have more presence than a subtitle can give. C and D are prettier at a glance and worse to use: C hides three actions behind icons, D makes "Navigieren beenden" a list row that scrolls out of reach.</p>
+</body>
+</html>

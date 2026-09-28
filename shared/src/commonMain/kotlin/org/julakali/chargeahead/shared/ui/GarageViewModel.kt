@@ -2,19 +2,16 @@ package org.julakali.chargeahead.shared.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.combine
+import kotlinx.coroutines.flow.combine
 import org.julakali.chargeahead.shared.core.RangeCalculator
 import org.julakali.chargeahead.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.SettingsStore
-import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
-import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -23,13 +20,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-/** The driver's cars and the charge levels the selected one plans with. */
+/** The driver's cars and the arrival level the selected one plans with. */
 data class GarageUiState(
     val vehicles: List<VehicleProfile> = emptyList(),
     val selected: VehicleProfile? = null,
-    val socPercent: Double? = null,
-    /** The charge level comes from the car, so the slider is locked. */
-    val socFromCar: Boolean = false,
     /** How full the battery should still be at the destination. */
     val arrivalSocPercent: Double = DEFAULT_ARRIVAL_SOC_PERCENT,
     /** The arrival-level dialog's entry; `null` while it is closed. */
@@ -43,10 +37,8 @@ data class GarageUiState(
 /** The garage screen: choose, edit, remove a car. */
 class GarageViewModel(
     private val settings: SettingsStore,
-    feature: ChargeStopsFeature,
     private val selectVehicle: SelectVehicleInteractor,
     private val removeVehicle: RemoveVehicleInteractor,
-    private val updateManualSoc: UpdateManualSocInteractor,
     private val updateArrivalSoc: UpdateArrivalSocInteractor,
 ) : ViewModel() {
 
@@ -55,16 +47,12 @@ class GarageViewModel(
     val uiState: StateFlow<GarageUiState> = combine(
         settings.vehicles,
         settings.vehicle,
-        settings.manualSocPercent,
         settings.arrivalSocPercent,
-        feature.currentEnergy,
         arrivalSocEditor,
-    ) { vehicles, selected, socPercent, arrivalSoc, energy, arrivalEditor ->
+    ) { vehicles, selected, arrivalSoc, arrivalEditor ->
         GarageUiState(
             vehicles = vehicles,
             selected = selected,
-            socPercent = socPercent,
-            socFromCar = energy?.source == SoCSourceKind.CAR_HARDWARE,
             arrivalSocPercent = arrivalSoc,
             arrivalSocInput = arrivalEditor,
             selectedFullRangeKm = selected?.let { RangeCalculator.rangeKm(it, socPercent = 100.0, reserveSocPercent = 0.0) },
@@ -79,10 +67,6 @@ class GarageViewModel(
 
     fun onVehicleRemoved(displayName: String) {
         viewModelScope.launch { removeVehicle(RemoveVehicleInteractor.Params(displayName)) }
-    }
-
-    fun onSocChanged(socPercent: Double) {
-        viewModelScope.launch { updateManualSoc(UpdateManualSocInteractor.Params(socPercent)) }
     }
 
     /** Opens the arrival-level dialog on the level currently in force. */

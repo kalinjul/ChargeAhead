@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -34,6 +36,11 @@ fun PhonePages(
     preferredNetworkCount: Int,
     onBack: () -> Unit,
     onCarAdded: (VehiclePreset) -> Unit,
+    onOpenStop: (PlannedStop) -> Unit,
+    onSendToMaps: (String) -> Unit,
+    onTripEnded: () -> Unit,
+    /** The committed destination's name, the active route page's title. */
+    activeRouteTitle: String?,
     modifier: Modifier = Modifier,
 ) {
     NavDisplay(
@@ -49,9 +56,9 @@ fun PhonePages(
         transitionSpec = {
             slideInHorizontally(ChargeAheadMotion.page()) { it } togetherWith fadeOut(ChargeAheadMotion.page())
         },
-        popTransitionSpec = {
-            fadeIn(ChargeAheadMotion.page()) togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }
-        },
+        popTransitionSpec = { pageSlideOut() },
+        // Navigation 3 scales and fades on a back gesture by default; the page should just slide, as on a tap.
+        predictivePopTransitionSpec = { _ -> pageSlideOut() },
         entryProvider = entryProvider {
             entry<Home> { }
 
@@ -99,6 +106,20 @@ fun PhonePages(
                 }
             }
 
+            entry<ActiveRoute> {
+                Page(title = activeRouteTitle ?: stringResource(R.string.active_route_title), onBack = onBack) { pagePadding ->
+                    ActiveRouteRoute(
+                        onOpenStop = onOpenStop,
+                        onSendToMaps = onSendToMaps,
+                        onEnded = {
+                            onBack()
+                            onTripEnded()
+                        },
+                        modifier = Modifier.fillMaxSize().padding(pagePadding),
+                    )
+                }
+            }
+
             entry<Legal> {
                 Page(title = stringResource(R.string.drawer_legal), onBack = onBack) { pagePadding ->
                     LegalScreen(modifier = Modifier.fillMaxSize().padding(pagePadding))
@@ -117,7 +138,7 @@ fun PhonePages(
 
 /**
  * One page of the back stack: a full-screen, opaque Scaffold with its own top
- * bar, so predictive back scales the whole page.
+ * bar, so a back gesture moves the whole page.
  */
 @Composable
 private fun Page(
@@ -134,3 +155,7 @@ private fun Page(
         content = content,
     )
 }
+
+/** The page slides off to the right while what was under it shows again. */
+private fun pageSlideOut(): ContentTransform =
+    fadeIn(ChargeAheadMotion.page()) togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }

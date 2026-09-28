@@ -1,7 +1,10 @@
 package org.julakali.chargeahead.shared.domain
 
+import kotlinx.serialization.Serializable
+
 // Shared contract: androidApp and iosApp compile directly against these names.
 
+@Serializable
 data class LatLon(val lat: Double, val lon: Double)
 
 enum class ConnectorType { CCS2, TYPE2, CHADEMO, TESLA_NACS, SCHUKO, UNKNOWN }
@@ -10,9 +13,11 @@ enum class ConnectorType { CCS2, TYPE2, CHADEMO, TESLA_NACS, SCHUKO, UNKNOWN }
 enum class Reachability { REACHABLE, MARGINAL, UNREACHABLE, UNKNOWN }
 
 /** [count] is `null` when the source doesn't state the quantity. */
+@Serializable
 data class Connector(val type: ConnectorType, val maxPowerKw: Double, val count: Int?)
 
 /** A site's postal address, to the extent the source knows one. */
+@Serializable
 data class Address(
     val street: String? = null,
     val postalCode: String? = null,
@@ -21,6 +26,7 @@ data class Address(
     val isEmpty: Boolean get() = street == null && postalCode == null && town == null
 }
 
+@Serializable
 data class ChargeSite(
     /** Source-qualified: "ocm:12345", "bnetza:1141226". For a merged site, the leading source's id. */
     val id: String,

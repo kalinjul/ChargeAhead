@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ui.TripListLayout
+import org.julakali.chargeahead.android.phone.SocEditing
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.etaText
 import org.julakali.chargeahead.shared.domain.PlannedStop
@@ -38,14 +39,12 @@ class TripSheetContentTest {
         var editArrivalSoc = false
         var sentToMaps = false
         var sectionSent = false
-        var toggledSave = false
         var toggledSelecting = false
     }
 
     private fun sheet(
         layout: TripListLayout = TripListLayout.LIST,
         selection: SectionSelection = SectionSelection(),
-        isSaved: Boolean = false,
     ): Calls {
         val calls = Calls()
         compose.setThemedContent {
@@ -53,25 +52,26 @@ class TripSheetContentTest {
                 TripSheetContent(
                     plan = Fixtures.plan,
                     startSocPercent = 26.0,
-                    isSaved = isSaved,
                     layout = layout,
                     selection = selection,
-                    socInput = null,
-                    arrivalSocInput = null,
                     onToggleSelecting = { calls.toggledSelecting = true },
                     onPickPoint = { calls.pickedPoint = it },
                     onSectionSent = { calls.sectionSent = true },
                     onOpenStop = { calls.openedStop = it },
                     onSendToMaps = { calls.sentToMaps = true },
-                    onToggleSave = { calls.toggledSave = true },
-                    onEditStartSoc = { calls.editStartSoc = true },
-                    onSocInputChange = {},
-                    onSocConfirm = {},
-                    onSocDismiss = {},
-                    onEditArrivalSoc = { calls.editArrivalSoc = true },
-                    onArrivalSocInputChange = {},
-                    onArrivalSocConfirm = {},
-                    onArrivalSocDismiss = {},
+                    socEditing = SocEditing(
+                        socInput = null,
+                        arrivalSocInput = null,
+                        askedForReplan = false,
+                        onEditStartSoc = { calls.editStartSoc = true },
+                        onSocInputChange = {},
+                        onSocConfirm = {},
+                        onSocDismiss = {},
+                        onEditArrivalSoc = { calls.editArrivalSoc = true },
+                        onArrivalSocInputChange = {},
+                        onArrivalSocConfirm = {},
+                        onArrivalSocDismiss = {},
+                    ),
                 )
             }
         }
@@ -167,13 +167,6 @@ class TripSheetContentTest {
     }
 
     @Test
-    fun `the heart toggles saving`() {
-        val calls = sheet()
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_save)).performClick()
-        assertTrue(calls.toggledSave)
-    }
-
-    @Test
     fun `the section button toggles selecting`() {
         val calls = sheet()
         compose.onNodeWithText(compose.string(R.string.trip_select_section)).performClick()
@@ -211,6 +204,5 @@ class TripSheetContentTest {
         sheet(layout = TripListLayout.TILES)
         compose.onNodeWithText(compose.string(R.string.trip_send_maps)).assertIsDisplayed()
         compose.onNodeWithText(compose.string(R.string.trip_select_section)).assertIsDisplayed()
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_save)).assertIsDisplayed()
     }
 }

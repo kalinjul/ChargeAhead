@@ -11,36 +11,26 @@ import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
 import org.julakali.chargeahead.android.phone.DestinationHeader
 import org.julakali.chargeahead.shared.ui.TripListLayout
+import org.julakali.chargeahead.android.phone.SocEditing
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.TripSummary
 import org.julakali.chargeahead.android.phone.headerLine
 import org.julakali.chargeahead.shared.ui.SectionSelection
 
 @Composable
-private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionSelection(), isSaved: Boolean = false) {
+private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionSelection()) {
     SheetBox {
         TripSheetContent(
             plan = SamplePlan,
             startSocPercent = 80.0,
-            isSaved = isSaved,
             layout = layout,
             selection = selection,
-            socInput = null,
-            arrivalSocInput = null,
             onToggleSelecting = {},
             onPickPoint = {},
             onSectionSent = {},
             onOpenStop = {},
             onSendToMaps = {},
-            onToggleSave = {},
-            onEditStartSoc = {},
-            onSocInputChange = {},
-            onSocConfirm = {},
-            onSocDismiss = {},
-            onEditArrivalSoc = {},
-            onArrivalSocInputChange = {},
-            onArrivalSocConfirm = {},
-            onArrivalSocDismiss = {},
+            socEditing = SocEditing(null, null, false, {}, {}, {}, {}, {}, {}, {}, {}),
         )
     }
 }
@@ -53,7 +43,7 @@ fun TripSheetList() = Sheet(TripListLayout.LIST)
 @PreviewTest
 @Preview(showBackground = true)
 @Composable
-fun TripSheetListSectionPicked() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2), isSaved = true)
+fun TripSheetListSectionPicked() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2))
 
 @PreviewTest
 @Preview(showBackground = true)
@@ -107,7 +97,7 @@ fun TripSheetListDark() = Sheet(TripListLayout.LIST)
 @PreviewTest
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun TripSheetListSectionPickedDark() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2), isSaved = true)
+fun TripSheetListSectionPickedDark() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2))
 
 @PreviewTest
 @Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
@@ -126,7 +116,7 @@ fun DestinationHeaderWithPlanDark() = DestinationHeaderWithPlan()
 fun DestinationHeaderNarrowLongTrip() {
     PreviewScaffold {
         Box(Modifier.width(260.dp).padding(8.dp)) {
-            DestinationHeader(title = "Kiel", subtitle = "873 km · 11h 16min · 5 Stopps", onClear = {}, onTitleClick = {})
+            DestinationHeader(title = "Kiel", subtitle = "873 km · 11h 16m", onClear = {}, onTitleClick = {})
         }
     }
 }

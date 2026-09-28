@@ -326,13 +326,12 @@ interface SettingsStore {
     val vehicles: Flow<List<VehicleProfile>>      // the garage; setVehicle selects AND adds
     val manualSocPercent: Flow<Double?>
     val chargeFilters: Flow<ChargeFilters>        // phone flows: min power, max distance
-    val savedRoutes: Flow<List<SavedRoute>>
+    val committedTrip: Flow<CommittedTrip?>       // the trip last sent to Maps, kept until ended
     suspend fun setVehicle(profile: VehicleProfile?)
     suspend fun removeVehicle(displayName: String)
     suspend fun setManualSocPercent(socPercent: Double?)
     suspend fun setChargeFilters(filters: ChargeFilters)
-    suspend fun saveRoute(route: SavedRoute); suspend fun renameSavedRoute(id: String, name: String)
-    suspend fun removeSavedRoute(id: String)
+    suspend fun commitTrip(trip: CommittedTrip); suspend fun clearCommittedTrip()
 }
 
 // Business logic lives in domain.usecases, Koin factories in
@@ -349,8 +348,8 @@ class RefreshChargeNowInteractor : Interactor<Params, Unit>
 class DestinationSearchObserver : SubjectInteractor<Params, DestinationSearch>
 class PlanTripInteractor : Interactor<PlanTripInteractor.Params, TripPlanResult>        // puts the plan into TripStore
 class UpdateArrivalSocInteractor : Interactor<Params, TripPlanResult?>        // stores the level, re-plans the stored trip
-class SaveRouteInteractor : Interactor<Params, Unit>
-class ToggleSavedRouteInteractor : Interactor<Params, Boolean>
+class CommitTripInteractor : Interactor<Params, CommittedTrip>      // "An Maps senden" makes the plan the active route
+class EndTripInteractor : Interactor<Unit, Unit>
 class RefreshNetworksInteractor : Interactor<Unit, Unit>
 ```
 

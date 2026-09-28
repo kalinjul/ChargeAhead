@@ -3,7 +3,6 @@ package org.julakali.chargeahead.android.car
 import android.Manifest
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
-import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.Action
 import androidx.car.app.model.CarColor
 import androidx.car.app.model.Header
@@ -15,12 +14,12 @@ import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.domain.SavedRoute
+import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-/** The car's start screen: enter a destination, charge right now, or pick a favorite route. */
+/** The car's start screen: enter a destination, charge right now, or open the active route. */
 class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
@@ -29,7 +28,7 @@ class CarHomeScreen(
 ) : Screen(carContext) {
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var favorites: List<SavedRoute> = emptyList()
+    private var committed: CommittedTrip? = null
     private val fineLocation = permissions.granted(Manifest.permission.ACCESS_FINE_LOCATION)
     private val coarseLocation = permissions.granted(Manifest.permission.ACCESS_COARSE_LOCATION)
 
@@ -39,8 +38,8 @@ class CarHomeScreen(
 
     init {
         lifecycleScope.launch {
-            settings.savedRoutes.collect { updated ->
-                favorites = updated
+            settings.committedTrip.collect { updated ->
+                committed = updated
                 invalidate()
             }
         }
@@ -58,23 +57,11 @@ class CarHomeScreen(
     override fun onGetTemplate(): Template {
         if (!hasLocationPermission) return permissionTemplate()
 
-        val contentLimit = carContext
-            .getCarService(ConstraintManager::class.java)
-            .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
-
         val itemList = ItemList.Builder()
         itemList.addItem(searchRow())
         itemList.addItem(chargeNowRow())
 
-        if (favorites.isEmpty()) {
-            itemList.addItem(
-                Row.Builder()
-                    .setTitle(carContext.getString(R.string.car_home_no_favorites))
-                    .build(),
-            )
-        } else {
-            favorites.take(contentLimit - 2).forEach { itemList.addItem(favoriteRow(it)) }
-        }
+        committed?.let { itemList.addItem(activeRouteRow(it)) }
 
         return ListTemplate.Builder()
             .setSingleList(itemList.build())
@@ -111,17 +98,15 @@ class CarHomeScreen(
         .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
         .build()
 
-    private fun favoriteRow(route: SavedRoute): Row {
-        val row = Row.Builder()
-            .setTitle(route.name)
-            .setImage(icon(R.drawable.ic_heart_filled, CarColor.RED), Row.IMAGE_TYPE_ICON)
-            .setBrowsable(true)
-            .setOnClickListener {
-                screenManager.push(RouteScreen(carContext, feature, route.destination, route.name))
-            }
-        route.summary?.let { row.addText(it) }
-        return row.build()
-    }
+    private fun activeRouteRow(trip: CommittedTrip): Row = Row.Builder()
+        .setTitle(carContext.getString(R.string.car_home_active_route))
+        .addText(trip.plan.destination.name)
+        .setImage(icon(R.drawable.ic_route), Row.IMAGE_TYPE_ICON)
+        .setBrowsable(true)
+        .setOnClickListener {
+            screenManager.push(RouteScreen(carContext, feature, trip.plan.destination, activeRoute = true))
+        }
+        .build()
 
     /** In projection, the driver confirms the permission on the phone, so it sits behind a button. */
     private fun requestLocationPermission() {

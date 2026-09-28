@@ -1,6 +1,5 @@
 package org.julakali.chargeahead.android.phone
 
-import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.expandVertically
@@ -28,12 +27,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrainHeight
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.shared.domain.PlannedStop
-import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.julakali.chargeahead.shared.ui.TripUiState
 import org.julakali.chargeahead.shared.ui.TripViewModel
@@ -59,7 +56,6 @@ fun TripSheetScaffold(
     viewModel: TripViewModel = koinViewModel(),
     content: @Composable (peek: Dp) -> Unit,
 ) {
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val scaffoldState = rememberBottomSheetScaffoldState(bottomSheetState = sheetState)
     val expandable = layout == TripListLayout.LIST
@@ -121,25 +117,26 @@ fun TripSheetScaffold(
                         TripSheetContent(
                             plan = trip.plan,
                             startSocPercent = trip.startSocPercent,
-                            isSaved = trip.isSaved,
                             layout = layout,
                             selection = trip.selection,
-                            socInput = trip.socInput,
-                            arrivalSocInput = trip.arrivalSocInput,
                             onToggleSelecting = viewModel::onSectionSelectingToggled,
                             onPickPoint = viewModel::onSectionPointPicked,
                             onSectionSent = viewModel::onSectionSent,
                             onOpenStop = onOpenStop,
                             onSendToMaps = { onSendToMaps(trip.mapsUrl) },
-                            onToggleSave = { viewModel.toggleSaved(trip.plan.summaryLine(context)) },
-                            onEditStartSoc = viewModel::onStartSocEditRequested,
-                            onSocInputChange = viewModel::onStartSocInputChanged,
-                            onSocConfirm = viewModel::onStartSocConfirmed,
-                            onSocDismiss = viewModel::onStartSocEditDismissed,
-                            onEditArrivalSoc = viewModel::onArrivalSocEditRequested,
-                            onArrivalSocInputChange = viewModel::onArrivalSocInputChanged,
-                            onArrivalSocConfirm = viewModel::onArrivalSocConfirmed,
-                            onArrivalSocDismiss = viewModel::onArrivalSocEditDismissed,
+                            socEditing = SocEditing(
+                                socInput = trip.socInput,
+                                arrivalSocInput = trip.arrivalSocInput,
+                                askedForReplan = trip.socAskedForReplan,
+                                onEditStartSoc = viewModel::onStartSocEditRequested,
+                                onSocInputChange = viewModel::onStartSocInputChanged,
+                                onSocConfirm = viewModel::onStartSocConfirmed,
+                                onSocDismiss = viewModel::onStartSocEditDismissed,
+                                onEditArrivalSoc = viewModel::onArrivalSocEditRequested,
+                                onArrivalSocInputChange = viewModel::onArrivalSocInputChanged,
+                                onArrivalSocConfirm = viewModel::onArrivalSocConfirmed,
+                                onArrivalSocDismiss = viewModel::onArrivalSocEditDismissed,
+                            ),
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -170,8 +167,3 @@ private fun Modifier.visibleSheetHeight(sheetState: SheetState, layoutHeightPx: 
         val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
         layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
-
-/** Shown under a saved route's name. */
-private fun TripPlan.summaryLine(context: Context): String =
-    context.getString(R.string.trip_summary_distance, route.distanceKm.roundToInt()) + " · " +
-        context.resources.getQuantityString(R.plurals.trip_summary_stops, stops.size, stops.size)

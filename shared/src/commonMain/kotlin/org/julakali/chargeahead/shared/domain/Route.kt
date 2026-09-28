@@ -1,6 +1,9 @@
 package org.julakali.chargeahead.shared.domain
 
+import kotlinx.serialization.Serializable
+
 /** A stretch of a route, addressed by distance from the start. */
+@Serializable
 data class RouteSegment(
     val fromKm: Double,
     val distanceKm: Double,
@@ -18,6 +21,7 @@ data class RouteSegment(
  * [segments] is how distance and time split up along the way; empty when the
  * route service gave no breakdown.
  */
+@Serializable
 data class Route(
     val points: List<LatLon>,
     val distanceKm: Double,

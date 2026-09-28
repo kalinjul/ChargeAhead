@@ -3,6 +3,12 @@ package org.julakali.chargeahead.uitests.phoneapp
 import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.first
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
@@ -16,7 +22,6 @@ import org.julakali.chargeahead.uitests.setThemedContent
 import org.julakali.chargeahead.uitests.string
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -149,31 +154,33 @@ class PhoneAppFlowTest {
     }
 
     @Test
-    fun `neu planen plans the same destination again without opening the search`() {
+    fun `aktive route is dimmed until a trip was sent, then shows it until navigieren beenden`() {
         launch()
+        val pill = compose.string(R.string.home_pill_active_route)
+        compose.onNodeWithText(pill).assertIsNotEnabled()
+
         searchAndPick()
         waitForTrip()
+        showTiles()
+        val stops = plannedSites()
+        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
+        nextStartedUrl()
 
-        compose.onNodeWithText(compose.string(R.string.trip_replan)).performClick()
-        compose.waitForIdle()
+        // Sending commits: the page is on top, with the same stops.
+        waitForText(compose.string(R.string.active_route_end))
+        stops.forEach { compose.onNodeWithText(it.operator!!, substring = true).assertIsDisplayed() }
 
-        // No search panel, the trip header is (still, or again) there.
-        compose.onNodeWithText(searchHint()).assertDoesNotExist()
-        waitForTrip()
-        compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).assertIsDisplayed()
-    }
-
-    @Test
-    fun `favoriten opens the routes sheet and back closes it`() {
-        launch()
-        compose.onNodeWithText(compose.string(R.string.home_pill_favorites)).performClick()
-
-        waitForText(compose.string(R.string.routes_title))
-        compose.onNodeWithText(compose.string(R.string.routes_empty)).assertIsDisplayed()
-
+        // Back lands on browsing, the pill is live now and reopens the page.
         pressBack()
-        waitForTextGone(compose.string(R.string.routes_title))
-        assertEquals(0, countOf(compose.string(R.string.routes_empty)))
+        waitForTextGone(compose.string(R.string.active_route_end))
+        compose.onNodeWithText(searchHint()).assertIsDisplayed()
+        compose.onNodeWithText(pill).assertIsEnabled().performClick()
+        waitForText(compose.string(R.string.active_route_end))
+
+        compose.onNodeWithText(compose.string(R.string.active_route_end)).performClick()
+        waitForTextGone(compose.string(R.string.active_route_end))
+        compose.onNodeWithText(pill).assertIsNotEnabled()
+        assertNull(runBlocking { harness.settings.committedTrip.first() })
     }
 
     /** Tiles keep the action row inside the peek, so it can be tapped without expanding the sheet. */
@@ -210,7 +217,8 @@ class PhoneAppFlowTest {
         val url = nextStartedUrl()
         // Origin stays "my location", the stops ride along as waypoints, München is the destination.
         assertEquals(MapsHandoff.directionsUrl(origin = null, destination = harness.muenchen, waypoints = stops.map { it.position }), url)
-        waitForText(compose.string(R.string.trip_maps_sent))
+        // Sending commits: the active route page takes over.
+        waitForText(compose.string(R.string.active_route_end))
     }
 
     @Test
@@ -231,8 +239,8 @@ class PhoneAppFlowTest {
 
         // From stop 1 to stop 2: the first point becomes a waypoint, the last the destination.
         assertEquals(MapsHandoff.directionsUrl(origin = null, destination = stops[1].position, waypoints = listOf(stops[0].position)), nextStartedUrl())
-        // Selection mode ends with the hand-off.
-        waitForText(compose.string(R.string.trip_select_section))
+        // The whole plan is committed, whatever section went out.
+        waitForText(compose.string(R.string.active_route_end))
     }
 
     @Test
