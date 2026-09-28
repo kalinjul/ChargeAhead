@@ -14,7 +14,6 @@ fun sharedUiModule(): Module = module {
     viewModelOf(::CommittedTripViewModel)
     viewModelOf(::SearchViewModel)
     viewModelOf(::ChargeNowViewModel)
-    viewModelOf(::RoutesViewModel)
     viewModelOf(::DrawerViewModel)
     viewModelOf(::GarageViewModel)
     viewModelOf(::AddCarViewModel)

@@ -9,9 +9,9 @@ import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
 import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshNetworksInteractor
-import org.julakali.chargeahead.shared.domain.usecases.RemoveSavedRouteInteractor
+import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
-import org.julakali.chargeahead.shared.domain.usecases.RenameSavedRouteInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
@@ -61,8 +61,8 @@ class ChargeStopsModuleTest {
             koin.get<PlanTripInteractor>()
             koin.get<UpdateArrivalSocInteractor>()
             koin.get<ReplanWithArrivalSocInteractor>()
-            koin.get<RenameSavedRouteInteractor>()
-            koin.get<RemoveSavedRouteInteractor>()
+            koin.get<CommitTripInteractor>()
+            koin.get<EndTripInteractor>()
             koin.get<SelectVehicleInteractor>()
             koin.get<RemoveVehicleInteractor>()
             koin.get<UpdateManualSocInteractor>()

@@ -223,9 +223,6 @@
     <string name="trip_send_stop">%1$s an Maps senden</string>
     <string name="trip_summary_charging">%1$s laden</string>
     <string name="trip_section_hint_second">Jetzt den Endpunkt antippen</string>
-    <string name="trip_save">Route speichern</string>
-    <string name="trip_saved">Route gespeichert — unter ♥ zu finden</string>
-    <string name="trip_unsaved">Aus den Favoriten entfernt</string>
     <string name="trip_start">Start</string>
     <string name="trip_destination">Ziel</string>
     <string name="trip_maps_sent">An Google Maps übergeben</string>
@@ -254,16 +251,6 @@
     <string name="cn_more">Mehr in der Nähe</string>
 
     <!-- Phone: saved routes -->
-    <string name="routes_title">Deine Routen</string>
-    <string name="routes_saved">Gespeichert</string>
-    <string name="routes_recent">Zuletzt</string>
-    <string name="routes_empty">Noch nichts gespeichert — das Herz an einer Route antippen.</string>
-    <string name="routes_rename">Umbenennen</string>
-    <string name="routes_delete">Löschen</string>
-    <string name="routes_save_recent">Als Favorit speichern</string>
-    <string name="routes_rename_title">Route umbenennen</string>
-    <string name="routes_ok">Speichern</string>
-    <string name="routes_cancel">Abbrechen</string>
 
     <!-- Phone: garage -->
     <string name="garage_title">Auto</string>

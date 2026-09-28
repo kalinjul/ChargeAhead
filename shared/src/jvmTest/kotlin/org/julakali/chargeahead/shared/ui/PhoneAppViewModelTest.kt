@@ -62,8 +62,8 @@ class PhoneAppViewModelTest {
 
     @Test
     fun `sheets open and close`() {
-        viewModel.onSheetOpened(PhoneAppSheet.ROUTES)
-        assertEquals(PhoneAppSheet.ROUTES, viewModel.uiState.value.sheet)
+        viewModel.onSheetOpened(PhoneAppSheet.CHARGE_NOW)
+        assertEquals(PhoneAppSheet.CHARGE_NOW, viewModel.uiState.value.sheet)
 
         viewModel.onSheetDismissed()
         assertEquals(PhoneAppSheet.NONE, viewModel.uiState.value.sheet)

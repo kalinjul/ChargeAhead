@@ -111,9 +111,6 @@ interface SettingsStore {
     /** Hard limits for the phone flows (planning, "charge now"). */
     val chargeFilters: Flow<ChargeFilters>
 
-    /** Routes kept under a chosen name, newest first. */
-    val savedRoutes: Flow<List<SavedRoute>>
-
     /** The trip sent to Maps last; `null` once ended. */
     val committedTrip: Flow<CommittedTrip?>
 
@@ -136,10 +133,6 @@ interface SettingsStore {
     suspend fun setArrivalSocPercent(socPercent: Double)
 
     suspend fun setChargeFilters(filters: ChargeFilters)
-
-    suspend fun saveRoute(route: SavedRoute)
-    suspend fun renameSavedRoute(id: String, name: String)
-    suspend fun removeSavedRoute(id: String)
 
     suspend fun commitTrip(trip: CommittedTrip)
     suspend fun clearCommittedTrip()

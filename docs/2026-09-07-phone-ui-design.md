@@ -63,12 +63,10 @@ leg-by-leg — the app tracks overall progress, Maps handles the current leg.
 - Pulling the sheet up expands it to full height; below the best three, the list
   continues by distance and scrolls endlessly (mockup shows the rest of the fake pool).
 
-### 6. Saved & recent routes
-- Heart button on the home screen opens the routes sheet: saved routes (with custom,
-  renamable names) on top, the three most recent routes below as small summary cards.
-- A recent route can be quick-favorited via its heart icon; tapping a route reopens it.
-- A freshly planned route is saved directly from the route view: a heart button sits next
-  to the send/select actions and toggles saved state, in sync with the routes sheet.
+### 6. Recent routes and the active route
+- Superseded 2026-09-28: saved routes are gone. Recents live in the search, and
+  "An Maps senden" commits the plan as the active route, which has its own page
+  behind the "Aktive Route" pill. See `docs/superpowers/plans/2026-09-28-committed-trip.md`.
 
 ### 7. Live data
 - Traffic per route leg (Routes API).
