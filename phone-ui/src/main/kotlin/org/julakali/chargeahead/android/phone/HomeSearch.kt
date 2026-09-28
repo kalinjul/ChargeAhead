@@ -348,7 +348,8 @@ fun HomeDockedSearchBar(
         },
         expanded = expanded,
         onExpandedChange = onExpandedChange,
-        modifier = modifier,
+        // The docked bar defaults to Material's 360dp minimum and sits at the start; fill the slot instead.
+        modifier = modifier.fillMaxWidth(),
         // Same lift as the custom pill, so the two compare on equal footing.
         colors = SearchBarDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
         shadowElevation = 6.dp,
