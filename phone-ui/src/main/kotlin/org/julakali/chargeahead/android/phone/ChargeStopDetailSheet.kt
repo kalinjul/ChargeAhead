@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -35,6 +36,7 @@ import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
  * Charging stop details as a bottom sheet over the map. With [live] charge
  * points the connectors come from them alone, otherwise from the site's data.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChargeStopDetailSheet(
     stop: ChargeStop,

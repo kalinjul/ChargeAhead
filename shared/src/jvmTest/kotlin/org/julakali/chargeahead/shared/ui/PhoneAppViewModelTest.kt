@@ -62,26 +62,16 @@ class PhoneAppViewModelTest {
         assertEquals(true, viewModel.uiState.value.tripExpandable)
     }
 
-    @Test
-    fun `sheets open and close`() {
-        viewModel.onSheetOpened(PhoneAppSheet.CHARGE_NOW)
-        assertEquals(PhoneAppSheet.CHARGE_NOW, viewModel.uiState.value.sheet)
 
-        viewModel.onSheetDismissed()
-        assertEquals(PhoneAppSheet.NONE, viewModel.uiState.value.sheet)
-    }
-
-    /** #133: search mode, open sheet and trip layout come back after process death. */
+    /** #133: search mode and trip layout come back after process death. */
     @Test
-    fun `the saved state restores search mode, sheet and layout`() {
+    fun `the saved state restores search mode and layout`() {
         viewModel.onSearchOpened()
-        viewModel.onSheetOpened(PhoneAppSheet.CHARGE_NOW)
         viewModel.onTripLayoutChanged(TripListLayout.TILES)
 
         val restored = PhoneAppViewModel(savedState).uiState.value
 
         assertEquals(true, restored.searching)
-        assertEquals(PhoneAppSheet.CHARGE_NOW, restored.sheet)
         assertEquals(TripListLayout.TILES, restored.tripLayout)
     }
 
@@ -94,11 +84,10 @@ class PhoneAppViewModelTest {
 
     @Test
     fun `an unknown persisted name falls back to the default`() {
-        val stale = SavedStateHandle(mapOf("sheet" to "GONE", "tripLayout" to "GONE"))
+        val stale = SavedStateHandle(mapOf("tripLayout" to "GONE"))
 
         val restored = PhoneAppViewModel(stale).uiState.value
 
-        assertEquals(PhoneAppSheet.NONE, restored.sheet)
         assertEquals(TripListLayout.LIST, restored.tripLayout)
     }
 }

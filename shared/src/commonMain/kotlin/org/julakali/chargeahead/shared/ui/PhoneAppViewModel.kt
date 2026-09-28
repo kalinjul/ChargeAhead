@@ -7,14 +7,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.updateAndGet
 
-enum class PhoneAppSheet { NONE, CHARGE_NOW }
-
 enum class TripListLayout { LIST, TILES }
 
 data class PhoneAppUiState(
     /** The search bar has focus and the results panel is open. */
     val searching: Boolean = false,
-    val sheet: PhoneAppSheet = PhoneAppSheet.NONE,
     val tripLayout: TripListLayout = TripListLayout.LIST,
     /** `null` until the platform has been asked once. */
     val hasLocationPermission: Boolean? = null,
@@ -31,7 +28,7 @@ sealed interface PhoneAppEvent {
     data object CheckLocationSettings : PhoneAppEvent
 }
 
-/** Everything around the map: search mode, open sheet, trip layout, location handshake. */
+/** Everything around the map: search mode, trip layout, location handshake. */
 class PhoneAppViewModel(private val savedState: SavedStateHandle) : ViewModel() {
 
     private val state = MutableStateFlow(savedState.restoredUiState())
@@ -77,14 +74,6 @@ class PhoneAppViewModel(private val savedState: SavedStateHandle) : ViewModel() 
         update { it.copy(searching = false) }
     }
 
-    fun onSheetOpened(sheet: PhoneAppSheet) {
-        update { it.copy(sheet = sheet) }
-    }
-
-    fun onSheetDismissed() {
-        update { it.copy(sheet = PhoneAppSheet.NONE) }
-    }
-
     fun onTripLayoutChanged(layout: TripListLayout) {
         update { it.copy(tripLayout = layout) }
     }
@@ -99,20 +88,17 @@ class PhoneAppViewModel(private val savedState: SavedStateHandle) : ViewModel() 
 }
 
 private const val KEY_SEARCHING = "searching"
-private const val KEY_SHEET = "sheet"
 private const val KEY_TRIP_LAYOUT = "tripLayout"
 
 // The location grant stays out: the platform re-checks it on every resume,
 // and a stale "granted" would skip the check.
 private fun SavedStateHandle.restoredUiState() = PhoneAppUiState(
     searching = get<Boolean>(KEY_SEARCHING) ?: false,
-    sheet = enum(KEY_SHEET, PhoneAppSheet.NONE),
     tripLayout = enum(KEY_TRIP_LAYOUT, TripListLayout.LIST),
 )
 
 private fun SavedStateHandle.store(state: PhoneAppUiState) {
     this[KEY_SEARCHING] = state.searching
-    this[KEY_SHEET] = state.sheet.name
     this[KEY_TRIP_LAYOUT] = state.tripLayout.name
 }
 
