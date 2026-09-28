@@ -6,7 +6,7 @@ import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
-import org.julakali.chargeahead.shared.domain.SoCSourceKind
+import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -67,7 +67,7 @@ class VehicleSettingsViewModel(
             consumption = edited.consumption,
             connectors = edited.connectors,
             socInput = socPercent?.asInput().orEmpty(),
-            socFromCar = energy?.source == SoCSourceKind.CAR_HARDWARE,
+            socFromCar = energy.reportedByCar,
             diagnostics = diagnostics,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, VehicleSettingsUiState())
@@ -122,9 +122,6 @@ class VehicleSettingsViewModel(
 /** Accepts the German decimal comma. */
 internal fun String.toPositiveDoubleOrNull(): Double? =
     replace(',', '.').trim().toDoubleOrNull()?.takeIf { it > 0.0 }
-
-internal fun String.toPercentOrNull(): Double? =
-    replace(',', '.').trim().toDoubleOrNull()?.takeIf { it in 0.0..100.0 }
 
 /** One decimal at most, whole numbers without the ".0". */
 internal fun Double.asInput(): String {

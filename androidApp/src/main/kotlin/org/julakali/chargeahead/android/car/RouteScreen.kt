@@ -28,6 +28,7 @@ import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
+import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TripStore
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -47,28 +48,40 @@ class RouteScreen(
     private val feature: ChargeStopsFeature,
     private val destination: Destination,
     private val title: String = destination.name,
-    /** The active route as the phone sent it; shown as is until the driver asks for a fresh plan. */
-    private val storedPlan: TripPlan? = null,
+    /** Show the active route as the phone keeps it, instead of planning here; leaves when it ends. */
+    private val activeRoute: Boolean = false,
 ) : Screen(carContext), KoinComponent {
 
     private val planTrip: PlanTripInteractor = get()
     private val tripStore: TripStore = get()
+    private val settings: SettingsStore = get()
 
     // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var plan: TripPlan? = storedPlan
+    private var plan: TripPlan? = null
     private var planning = false
 
     /** Why the last planning attempt found no plan; `null` after a success. */
     private var failure: TripPlanResult? = null
 
     init {
-        lifecycleScope.launch {
-            // Also a trip the phone plans to the same destination.
-            tripStore.plan.collect { stored ->
-                val matching = stored?.takeIf { it.destination.position == destination.position }
-                // The stored plan stays until a plan of our own replaces it.
-                if (matching != null || storedPlan == null) plan = matching
-                invalidate()
+        if (activeRoute) {
+            lifecycleScope.launch {
+                settings.committedTrip.collect { committed ->
+                    if (committed == null) {
+                        screenManager.pop()
+                    } else {
+                        plan = committed.plan
+                        invalidate()
+                    }
+                }
+            }
+        } else {
+            lifecycleScope.launch {
+                // Also a trip the phone plans to the same destination.
+                tripStore.plan.collect { stored ->
+                    plan = stored?.takeIf { it.destination.position == destination.position }
+                    invalidate()
+                }
             }
         }
         lifecycleScope.launch {
@@ -77,7 +90,7 @@ class RouteScreen(
                 invalidate()
             }
         }
-        if (storedPlan == null) {
+        if (!activeRoute) {
             lifecycleScope.launch {
                 plan(feature.currentFix.filterNotNull().first())
             }

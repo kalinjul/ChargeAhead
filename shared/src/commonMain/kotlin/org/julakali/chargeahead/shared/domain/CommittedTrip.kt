@@ -2,7 +2,11 @@ package org.julakali.chargeahead.shared.domain
 
 import kotlinx.serialization.Serializable
 
-/** The trip that went to Maps, kept as it was sent until the driver ends it or re-plans. */
+/**
+ * The trip that went to Maps, kept as it was sent until the driver ends it or re-plans.
+ *
+ * Persisted as JSON: new fields on it or on [TripPlan]'s types need defaults, or a stored trip reads back as none.
+ */
 @Serializable
 data class CommittedTrip(
     val plan: TripPlan,

@@ -12,7 +12,7 @@ import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
-import org.julakali.chargeahead.shared.domain.SoCSourceKind
+import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.TripStore
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
@@ -42,6 +42,8 @@ sealed interface TripUiState {
         val socInput: String? = null,
         /** The arrival-level editor's input; `null` while it is closed. */
         val arrivalSocInput: String? = null,
+        /** The start-level editor opened because "Neu planen" had no car reading to go on. */
+        val socAskedForReplan: Boolean = false,
     ) : TripUiState {
         /** What "An Maps senden" hands over: the picked section, or the whole trip. */
         val mapsUrl: String get() = plan.mapsUrl(startPosition, selection)
@@ -132,6 +134,7 @@ class TripViewModel(
     private val isPlanning = combine(planTrip.inProgress, replanWithArrivalSoc.inProgress) { plan, replan -> plan || replan }
     private val selection = MutableStateFlow(SectionSelection())
     private val socEditor = MutableStateFlow<String?>(null)
+    private val socAskedForReplan = MutableStateFlow(false)
     private val arrivalSocEditor = MutableStateFlow<String?>(null)
     private val events = MutableStateFlow<TripEvent?>(null)
 
@@ -145,7 +148,8 @@ class TripViewModel(
         arrivalSocEditor,
         settings.manualSocPercent,
         feature.currentFix,
-    ) { plan, planning, sectionSelection, socInput, arrivalSocInput, socPercent, fix ->
+        socAskedForReplan,
+    ) { plan, planning, sectionSelection, socInput, arrivalSocInput, socPercent, fix, askedForReplan ->
         when {
             planning -> TripUiState.Planning
             plan == null -> TripUiState.NoPlan
@@ -156,6 +160,7 @@ class TripViewModel(
                 selection = sectionSelection,
                 socInput = socInput,
                 arrivalSocInput = arrivalSocInput,
+                socAskedForReplan = askedForReplan,
             )
         }
     }.stateIn(viewModelScope, WhileUiSubscribed, TripUiState.NoPlan)
@@ -216,6 +221,11 @@ class TripViewModel(
      * level this plan was made from.
      */
     fun onStartSocEditRequested() {
+        socAskedForReplan.value = false
+        openStartSocEditor()
+    }
+
+    private fun openStartSocEditor() {
         viewModelScope.launch {
             socEditor.value = settings.manualSocPercent.first()?.roundToInt()?.toString().orEmpty()
         }
@@ -227,11 +237,11 @@ class TripViewModel(
      */
     fun onReplanRequested() {
         val destination = tripStore.plan.value?.destination ?: return
-        val energy = feature.currentEnergy.value
-        if (energy != null && energy.source != SoCSourceKind.MANUAL) {
+        if (feature.currentEnergy.value.reportedByCar) {
             plan(destination)
         } else {
-            onStartSocEditRequested()
+            socAskedForReplan.value = true
+            openStartSocEditor()
         }
     }
 

@@ -14,7 +14,7 @@ import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.SettingsStore
-import org.julakali.chargeahead.shared.domain.SoCSourceKind
+import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripStore
 import org.julakali.chargeahead.shared.domain.invoke
@@ -32,6 +32,9 @@ data class CommittedTripUiState(
     /** The charge-level prompt before a re-plan; `null` while closed. */
     val socInput: String? = null,
 ) {
+    /** Re-planning needs to know where we are. */
+    val canReplan: Boolean get() = trip != null && startPosition != null
+
     /** What "An Maps senden" hands over: the picked section, or the whole trip. */
     val mapsUrl: String? get() = trip?.plan?.mapsUrl(startPosition, selection)
 }
@@ -75,8 +78,7 @@ class CommittedTripViewModel(
      * otherwise ask for the level first, seeded with the stored one.
      */
     fun onReplanRequested() {
-        val energy = feature.currentEnergy.value
-        if (energy != null && energy.source != SoCSourceKind.MANUAL) {
+        if (feature.currentEnergy.value.reportedByCar) {
             replan()
             return
         }
@@ -112,7 +114,9 @@ class CommittedTripViewModel(
                 socPercent?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)) }
                 val result = planTrip(PlanTripInteractor.Params(from, trip.plan.destination, startSocPercent = socPercent)).getOrNull()
                 if (result is TripPlanResult.Planned) {
-                    commitTrip(CommitTripInteractor.Params(result.plan, socPercent ?: trip.startSocPercent))
+                    // The planner took the stored level (the car's last reading, or what was typed).
+                    val plannedWith = socPercent ?: settings.manualSocPercent.first()
+                    commitTrip(CommitTripInteractor.Params(result.plan, plannedWith))
                     // The plan is the committed one now, not something to look at on the home screen.
                     tripStore.clear()
                     events.value = CommittedTripEvent.Replanned

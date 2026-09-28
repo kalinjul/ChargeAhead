@@ -15,6 +15,10 @@ import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Fix
+import org.julakali.chargeahead.shared.domain.SoCSourceKind
+import org.julakali.chargeahead.shared.domain.SoCSource
+import org.julakali.chargeahead.shared.domain.EnergyState
+import kotlinx.coroutines.flow.flowOf
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
@@ -80,15 +84,23 @@ class CommittedTripViewModelTest {
         }
     }
 
-    private val feature = ChargeStopsFeature(
+    private fun feature(carSoc: Double? = null) = ChargeStopsFeature(
         locationSource = object : LocationSource {
             override val updates: Flow<Fix> = MutableSharedFlow()
             override suspend fun currentFix() = Fix(hannover, null, null, 0L)
         },
+        socSource = carSoc?.let { soc ->
+            object : SoCSource {
+                override val kind = SoCSourceKind.CAR_HARDWARE
+                override val energy: Flow<EnergyState?> = flowOf(EnergyState(soc, SoCSourceKind.CAR_HARDWARE, 0L))
+            }
+        },
         dispatcher = Dispatchers.Unconfined,
     )
 
-    private fun viewModel() = CommittedTripViewModel(
+    private val feature = feature()
+
+    private fun viewModel(feature: ChargeStopsFeature = this.feature) = CommittedTripViewModel(
         settings = settings,
         feature = feature,
         planTrip = PlanTripInteractor(planner, settings, store),
@@ -100,6 +112,8 @@ class CommittedTripViewModelTest {
 
     private fun commitFromHamburg() = runBlocking {
         settings.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))
+        // The level the trip was sent with, and still the stored one when it is planned again.
+        settings.setManualSocPercent(60.0)
         settings.commitTrip(CommittedTrip(plan(hamburg), startSocPercent = 60.0, committedAtEpochMillis = 1L))
     }
 
@@ -204,5 +218,36 @@ class CommittedTripViewModelTest {
 
         assertNull(viewModel.uiState.value.socInput)
         assertNull(plannedFrom)
+    }
+
+    @Test
+    fun `neu planen with a car reading plans at once and stores the level the car gave`() = runBlocking {
+        commitFromHamburg()
+        val carFeature = feature(carSoc = 42.0)
+        carFeature.start()
+        carFeature.locate()
+        withTimeout(5_000) { carFeature.currentEnergy.first { it != null } }
+        // The car's reading lands in the stored level, which is what the planner reads.
+        settings.setManualSocPercent(42.0)
+        val viewModel = viewModel(carFeature)
+        viewModel.uiState.first { it.trip != null }
+
+        viewModel.onReplanRequested()
+        withTimeout(5_000) { viewModel.event.first { it != null } }
+
+        assertNull(viewModel.uiState.value.socInput)
+        assertEquals(42.0, settings.committedTrip.first()!!.startSocPercent)
+    }
+
+    @Test
+    fun `without a position there is nothing to re-plan from`() = runBlocking {
+        commitFromHamburg()
+        val viewModel = viewModel()
+        val state = viewModel.uiState.first { it.trip != null }
+
+        assertEquals(false, state.canReplan)
+        viewModel.replan()
+        assertNull(viewModel.event.value)
+        assertEquals(plan(hamburg), settings.committedTrip.first()!!.plan)
     }
 }

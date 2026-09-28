@@ -104,7 +104,7 @@ class CarHomeScreen(
         .setImage(icon(R.drawable.ic_route), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
         .setOnClickListener {
-            screenManager.push(RouteScreen(carContext, feature, trip.plan.destination, storedPlan = trip.plan))
+            screenManager.push(RouteScreen(carContext, feature, trip.plan.destination, activeRoute = true))
         }
         .build()
 

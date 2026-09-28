@@ -218,7 +218,7 @@ class PhoneAppFlowTest {
         // Origin stays "my location", the stops ride along as waypoints, München is the destination.
         assertEquals(MapsHandoff.directionsUrl(origin = null, destination = harness.muenchen, waypoints = stops.map { it.position }), url)
         // Sending commits: the active route page takes over.
-        waitForText(compose.string(R.string.active_route_title))
+        waitForText(compose.string(R.string.active_route_end))
     }
 
     @Test
@@ -240,7 +240,7 @@ class PhoneAppFlowTest {
         // From stop 1 to stop 2: the first point becomes a waypoint, the last the destination.
         assertEquals(MapsHandoff.directionsUrl(origin = null, destination = stops[1].position, waypoints = listOf(stops[0].position)), nextStartedUrl())
         // The whole plan is committed, whatever section went out.
-        waitForText(compose.string(R.string.active_route_title))
+        waitForText(compose.string(R.string.active_route_end))
     }
 
     @Test
