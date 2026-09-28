@@ -118,17 +118,6 @@ jobs:
           FASTLANE_HIDE_CHANGELOG: "1"
         run: bundle exec fastlane android internal
 
-      - name: Upload the shipped bundle
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: androidApp-release-aab
-          path: androidApp/build/outputs/bundle/release/*.aab
-          # Play keeps the upload key signature, not this file; it is here so
-          # a shipped build can be compared against later.
-          retention-days: 90
-          if-no-files-found: warn
-
       - name: Remove credentials from the runner
         if: always()
         run: rm -f "$RUNNER_TEMP/release.keystore" "$RUNNER_TEMP/play-service-account.json"

@@ -103,7 +103,7 @@ jobs:
         with:
           name: androidApp-debug
           path: androidApp/build/outputs/apk/debug/*.apk
-          retention-days: 14
+          retention-days: 1
 
   ios-kotlin:
     name: Kotlin/Native (iosMain)

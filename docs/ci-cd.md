@@ -20,7 +20,7 @@ as done:
 
 - **Android build + shared tests** — `:androidApp:assembleDebug` and
   `:shared:jvmTest`. Test reports are uploaded on failure, the debug APK
-  always.
+  always, kept for one day.
 - **Kotlin/Native (iosMain)** — `:shared:compileKotlinIosSimulatorArm64`.
   Compiles `iosMain` against the real cinterop bindings; linking is skipped
   on Linux, so no framework and no Objective-C header come out of it.
