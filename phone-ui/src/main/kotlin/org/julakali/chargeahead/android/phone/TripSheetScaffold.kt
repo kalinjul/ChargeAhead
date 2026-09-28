@@ -3,7 +3,6 @@ package org.julakali.chargeahead.android.phone
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -22,6 +21,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -71,7 +71,7 @@ fun TripSheetScaffold(
     // The scaffold snaps to a new peek; animating the value makes a trip glide in and out.
     val peek by animateDpAsState(
         targetValue = if (trip != null) tripPeekHeight() else 0.dp,
-        animationSpec = tween(260),
+        animationSpec = ChargeAheadMotion.surface(),
         label = "sheet peek",
     )
 
@@ -96,8 +96,8 @@ fun TripSheetScaffold(
                         // The handle is the "you can expand this" hint; it folds away with the slide.
                         AnimatedVisibility(
                             visible = expandable,
-                            enter = expandVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeIn(tween(LAYOUT_SLIDE_MILLIS)),
-                            exit = shrinkVertically(tween(LAYOUT_SLIDE_MILLIS)) + fadeOut(tween(LAYOUT_SLIDE_MILLIS)),
+                            enter = expandVertically(ChargeAheadMotion.spatial()) + fadeIn(ChargeAheadMotion.effects()),
+                            exit = shrinkVertically(ChargeAheadMotion.spatial()) + fadeOut(ChargeAheadMotion.effects()),
                             modifier = Modifier.align(Alignment.CenterHorizontally),
                         ) {
                             BottomSheetDefaults.DragHandle()

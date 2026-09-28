@@ -1,6 +1,17 @@
 package org.julakali.chargeahead.android.phone
 
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.BiasAlignment
+import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,7 +44,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
@@ -62,13 +73,20 @@ fun HomeSearchBar(
     LaunchedEffect(takeFocus) {
         if (takeFocus) focusRequester.requestFocus()
     }
+    // Centred pill ↔ start-aligned field: the text glides with the bar instead of jumping.
+    val bias by animateFloatAsState(if (expanded) -1f else 0f, ChargeAheadMotion.spatial(), label = "search text bias")
+    val startPadding by animateDpAsState(if (expanded) 4.dp else 16.dp, ChargeAheadMotion.spatial(), label = "search bar start")
+
     Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(start = if (expanded) 4.dp else 16.dp, end = 6.dp).fillMaxWidth(),
+            modifier = Modifier.padding(start = startPadding, end = 6.dp).fillMaxWidth(),
         ) {
-            if (expanded) {
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(ChargeAheadMotion.effects()) + expandHorizontally(ChargeAheadMotion.spatial()),
+                exit = fadeOut(ChargeAheadMotion.effects()) + shrinkHorizontally(ChargeAheadMotion.spatial()),
+            ) {
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
@@ -83,25 +101,26 @@ fun HomeSearchBar(
                 singleLine = true,
                 // BasicTextField's cursor defaults to black, invisible on the dark bar.
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    color = MaterialTheme.colorScheme.onSurface,
-                    textAlign = if (expanded) TextAlign.Start else TextAlign.Center,
-                ),
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
                 decorationBox = { inner ->
-                    Box(contentAlignment = if (expanded) Alignment.CenterStart else Alignment.Center) {
-                        if (query.isEmpty()) {
-                            Text(
-                                stringResource(R.string.home_search_hint),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = ChargeAheadColors.faint,
-                            )
+                    // The field itself is only as wide as its text, so the bias can move it.
+                    Box(Modifier.fillMaxWidth(), contentAlignment = BiasAlignment(horizontalBias = bias, verticalBias = 0f)) {
+                        Box(Modifier.width(IntrinsicSize.Min)) {
+                            if (query.isEmpty()) {
+                                Text(
+                                    stringResource(R.string.home_search_hint),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = ChargeAheadColors.faint,
+                                    maxLines = 1,
+                                )
+                            }
+                            inner()
                         }
-                        inner()
                     }
                 },
                 modifier = Modifier
                     .weight(1f)
-                    .padding(vertical = 14.dp)
+                    .padding(horizontal = 10.dp, vertical = 14.dp)
                     .focusRequester(focusRequester)
                     .onFocusChanged { if (it.isFocused) onFocused() },
             )

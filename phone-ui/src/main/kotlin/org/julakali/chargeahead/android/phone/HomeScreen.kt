@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -30,6 +29,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -363,8 +363,8 @@ fun HomeScreen(
 private fun SideButton(visible: Boolean, trailingGap: Boolean, content: @Composable () -> Unit) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(SIDE_FADE_MILLIS)) + expandHorizontally(tween(SIDE_FADE_MILLIS)),
-        exit = fadeOut(tween(SIDE_FADE_MILLIS)) + shrinkHorizontally(tween(SIDE_FADE_MILLIS)),
+        enter = fadeIn(ChargeAheadMotion.effects()) + expandHorizontally(ChargeAheadMotion.spatial()),
+        exit = fadeOut(ChargeAheadMotion.effects()) + shrinkHorizontally(ChargeAheadMotion.spatial()),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (!trailingGap) Spacer(Modifier.width(10.dp))
@@ -373,5 +373,3 @@ private fun SideButton(visible: Boolean, trailingGap: Boolean, content: @Composa
         }
     }
 }
-
-private const val SIDE_FADE_MILLIS = 220
