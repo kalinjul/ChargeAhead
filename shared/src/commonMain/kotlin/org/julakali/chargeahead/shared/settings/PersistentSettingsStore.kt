@@ -10,6 +10,7 @@ import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.SavedRoute
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.domain.SettingsStore
@@ -220,6 +221,19 @@ class PersistentSettingsStore(
             .orEmpty()
             .map { SavedRoute(it.id, it.name, Destination(it.destName, LatLon(it.lat, it.lon), it.destAddress), it.summary) }
 
+    private val mutableCommittedTrip = MutableStateFlow(initial.getJson<CommittedTrip>(KEY_COMMITTED_TRIP))
+    override val committedTrip: StateFlow<CommittedTrip?> = mutableCommittedTrip.asStateFlow()
+
+    override suspend fun commitTrip(trip: CommittedTrip) = write {
+        putJson(KEY_COMMITTED_TRIP, trip)
+        mutableCommittedTrip.value = trip
+    }
+
+    override suspend fun clearCommittedTrip() = write {
+        putJson<CommittedTrip>(KEY_COMMITTED_TRIP, null)
+        mutableCommittedTrip.value = null
+    }
+
     private val mutableCarData = MutableStateFlow(readCarData())
     override val carDebugData: StateFlow<List<CarDataPoint>> = mutableCarData.asStateFlow()
 
@@ -395,13 +409,14 @@ class PersistentSettingsStore(
         private const val KEY_ARRIVAL_SOC = "energy.arrivalSocPercent"
         private const val KEY_CHARGE_FILTERS = "filters.charge"
         private const val KEY_SAVED_ROUTES = "routes.saved"
+        private const val KEY_COMMITTED_TRIP = "trip.committed"
         private const val KEY_CAR_DEBUG = "car.debugData"
 
         /** Every key the store has ever written; what a migration copies. */
         val ALL_KEYS: Set<String> = setOf(
             KEY_DESTINATIONS, KEY_SOC_DIAGNOSTICS, KEY_ONLY_PREFERRED, KEY_PREFERRED_NETWORKS,
             KEY_NAME, KEY_BATTERY_KWH, KEY_CONSUMPTION, KEY_CONNECTORS, KEY_DC_PEAK, KEY_GARAGE,
-            KEY_MANUAL_SOC, KEY_ARRIVAL_SOC, KEY_CHARGE_FILTERS, KEY_SAVED_ROUTES, KEY_CAR_DEBUG,
+            KEY_MANUAL_SOC, KEY_ARRIVAL_SOC, KEY_CHARGE_FILTERS, KEY_SAVED_ROUTES, KEY_COMMITTED_TRIP, KEY_CAR_DEBUG,
         )
     }
 }
