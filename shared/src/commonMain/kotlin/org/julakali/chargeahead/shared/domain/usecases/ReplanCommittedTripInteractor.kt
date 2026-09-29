@@ -24,12 +24,15 @@ class ReplanCommittedTripInteractor(
     private val time: TimeProvider,
 ) : Interactor<ReplanCommittedTripInteractor.Params, TripPlanResult?>() {
 
-    /** A [socPercent] is stored as the manual level; `null` takes the stored one. */
-    data class Params(val from: LatLon, val socPercent: Double? = null)
+    /**
+     * A [socPercent] is stored as the manual level unless [storeSoc] is false;
+     * `null` takes the stored one.
+     */
+    data class Params(val from: LatLon, val socPercent: Double? = null, val storeSoc: Boolean = true)
 
     override suspend fun doWork(params: Params): TripPlanResult? {
         val destination = trips.state.value.committed?.plan?.destination ?: return null
-        params.socPercent?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)).getOrThrow() }
+        params.socPercent?.takeIf { params.storeSoc }?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)).getOrThrow() }
         val result = planner.planWithSettings(settings, params.from, destination, params.socPercent)
         if (result is TripPlanResult.Planned) {
             val plannedWith = params.socPercent ?: settings.manualSocPercent.first()

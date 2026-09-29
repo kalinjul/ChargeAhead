@@ -83,11 +83,7 @@ class CarRouteViewModel(
             state.planned?.takeIf { it.destination.position == destination.position }
         }
 
-    /**
-     * Plans again from the freshest position. The active route is re-planned
-     * with the stored level, since passing the car's would overwrite the
-     * manual one.
-     */
+    /** Plans again with the freshest position and charge state. */
     fun onRefresh() {
         val fix = feature.currentFix.value ?: return
         viewModelScope.launch {
@@ -96,8 +92,13 @@ class CarRouteViewModel(
     }
 
     private suspend fun replan(fix: Fix) {
-        val result = replanCommittedTrip(ReplanCommittedTripInteractor.Params(fix.position))
-            .getOrDefault(TripPlanResult.NoRoute)
+        val result = replanCommittedTrip(
+            ReplanCommittedTripInteractor.Params(
+                from = fix.position,
+                socPercent = feature.currentEnergy.value?.socPercent,
+                storeSoc = false,
+            ),
+        ).getOrDefault(TripPlanResult.NoRoute)
         failure.value = result?.takeUnless { it is TripPlanResult.Planned }
     }
 

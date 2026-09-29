@@ -149,7 +149,7 @@ class CarRouteViewModelTest {
     }
 
     @Test
-    fun `refreshing the active route replans the committed trip with the stored level`() = runBlocking<Unit> {
+    fun `refreshing the active route replans the committed trip with the car's level, without storing it`() = runBlocking<Unit> {
         withVehicle()
         settings.setManualSocPercent(40.0)
         fixes.emit(Fix(hamburg, null, null, 0L))
@@ -160,8 +160,8 @@ class CarRouteViewModelTest {
         viewModel.onRefresh()
 
         val committed = trips.state.await { it.committed?.committedAtEpochMillis == 9L }.committed!!
-        assertEquals(40.0, committed.startSocPercent)
-        assertEquals(40.0, plannedSoc)
+        assertEquals(64.0, committed.startSocPercent)
+        assertEquals(64.0, plannedSoc)
         assertEquals(40.0, settings.manualSocPercent.first())
         assertNull(trips.state.value.planned)
         viewModel.uiState.await { it is CarRouteUiState.Ready }
