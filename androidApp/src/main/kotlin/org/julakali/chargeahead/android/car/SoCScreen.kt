@@ -11,39 +11,28 @@ import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
-import org.julakali.chargeahead.shared.domain.SettingsStore
-import org.julakali.chargeahead.shared.domain.SoCDiagnostics
-import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
+import org.julakali.chargeahead.shared.ui.car.CarViewModels
 import kotlinx.coroutines.launch
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 
 /** Enter the state of charge manually while driving, in steps from high to low. */
 class SoCScreen(
     carContext: CarContext,
-    private val settings: SettingsStore,
+    viewModels: CarViewModels,
     private val permissions: CarPermissions,
-) : Screen(carContext), KoinComponent {
+) : Screen(carContext) {
 
-    private val updateManualSoc: UpdateManualSocInteractor = get()
+    private val viewModel = screenViewModel { viewModels.soc() }
 
-    private var currentPercent: Double? = null
-    private var diagnostics: SoCDiagnostics? = null
+    // The permission is the platform's; only it stays here.
     private var hasCarFuelPermission =
         permissions.granted(CarEnergyLevels.CAR_FUEL_PERMISSION).value
     private var permissionRequestPending = false
 
     init {
+        // onGetTemplate() is synchronous; changes are picked up via invalidate().
         lifecycleScope.launch {
-            settings.manualSocPercent.collect { updated ->
-                currentPercent = updated
-                invalidate()
-            }
-        }
-        lifecycleScope.launch {
-            settings.socDiagnostics.collect { updated ->
-                diagnostics = updated
-                invalidate()
+            viewModel.uiState.collect { state ->
+                if (state.saved) screenManager.pop() else invalidate()
             }
         }
         lifecycleScope.launch {
@@ -55,6 +44,7 @@ class SoCScreen(
     }
 
     override fun onGetTemplate(): Template {
+        val state = viewModel.uiState.value
         val contentLimit = carContext
             .getCarService(ConstraintManager::class.java)
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
@@ -63,8 +53,8 @@ class SoCScreen(
         // The first row only displays the current value.
         itemList.addItem(
             Row.Builder()
-                .setTitle(currentText())
-                .addText(carHardwareText())
+                .setTitle(currentText(state.currentPercent))
+                .addText(carHardwareText(state.carReading))
                 .build(),
         )
 
@@ -80,7 +70,7 @@ class SoCScreen(
             reserved = 2
         }
 
-        STEP_PERCENTS.take(contentLimit - reserved).forEach { percent -> itemList.addItem(buildRow(percent)) }
+        state.steps.take(contentLimit - reserved).forEach { percent -> itemList.addItem(buildRow(percent)) }
 
         return ListTemplate.Builder()
             .setSingleList(itemList.build())
@@ -94,7 +84,7 @@ class SoCScreen(
     }
 
     /** "Current: 60%" — or a note that nothing has been entered yet. */
-    private fun currentText(): String {
+    private fun currentText(currentPercent: Double?): String {
         val percent = currentPercent
             ?: return carContext.getString(R.string.car_soc_unset)
         return carContext.getString(R.string.car_soc_current, percent.toInt().toString())
@@ -103,27 +93,14 @@ class SoCScreen(
     private fun buildRow(percent: Int): Row =
         Row.Builder()
             .setTitle(carContext.getString(R.string.car_soc_percent, percent))
-            .setOnClickListener {
-                lifecycleScope.launch {
-                    updateManualSoc(UpdateManualSocInteractor.Params(percent.toDouble()))
-                    screenManager.pop()
-                }
-            }
+            .setOnClickListener { viewModel.onStepPicked(percent) }
             .build()
 
     /** What the vehicle delivered on the last attempt. */
-    private fun carHardwareText(): String {
-        val current = diagnostics
-        return when {
-            permissionRequestPending -> carContext.getString(R.string.car_soc_carhardware_asking)
-            current?.outcome == SoCDiagnostics.Outcome.AVAILABLE ->
-                carContext.getString(
-                    R.string.car_soc_carhardware_available,
-                    current.detail.orEmpty(),
-                )
-
-            else -> carContext.getString(R.string.car_soc_carhardware_none)
-        }
+    private fun carHardwareText(carReading: String?): String = when {
+        permissionRequestPending -> carContext.getString(R.string.car_soc_carhardware_asking)
+        carReading != null -> carContext.getString(R.string.car_soc_carhardware_available, carReading)
+        else -> carContext.getString(R.string.car_soc_carhardware_none)
     }
 
     /** Requested separately from location, and only here. */
@@ -137,10 +114,5 @@ class SoCScreen(
             permissionRequestPending = false
             invalidate()
         }
-    }
-
-    private companion object {
-        /** Steps of ten from the top down, down to the reserve. */
-        val STEP_PERCENTS = listOf(100, 90, 80, 70, 60, 50, 40, 30, 20, 10)
     }
 }

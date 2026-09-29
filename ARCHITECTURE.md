@@ -668,8 +668,8 @@ so a trip survives process death, a restart and a cache schema bump. Only
 the trip interactors write it.
 
 A `SettingsStore` write from the UI goes through one of them
-(`SelectVehicleInteractor`, `UpdateManualSocInteractor`, …). ViewModels and
-car screens read the store's flows directly, but never call a setter — that
+(`SelectVehicleInteractor`, `UpdateManualSocInteractor`, …). ViewModels
+read the store's flows directly, but never call a setter — that
 keeps one write in one place, testable without a ViewModel and with an
 `inProgress` flag of its own. Data sources that write back what they
 observed (`RememberingSoCSource`, `CarHardwareSoCSource`) still write
@@ -707,10 +707,14 @@ ViewModel — including form text, which is state, not display: "17," is a
 legitimate step towards "17,8" and the old screens lost it because they
 derived their fields from the stored profile.
 
-**The car UI does not use ViewModels.** The Car App Library brings its own
-`Screen` lifecycle and its own state model; `ChargeStopsFeature` and the
-domain use cases are the shared source of state there, exactly as in section 7. Nothing about the
-phone's state layer applies to `androidApp/car`.
+**The car screens have ViewModels too**, in `shared/ui/car`
+(`CarRouteViewModel`, `CarChargeNowViewModel`, …), so CarPlay gets the same
+state instead of re-implementing it in Swift. A car `Screen` is no
+`ViewModelStoreOwner`: it creates its ViewModel through `screenViewModel {}`
+(a `ViewModelHost` cleared in `onDestroy`), collects `uiState` and calls
+`invalidate()`. `CarViewModels`, built by `ChargeSession` over the car's own
+`ChargeStopsFeature`, constructs them. The screen keeps only what is the
+platform's: templates, permissions, navigation and the Maps hand-off.
 
 ---
 
