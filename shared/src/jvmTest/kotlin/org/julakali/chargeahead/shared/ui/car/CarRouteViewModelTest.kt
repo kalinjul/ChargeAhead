@@ -32,12 +32,15 @@ import org.julakali.chargeahead.shared.domain.invoke
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CarRouteViewModelTest {
@@ -93,7 +96,14 @@ class CarRouteViewModelTest {
     ).apply { start() }
 
     private fun viewModel(activeRoute: Boolean = false) =
-        CarRouteViewModel(feature, muenchen, activeRoute, PlanTripInteractor(planner, settings, trips), trips)
+        CarRouteViewModel(
+            feature,
+            muenchen,
+            activeRoute,
+            PlanTripInteractor(planner, settings, trips),
+            ReplanCommittedTripInteractor(planner, settings, trips, UpdateManualSocInteractor(settings)) { 9L },
+            trips,
+        )
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T = withTimeout(5_000) { first(matching) }
 
@@ -136,5 +146,24 @@ class CarRouteViewModelTest {
 
         EndTripInteractor(trips).invoke()
         viewModel.uiState.await { it == CarRouteUiState.Ended }
+    }
+
+    @Test
+    fun `refreshing the active route replans the committed trip with the stored level`() = runBlocking<Unit> {
+        withVehicle()
+        settings.setManualSocPercent(40.0)
+        fixes.emit(Fix(hamburg, null, null, 0L))
+        CommitTripInteractor(trips) { 0L }(CommitTripInteractor.Params(plan(), startSocPercent = 50.0))
+        val viewModel = viewModel(activeRoute = true)
+        viewModel.uiState.await { it is CarRouteUiState.Ready }
+
+        viewModel.onRefresh()
+
+        val committed = trips.state.await { it.committed?.committedAtEpochMillis == 9L }.committed!!
+        assertEquals(40.0, committed.startSocPercent)
+        assertEquals(40.0, plannedSoc)
+        assertEquals(40.0, settings.manualSocPercent.first())
+        assertNull(trips.state.value.planned)
+        viewModel.uiState.await { it is CarRouteUiState.Ready }
     }
 }
