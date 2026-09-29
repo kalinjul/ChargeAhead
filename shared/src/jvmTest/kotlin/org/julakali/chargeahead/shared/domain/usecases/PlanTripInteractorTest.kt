@@ -164,6 +164,21 @@ class PlanTripTest {
     }
 
     @Test
+    fun `a re-plan level that is not to be stored leaves the manual level alone`() = runBlocking {
+        settings.setVehicle(vehicle)
+        settings.setManualSocPercent(30.0)
+        val first = (planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow() as TripPlanResult.Planned).plan
+        commitTrip(CommitTripInteractor.Params(first, 60.0)).getOrThrow()
+
+        val params = ReplanCommittedTripInteractor.Params(from, socPercent = 72.0, storeSoc = false)
+        assertIs<TripPlanResult.Planned>(replanCommitted(params).getOrThrow())
+
+        assertEquals(72.0, calls.last().startSocPercent)
+        assertEquals(72.0, trips.state.value.committed?.startSocPercent)
+        assertEquals(30.0, settings.manualSocPercent.first())
+    }
+
+    @Test
     fun `a failed re-plan keeps the committed trip`() = runBlocking {
         settings.setVehicle(vehicle)
         val first = (planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow() as TripPlanResult.Planned).plan

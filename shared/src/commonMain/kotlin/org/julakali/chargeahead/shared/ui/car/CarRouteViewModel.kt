@@ -10,6 +10,7 @@ import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripState
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import org.julakali.chargeahead.shared.ui.WhileUiSubscribed
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -44,6 +45,7 @@ class CarRouteViewModel(
     private val destination: Destination,
     private val activeRoute: Boolean,
     private val planTrip: PlanTripInteractor,
+    private val replanCommittedTrip: ReplanCommittedTripInteractor,
     trips: TripRepository,
 ) : ViewModel() {
 
@@ -53,13 +55,14 @@ class CarRouteViewModel(
     val uiState: StateFlow<CarRouteUiState> = combine(
         trips.state,
         planTrip.inProgress,
+        replanCommittedTrip.inProgress,
         failure,
         feature.currentFix,
-    ) { state, planning, failed, fix ->
+    ) { state, planning, replanning, failed, fix ->
         val plan = shownPlan(state)
         when {
             activeRoute && state.committed == null -> CarRouteUiState.Ended
-            planning -> CarRouteUiState.Loading(waitingForLocation = fix == null)
+            planning || replanning -> CarRouteUiState.Loading(waitingForLocation = fix == null)
             failed != null -> CarRouteUiState.Failed(failed)
             plan == null -> CarRouteUiState.Loading(waitingForLocation = fix == null)
             else -> CarRouteUiState.Ready(plan)
@@ -83,7 +86,20 @@ class CarRouteViewModel(
     /** Plans again with the freshest position and charge state. */
     fun onRefresh() {
         val fix = feature.currentFix.value ?: return
-        viewModelScope.launch { plan(fix) }
+        viewModelScope.launch {
+            if (activeRoute) replan(fix) else plan(fix)
+        }
+    }
+
+    private suspend fun replan(fix: Fix) {
+        val result = replanCommittedTrip(
+            ReplanCommittedTripInteractor.Params(
+                from = fix.position,
+                socPercent = feature.currentEnergy.value?.socPercent,
+                storeSoc = false,
+            ),
+        ).getOrDefault(TripPlanResult.NoRoute)
+        failure.value = result?.takeUnless { it is TripPlanResult.Planned }
     }
 
     private suspend fun plan(fix: Fix) {

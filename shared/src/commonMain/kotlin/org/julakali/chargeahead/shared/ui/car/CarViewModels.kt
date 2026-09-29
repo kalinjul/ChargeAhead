@@ -18,7 +18,7 @@ class CarViewModels(
         CarDestinationSearchViewModel(koin.get(), koin.get())
 
     fun route(destination: Destination, activeRoute: Boolean): CarRouteViewModel =
-        CarRouteViewModel(feature, destination, activeRoute, koin.get(), koin.get())
+        CarRouteViewModel(feature, destination, activeRoute, koin.get(), koin.get(), koin.get())
 
     fun chargeNow(): CarChargeNowViewModel = CarChargeNowViewModel(feature, koin.get(), koin.get())
 
