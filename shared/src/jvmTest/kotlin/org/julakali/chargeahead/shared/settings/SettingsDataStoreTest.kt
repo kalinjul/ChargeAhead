@@ -40,7 +40,7 @@ class SettingsDataStoreTest {
     ): T = runBlocking {
         val job = SupervisorJob()
         try {
-            val dataStore = createSettingsDataStore(file.absolutePath, migrations, CoroutineScope(Dispatchers.IO + job))
+            val dataStore = createSettingsDataStore(file.absolutePath, CoroutineScope(Dispatchers.IO + job), migrations)
             block(PersistentSettingsStore(dataStore))
         } finally {
             job.cancelAndJoin()

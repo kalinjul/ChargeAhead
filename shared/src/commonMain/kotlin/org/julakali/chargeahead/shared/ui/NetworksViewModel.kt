@@ -2,13 +2,13 @@ package org.julakali.chargeahead.shared.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -42,6 +42,7 @@ class NetworksViewModel(
     private val settings: SettingsStore,
     networkRepository: NetworkRepository,
     private val updateNetworks: UpdateNetworksInteractor,
+    dispatchers: AppCoroutineDispatchers,
 ) : ViewModel() {
 
     private val search = MutableStateFlow("")
@@ -64,7 +65,7 @@ class NetworksViewModel(
             stored.selectable(known).map { it to OperatorKey.folded(it.name) }
         }
             .distinctUntilChanged()
-            .flowOn(Dispatchers.Default)
+            .flowOn(dispatchers.computation)
 
     /** The catalog rows that survive the search, in catalog order. */
     private val matches: Flow<List<Pair<Network, String>>> = combine(
@@ -78,7 +79,7 @@ class NetworksViewModel(
             catalog.filter { (_, folded) -> folded.contains(needle) }
         }
     }
-        .flowOn(Dispatchers.Default)
+        .flowOn(dispatchers.computation)
 
     val uiState: StateFlow<NetworksUiState> = combine(
         matches,

@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.ui.car
 
+import org.julakali.chargeahead.shared.testDispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -61,7 +63,7 @@ class CarScreenViewModelsTest {
         val fixes = MutableSharedFlow<Fix>(replay = 1)
         val feature = ChargeStopsFeature(
             locationSource = object : LocationSource { override val updates: Flow<Fix> = fixes },
-            dispatcher = Dispatchers.Unconfined,
+            parentScope = CoroutineScope(Dispatchers.Unconfined),
         ).apply { start() }
         val nearby = ChargeSite(
             id = "near",
@@ -81,7 +83,7 @@ class CarScreenViewModelsTest {
         }
         val viewModel = CarChargeNowViewModel(
             feature,
-            ChargeNowObserver(repository, settings),
+            ChargeNowObserver(repository, settings, testDispatchers),
             RefreshChargeNowInteractor(repository, settings),
         )
         assertEquals(ChargeNowUiState.NoPosition, viewModel.uiState.await { true })

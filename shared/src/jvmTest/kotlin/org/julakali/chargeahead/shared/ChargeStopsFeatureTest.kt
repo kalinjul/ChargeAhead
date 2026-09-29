@@ -12,6 +12,7 @@ import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.destination
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -47,7 +48,7 @@ class ChargeStopsFeatureTest {
     private fun feature(location: LocationSource, socSource: SoCSource? = null) = ChargeStopsFeature(
         locationSource = location,
         socSource = socSource,
-        dispatcher = Dispatchers.Unconfined,
+        parentScope = CoroutineScope(Dispatchers.Unconfined),
     )
 
     @Test

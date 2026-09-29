@@ -404,6 +404,11 @@ data class ChargeStopsState(
 // BackendConfig; one HttpClient, database and repository per process, shared
 // by phone and car.
 fun chargeStopsModule(): Module
+// Koin singles in chargeStopsModule: inject these instead of calling
+// CoroutineScope(...) or Dispatchers.* anywhere else. AppScope is cancelled
+// when the graph closes; a class with its own lifecycle takes childScope() of it.
+data class AppCoroutineDispatchers(io, computation, main)
+val AppScope: Qualifier   // get<CoroutineScope>(AppScope)
 data class BackendConfig(baseUrl: String, token: String)
 // A feature the caller owns and closes — the car session's, with the car's battery.
 fun Koin.newChargeStopsFeature(locationSource, hardwareSoCSource = null): ChargeStopsFeature

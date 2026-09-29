@@ -11,6 +11,7 @@ import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -105,7 +106,7 @@ class SearchViewModelTest {
 
     private fun stubFeature() = ChargeStopsFeature(
         locationSource = object : LocationSource { override val updates: Flow<Fix> = emptyFlow() },
-        dispatcher = Dispatchers.Unconfined,
+        parentScope = CoroutineScope(Dispatchers.Unconfined),
     )
 
     private object NoGeocoder : Geocoder {

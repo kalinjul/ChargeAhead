@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.ui
 
+import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.NetworkRepository
@@ -48,7 +49,7 @@ class NetworksViewModelTest {
         TrackingSettingsStore(PersistentSettingsStore(InMemoryPreferencesDataStore()))
 
     private fun networksViewModel(settings: SettingsStore, listed: List<Network> = LISTED) =
-        NetworksViewModel(settings, FixedNetworkRepository(listed), UpdateNetworksInteractor(settings))
+        NetworksViewModel(settings, FixedNetworkRepository(listed), UpdateNetworksInteractor(settings), testDispatchers)
 
     @Test
     fun `networks that dropped off the list show only while selected`() = runBlocking<Unit> {

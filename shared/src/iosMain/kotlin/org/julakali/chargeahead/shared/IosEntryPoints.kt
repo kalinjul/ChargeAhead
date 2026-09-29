@@ -4,6 +4,7 @@ import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.data.LegacyTripSource
 import org.julakali.chargeahead.shared.db.DatabaseFactory
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
@@ -25,6 +26,7 @@ import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.julakali.chargeahead.shared.ui.ViewModelHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import org.koin.core.Koin
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
@@ -42,7 +45,10 @@ import org.koin.dsl.module
  * behalf, and [ChargeStopsWatcher] turns a `StateFlow` into a plain callback.
  */
 fun createSettingsStore(): SettingsStore =
-    PersistentSettingsStore(createSettingsDataStore())
+    PersistentSettingsStore(createSettingsDataStore(settingsScope))
+
+// Swift creates the settings store before the graph exists, so it can't use the graph's scope.
+private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 /**
  * The process-wide graph, built on the first [createChargeStopsFeature] call;
@@ -57,7 +63,7 @@ private fun graph(backend: BackendConfig, settingsStore: SettingsStore): Koin =
             module {
                 single { settingsStore }
                 single<TripStorage> {
-                    DataStoreTripStorage(createTripDataStore(), legacy = settingsStore as? LegacyTripSource)
+                    DataStoreTripStorage(createTripDataStore(get<CoroutineScope>(AppScope) + get<AppCoroutineDispatchers>().io), legacy = settingsStore as? LegacyTripSource)
                 }
                 single<LocationSource> { CoreLocationSource() }
                 single { DatabaseFactory() }

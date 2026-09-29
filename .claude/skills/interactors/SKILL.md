@@ -45,9 +45,10 @@ The worked example is `MapChargersObserver`, used by `HomeViewModel`.
    refill() })`); the refill writes to the store and the store's flow
    re-emits. `SubjectInteractor.flow` is `distinctUntilChanged`, so identical
    results are swallowed — don't rely on an emission per trigger.
-5. **Heavy computation runs in `withContext(Dispatchers.Default)`** inside the
-   use case. Repository calls stay on the caller's dispatcher — they are
-   main-safe.
+5. **Heavy computation runs in `withContext(dispatchers.computation)`** inside
+   the use case, with `AppCoroutineDispatchers` injected from Koin — never a
+   hard-coded `Dispatchers.*`. Tests pass `testDispatchers`. Repository calls
+   stay on the caller's dispatcher — they are main-safe.
 6. **Failures of a refill are swallowed with `cancellableRunCatching`**, never
    plain `runCatching`: that one would eat the cancellation `flatMapLatest`
    relies on. An `Interactor` returns `Result<R>`; the ViewModel decides what

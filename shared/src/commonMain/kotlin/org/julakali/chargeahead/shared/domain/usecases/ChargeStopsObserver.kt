@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.ChargeStops
 import org.julakali.chargeahead.shared.domain.CorridorPlanning
 import org.julakali.chargeahead.shared.domain.Destination
@@ -17,7 +18,6 @@ import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.cancellableRunCatching
 import org.julakali.chargeahead.shared.logWarning
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +48,7 @@ class ChargeStopsObserver(
     private val trips: TripRepository,
     private val routeEngine: RouteEngine,
     private val planning: CorridorPlanning,
+    private val dispatchers: AppCoroutineDispatchers,
     private val refreshPolicy: RefreshPolicy = RefreshPolicy(),
 ) : SubjectInteractor<ChargeStopsObserver.Params, ChargeStops?>() {
 
@@ -115,7 +116,7 @@ class ChargeStopsObserver(
             refill.value = if (result.isSuccess) ChargeStops.Refill.DONE else ChargeStops.Refill.FAILED
         }
         val stops = repository.storedSitesIn(area).map { sites ->
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.computation) {
                 corridor.stops(inputs.fix, area, sites, inputs.vehicle, inputs.energy, inputs.networks)
             }
         }

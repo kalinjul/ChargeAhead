@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.CHARGE_NOW_RELAX_FETCH_FACTOR
 import org.julakali.chargeahead.shared.domain.ChargeFilters
@@ -44,7 +45,7 @@ class ObserveChargeNowTest {
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = store
     }
 
-    private val observe = ChargeNowObserver(repository, settings)
+    private val observe = ChargeNowObserver(repository, settings, testDispatchers)
     private val refresh = RefreshChargeNowInteractor(repository, settings)
 
     /** [northKm] north of [here]. */
