@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripRepository
@@ -46,7 +46,7 @@ sealed interface CommittedTripEvent {
 
 /** The trip the driver is on: its stops, sending it again, planning it anew, ending it. */
 class CommittedTripViewModel(
-    private val settings: SettingsStore,
+    private val vehicles: VehicleRepository,
     private val feature: ChargeStopsFeature,
     private val replanCommittedTrip: ReplanCommittedTripInteractor,
     private val endTrip: EndTripInteractor,
@@ -79,7 +79,7 @@ class CommittedTripViewModel(
             return
         }
         viewModelScope.launch {
-            socEditor.value = settings.manualSocPercent.first()?.roundToInt()?.toString().orEmpty()
+            socEditor.value = vehicles.manualSocPercent.first()?.roundToInt()?.toString().orEmpty()
         }
     }
 

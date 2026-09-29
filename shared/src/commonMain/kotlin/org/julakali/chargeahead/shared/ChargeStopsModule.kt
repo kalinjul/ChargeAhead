@@ -45,12 +45,13 @@ import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInter
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.RouteEngine
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
@@ -66,9 +67,10 @@ import org.koin.dsl.module
 /**
  * The data graph behind both features, declared once for both platforms.
  *
- * The platform module supplies [LocationSource] (the phone's),
- * [org.julakali.chargeahead.shared.db.DatabaseFactory], [SettingsStore],
- * [org.julakali.chargeahead.shared.domain.TripStorage] and [BackendConfig].
+ * The platform modules supply [LocationSource] (the phone's),
+ * [org.julakali.chargeahead.shared.db.DatabaseFactory], the settings
+ * repositories (`settingsModule`), [org.julakali.chargeahead.shared.domain.TripStorage]
+ * and [BackendConfig].
  * Everything here is one instance per process.
  */
 fun chargeStopsModule(): Module = module {
@@ -120,19 +122,19 @@ fun chargeStopsModule(): Module = module {
     factory { ChargeNowObserver(get(), get()) }
     factory { RefreshChargeNowInteractor(get(), get()) }
     factory { DestinationSearchObserver(get(), get()) }
-    factory { PlanTripInteractor(get(), get(), get()) }
+    factory { PlanTripInteractor(get(), get(), get(), get(), get()) }
     factory { UpdateArrivalSocInteractor(get()) }
     factory { ReplanWithArrivalSocInteractor(get(), get(), get()) }
     factory { CommitTripInteractor(get(), get()) }
     factory { EndTripInteractor(get()) }
     factory { DismissPlannedTripInteractor(get()) }
-    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get()) }
+    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get(), get()) }
     factory { SelectVehicleInteractor(get()) }
     factory { RemoveVehicleInteractor(get()) }
     factory { UpdateManualSocInteractor(get()) }
     factory { UpdateChargeFiltersInteractor(get()) }
     factory { UpdateNetworksInteractor(get()) }
-    factory { ChargeStopsObserver(get(), get(), get(), get(), get()) }
+    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     single<NetworkRepository> {
         val backend = get<BackendConfig>()
@@ -154,7 +156,8 @@ fun Koin.newChargeStopsFeature(
     locationSource: LocationSource,
     hardwareSoCSource: SoCSource? = null,
 ): ChargeStopsFeature {
-    val settingsStore = get<SettingsStore>()
+    val vehicles = get<VehicleRepository>()
+    val preferences = get<PreferencesRepository>()
     val time = get<TimeProvider>()
     val database = get<ChargeSiteDatabase>()
     val refreshNetworks = get<RefreshNetworksInteractor>()
@@ -162,12 +165,12 @@ fun Koin.newChargeStopsFeature(
     return ChargeStopsFeature(
         locationSource = locationSource,
         socSource = CombinedSoCSource(
-            manual = ManualSoCSource(settingsStore, time),
+            manual = ManualSoCSource(vehicles, time),
             hardware = hardwareSoCSource,
         ),
         onStart = {
             runCatching {
-                val keys = settingsStore.networks.first().preferredOperators
+                val keys = preferences.networks.first().preferredOperators
                 pruneCache(database, keys, time.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
             }
             runCatching { trips.restore() }

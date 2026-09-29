@@ -2,7 +2,7 @@ package org.julakali.chargeahead.shared.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
@@ -23,7 +23,7 @@ data class AddCarUiState(
 
 /** The add-car screen: search the catalog, tap to add. */
 class AddCarViewModel(
-    settings: SettingsStore,
+    vehicles: VehicleRepository,
     private val selectVehicle: SelectVehicleInteractor,
 ) : ViewModel() {
 
@@ -31,7 +31,7 @@ class AddCarViewModel(
 
     val uiState: StateFlow<AddCarUiState> = combine(
         query,
-        settings.vehicles,
+        vehicles.vehicles,
     ) { query, owned ->
         val ownedNames = owned.mapTo(HashSet()) { it.displayName }
         val needle = query.trim()

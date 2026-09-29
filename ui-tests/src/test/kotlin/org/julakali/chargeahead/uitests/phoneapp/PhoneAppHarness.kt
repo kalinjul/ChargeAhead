@@ -35,11 +35,11 @@ import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SearchArea
-import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.distanceKmTo
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.settings.settingsModule
 import org.julakali.chargeahead.shared.ui.sharedUiModule
 import org.julakali.chargeahead.uitests.Fixtures
 import org.julakali.chargeahead.uitests.InMemoryPreferencesDataStore
@@ -68,9 +68,6 @@ class PhoneAppHarness {
         Fixtures.site("s3", "Aral pulse", along(0.75), "Nürnberg"),
     )
 
-    lateinit var settings: SettingsStore
-        private set
-
     val trips: TripRepository get() = GlobalContext.get().get()
 
     fun start(withVehicle: Boolean = true) {
@@ -80,9 +77,10 @@ class PhoneAppHarness {
             Manifest.permission.ACCESS_COARSE_LOCATION,
         )
         stubCameraUpdates()
-        settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val settingsFile = InMemoryPreferencesDataStore()
         if (withVehicle) runBlocking {
-            settings.setVehicle(
+            val vehicles = DataStoreVehicleRepository(settingsFile)
+            vehicles.setVehicle(
                 VehicleProfile(
                     displayName = "Test-EV",
                     usableBatteryKwh = 75.0,
@@ -90,19 +88,18 @@ class PhoneAppHarness {
                     acceptedConnectors = setOf(ConnectorType.CCS2),
                 ),
             )
-            settings.setManualSocPercent(80.0)
+            vehicles.setManualSocPercent(80.0)
         }
         startKoin {
             androidContext(app)
             allowOverride(true)
-            modules(chargeStopsModule(), sharedUiModule(), fakes())
+            modules(settingsModule { settingsFile }, chargeStopsModule(), sharedUiModule(), fakes())
         }
     }
 
     fun stop() = stopKoin()
 
     private fun fakes() = module {
-        single<SettingsStore> { settings }
         single<LocationSource> { FakeLocationSource(fix) }
         single<Geocoder> { FakeGeocoder(Place("München", "München, Bayern", muenchen)) }
         single<RouteEngine> { StraightLineRouteEngine() }

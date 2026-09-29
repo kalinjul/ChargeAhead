@@ -14,7 +14,7 @@ import androidx.core.content.ContextCompat
 import org.julakali.chargeahead.shared.domain.CarDataKind
 import org.julakali.chargeahead.shared.domain.CarDataPoint
 import org.julakali.chargeahead.shared.domain.CarDataStatus
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.CarDiagnosticsRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,7 +32,7 @@ class CarHardwareDebugRecorder(
     private val permissions: CarPermissions,
     /** Shared with the SoC source. */
     private val energyLevels: CarEnergyLevels,
-    private val settingsStore: SettingsStore,
+    private val diagnostics: CarDiagnosticsRepository,
 ) {
 
     private var carInfo: CarInfo? = null
@@ -190,8 +190,8 @@ class CarHardwareDebugRecorder(
     }
 
     private fun record(kind: CarDataKind, point: CarDataPoint) {
-        // The store serializes the write.
-        scope?.launch { settingsStore.recordCarDataPoint(point.copy(kind = kind)) }
+        // The repository serializes the write.
+        scope?.launch { diagnostics.recordCarDataPoint(point.copy(kind = kind)) }
     }
 
     private fun connectorName(type: Int): String = when (type) {

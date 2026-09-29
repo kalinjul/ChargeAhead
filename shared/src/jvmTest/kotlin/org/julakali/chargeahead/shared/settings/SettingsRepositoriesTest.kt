@@ -1,10 +1,12 @@
 package org.julakali.chargeahead.shared.settings
 
+import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,7 +14,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class PersistentSettingsStoreTest {
+class SettingsRepositoriesTest {
 
     private val vehicle = VehicleProfile(
         displayName = "Testwagen",
@@ -22,65 +24,65 @@ class PersistentSettingsStoreTest {
     )
 
     @Test
-    fun aNewStore_hasNeitherProfileNorChargeLevel() {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    fun aNewStore_hasNeitherProfileNorChargeLevel() = runBlocking {
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
 
-        assertNull(store.vehicle.value)
-        assertNull(store.manualSocPercent.value)
+        assertNull(store.vehicle.first())
+        assertNull(store.manualSocPercent.first())
     }
 
     @Test
     fun aSavedProfile_survivesARestart() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        PersistentSettingsStore(storage).setVehicle(vehicle)
+        DataStoreVehicleRepository(storage).setVehicle(vehicle)
 
         // A new instance on the same storage = an app restart.
-        assertEquals(vehicle, PersistentSettingsStore(storage).vehicle.value)
+        assertEquals(vehicle, DataStoreVehicleRepository(storage).vehicle.first())
     }
 
     @Test
     fun aSavedChargeLevel_survivesARestart() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        PersistentSettingsStore(storage).setManualSocPercent(64.0)
+        DataStoreVehicleRepository(storage).setManualSocPercent(64.0)
 
-        assertEquals(64.0, PersistentSettingsStore(storage).manualSocPercent.value)
+        assertEquals(64.0, DataStoreVehicleRepository(storage).manualSocPercent.first())
     }
 
     @Test
     fun deletingTheProfile_clearsTheStorage() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        val store = PersistentSettingsStore(storage)
+        val store = DataStoreVehicleRepository(storage)
         store.setVehicle(vehicle)
 
         store.setVehicle(null)
 
-        assertNull(store.vehicle.value)
-        assertNull(PersistentSettingsStore(storage).vehicle.value)
+        assertNull(store.vehicle.first())
+        assertNull(DataStoreVehicleRepository(storage).vehicle.first())
     }
 
     @Test
     fun chargeLevelIsClampedBetweenZeroAndHundred() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
 
         store.setManualSocPercent(140.0)
-        assertEquals(100.0, store.manualSocPercent.value)
+        assertEquals(100.0, store.manualSocPercent.first())
 
         store.setManualSocPercent(-5.0)
-        assertEquals(0.0, store.manualSocPercent.value)
+        assertEquals(0.0, store.manualSocPercent.first())
     }
 
     @Test
-    fun aHalfProfileInStorage_countsAsNone() {
+    fun aHalfProfileInStorage_countsAsNone() = runBlocking {
         // A partial profile is treated as no profile.
         val batteryOnly = InMemoryPreferencesDataStore(
             mapOf("vehicle.usableBatteryKwh" to "77.0", "vehicle.displayName" to "Halb"),
         )
 
-        assertNull(PersistentSettingsStore(batteryOnly).vehicle.value)
+        assertNull(DataStoreVehicleRepository(batteryOnly).vehicle.first())
     }
 
     @Test
-    fun nonsensicalValuesInStorage_countAsNoProfile() {
+    fun nonsensicalValuesInStorage_countAsNoProfile() = runBlocking {
         val broken = InMemoryPreferencesDataStore(
             mapOf(
                 "vehicle.usableBatteryKwh" to "keine Zahl",
@@ -94,8 +96,8 @@ class PersistentSettingsStoreTest {
             ),
         )
 
-        assertNull(PersistentSettingsStore(broken).vehicle.value)
-        assertNull(PersistentSettingsStore(zeroBattery).vehicle.value)
+        assertNull(DataStoreVehicleRepository(broken).vehicle.first())
+        assertNull(DataStoreVehicleRepository(zeroBattery).vehicle.first())
     }
 
     @Test
@@ -109,7 +111,7 @@ class PersistentSettingsStoreTest {
             ),
         )
 
-        val loaded = PersistentSettingsStore(storage).vehicle.value
+        val loaded = DataStoreVehicleRepository(storage).vehicle.first()
 
         assertEquals(setOf(ConnectorType.CCS2, ConnectorType.TYPE2), loaded?.acceptedConnectors)
     }
@@ -117,13 +119,13 @@ class PersistentSettingsStoreTest {
     @Test
     fun theConnectorListFullySurvives() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        PersistentSettingsStore(storage).setVehicle(
+        DataStoreVehicleRepository(storage).setVehicle(
             vehicle.copy(acceptedConnectors = setOf(ConnectorType.CCS2, ConnectorType.CHADEMO)),
         )
 
         assertEquals(
             setOf(ConnectorType.CCS2, ConnectorType.CHADEMO),
-            PersistentSettingsStore(storage).vehicle.value?.acceptedConnectors,
+            DataStoreVehicleRepository(storage).vehicle.first()?.acceptedConnectors,
         )
     }
 
@@ -133,51 +135,51 @@ class PersistentSettingsStoreTest {
     private val nuremberg = Destination("Nürnberg Hauptbahnhof", LatLon(49.4457, 11.0823))
 
     @Test
-    fun theHistoryStartsEmpty() {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    fun theHistoryStartsEmpty() = runBlocking {
+        val store = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
 
-        assertTrue(store.recentDestinations.value.isEmpty())
+        assertTrue(store.recentDestinations.first().isEmpty())
     }
 
     @Test
     fun theHistory_survivesARestart() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        PersistentSettingsStore(storage).addRecentDestination(munich)
+        DataStoreDestinationHistory(storage).addRecentDestination(munich)
 
-        assertEquals(listOf(munich), PersistentSettingsStore(storage).recentDestinations.value)
+        assertEquals(listOf(munich), DataStoreDestinationHistory(storage).recentDestinations.first())
     }
 
     @Test
     fun theNewestDestinationComesFirst() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
 
         store.addRecentDestination(munich)
         store.addRecentDestination(nuremberg)
 
-        assertEquals(listOf(nuremberg, munich), store.recentDestinations.value)
+        assertEquals(listOf(nuremberg, munich), store.recentDestinations.first())
     }
 
     @Test
     fun theSameDestinationTwice_appearsOnlyOnceInHistory() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
 
         store.addRecentDestination(munich)
         store.addRecentDestination(nuremberg)
         store.addRecentDestination(munich)
 
-        assertEquals(listOf(munich, nuremberg), store.recentDestinations.value)
+        assertEquals(listOf(munich, nuremberg), store.recentDestinations.first())
     }
 
     @Test
     fun theHistoryIsLimited() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
 
         repeat(12) { i ->
             store.addRecentDestination(Destination("Ziel $i", LatLon(48.0 + i * 0.1, 11.0)))
         }
 
-        assertEquals(8, store.recentDestinations.value.size)
-        assertEquals("Ziel 11", store.recentDestinations.value.first().name)
+        assertEquals(8, store.recentDestinations.first().size)
+        assertEquals("Ziel 11", store.recentDestinations.first().first().name)
     }
 
     @Test
@@ -185,57 +187,81 @@ class PersistentSettingsStoreTest {
         // Place names may contain commas, quotes, and line breaks.
         val storage = InMemoryPreferencesDataStore()
         val tricky = Destination("St. Peter-Ording, \"Nord\"; Zeile\nZwei", LatLon(54.3, 8.6))
-        PersistentSettingsStore(storage).addRecentDestination(tricky)
+        DataStoreDestinationHistory(storage).addRecentDestination(tricky)
 
-        assertEquals(listOf(tricky), PersistentSettingsStore(storage).recentDestinations.value)
+        assertEquals(listOf(tricky), DataStoreDestinationHistory(storage).recentDestinations.first())
     }
 
     @Test
     fun theAddress_survivesSavingInTheHistory() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
         val club = Destination("Uebel und Gefährlich", LatLon(53.556, 9.968), "Feldstraße 66, 20359 Hamburg")
-        PersistentSettingsStore(storage).addRecentDestination(club)
+        DataStoreDestinationHistory(storage).addRecentDestination(club)
 
-        assertEquals(listOf(club), PersistentSettingsStore(storage).recentDestinations.value)
+        assertEquals(listOf(club), DataStoreDestinationHistory(storage).recentDestinations.first())
     }
 
     // --- Network filter ---
 
     @Test
-    fun aNewStore_hasTheNetworkFilterSwitchedOn() {
+    fun aNewStore_hasTheNetworkFilterSwitchedOn() = runBlocking {
         // Default on, so a first selection takes effect immediately.
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
 
-        assertTrue(store.networks.value.onlyPreferred)
-        assertFalse(store.networks.value.isActive)
+        assertTrue(store.networks.first().onlyPreferred)
+        assertFalse(store.networks.first().isActive)
     }
 
     @Test
     fun aSwitchedOffNetworkFilter_survivesARestart() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        PersistentSettingsStore(storage).setNetworks(NetworkPreferences(onlyPreferred = false))
+        DataStorePreferencesRepository(storage).setNetworks(NetworkPreferences(onlyPreferred = false))
 
-        assertFalse(PersistentSettingsStore(storage).networks.value.onlyPreferred)
+        assertFalse(DataStorePreferencesRepository(storage).networks.first().onlyPreferred)
     }
 
     @Test
-    fun aSelectionOnARenamedNetworkKey_isCarriedOver() {
+    fun aSelectionOnARenamedNetworkKey_isCarriedOver() = runBlocking {
         // An install that ticked EWE Go back when the catalog keyed it "ewe".
         val storage = InMemoryPreferencesDataStore(
             mapOf("networks.preferred" to """["ewe","enbw"]"""),
         )
 
-        val store = PersistentSettingsStore(storage)
+        val store = DataStorePreferencesRepository(storage)
 
-        assertEquals(setOf("ewe-go", "enbw"), store.networks.value.preferredOperators)
+        assertEquals(setOf("ewe-go", "enbw"), store.networks.first().preferredOperators)
+    }
+
+
+    @Test
+    fun slowMode_lastsForTheProcessOnly() = runBlocking {
+        val storage = InMemoryPreferencesDataStore()
+        val preferences = DataStorePreferencesRepository(storage)
+
+        preferences.setChargeFilters(ChargeFilters(minPowerKw = 50.0, slowMode = true))
+
+        assertTrue(preferences.chargeFilters.first().slowMode)
+        assertEquals(ChargeFilters(minPowerKw = 50.0), DataStorePreferencesRepository(storage).chargeFilters.first())
     }
 
     @Test
-    fun aBrokenHistory_doesNotCrashTheApp() {
+    fun repositoriesOnOneFile_keepEachOthersValues() = runBlocking {
+        val storage = InMemoryPreferencesDataStore()
+
+        DataStoreVehicleRepository(storage).setVehicle(vehicle)
+        DataStorePreferencesRepository(storage).setNetworks(NetworkPreferences(onlyPreferred = false))
+        DataStoreDestinationHistory(storage).addRecentDestination(munich)
+
+        assertEquals(vehicle, DataStoreVehicleRepository(storage).vehicle.first())
+        assertFalse(DataStorePreferencesRepository(storage).networks.first().onlyPreferred)
+        assertEquals(listOf(munich), DataStoreDestinationHistory(storage).recentDestinations.first())
+    }
+    @Test
+    fun aBrokenHistory_doesNotCrashTheApp() = runBlocking {
         val broken = InMemoryPreferencesDataStore(mapOf("route.destinations" to "{kein JSON"))
 
-        val store = PersistentSettingsStore(broken)
+        val store = DataStoreDestinationHistory(broken)
 
-        assertTrue(store.recentDestinations.value.isEmpty())
+        assertTrue(store.recentDestinations.first().isEmpty())
     }
 }

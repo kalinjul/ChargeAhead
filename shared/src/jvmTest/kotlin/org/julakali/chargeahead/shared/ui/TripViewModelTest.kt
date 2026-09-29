@@ -34,7 +34,9 @@ import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInter
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
+import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -52,7 +54,9 @@ class TripViewModelTest {
 
     private val hamburg = LatLon(53.55, 9.99)
     private val muenchen = Destination("München", LatLon(48.137, 11.575))
-    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+    private val history = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
     private val trips = TripRepository()
     private var plannedSoc: Double? = null
     private var plans = 0
@@ -97,22 +101,22 @@ class TripViewModelTest {
     )
 
     private fun viewModel(feature: ChargeStopsFeature): TripViewModel {
-        val planTrip = PlanTripInteractor(planner, settings, trips)
+        val planTrip = PlanTripInteractor(planner, vehicles, preferences, history, trips)
         return TripViewModel(
             feature = feature,
             planTrip = planTrip,
-            replanWithArrivalSoc = ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(settings), trips, planTrip),
+            replanWithArrivalSoc = ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(vehicles), trips, planTrip),
             commitTrip = CommitTripInteractor(trips) { 0L },
-            updateManualSoc = UpdateManualSocInteractor(settings),
+            updateManualSoc = UpdateManualSocInteractor(vehicles),
             dismissPlannedTrip = DismissPlannedTripInteractor(trips),
             trips = trips,
-            settings = settings,
+            vehicles = vehicles,
         )
     }
 
     private suspend fun planned(feature: ChargeStopsFeature): TripViewModel {
-        settings.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))
-        settings.setManualSocPercent(55.0)
+        vehicles.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))
+        vehicles.setManualSocPercent(55.0)
         feature.start()
         feature.locate()
         val viewModel = viewModel(feature)
@@ -142,8 +146,8 @@ class TripViewModelTest {
 
         viewModel.onReplanRequested()
 
-        withTimeout(5_000) { viewModel.event.first { it == TripEvent.PlanReady } }
-        assertEquals(before + 1, plans)
-        assertNull((viewModel.uiState.value as TripUiState.Planned).socInput)
+        val state = withTimeout(5_000) { viewModel.uiState.first { it is TripUiState.Planned && plans == before + 1 } }
+        assertEquals(TripEvent.PlanReady, viewModel.event.value)
+        assertNull((state as TripUiState.Planned).socInput)
     }
 }

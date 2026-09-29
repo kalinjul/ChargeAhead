@@ -6,7 +6,7 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
 import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
 import org.julakali.chargeahead.shared.domain.chargeNowArea
@@ -29,7 +29,7 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChargeNowObserver(
     private val repository: SiteRepository,
-    private val settings: SettingsStore,
+    private val preferences: PreferencesRepository,
 ) : SubjectInteractor<ChargeNowObserver.Params, ChargeNowResult?>() {
 
     /** [position] `null` means: no location yet, and no result. */
@@ -37,7 +37,7 @@ class ChargeNowObserver(
 
     override fun createObservable(params: Params): Flow<ChargeNowResult?> {
         val position = params.position ?: return flowOf(null)
-        return combine(settings.chargeFilters, settings.networks, ::Pair)
+        return combine(preferences.chargeFilters, preferences.networks, ::Pair)
             .distinctUntilChanged()
             .flatMapLatest { (filters, networks) ->
                 val area = chargeNowArea(position, filters)

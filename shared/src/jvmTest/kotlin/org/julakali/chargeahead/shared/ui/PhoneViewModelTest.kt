@@ -22,6 +22,7 @@ import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.Geocoder
 import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
 import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
@@ -44,7 +45,9 @@ import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStoreCarDiagnosticsRepository
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
+import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -86,11 +89,12 @@ class PhoneViewModelTest {
     /** Typing the comma in "17,8" must not be swallowed by the stored profile. */
     @Test
     fun `the form keeps what was typed while the store takes what parses`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         val viewModel = VehicleSettingsViewModel(
-            settings,
+            vehicles,
+            DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore()),
             stubFeature(),
-            SelectVehicleInteractor(settings),
+            SelectVehicleInteractor(vehicles),
         )
 
         viewModel.onNameChanged("Testwagen")
@@ -101,24 +105,25 @@ class PhoneViewModelTest {
         assertEquals("77", state.battery)
         assertEquals("17,", state.consumption, "the comma must survive being written through")
         // The profile is written from a coroutine.
-        assertEquals(17.0, settings.vehicle.awaitValue { it != null }?.consumptionKwhPer100Km)
+        assertEquals(17.0, vehicles.vehicle.awaitValue { it != null }?.consumptionKwhPer100Km)
 
         viewModel.onConsumptionChanged("17,8")
         assertEquals("17,8", viewModel.uiState.await { it.consumption == "17,8" }.consumption)
         assertEquals(
             17.8,
-            settings.vehicle.awaitValue { it?.consumptionKwhPer100Km != 17.0 }?.consumptionKwhPer100Km,
+            vehicles.vehicle.awaitValue { it?.consumptionKwhPer100Km != 17.0 }?.consumptionKwhPer100Km,
         )
     }
 
     /** Without a usable capacity, no profile is stored at all. */
     @Test
     fun `an unparseable capacity stores no profile`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         val viewModel = VehicleSettingsViewModel(
-            settings,
+            vehicles,
+            DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore()),
             stubFeature(),
-            SelectVehicleInteractor(settings),
+            SelectVehicleInteractor(vehicles),
         )
 
         viewModel.onNameChanged("Testwagen")
@@ -126,18 +131,18 @@ class PhoneViewModelTest {
         viewModel.onBatteryChanged("sieben")
 
         assertTrue(viewModel.uiState.await { it.battery == "sieben" }.batteryInvalid)
-        assertNull(settings.vehicle.first())
+        assertNull(vehicles.vehicle.first())
     }
 
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val addCar = AddCarViewModel(settings, SelectVehicleInteractor(settings))
+        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val addCar = AddCarViewModel(vehicles, SelectVehicleInteractor(vehicles))
         val garage = GarageViewModel(
-            settings,
-            SelectVehicleInteractor(settings),
-            RemoveVehicleInteractor(settings),
-            UpdateArrivalSocInteractor(settings),
+            vehicles,
+            SelectVehicleInteractor(vehicles),
+            RemoveVehicleInteractor(vehicles),
+            UpdateArrivalSocInteractor(vehicles),
         )
 
         val preset = addCar.uiState.await { it.matches.isNotEmpty() }.matches.first()
@@ -173,14 +178,14 @@ class PhoneViewModelTest {
     /** Issue #17: a filter change must re-run the marker query, not only a viewport change. */
     @Test
     fun `changing the minimum power reloads the map markers`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = homeViewModel(mapSites, settings)
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+        val viewModel = homeViewModel(mapSites, preferences)
 
         viewModel.onViewportChanged(VIEWPORT)
         // Default minimum is 150 kW, so the 50 kW site starts out hidden.
         assertEquals(listOf("demo:hpc"), viewModel.uiState.await { it.chargers.isNotEmpty() }.chargers.map { it.site.id })
 
-        settings.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
+        preferences.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
         assertEquals(
             listOf("demo:hpc", "demo:slow"),
             viewModel.uiState.await { it.chargers.size == 2 }.chargers.map { it.site.id },
@@ -190,24 +195,24 @@ class PhoneViewModelTest {
     /** Same reasoning for the other filter the map applies. */
     @Test
     fun `picking networks reloads the map markers`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = homeViewModel(mapSites, settings)
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+        val viewModel = homeViewModel(mapSites, preferences)
 
         viewModel.onViewportChanged(VIEWPORT)
         viewModel.uiState.await { it.chargers.isNotEmpty() }
 
-        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
         assertTrue(viewModel.uiState.await { it.chargers.isEmpty() }.chargers.isEmpty())
     }
 
     @Test
     fun `a viewport change brings the markers' live availability`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
         val site = mapSite("hpc", "Ionity", 300.0).copy(liveStatusId = "live-hpc")
         val statusSource = ChargePointStatusSource { ids ->
             ids.associateWith { listOf(ChargePointStatus(ChargePointState.AVAILABLE), ChargePointStatus(ChargePointState.OCCUPIED)) }
         }
-        val viewModel = homeViewModel(listOf(site), settings, statusSource = statusSource)
+        val viewModel = homeViewModel(listOf(site), preferences, statusSource = statusSource)
 
         viewModel.onViewportChanged(VIEWPORT)
 
@@ -217,7 +222,7 @@ class PhoneViewModelTest {
 
     @Test
     fun `a selected charger shows its live connectors until dismissed`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
         val site = mapSite("hpc", "Ionity", 300.0).copy(liveStatusId = "live-hpc")
         val statusSource = ChargePointStatusSource { ids ->
             ids.associateWith {
@@ -227,7 +232,7 @@ class PhoneViewModelTest {
                 )
             }
         }
-        val viewModel = homeViewModel(listOf(site), settings, statusSource = statusSource)
+        val viewModel = homeViewModel(listOf(site), preferences, statusSource = statusSource)
 
         viewModel.onChargerSelected(MapCharger(site, 300.0))
 
@@ -262,7 +267,7 @@ class PhoneViewModelTest {
     /** On the *same* store the ViewModel gets, over an in-memory database. */
     private fun homeViewModel(
         sites: List<ChargeSite>,
-        settings: PersistentSettingsStore,
+        preferences: PreferencesRepository,
         locationTimeoutMillis: Long = HomeViewModel.DEFAULT_LOCATION_TIMEOUT_MILLIS,
         statusSource: ChargePointStatusSource = ChargePointStatusSource { emptyMap() },
     ): HomeViewModel {
@@ -270,19 +275,18 @@ class PhoneViewModelTest {
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })
         return HomeViewModel(
             stubFeature(),
-            MapChargersObserver(repository, statuses, settings),
-            RefreshMapChargersInteractor(repository, settings),
-            RefreshChargerAvailabilityInteractor(repository, statuses, settings),
+            MapChargersObserver(repository, statuses, preferences),
+            RefreshMapChargersInteractor(repository, preferences),
+            RefreshChargerAvailabilityInteractor(repository, statuses, preferences),
             LiveConnectorsObserver(statuses),
             RefreshLiveConnectorsInteractor(statuses),
-            settings,
+            preferences,
             locationTimeoutMillis,
         )
     }
 
     @Test
     fun `the corridor list waits for a fix and then shows the stored stops`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
         val fixes = MutableSharedFlow<Fix>(extraBufferCapacity = 1)
         val feature = ChargeStopsFeature(
             locationSource = object : LocationSource {
@@ -293,8 +297,8 @@ class PhoneViewModelTest {
         val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
         val viewModel = CorridorViewModel(
             feature,
-            ChargeStopsObserver(repository, settings, TripRepository(), NoRoute, CorridorPlanner()),
-            RefreshChargeStopsInteractor(repository, settings),
+            ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner()),
+            RefreshChargeStopsInteractor(repository, DataStorePreferencesRepository(InMemoryPreferencesDataStore())),
         )
 
         viewModel.uiState.await { it.phase == ChargeStopsState.Phase.WAITING_FOR_LOCATION }
@@ -308,8 +312,8 @@ class PhoneViewModelTest {
 
     @Test
     fun `without a fix the location button says it is searching`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = homeViewModel(emptyList(), settings)
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+        val viewModel = homeViewModel(emptyList(), preferences)
 
         viewModel.onLocateRequested()
 
@@ -320,8 +324,8 @@ class PhoneViewModelTest {
 
     @Test
     fun `past the deadline the map says why it is still empty`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        val viewModel = homeViewModel(emptyList(), settings, locationTimeoutMillis = 50L)
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+        val viewModel = homeViewModel(emptyList(), preferences, locationTimeoutMillis = 50L)
 
         viewModel.onLocateRequested()
 

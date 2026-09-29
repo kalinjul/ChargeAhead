@@ -13,18 +13,13 @@ final class ChargeStopsViewModel: ObservableObject {
     /// For callers without SwiftUI: CarPlay templates are swapped out manually.
     var onStateChange: ((ChargeStopsState) -> Void)?
 
-    /// One settings store for the whole process, so the feature reads the
-    /// same flows the settings UI writes.
-    static let settingsStore: SettingsStore = IosEntryPointsKt.createSettingsStore()
-
     let feature: ChargeStopsFeature
     private let watcher: ChargeStopsWatcher
 
     init() {
         let feature = IosEntryPointsKt.createChargeStopsFeature(
             backendBaseUrl: ChargeStopsViewModel.bundleValue("ChargeAheadBaseUrl"),
-            backendToken: ChargeStopsViewModel.bundleValue("ChargeAheadToken"),
-            settingsStore: ChargeStopsViewModel.settingsStore
+            backendToken: ChargeStopsViewModel.bundleValue("ChargeAheadToken")
         )
         self.feature = feature
         let watcher = ChargeStopsWatcher(feature: feature)

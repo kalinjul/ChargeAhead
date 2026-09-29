@@ -2,8 +2,8 @@ package org.julakali.chargeahead.android.car
 
 import androidx.car.app.hardware.common.CarValue
 import androidx.car.app.hardware.info.EnergyLevel
+import org.julakali.chargeahead.shared.domain.CarDiagnosticsRepository
 import org.julakali.chargeahead.shared.domain.EnergyState
-import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
@@ -24,7 +24,7 @@ class CarHardwareSoCSource(
     private val energyLevels: CarEnergyLevels,
     private val time: TimeProvider,
     /** Where the result is written for the phone UI. */
-    private val settingsStore: SettingsStore? = null,
+    private val diagnosticsRepository: CarDiagnosticsRepository? = null,
 ) : SoCSource {
 
     override val kind: SoCSourceKind = SoCSourceKind.CAR_HARDWARE
@@ -32,7 +32,7 @@ class CarHardwareSoCSource(
     override val energy: Flow<EnergyState?> = energyLevels.readings
         .map { reading ->
             val (state, diagnostics) = evaluate(reading)
-            settingsStore?.recordSoCDiagnostics(diagnostics)
+            diagnosticsRepository?.recordSoCDiagnostics(diagnostics)
             state
         }
         // Initial null, since combine() in CombinedSoCSource waits for every source.

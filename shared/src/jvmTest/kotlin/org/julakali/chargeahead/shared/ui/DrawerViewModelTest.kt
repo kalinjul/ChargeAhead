@@ -3,7 +3,8 @@ package org.julakali.chargeahead.shared.ui
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
+import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
@@ -32,15 +33,15 @@ class DrawerViewModelTest {
 
     @Test
     fun `the count includes selected keys the network list does not know`() = runBlocking<Unit> {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
         // Off the backend's list, but it still filters, so it counts.
-        settings.setNetworks(
+        preferences.setNetworks(
             NetworkPreferences(
                 onlyPreferred = true,
                 preferredOperators = setOf("enbw", "stadtwerke-kiel"),
             ),
         )
-        val vm = DrawerViewModel(settings, UpdateChargeFiltersInteractor(settings))
+        val vm = DrawerViewModel(DataStoreVehicleRepository(InMemoryPreferencesDataStore()), preferences, UpdateChargeFiltersInteractor(preferences))
 
         val state = vm.uiState.await { it.preferredNetworkCount > 0 }
         assertEquals(2, state.preferredNetworkCount)

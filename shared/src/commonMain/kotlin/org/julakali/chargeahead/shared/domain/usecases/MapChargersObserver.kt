@@ -5,7 +5,7 @@ import org.julakali.chargeahead.shared.domain.ChargePointStatus
 import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.MapFilter
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
@@ -33,7 +33,7 @@ import kotlinx.coroutines.withContext
 class MapChargersObserver(
     private val repository: SiteRepository,
     private val statusRepository: ChargePointStatusRepository,
-    private val settings: SettingsStore,
+    private val preferences: PreferencesRepository,
 ) : SubjectInteractor<MapChargersObserver.Params, List<MapCharger>>() {
 
     /** [viewport] `null` means: zoomed out past the point where markers are useful. */
@@ -41,7 +41,7 @@ class MapChargersObserver(
 
     override fun createObservable(params: Params): Flow<List<MapCharger>> {
         val viewport = params.viewport ?: return flowOf(emptyList())
-        return settings.mapFilter().flatMapLatest { filter ->
+        return preferences.mapFilter().flatMapLatest { filter ->
             combine(
                 repository.mapChargersIn(viewport, filter),
                 statusRepository.statuses,

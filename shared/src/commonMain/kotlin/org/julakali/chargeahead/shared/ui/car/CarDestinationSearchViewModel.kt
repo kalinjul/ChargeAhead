@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Place
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.DestinationHistory
 import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.ui.WhileUiSubscribed
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,7 +23,7 @@ data class CarDestinationSearchUiState(
 
 /** Typing a destination in the car; geocoding fires on submit only, not per keystroke. */
 class CarDestinationSearchViewModel(
-    settings: SettingsStore,
+    history: DestinationHistory,
     private val observeDestinationSearch: DestinationSearchObserver,
 ) : ViewModel() {
 
@@ -33,7 +33,7 @@ class CarDestinationSearchViewModel(
     val uiState: StateFlow<CarDestinationSearchUiState> = combine(
         query,
         submittedQuery,
-        settings.recentDestinations,
+        history.recentDestinations,
         observeDestinationSearch.flow,
     ) { query, submitted, recents, search ->
         val blank = query.isBlank()

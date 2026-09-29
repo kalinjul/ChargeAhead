@@ -6,7 +6,7 @@ import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,7 +39,7 @@ data class NetworksUiState(
  * [onLeave], since every write re-runs planning and the map query.
  */
 class NetworksViewModel(
-    private val settings: SettingsStore,
+    private val preferences: PreferencesRepository,
     networkRepository: NetworkRepository,
     private val updateNetworks: UpdateNetworksInteractor,
 ) : ViewModel() {
@@ -60,7 +60,7 @@ class NetworksViewModel(
 
     /** The rows to choose from, each name folded once for search and sorting. */
     private val catalog: Flow<List<Pair<Network, String>>> =
-        combine(networkRepository.networks, settings.networks) { known, stored ->
+        combine(networkRepository.networks, preferences.networks) { known, stored ->
             stored.selectable(known).map { it to OperatorKey.folded(it.name) }
         }
             .distinctUntilChanged()
@@ -82,7 +82,7 @@ class NetworksViewModel(
 
     val uiState: StateFlow<NetworksUiState> = combine(
         matches,
-        settings.networks,
+        preferences.networks,
         staged,
         search,
         displayOrder,
@@ -121,7 +121,7 @@ class NetworksViewModel(
     /** Re-freeze the order from the selection as it stands, edits included. */
     private fun refreshOrder() {
         viewModelScope.launch {
-            displayOrder.value = (staged.value ?: settings.networks.first()).orderedKeys(catalog.first())
+            displayOrder.value = (staged.value ?: preferences.networks.first()).orderedKeys(catalog.first())
         }
     }
 
@@ -135,7 +135,7 @@ class NetworksViewModel(
 
     private fun edit(block: (NetworkPreferences) -> NetworkPreferences) {
         viewModelScope.launch {
-            staged.value = block(staged.value ?: settings.networks.first())
+            staged.value = block(staged.value ?: preferences.networks.first())
             scheduleCommit()
         }
     }

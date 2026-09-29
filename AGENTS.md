@@ -321,17 +321,33 @@ fun interface TimeProvider { fun nowMillis(): Long }
 // From M2. null in the stream means "this source currently knows nothing" —
 // for CAR_HARDWARE that's the normal case, not the exception.
 interface SoCSource     { val kind: SoCSourceKind; val energy: Flow<EnergyState?> }
-interface SettingsStore {
+// The driver's settings, one repository per kind of data, all over one
+// DataStore file (settingsModule). Depend only on the one you use.
+interface VehicleRepository {
     val vehicle: Flow<VehicleProfile?>
     val vehicles: Flow<List<VehicleProfile>>      // the garage; setVehicle selects AND adds
     val manualSocPercent: Flow<Double?>
-    val chargeFilters: Flow<ChargeFilters>        // phone flows: min power, max distance
-    val recentDestinations: Flow<List<Destination>>
+    val arrivalSocPercent: Flow<Double>
     suspend fun setVehicle(profile: VehicleProfile?)
     suspend fun removeVehicle(displayName: String)
     suspend fun setManualSocPercent(socPercent: Double?)
+    suspend fun setArrivalSocPercent(socPercent: Double)
+}
+interface PreferencesRepository {
+    val networks: Flow<NetworkPreferences>
+    val chargeFilters: Flow<ChargeFilters>        // phone flows: min power, max distance; slowMode is not persisted
+    suspend fun setNetworks(preferences: NetworkPreferences)
     suspend fun setChargeFilters(filters: ChargeFilters)
+}
+interface DestinationHistory {
+    val recentDestinations: Flow<List<Destination>>
     suspend fun addRecentDestination(destination: Destination)
+}
+interface CarDiagnosticsRepository {              // what the car last reported, for the debug views
+    val socDiagnostics: Flow<SoCDiagnostics?>
+    val carDebugData: Flow<List<CarDataPoint>>
+    suspend fun recordSoCDiagnostics(diagnostics: SoCDiagnostics)
+    suspend fun recordCarDataPoint(point: CarDataPoint)
 }
 
 // Destination, planned trip (on the map) and committed trip (sent to Maps),
@@ -370,10 +386,12 @@ section still ahead does. `RoutedRouteProvider` falls back to the corridor
 when the driver leaves the route or reaches the destination; without that
 fallback the list would sit empty at the end of every drive.
 
-**One `SettingsStore` instance per process.** The phone UI writes into it,
-the feature reads the same flows; two instances over the same storage would
-keep changes from each other. In Android Auto, the phone and car UI run in
-the same process — the Koin `appModule` (androidApp) holds the singleton.
+**One settings file per process.** The settings repositories all read and
+write the same DataStore file, and DataStore refuses a second active
+instance on it. `settingsModule { … }` (shared) opens it once and declares
+each repository as a singleton; the platform module passes in how to open
+the file. In Android Auto, the phone and car UI run in the same process and
+share them.
 
 ### State and assembly
 
@@ -400,7 +418,7 @@ data class ChargeStopsState(
 )
 
 // The data graph (Koin), declared once for both platforms. Platform modules
-// supply LocationSource, DatabaseFactory, SettingsStore, TripStorage and
+// supply LocationSource, DatabaseFactory, settingsModule, TripStorage and
 // BackendConfig; one HttpClient, database and repository per process, shared
 // by phone and car.
 fun chargeStopsModule(): Module
@@ -419,7 +437,7 @@ expect fun currentTimeMillis(): Long
 ```
 
 The iOS framework is called **`Shared`** (`import Shared`). Swift goes
-through `IosEntryPointsKt.createChargeStopsFeature(backendBaseUrl:backendToken:settingsStore:)` and
+through `IosEntryPointsKt.createChargeStopsFeature(backendBaseUrl:backendToken:)` and
 `ChargeStopsWatcher` (which hosts `CorridorViewModel`) — both in `iosMain`, because Kotlin's default arguments
 don't reach the Objective-C header and a `StateFlow` isn't subscribable from
 Swift without SKIE.
@@ -480,7 +498,8 @@ The short version, for the cases where the skill isn't loaded:
   state.
 - No user-visible text in a `UiState` — `shared` has no resources. States
   and reasons are types; the wording comes from `strings.xml`.
-- ViewModels take `SettingsStore`, `ChargeStopsFeature` and domain use
+- ViewModels take the settings repositories they read (`VehicleRepository`,
+  `PreferencesRepository`, …), `ChargeStopsFeature` and domain use
   cases — never a `Context`, never a `CoroutineScope`.
 - Because they live in `shared`, `:shared:compileKotlinIosSimulatorArm64`
   is mandatory after touching them. It is what keeps the "reusable on iOS"

@@ -35,7 +35,9 @@ import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
+import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -53,7 +55,9 @@ class CarRouteViewModelTest {
 
     private val hamburg = LatLon(53.55, 9.99)
     private val muenchen = Destination("München", LatLon(48.137, 11.575))
-    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+    private val history = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
     private val trips = TripRepository()
     private val fixes = MutableSharedFlow<Fix>(replay = 1)
     private var plannedSoc: Double? = null
@@ -100,15 +104,15 @@ class CarRouteViewModelTest {
             feature,
             muenchen,
             activeRoute,
-            PlanTripInteractor(planner, settings, trips),
-            ReplanCommittedTripInteractor(planner, settings, trips, UpdateManualSocInteractor(settings)) { 9L },
+            PlanTripInteractor(planner, vehicles, preferences, history, trips),
+            ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles)) { 9L },
             trips,
         )
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T = withTimeout(5_000) { first(matching) }
 
     private suspend fun withVehicle() {
-        settings.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))
+        vehicles.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))
     }
 
     @Test
@@ -151,7 +155,7 @@ class CarRouteViewModelTest {
     @Test
     fun `refreshing the active route replans the committed trip with the car's level, without storing it`() = runBlocking<Unit> {
         withVehicle()
-        settings.setManualSocPercent(40.0)
+        vehicles.setManualSocPercent(40.0)
         fixes.emit(Fix(hamburg, null, null, 0L))
         CommitTripInteractor(trips) { 0L }(CommitTripInteractor.Params(plan(), startSocPercent = 50.0))
         val viewModel = viewModel(activeRoute = true)
@@ -162,7 +166,7 @@ class CarRouteViewModelTest {
         val committed = trips.state.await { it.committed?.committedAtEpochMillis == 9L }.committed!!
         assertEquals(64.0, committed.startSocPercent)
         assertEquals(64.0, plannedSoc)
-        assertEquals(40.0, settings.manualSocPercent.first())
+        assertEquals(40.0, vehicles.manualSocPercent.first())
         assertNull(trips.state.value.planned)
         viewModel.uiState.await { it is CarRouteUiState.Ready }
     }

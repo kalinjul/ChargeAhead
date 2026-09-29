@@ -24,7 +24,7 @@ The worked example is `MapChargersObserver`, used by `HomeViewModel`.
 ## The rules
 
 1. **Domain only.** A use case lives in `org.julakali.chargeahead.shared.domain.usecases`
-   and depends on ports (`SiteRepository`, `SettingsStore`,
+   and depends on ports (`SiteRepository`, `PreferencesRepository`,
    `ChargePointStatusSource`, …) and domain types. Never on
    `ChargeStopsFeature`, `core`, `data` or `ui`. Constants, models and
    shared helpers it needs live in `domain`, not next to the use case (as
@@ -58,8 +58,8 @@ The worked example is `MapChargersObserver`, used by `HomeViewModel`.
 8. **Koin: `factory`, not `single`.** A `SubjectInteractor` keeps its params
    per instance; two ViewModels sharing one would steer each other. Declare
    it in `chargeStopsModule()` next to its ports.
-9. **A `SettingsStore` write from the UI is an interactor.** Reads stay
-   direct — a ViewModel puts `settings.vehicle` straight into
+9. **A settings write from the UI is an interactor.** Reads stay
+   direct — a ViewModel puts `vehicles.vehicle` straight into
    `combine()` — but neither ever calls a setter. One write, one interactor
    (`SelectVehicleInteractor`, `UpdateManualSocInteractor`,
    `UpdateNetworksInteractor`, …); an interactor that writes and then does
@@ -79,13 +79,13 @@ The worked example is `MapChargersObserver`, used by `HomeViewModel`.
 ```kotlin
 class HomeViewModel(
     private val observeMapChargers: MapChargersObserver,
-    settings: SettingsStore,
+    preferences: PreferencesRepository,
     …
 ) : ViewModel() {
 
     val uiState = combine(
         observeMapChargers.flow,          // the observer is a combine() parameter
-        settings.chargeFilters,
+        preferences.chargeFilters,
         …
     ) { mapChargers, filters, … -> HomeUiState(chargers = mapChargers.chargers, …) }
         .stateIn(viewModelScope, WhileUiSubscribed, HomeUiState())
@@ -123,7 +123,8 @@ ViewModel — see `MapChargersObserverTest`:
 
 - Fake the ports with an `object : SiteRepository { … }` whose
   `storedSitesIn` returns a `MutableStateFlow` the fake fetch updates; use
-  `PersistentSettingsStore(InMemoryPreferencesDataStore())` as the real store.
+  `DataStorePreferencesRepository(InMemoryPreferencesDataStore())` (or the
+  repository the use case needs) as the real one.
 - Call the observer with its params, then
   `withTimeout(5_000) { observer.flow.first { <condition> } }`.
 - To see the post-refill result, make the fake's fetch change what it

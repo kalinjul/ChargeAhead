@@ -18,7 +18,7 @@ fun createSettingsDataStore(
         path = "${documentsDirectory()}/$SETTINGS_DATASTORE_FILE",
         migrations = listOf(
             KeyValueMigration(
-                keys = PersistentSettingsStore.ALL_KEYS,
+                keys = SettingsKeys.ALL,
                 read = defaults::stringForKey,
                 remove = defaults::removeObjectForKey,
             ),

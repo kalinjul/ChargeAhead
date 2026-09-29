@@ -79,18 +79,19 @@ const val DEFAULT_ASSUMED_SOC_PERCENT = 80.0
  * [DEFAULT_ASSUMED_SOC_PERCENT].
  */
 suspend fun TripPlanning.planWithSettings(
-    settings: SettingsStore,
+    vehicles: VehicleRepository,
+    preferences: PreferencesRepository,
     from: LatLon,
     destination: Destination,
     startSocPercent: Double?,
 ): TripPlanResult {
-    val vehicle = settings.vehicle.first() ?: return TripPlanResult.NoVehicle
+    val vehicle = vehicles.vehicle.first() ?: return TripPlanResult.NoVehicle
     val soc = startSocPercent
-        ?: settings.manualSocPercent.first()
+        ?: vehicles.manualSocPercent.first()
         ?: DEFAULT_ASSUMED_SOC_PERCENT
-    val arrivalSoc = settings.arrivalSocPercent.first()
-    val filters = settings.chargeFilters.first()
-    val networks = settings.networks.first()
+    val arrivalSoc = vehicles.arrivalSocPercent.first()
+    val filters = preferences.chargeFilters.first()
+    val networks = preferences.networks.first()
     return withContext(Dispatchers.Default) {
         plan(from, destination, vehicle, soc, arrivalSoc, filters, networks)
     }

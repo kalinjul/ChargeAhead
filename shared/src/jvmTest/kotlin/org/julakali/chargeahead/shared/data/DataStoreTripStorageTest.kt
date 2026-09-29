@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.data
 
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import org.julakali.chargeahead.shared.domain.Address
@@ -15,7 +16,8 @@ import org.julakali.chargeahead.shared.domain.RouteSegment
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripState
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
+import org.julakali.chargeahead.shared.settings.SettingsLegacyTripSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -65,23 +67,24 @@ class DataStoreTripStorageTest {
                 "route.destinations" to """[{"name":"München","lat":48.137,"lon":11.575,"current":true}]""",
             ),
         )
-        val settings = PersistentSettingsStore(settingsFile)
-        val migrating = DataStoreTripStorage(preferences, legacy = settings)
+        val legacy = SettingsLegacyTripSource(settingsFile)
+        val migrating = DataStoreTripStorage(preferences, legacy = legacy)
 
         val expected = TripState(destination = Destination("München", LatLon(48.137, 11.575)), committed = committed)
         assertEquals(expected, migrating.read())
         assertEquals(expected, DataStoreTripStorage(preferences).read())
-        assertNull(settings.legacyTrip())
-        assertEquals(listOf(Destination("München", LatLon(48.137, 11.575))), PersistentSettingsStore(settingsFile).recentDestinations.value)
+        assertNull(legacy.legacyTrip())
+        assertEquals(listOf(Destination("München", LatLon(48.137, 11.575))), DataStoreDestinationHistory(settingsFile).recentDestinations.first())
     }
 
     @Test
     fun `settings without a trip leave the state empty`() = runBlocking {
-        val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-        settings.addRecentDestination(munich)
+        val settingsFile = InMemoryPreferencesDataStore()
+        val history = DataStoreDestinationHistory(settingsFile)
+        history.addRecentDestination(munich)
 
-        assertNull(DataStoreTripStorage(preferences, legacy = settings).read())
-        assertTrue(settings.recentDestinations.value.isNotEmpty())
+        assertNull(DataStoreTripStorage(preferences, legacy = SettingsLegacyTripSource(settingsFile)).read())
+        assertTrue(history.recentDestinations.first().isNotEmpty())
     }
 
     private companion object {

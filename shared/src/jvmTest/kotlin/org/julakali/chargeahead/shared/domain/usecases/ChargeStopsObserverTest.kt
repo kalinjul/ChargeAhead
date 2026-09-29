@@ -24,7 +24,8 @@ import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -60,7 +61,9 @@ class ObserveChargeStopsTest {
         acceptedConnectors = setOf(ConnectorType.CCS2),
     )
 
-    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+
+    private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
     private val trips = TripRepository()
 
     private suspend fun setDestination(destination: Destination?) {
@@ -117,7 +120,7 @@ class ObserveChargeStopsTest {
     private fun observer(
         repository: SiteRepository,
         router: RouteEngine = FixedRoute(Route(a9, 170.0, 108.0)),
-    ) = ChargeStopsObserver(repository, settings, trips, router, CorridorPlanner()).also {
+    ) = ChargeStopsObserver(repository, vehicles, preferences, trips, router, CorridorPlanner()).also {
         it(ChargeStopsObserver.Params(fixes, energy))
     }
 
@@ -181,7 +184,7 @@ class ObserveChargeStopsTest {
         fixes.value = fix()
         val searched = observe.awaitDone()
 
-        RefreshChargeStopsInteractor(repository, settings)(RefreshChargeStopsInteractor.Params(searched.area)).getOrThrow()
+        RefreshChargeStopsInteractor(repository, preferences)(RefreshChargeStopsInteractor.Params(searched.area)).getOrThrow()
 
         assertEquals(1, repository.invalidations)
         assertEquals(listOf(searched.area, searched.area), repository.fetched.map { it.first })
@@ -200,7 +203,7 @@ class ObserveChargeStopsTest {
 
     @Test
     fun `with profile and charge reachability is classified`() = runBlocking<Unit> {
-        settings.setVehicle(vehicle)
+        vehicles.setVehicle(vehicle)
         energy.value = soc(80.0)
         val observe = observer(FakeRepository(listOf(site("a", 180.0, 10.0))))
 
@@ -214,7 +217,7 @@ class ObserveChargeStopsTest {
     /** Takes effect without waiting for the next location fix. */
     @Test
     fun `a change in charge recomputes at once`() = runBlocking<Unit> {
-        settings.setVehicle(vehicle)
+        vehicles.setVehicle(vehicle)
         energy.value = soc(80.0)
         // 25 km falls within the corridor whether the battery is full or nearly
         // empty: at 15% the radius shrinks to 30 km (minimum search radius 25 km x 1.2).
@@ -236,7 +239,7 @@ class ObserveChargeStopsTest {
         fixes.value = fix()
         observe.await { it.stops.singleOrNull()?.reachability == Reachability.UNKNOWN }
 
-        settings.setVehicle(vehicle)
+        vehicles.setVehicle(vehicle)
 
         observe.await { it.stops.singleOrNull()?.reachability == Reachability.REACHABLE }
     }
@@ -244,7 +247,7 @@ class ObserveChargeStopsTest {
     /** The minimum search radius applies below the reserve. */
     @Test
     fun `an empty battery does not make the list disappear`() = runBlocking<Unit> {
-        settings.setVehicle(vehicle)
+        vehicles.setVehicle(vehicle)
         energy.value = soc(2.0)
         val observe = observer(FakeRepository(listOf(site("a", 180.0, 5.0))))
 
@@ -256,7 +259,7 @@ class ObserveChargeStopsTest {
     /** The 1.2x margin: a band just beyond range is still searched and flagged. */
     @Test
     fun `just out of reach stays visible but far away does not`() = runBlocking<Unit> {
-        settings.setVehicle(vehicle)
+        vehicles.setVehicle(vehicle)
         // 20% - 10% = 10% of 77 kWh = 7.7 kWh -> just under 43 km of range,
         // so a search radius of about 51 km.
         energy.value = soc(20.0)
@@ -273,7 +276,7 @@ class ObserveChargeStopsTest {
 
     @Test
     fun `an active network filter fetches the selected networks`() = runBlocking<Unit> {
-        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
         val repository = FakeRepository(emptyList())
         val observe = observer(repository)
 
@@ -285,7 +288,7 @@ class ObserveChargeStopsTest {
 
     @Test
     fun `an inactive network filter fetches everything`() = runBlocking<Unit> {
-        settings.setNetworks(NetworkPreferences(onlyPreferred = false, preferredOperators = setOf("ionity")))
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = false, preferredOperators = setOf("ionity")))
         val repository = FakeRepository(emptyList())
         val observe = observer(repository)
 

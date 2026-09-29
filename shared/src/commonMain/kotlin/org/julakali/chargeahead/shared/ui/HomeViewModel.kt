@@ -16,7 +16,7 @@ import org.julakali.chargeahead.shared.domain.Reachability
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,7 +57,7 @@ class HomeViewModel(
     private val refreshChargerAvailability: RefreshChargerAvailabilityInteractor,
     private val observeLiveConnectors: LiveConnectorsObserver,
     private val refreshLiveConnectors: RefreshLiveConnectorsInteractor,
-    settings: SettingsStore,
+    preferences: PreferencesRepository,
     /** How long the button may spin before the map says something. */
     private val locationTimeoutMillis: Long = DEFAULT_LOCATION_TIMEOUT_MILLIS,
 ) : ViewModel() {
@@ -70,8 +70,8 @@ class HomeViewModel(
 
     val uiState: StateFlow<HomeUiState> = combine(
         feature.currentFix,
-        settings.chargeFilters,
-        settings.networks,
+        preferences.chargeFilters,
+        preferences.networks,
         map,
         observeLiveConnectors.flow,
         observeMapChargers.flow,
