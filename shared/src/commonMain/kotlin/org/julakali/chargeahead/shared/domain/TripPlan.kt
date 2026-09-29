@@ -1,5 +1,8 @@
 package org.julakali.chargeahead.shared.domain
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 
 /** One planned charging stop along a trip. */
@@ -65,4 +68,30 @@ interface TripPlanning {
         filters: ChargeFilters = ChargeFilters(),
         networks: NetworkPreferences = NetworkPreferences(),
     ): TripPlanResult
+}
+
+/** Assumed start charge when the driver never entered one. */
+const val DEFAULT_ASSUMED_SOC_PERCENT = 80.0
+
+/**
+ * Plans with the selected vehicle and the stored preferences. A null
+ * [startSocPercent] takes the stored manual level, and without one
+ * [DEFAULT_ASSUMED_SOC_PERCENT].
+ */
+suspend fun TripPlanning.planWithSettings(
+    settings: SettingsStore,
+    from: LatLon,
+    destination: Destination,
+    startSocPercent: Double?,
+): TripPlanResult {
+    val vehicle = settings.vehicle.first() ?: return TripPlanResult.NoVehicle
+    val soc = startSocPercent
+        ?: settings.manualSocPercent.first()
+        ?: DEFAULT_ASSUMED_SOC_PERCENT
+    val arrivalSoc = settings.arrivalSocPercent.first()
+    val filters = settings.chargeFilters.first()
+    val networks = settings.networks.first()
+    return withContext(Dispatchers.Default) {
+        plan(from, destination, vehicle, soc, arrivalSoc, filters, networks)
+    }
 }

@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -16,12 +17,10 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.TripPlanResult
-import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.invoke
-import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
-import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
-import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import kotlin.math.roundToInt
 
 data class CommittedTripUiState(
@@ -49,24 +48,21 @@ sealed interface CommittedTripEvent {
 class CommittedTripViewModel(
     private val settings: SettingsStore,
     private val feature: ChargeStopsFeature,
-    private val planTrip: PlanTripInteractor,
-    private val commitTrip: CommitTripInteractor,
+    private val replanCommittedTrip: ReplanCommittedTripInteractor,
     private val endTrip: EndTripInteractor,
-    private val updateManualSoc: UpdateManualSocInteractor,
-    private val tripStore: TripStore,
+    trips: TripRepository,
 ) : ViewModel() {
 
     private val selection = MutableStateFlow(SectionSelection())
-    private val planning = MutableStateFlow(false)
     private val socEditor = MutableStateFlow<String?>(null)
     private val events = MutableStateFlow<CommittedTripEvent?>(null)
 
     val event: StateFlow<CommittedTripEvent?> = events.asStateFlow()
 
     val uiState: StateFlow<CommittedTripUiState> = combine(
-        settings.committedTrip,
+        trips.state.map { it.committed },
         selection,
-        planning,
+        replanCommittedTrip.inProgress,
         feature.currentFix,
         socEditor,
     ) { trip, sectionSelection, isPlanning, fix, socInput ->
@@ -105,27 +101,12 @@ class CommittedTripViewModel(
 
     /** Plans the same destination from where we are now and keeps that instead of the stored plan. */
     fun replan(socPercent: Double? = null) {
-        val trip = uiState.value.trip ?: return
+        if (uiState.value.trip == null) return
         val from = feature.currentFix.value?.position ?: return
         selection.value = SectionSelection()
         viewModelScope.launch {
-            planning.value = true
-            try {
-                socPercent?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)) }
-                val result = planTrip(PlanTripInteractor.Params(from, trip.plan.destination, startSocPercent = socPercent)).getOrNull()
-                if (result is TripPlanResult.Planned) {
-                    // The planner took the stored level (the car's last reading, or what was typed).
-                    val plannedWith = socPercent ?: settings.manualSocPercent.first()
-                    commitTrip(CommitTripInteractor.Params(result.plan, plannedWith))
-                    // The plan is the committed one now, not something to look at on the home screen.
-                    tripStore.clear()
-                    events.value = CommittedTripEvent.Replanned
-                } else {
-                    events.value = CommittedTripEvent.NoRoute
-                }
-            } finally {
-                planning.value = false
-            }
+            val result = replanCommittedTrip(ReplanCommittedTripInteractor.Params(from, socPercent)).getOrNull()
+            events.value = if (result is TripPlanResult.Planned) CommittedTripEvent.Replanned else CommittedTripEvent.NoRoute
         }
     }
 

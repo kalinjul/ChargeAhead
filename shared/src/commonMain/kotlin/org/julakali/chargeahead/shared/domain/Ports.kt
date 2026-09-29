@@ -103,16 +103,10 @@ interface SettingsStore {
     /** How full the battery should still be at the destination. */
     val arrivalSocPercent: Flow<Double>
 
-    /** `null` means no destination set. */
-    val destination: Flow<Destination?>
-
     val networks: Flow<NetworkPreferences>
 
     /** Hard limits for the phone flows (planning, "charge now"). */
     val chargeFilters: Flow<ChargeFilters>
-
-    /** The trip sent to Maps last; `null` once ended. */
-    val committedTrip: Flow<CommittedTrip?>
 
     /** The outcome of the last attempt to read the charge level from the vehicle. */
     val socDiagnostics: Flow<SoCDiagnostics?>
@@ -134,11 +128,8 @@ interface SettingsStore {
 
     suspend fun setChargeFilters(filters: ChargeFilters)
 
-    suspend fun commitTrip(trip: CommittedTrip)
-    suspend fun clearCommittedTrip()
-
-    /** Sets the destination and adds it to the history. `null` clears the destination. */
-    suspend fun setDestination(destination: Destination?)
+    /** Puts [destination] first in the history. */
+    suspend fun addRecentDestination(destination: Destination)
 
     suspend fun setNetworks(preferences: NetworkPreferences)
 

@@ -326,13 +326,19 @@ interface SettingsStore {
     val vehicles: Flow<List<VehicleProfile>>      // the garage; setVehicle selects AND adds
     val manualSocPercent: Flow<Double?>
     val chargeFilters: Flow<ChargeFilters>        // phone flows: min power, max distance
-    val committedTrip: Flow<CommittedTrip?>       // the trip last sent to Maps, kept until ended
+    val recentDestinations: Flow<List<Destination>>
     suspend fun setVehicle(profile: VehicleProfile?)
     suspend fun removeVehicle(displayName: String)
     suspend fun setManualSocPercent(socPercent: Double?)
     suspend fun setChargeFilters(filters: ChargeFilters)
-    suspend fun commitTrip(trip: CommittedTrip); suspend fun clearCommittedTrip()
+    suspend fun addRecentDestination(destination: Destination)
 }
+
+// Destination, planned trip (on the map) and committed trip (sent to Maps),
+// one per process. Every transition is one write of the whole state, own
+// DataStore file; only the trip interactors call update().
+data class TripState(val destination: Destination?, val planned: TripPlan?, val committed: CommittedTrip?)
+class TripRepository(storage: TripStorage) { val state: StateFlow<TripState>; suspend fun restore() }
 
 // Business logic lives in domain.usecases, Koin factories in
 // chargeStopsModule; ViewModels and car screens only wire them up. Swift
@@ -346,15 +352,17 @@ class RefreshChargerAvailabilityInteractor : Interactor<Params, Unit>
 class ChargeNowObserver : SubjectInteractor<Params, ChargeNowResult?> // best 3, nearest first; relax ladder: power → networks → distance
 class RefreshChargeNowInteractor : Interactor<Params, Unit>
 class DestinationSearchObserver : SubjectInteractor<Params, DestinationSearch>
-class PlanTripInteractor : Interactor<PlanTripInteractor.Params, TripPlanResult>        // puts the plan into TripStore
-class UpdateArrivalSocInteractor : Interactor<Params, TripPlanResult?>        // stores the level, re-plans the stored trip
+class PlanTripInteractor : Interactor<PlanTripInteractor.Params, TripPlanResult>        // sets destination and planned trip
+class ReplanWithArrivalSocInteractor : Interactor<Params, TripPlanResult?>    // stores the level, re-plans the planned trip
 class CommitTripInteractor : Interactor<Params, CommittedTrip>      // "An Maps senden" makes the plan the active route
+class ReplanCommittedTripInteractor : Interactor<Params, TripPlanResult?>     // plans the active route anew and commits it
+class DismissPlannedTripInteractor : Interactor<Unit, Unit>
 class EndTripInteractor : Interactor<Unit, Unit>
 class RefreshNetworksInteractor : Interactor<Unit, Unit>
 ```
 
 **The route is computed once per destination, not once per location
-update.** A planned trip brings its route along (`TripStore`), so
+update.** A planned or committed trip brings its route along (`TripRepository`), so
 `ChargeStopsObserver` only asks the `RouteEngine` itself when there is no
 plan to the destination. `PolylineArea.aheadOf()` trims it at the front as the drive
 progresses — the route itself doesn't change during the drive, only the
@@ -390,8 +398,9 @@ data class ChargeStopsState(
 )
 
 // The data graph (Koin), declared once for both platforms. Platform modules
-// supply LocationSource, DatabaseFactory, SettingsStore and BackendConfig; one
-// HttpClient, database and repository per process, shared by phone and car.
+// supply LocationSource, DatabaseFactory, SettingsStore, TripStorage and
+// BackendConfig; one HttpClient, database and repository per process, shared
+// by phone and car.
 fun chargeStopsModule(): Module
 data class BackendConfig(baseUrl: String, token: String)
 // A feature the caller owns and closes — the car session's, with the car's battery.

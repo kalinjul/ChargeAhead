@@ -25,9 +25,10 @@ import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
-import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.DismissPlannedTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
@@ -52,7 +53,7 @@ class TripViewModelTest {
     private val hamburg = LatLon(53.55, 9.99)
     private val muenchen = Destination("München", LatLon(48.137, 11.575))
     private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-    private val store = TripStore()
+    private val trips = TripRepository()
     private var plannedSoc: Double? = null
     private var plans = 0
 
@@ -96,14 +97,15 @@ class TripViewModelTest {
     )
 
     private fun viewModel(feature: ChargeStopsFeature): TripViewModel {
-        val planTrip = PlanTripInteractor(planner, settings, store)
+        val planTrip = PlanTripInteractor(planner, settings, trips)
         return TripViewModel(
             feature = feature,
             planTrip = planTrip,
-            replanWithArrivalSoc = ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(settings), store, planTrip),
-            commitTrip = CommitTripInteractor(settings) { 0L },
+            replanWithArrivalSoc = ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(settings), trips, planTrip),
+            commitTrip = CommitTripInteractor(trips) { 0L },
             updateManualSoc = UpdateManualSocInteractor(settings),
-            tripStore = store,
+            dismissPlannedTrip = DismissPlannedTripInteractor(trips),
+            trips = trips,
             settings = settings,
         )
     }

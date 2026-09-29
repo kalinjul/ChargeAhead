@@ -2,13 +2,13 @@ package org.julakali.chargeahead.shared.domain.usecases
 
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.Interactor
-import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripPlan
+import org.julakali.chargeahead.shared.domain.TripRepository
 
-/** Makes [Params.plan] the trip the driver is on; the previous one, if any, is replaced. */
+/** Makes [Params.plan] the trip the driver is on and takes it off the map; the previous one is replaced. */
 class CommitTripInteractor(
-    private val settings: SettingsStore,
+    private val trips: TripRepository,
     private val time: TimeProvider,
 ) : Interactor<CommitTripInteractor.Params, CommittedTrip>() {
 
@@ -16,7 +16,7 @@ class CommitTripInteractor(
 
     override suspend fun doWork(params: Params): CommittedTrip {
         val trip = CommittedTrip(params.plan, params.startSocPercent, time.nowMillis())
-        settings.commitTrip(trip)
+        trips.update { it.committed(trip) }
         return trip
     }
 }

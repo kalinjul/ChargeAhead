@@ -1,6 +1,8 @@
 package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.data.CoreLocationSource
+import org.julakali.chargeahead.shared.data.DataStoreTripStorage
+import org.julakali.chargeahead.shared.data.LegacyTripSource
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.Destination
@@ -11,8 +13,10 @@ import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
+import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
+import org.julakali.chargeahead.shared.settings.createTripDataStore
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.julakali.chargeahead.shared.ui.CorridorViewModel
@@ -52,6 +56,9 @@ private fun graph(backend: BackendConfig, settingsStore: SettingsStore): Koin =
         modules(
             module {
                 single { settingsStore }
+                single<TripStorage> {
+                    DataStoreTripStorage(createTripDataStore(), legacy = settingsStore as? LegacyTripSource)
+                }
                 single<LocationSource> { CoreLocationSource() }
                 single { DatabaseFactory() }
                 single { backend }

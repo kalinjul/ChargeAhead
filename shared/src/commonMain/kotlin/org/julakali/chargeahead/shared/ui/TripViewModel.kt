@@ -13,7 +13,9 @@ import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.reportedByCar
-import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.invoke
+import org.julakali.chargeahead.shared.domain.usecases.DismissPlannedTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,6 +23,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -127,7 +130,8 @@ class TripViewModel(
     private val replanWithArrivalSoc: ReplanWithArrivalSocInteractor,
     private val commitTrip: CommitTripInteractor,
     private val updateManualSoc: UpdateManualSocInteractor,
-    private val tripStore: TripStore,
+    private val dismissPlannedTrip: DismissPlannedTripInteractor,
+    private val trips: TripRepository,
     private val settings: SettingsStore,
 ) : ViewModel() {
 
@@ -141,7 +145,7 @@ class TripViewModel(
     val event: StateFlow<TripEvent?> = events.asStateFlow()
 
     val uiState: StateFlow<TripUiState> = combine(
-        tripStore.plan,
+        trips.state.map { it.planned },
         isPlanning,
         selection,
         socEditor,
@@ -173,9 +177,7 @@ class TripViewModel(
     fun plan(destination: Destination, socPercent: Double? = null) {
         val from = feature.currentFix.value?.position ?: return
         // A new plan starts with a clean selection and closed editors.
-        selection.value = SectionSelection()
-        socEditor.value = null
-        arrivalSocEditor.value = null
+        resetEditing()
         viewModelScope.launch {
             // Persisted alongside, so the plan starts at once.
             launch { socPercent?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)) } }
@@ -187,10 +189,14 @@ class TripViewModel(
 
     /** The driver dismissed the trip; the map goes back to browsing. */
     fun clear() {
+        resetEditing()
+        viewModelScope.launch { dismissPlannedTrip() }
+    }
+
+    private fun resetEditing() {
         selection.value = SectionSelection()
         socEditor.value = null
         arrivalSocEditor.value = null
-        viewModelScope.launch { tripStore.clear() }
     }
 
     private fun onPlanned(result: TripPlanResult) {
@@ -210,7 +216,7 @@ class TripViewModel(
         val current = uiState.value as? TripUiState.Planned ?: return
         viewModelScope.launch {
             commitTrip(CommitTripInteractor.Params(current.plan, current.startSocPercent)).onSuccess {
-                clear()
+                resetEditing()
                 events.value = TripEvent.TripCommitted
             }
         }
@@ -236,7 +242,7 @@ class TripViewModel(
      * where we are; otherwise ask for the level first, and the confirm plans.
      */
     fun onReplanRequested() {
-        val destination = tripStore.plan.value?.destination ?: return
+        val destination = trips.state.value.planned?.destination ?: return
         if (feature.currentEnergy.value.reportedByCar) {
             plan(destination)
         } else {
@@ -257,7 +263,7 @@ class TripViewModel(
     /** Re-plans the same destination from the charge level just entered. */
     fun onStartSocConfirmed() {
         val socPercent = socEditor.value?.toIntOrNull()?.takeIf { it in 1..100 } ?: return
-        val destination = tripStore.plan.value?.destination ?: return
+        val destination = trips.state.value.planned?.destination ?: return
         socEditor.value = null
         plan(destination, socPercent.toDouble())
     }

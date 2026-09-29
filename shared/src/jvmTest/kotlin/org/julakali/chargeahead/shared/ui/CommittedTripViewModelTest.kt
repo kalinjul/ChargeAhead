@@ -27,11 +27,10 @@ import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
-import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
-import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
-import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
@@ -55,7 +54,7 @@ class CommittedTripViewModelTest {
     private val hannover = LatLon(52.37, 9.73)
     private val muenchen = Destination("München", LatLon(48.137, 11.575))
     private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
-    private val store = TripStore()
+    private val trips = TripRepository()
     private var plannedFrom: LatLon? = null
     private var plannedSoc: Double? = null
 
@@ -103,18 +102,21 @@ class CommittedTripViewModelTest {
     private fun viewModel(feature: ChargeStopsFeature = this.feature) = CommittedTripViewModel(
         settings = settings,
         feature = feature,
-        planTrip = PlanTripInteractor(planner, settings, store),
-        commitTrip = CommitTripInteractor(settings) { 42L },
-        endTrip = EndTripInteractor(settings),
-        updateManualSoc = UpdateManualSocInteractor(settings),
-        tripStore = store,
+        replanCommittedTrip = ReplanCommittedTripInteractor(
+            planner,
+            settings,
+            trips,
+            UpdateManualSocInteractor(settings),
+        ) { 42L },
+        endTrip = EndTripInteractor(trips),
+        trips = trips,
     )
 
     private fun commitFromHamburg() = runBlocking {
         settings.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))
         // The level the trip was sent with, and still the stored one when it is planned again.
         settings.setManualSocPercent(60.0)
-        settings.commitTrip(CommittedTrip(plan(hamburg), startSocPercent = 60.0, committedAtEpochMillis = 1L))
+        trips.update { it.committed(CommittedTrip(plan(hamburg), startSocPercent = 60.0, committedAtEpochMillis = 1L)) }
     }
 
     @Test
@@ -137,11 +139,11 @@ class CommittedTripViewModelTest {
 
         assertEquals(CommittedTripEvent.Replanned, event)
         assertEquals(hannover, plannedFrom)
-        val stored = settings.committedTrip.first()!!
+        val stored = trips.state.value.committed!!
         assertEquals(plan(hannover), stored.plan)
         assertEquals(60.0, stored.startSocPercent)
         assertEquals(42L, stored.committedAtEpochMillis)
-        assertNull(store.plan.value, "the re-plan is committed, not left on the home screen")
+        assertNull(trips.state.value.planned, "the re-plan is committed, not left on the home screen")
     }
 
     @Test
@@ -152,7 +154,7 @@ class CommittedTripViewModelTest {
 
         viewModel.endTrip()
 
-        assertNull(settings.committedTrip.first())
+        assertNull(trips.state.value.committed)
         assertEquals(CommittedTripEvent.Ended, viewModel.event.value)
     }
 
@@ -201,7 +203,7 @@ class CommittedTripViewModelTest {
 
         assertEquals(35.0, plannedSoc)
         assertEquals(35.0, settings.manualSocPercent.first())
-        assertEquals(35.0, settings.committedTrip.first()!!.startSocPercent)
+        assertEquals(35.0, trips.state.value.committed!!.startSocPercent)
         assertNull(viewModel.uiState.value.socInput)
     }
 
@@ -236,7 +238,7 @@ class CommittedTripViewModelTest {
         withTimeout(5_000) { viewModel.event.first { it != null } }
 
         assertNull(viewModel.uiState.value.socInput)
-        assertEquals(42.0, settings.committedTrip.first()!!.startSocPercent)
+        assertEquals(42.0, trips.state.value.committed!!.startSocPercent)
     }
 
     @Test
@@ -248,6 +250,6 @@ class CommittedTripViewModelTest {
         assertEquals(false, state.canReplan)
         viewModel.replan()
         assertNull(viewModel.event.value)
-        assertEquals(plan(hamburg), settings.committedTrip.first()!!.plan)
+        assertEquals(plan(hamburg), trips.state.value.committed!!.plan)
     }
 }

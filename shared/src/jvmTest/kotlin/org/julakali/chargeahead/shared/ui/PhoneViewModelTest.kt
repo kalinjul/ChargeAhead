@@ -42,7 +42,7 @@ import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.TimeProvider
-import org.julakali.chargeahead.shared.domain.TripStore
+import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import kotlinx.coroutines.Dispatchers
@@ -293,7 +293,7 @@ class PhoneViewModelTest {
         val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
         val viewModel = CorridorViewModel(
             feature,
-            ChargeStopsObserver(repository, settings, TripStore(), NoRoute, CorridorPlanner()),
+            ChargeStopsObserver(repository, settings, TripRepository(), NoRoute, CorridorPlanner()),
             RefreshChargeStopsInteractor(repository, settings),
         )
 

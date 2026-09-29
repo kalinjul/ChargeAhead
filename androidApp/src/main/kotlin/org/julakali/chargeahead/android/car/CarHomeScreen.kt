@@ -16,7 +16,10 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.TripRepository
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** The car's start screen: enter a destination, charge right now, or open the active route. */
@@ -24,6 +27,7 @@ class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
     private val settings: SettingsStore,
+    private val trips: TripRepository,
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
@@ -38,7 +42,7 @@ class CarHomeScreen(
 
     init {
         lifecycleScope.launch {
-            settings.committedTrip.collect { updated ->
+            trips.state.map { it.committed }.distinctUntilChanged().collect { updated ->
                 committed = updated
                 invalidate()
             }

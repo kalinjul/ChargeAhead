@@ -13,14 +13,9 @@ import platform.Foundation.NSUserDomainMask
  */
 fun createSettingsDataStore(
     defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
-): DataStore<Preferences> {
-    val documents = NSSearchPathForDirectoriesInDomains(
-        NSDocumentDirectory,
-        NSUserDomainMask,
-        true,
-    ).first() as String
-    return createSettingsDataStore(
-        path = "$documents/$SETTINGS_DATASTORE_FILE",
+): DataStore<Preferences> =
+    createSettingsDataStore(
+        path = "${documentsDirectory()}/$SETTINGS_DATASTORE_FILE",
         migrations = listOf(
             KeyValueMigration(
                 keys = PersistentSettingsStore.ALL_KEYS,
@@ -29,4 +24,10 @@ fun createSettingsDataStore(
             ),
         ),
     )
-}
+
+/** The trip state in the app's documents directory, apart from the settings. */
+fun createTripDataStore(): DataStore<Preferences> =
+    createSettingsDataStore(path = "${documentsDirectory()}/$TRIP_DATASTORE_FILE")
+
+private fun documentsDirectory(): String =
+    NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).first() as String

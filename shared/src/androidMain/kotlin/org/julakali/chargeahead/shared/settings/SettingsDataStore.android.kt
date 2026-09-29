@@ -17,4 +17,10 @@ fun createSettingsDataStore(context: Context): DataStore<Preferences> {
     )
 }
 
+/** The trip state in the app's files directory, apart from the settings. */
+fun createTripDataStore(context: Context): DataStore<Preferences> =
+    createSettingsDataStore(
+        path = context.applicationContext.filesDir.resolve("datastore/$TRIP_DATASTORE_FILE").absolutePath,
+    )
+
 private const val LEGACY_SHARED_PREFERENCES = "de.autoapp.settings"
