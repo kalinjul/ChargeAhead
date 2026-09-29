@@ -338,7 +338,7 @@ interface SettingsStore {
 // chargeStopsModule; ViewModels and car screens only wire them up. Swift
 // goes through the bridges in iosMain. Observers read from a store; a
 // Refresh…Interactor only refills that store.
-class ChargeStopsObserver : SubjectInteractor<Params, ChargeStops?>   // the corridor list, car and iOS
+class ChargeStopsObserver : SubjectInteractor<Params, ChargeStops?>   // the corridor list: iOS only, being phased out (#152, #153)
 class RefreshChargeStopsInteractor : Interactor<Params, Unit>
 class MapChargersObserver : SubjectInteractor<Params, List<MapCharger>> // phone map, with live availability
 class RefreshMapChargersInteractor : Interactor<Params, Unit>
@@ -382,7 +382,9 @@ class ChargeStopsFeature(locationSource, socSource, ...) {
 
 // The corridor list is ChargeStopsObserver (domain) over the feature's flows;
 // CorridorViewModel turns it into this state for iOS. List AND status. Flat
-// instead of sealed, so the type crosses to Swift losslessly.
+// instead of sealed, so the type crosses to Swift losslessly. Being phased
+// out: CarPlay follows Android Auto's screens (#152), the iOS map moves to
+// MapChargersObserver (#153); don't build new features on it.
 data class ChargeStopsState(
     val stops: List<ChargeStop>,
     val phase: Phase,          // WAITING_FOR_LOCATION | LOADING | READY | FAILED
@@ -502,11 +504,14 @@ themselves. Every number shown in the car comes from `ChargeStopFormatter`.
   carry their own title (`ActionsConstraints.ACTIONS_CONSTRAINTS_MULTI_HEADER`).
   A violation only throws at runtime.
 - An empty list is never the outcome. If there's nothing to show, a
-  `MessageTemplate` says why — the states for that live in
-  `ChargeStopsState`.
+  `MessageTemplate` says why, from the screen's own state (on the route
+  screen, the failed `TripPlanResult`).
 
 **CarPlay**
 
+- CarPlay offers the same screens as Android Auto: home, destination
+  search, route, charge now, charge level. The single corridor list it shows
+  today is being replaced (#152); new car features go to both platforms.
 - The entitlement is `com.apple.developer.carplay-charging`. Without
   approval from Apple, no build is possible; the code is still written in
   full.
