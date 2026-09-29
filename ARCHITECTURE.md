@@ -196,7 +196,7 @@ flowchart TD
         PH["Phone UI<br/>Compose / SwiftUI"]
     end
     subgraph shared["shared (Kotlin Multiplatform)"]
-        VM["ChargeStopsFeature · ChargeStopsObserver<br/>location, charge, corridor list"]
+        VM["ChargeStopsFeature · use cases<br/>location, charge, trips, chargers"]
         CORE["core: range · corridor · dedup"]
         DOM["domain: model + ports"]
         DATA["data: sources + cache"]
@@ -382,6 +382,9 @@ looks arbitrarily empty at a low charge level and the driver loses trust in
 the app. They sink to the bottom.
 
 ### 5.3 Corridor (M1)
+
+Only the corridor *list* is being phased out (section 7). `SectorArea`
+itself stays: "Jetzt laden" searches with it too (`ChargeNowArea`).
 
 1. Heading from the GPS fix; if it's unreliable (stationary), derive it from
    the last fixes.
@@ -583,8 +586,23 @@ M3 behind the same interface (`SiteRepository`).
 
 ## 7. Car UI
 
-Both platforms get the same source of state: a `StateFlow<ChargeStopList>`
-from the shared module. The platform layer does nothing but translate.
+Both car surfaces offer the same screens, fed by the same shared use cases;
+the platform layer does nothing but translate.
+
+| Screen | Android Auto | CarPlay (target, #152) |
+|---|---|---|
+| Home: destination, "Jetzt laden", active route | `CarHomeScreen`, `ListTemplate` | `CPListTemplate` |
+| Destination search with recents | `DestinationSearchScreen`, `SearchTemplate` | `CPSearchTemplate` |
+| Route: planned stops, tap hands over to navigation | `RouteScreen`, `ListTemplate` | `CPListTemplate` |
+| Charge now: the best three nearby | `ChargeNowScreen`, `ListTemplate` | `CPListTemplate` |
+| Manual charge level | `SoCScreen` | `CPListTemplate` |
+
+**The corridor list is being phased out.** It was the car's only screen in
+M1: stations in a sector ahead, without a destination. Android Auto replaced
+it with "Jetzt laden" for the no-destination case and the route screen for
+the rest. CarPlay and the iOS phone map still run on it
+(`ChargeStopsObserver` → `CorridorViewModel` → `ChargeStopsWatcher`) until
+#152 and #153 move them over; then it is deleted. No new feature builds on it.
 
 **Don't forget package visibility.** Since Android 11, an app only sees
 other apps if it declares them in the manifest under `<queries>`. Without
@@ -593,15 +611,13 @@ fails with `ActivityNotFoundException` — even if Google Maps is installed.
 Verified on the emulator (`AppsFilter: … BLOCKED`); the bug isn't visible in
 the code, only in the log.
 
-**Android Auto** — `ListTemplate` with one `Row` per stop: title = name +
-operator, text 1 = `12 km · CCS 150 kW`, text 2 = arrival SoC. Reachability
-via icon tint (`CarColor.GREEN` / `YELLOW` / `RED`). Row count from
-`ConstraintManager.getContentLimit(CONTENT_LIMIT_TYPE_LIST)`. Tap →
-`PaneTemplate` with details and an `Action` "Start navigation" via
+**Android Auto** — list rows come from `ChargeStopFormatter`. Row count from
+`ConstraintManager.getContentLimit(CONTENT_LIMIT_TYPE_LIST)`. A tap on a stop
+hands it to the navigation app via
 `CarContext.startCarApp(Intent(ACTION_NAVIGATE, geo:…))`.
 
-**CarPlay** — `CPListTemplate` with `CPListItem`; same level of detail.
-Navigation via `MKMapItem.openInMaps` or `CPTemplateApplicationScene`.
+**CarPlay** — the same rows as `CPListItem`, the same formatter. Navigation
+via `MKMapItem.openInMaps`.
 
 Design rule for both: **no information that needs two glances.** Distance
 and reachability must be on the first line.
