@@ -14,25 +14,20 @@ import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
-import org.julakali.chargeahead.shared.domain.CommittedTrip
-import org.julakali.chargeahead.shared.domain.SettingsStore
-import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.ui.car.CarViewModels
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 /** The car's start screen: enter a destination, charge right now, or open the active route. */
 class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
-    private val settings: SettingsStore,
-    private val trips: TripRepository,
+    private val viewModels: CarViewModels,
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
-    // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var committed: CommittedTrip? = null
+    private val viewModel = screenViewModel { viewModels.home() }
     private val fineLocation = permissions.granted(Manifest.permission.ACCESS_FINE_LOCATION)
     private val coarseLocation = permissions.granted(Manifest.permission.ACCESS_COARSE_LOCATION)
 
@@ -41,12 +36,8 @@ class CarHomeScreen(
     private var permissionRequestPending = false
 
     init {
-        lifecycleScope.launch {
-            trips.state.map { it.committed }.distinctUntilChanged().collect { updated ->
-                committed = updated
-                invalidate()
-            }
-        }
+        // onGetTemplate() is synchronous; changes are picked up via invalidate().
+        lifecycleScope.launch { viewModel.uiState.collect { invalidate() } }
         lifecycleScope.launch {
             combine(fineLocation, coarseLocation) { fine, coarse -> fine || coarse }
                 .collect { granted ->
@@ -65,7 +56,7 @@ class CarHomeScreen(
         itemList.addItem(searchRow())
         itemList.addItem(chargeNowRow())
 
-        committed?.let { itemList.addItem(activeRouteRow(it)) }
+        viewModel.uiState.value.activeDestination?.let { itemList.addItem(activeRouteRow(it)) }
 
         return ListTemplate.Builder()
             .setSingleList(itemList.build())
@@ -80,7 +71,7 @@ class CarHomeScreen(
         .addEndHeaderAction(
             Action.Builder()
                 .setIcon(icon(R.drawable.ic_battery))
-                .setOnClickListener { screenManager.push(SoCScreen(carContext, settings, permissions)) }
+                .setOnClickListener { screenManager.push(SoCScreen(carContext, viewModels, permissions)) }
                 .build(),
         )
         .build()
@@ -92,23 +83,23 @@ class CarHomeScreen(
         .setTitle(carContext.getString(R.string.car_home_enter_destination))
         .setImage(icon(R.drawable.ic_search), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, feature, settings)) }
+        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, viewModels)) }
         .build()
 
     private fun chargeNowRow(): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
         .setImage(icon(R.drawable.ic_bolt), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, viewModels)) }
         .build()
 
-    private fun activeRouteRow(trip: CommittedTrip): Row = Row.Builder()
+    private fun activeRouteRow(destination: Destination): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_home_active_route))
-        .addText(trip.plan.destination.name)
+        .addText(destination.name)
         .setImage(icon(R.drawable.ic_route), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
         .setOnClickListener {
-            screenManager.push(RouteScreen(carContext, feature, trip.plan.destination, activeRoute = true))
+            screenManager.push(RouteScreen(carContext, viewModels, destination, activeRoute = true))
         }
         .build()
 

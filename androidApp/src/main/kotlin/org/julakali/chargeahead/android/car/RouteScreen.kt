@@ -20,109 +20,52 @@ import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.PhoneUiVisibility
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
-import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.core.MapsHandoff
+import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
-import org.julakali.chargeahead.shared.domain.Destination
-import org.julakali.chargeahead.shared.domain.Fix
-import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
-import org.julakali.chargeahead.shared.domain.TripRepository
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
+import org.julakali.chargeahead.shared.ui.car.CarRouteUiState
+import org.julakali.chargeahead.shared.ui.car.CarViewModels
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 
 /**
  * The committed route: its planned charging stops, numbered like an
  * itinerary. Tapping a stop hands it straight to the navigation app.
- *
- * Plans with the live charge state.
  */
 class RouteScreen(
     carContext: CarContext,
-    private val feature: ChargeStopsFeature,
+    private val viewModels: CarViewModels,
     private val destination: Destination,
     private val title: String = destination.name,
     /** Show the active route as the phone keeps it, instead of planning here; leaves when it ends. */
-    private val activeRoute: Boolean = false,
-) : Screen(carContext), KoinComponent {
+    activeRoute: Boolean = false,
+) : Screen(carContext) {
 
-    private val planTrip: PlanTripInteractor = get()
-    private val trips: TripRepository = get()
-
-    // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var plan: TripPlan? = null
-    private var planning = false
-
-    /** Why the last planning attempt found no plan; `null` after a success. */
-    private var failure: TripPlanResult? = null
+    private val viewModel = screenViewModel { viewModels.route(destination, activeRoute) }
 
     init {
-        if (activeRoute) {
-            lifecycleScope.launch {
-                trips.state.map { it.committed }.distinctUntilChanged().collect { committed ->
-                    if (committed == null) {
-                        screenManager.pop()
-                    } else {
-                        plan = committed.plan
-                        invalidate()
-                    }
-                }
-            }
-        } else {
-            lifecycleScope.launch {
-                // Also a trip the phone plans to the same destination.
-                trips.state.map { it.planned }.distinctUntilChanged().collect { stored ->
-                    plan = stored?.takeIf { it.destination.position == destination.position }
-                    invalidate()
-                }
-            }
-        }
+        // onGetTemplate() is synchronous; changes are picked up via invalidate().
         lifecycleScope.launch {
-            planTrip.inProgress.collect {
-                planning = it
-                invalidate()
-            }
-        }
-        if (!activeRoute) {
-            lifecycleScope.launch {
-                plan(feature.currentFix.filterNotNull().first())
+            viewModel.uiState.collect { state ->
+                if (state == CarRouteUiState.Ended) screenManager.pop() else invalidate()
             }
         }
     }
 
-    private suspend fun plan(fix: Fix) {
-        val result = planTrip(
-            PlanTripInteractor.Params(
-                from = fix.position,
-                destination = destination,
-                startSocPercent = feature.currentEnergy.value?.socPercent,
-            ),
-        ).getOrDefault(TripPlanResult.NoRoute)
-        failure = result.takeUnless { it is TripPlanResult.Planned }
-        invalidate()
-    }
-
-    override fun onGetTemplate(): Template {
-        val current = plan
-        val failed = failure
-        return when {
-            planning -> loadingTemplate()
-            failed != null -> failureTemplate(failed)
-            current == null -> loadingTemplate()
-            current.stops.isEmpty() -> directTemplate()
-            else -> stopsTemplate(current)
-        }
+    override fun onGetTemplate(): Template = when (val state = viewModel.uiState.value) {
+        is CarRouteUiState.Loading -> loadingTemplate(state.waitingForLocation)
+        // Leaving already.
+        CarRouteUiState.Ended -> loadingTemplate(waitingForLocation = false)
+        is CarRouteUiState.Failed -> failureTemplate(state.result)
+        is CarRouteUiState.Ready ->
+            if (state.plan.stops.isEmpty()) directTemplate() else stopsTemplate(state.plan)
     }
 
     private fun failureTemplate(failure: TripPlanResult): Template = when (failure) {
-        is TripPlanResult.Planned -> loadingTemplate()
+        is TripPlanResult.Planned -> loadingTemplate(waitingForLocation = false)
         TripPlanResult.NoVehicle -> messageTemplate(carContext.getString(R.string.car_route_no_vehicle))
         TripPlanResult.NoRoute -> messageTemplate(carContext.getString(R.string.car_route_no_route))
         is TripPlanResult.NoChargerInReach -> messageTemplate(
@@ -133,8 +76,8 @@ class RouteScreen(
         )
     }
 
-    private fun loadingTemplate(): Template {
-        val waitingText = if (feature.currentFix.value == null) {
+    private fun loadingTemplate(waitingForLocation: Boolean): Template {
+        val waitingText = if (waitingForLocation) {
             R.string.car_waiting_for_location
         } else {
             R.string.car_route_planning
@@ -247,7 +190,7 @@ class RouteScreen(
     private fun chargeNowFab(): Action = Action.Builder()
         .setIcon(icon(R.drawable.ic_bolt))
         .setBackgroundColor(CarColor.PRIMARY)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, viewModels)) }
         .build()
 
     /** Destination in reach without charging: no list to show, just the handoff. */
@@ -272,7 +215,7 @@ class RouteScreen(
     /** Body actions may carry titles — unlike the icon-only FAB. */
     private fun chargeNowTitledAction(): Action = Action.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, feature)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, viewModels)) }
         .build()
 
     private fun header(withRefresh: Boolean, subtitle: String? = null): Header {
@@ -285,9 +228,7 @@ class RouteScreen(
             builder.addEndHeaderAction(
                 Action.Builder()
                     .setIcon(icon(R.drawable.ic_refresh))
-                    .setOnClickListener {
-                        lifecycleScope.launch { feature.currentFix.value?.let { plan(it) } }
-                    }
+                    .setOnClickListener(viewModel::onRefresh)
                     .build(),
             )
         }

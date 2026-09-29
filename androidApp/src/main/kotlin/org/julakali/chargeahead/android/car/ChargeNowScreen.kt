@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.android.car
 
+import androidx.annotation.StringRes
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
@@ -13,18 +14,12 @@ import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
-import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.RelaxedFilter
-import org.julakali.chargeahead.shared.domain.Fix
-import org.julakali.chargeahead.shared.domain.usecases.ChargeNowObserver
-import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeNowInteractor
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
+import org.julakali.chargeahead.shared.ui.ChargeNowUiState
+import org.julakali.chargeahead.shared.ui.car.CarViewModels
 import kotlinx.coroutines.launch
-import org.koin.core.component.KoinComponent
-import org.koin.core.component.get
 
 /**
  * The best fast chargers around the current position, cheap and near first.
@@ -32,43 +27,22 @@ import org.koin.core.component.get
  */
 class ChargeNowScreen(
     carContext: CarContext,
-    private val feature: ChargeStopsFeature,
-) : Screen(carContext), KoinComponent {
+    viewModels: CarViewModels,
+) : Screen(carContext) {
 
-    private val observeChargeNow: ChargeNowObserver = get()
-    private val refreshChargeNow: RefreshChargeNowInteractor = get()
-
-    // onGetTemplate() is synchronous; changes are picked up via invalidate().
-    private var result: ChargeNowResult? = null
-    private var refreshing = false
+    private val viewModel = screenViewModel { viewModels.chargeNow() }
 
     init {
-        lifecycleScope.launch {
-            observeChargeNow.flow.collect {
-                result = it
-                invalidate()
-            }
-        }
-        lifecycleScope.launch {
-            refreshChargeNow.inProgress.collect {
-                refreshing = it
-                invalidate()
-            }
-        }
-        lifecycleScope.launch {
-            load(feature.currentFix.filterNotNull().first())
-        }
-    }
-
-    private suspend fun load(fix: Fix) {
-        observeChargeNow(ChargeNowObserver.Params(fix.position))
-        // A failed refill leaves the stored sites to rank.
-        refreshChargeNow(RefreshChargeNowInteractor.Params(fix.position))
+        // onGetTemplate() is synchronous; changes are picked up via invalidate().
+        lifecycleScope.launch { viewModel.uiState.collect { invalidate() } }
     }
 
     override fun onGetTemplate(): Template {
-        // Nothing stored yet: wait for the refill rather than say "nothing nearby".
-        val current = result?.takeUnless { it.isEmpty && refreshing } ?: return loadingTemplate()
+        val current = when (val state = viewModel.uiState.value) {
+            ChargeNowUiState.NoPosition -> return loadingTemplate(R.string.car_waiting_for_location)
+            ChargeNowUiState.Loading -> return loadingTemplate(R.string.car_now_loading)
+            is ChargeNowUiState.Ready -> state.result
+        }
 
         val candidates = current.candidates + current.more
         if (candidates.isEmpty()) {
@@ -95,17 +69,11 @@ class ChargeNowScreen(
             .build()
     }
 
-    private fun loadingTemplate(): Template {
-        val waitingText = if (feature.currentFix.value == null) {
-            R.string.car_waiting_for_location
-        } else {
-            R.string.car_now_loading
-        }
-        return ListTemplate.Builder()
+    private fun loadingTemplate(@StringRes waitingText: Int): Template =
+        ListTemplate.Builder()
             .setLoading(true)
             .setHeader(header(withRefresh = false, subtitle = carContext.getString(waitingText)))
             .build()
-    }
 
     private fun candidateRow(candidate: ChargeNowCandidate): Row = Row.Builder()
         .setTitle(candidate.site.name)
@@ -142,9 +110,7 @@ class ChargeNowScreen(
             builder.addEndHeaderAction(
                 Action.Builder()
                     .setIcon(icon(R.drawable.ic_refresh))
-                    .setOnClickListener {
-                        lifecycleScope.launch { feature.currentFix.value?.let { load(it) } }
-                    }
+                    .setOnClickListener(viewModel::onRefresh)
                     .build(),
             )
         }

@@ -34,6 +34,30 @@ A `commonMain` file that imports anything from `android.*` or
 `androidx.compose.*` is in the wrong module. `androidx.lifecycle.ViewModel`
 is fine — that one is multiplatform.
 
+## Car screens
+
+Android Auto screens follow the same rules with ViewModels in
+`shared/ui/car` (`CarRouteViewModel`, …). A car `Screen` is no
+`ViewModelStoreOwner`, so there is no `koinViewModel()`:
+
+```kotlin
+class ExampleCarScreen(carContext: CarContext, viewModels: CarViewModels) : Screen(carContext) {
+    private val viewModel = screenViewModel { viewModels.example() }   // cleared in onDestroy
+
+    init {
+        lifecycleScope.launch { viewModel.uiState.collect { invalidate() } }
+    }
+
+    override fun onGetTemplate(): Template = when (val state = viewModel.uiState.value) { /* ... */ }
+}
+```
+
+`CarViewModels` constructs them over the car session's own
+`ChargeStopsFeature`, which is not the phone's Koin singleton. A screen that
+must leave once something finished (a stored level, an ended trip) reads
+that from `uiState` and pops; popping first would clear the ViewModel and
+cancel the write.
+
 ## The rules
 
 1. **One ViewModel per screen**, one `uiState` per ViewModel. A sheet or a

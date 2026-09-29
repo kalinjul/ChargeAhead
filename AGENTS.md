@@ -341,7 +341,7 @@ data class TripState(val destination: Destination?, val planned: TripPlan?, val 
 class TripRepository(storage: TripStorage) { val state: StateFlow<TripState>; suspend fun restore() }
 
 // Business logic lives in domain.usecases, Koin factories in
-// chargeStopsModule; ViewModels and car screens only wire them up. Swift
+// chargeStopsModule; ViewModels only wire them up. Swift
 // goes through the bridges in iosMain. Observers read from a store; a
 // Refresh…Interactor only refills that store.
 class ChargeStopsObserver : SubjectInteractor<Params, ChargeStops?>   // the corridor list: iOS only, being phased out (#152, #153)
@@ -486,14 +486,21 @@ The short version, for the cases where the skill isn't loaded:
   is mandatory after touching them. It is what keeps the "reusable on iOS"
   claim honest.
 
-This section is about `androidApp/phone` only. The car UI has its own
-lifecycle from the Car App Library and uses `ChargeStopsFeature` and the
-domain use cases directly.
+The car screens follow the same pattern with their own ViewModels in
+`shared/ui/car`; see "Rules for the car UI".
 
 ## Rules for the car UI
 
 Both platforms only translate — they don't compute and don't format
 themselves. Every number shown in the car comes from `ChargeStopFormatter`.
+
+Each car screen's state lives in a ViewModel in `shared/ui/car`
+(`CarXViewModel`, one `uiState`), created through `CarViewModels` over the
+car session's `ChargeStopsFeature`. An Android Auto `Screen` gets it with
+`screenViewModel { viewModels.x() }`, which clears it in `onDestroy`,
+collects `uiState` and calls `invalidate()`; `onGetTemplate()` maps
+`uiState.value` to a template. No `KoinComponent` in a screen, no planning or
+selecting — only templates, permissions, navigation and the Maps hand-off.
 
 **Android Auto**
 
