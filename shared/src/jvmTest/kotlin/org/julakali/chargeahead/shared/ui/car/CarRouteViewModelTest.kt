@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.ui.car
 
+import org.julakali.chargeahead.shared.testDispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -96,7 +98,7 @@ class CarRouteViewModelTest {
             override val kind = SoCSourceKind.CAR_HARDWARE
             override val energy: Flow<EnergyState?> = flowOf(EnergyState(64.0, SoCSourceKind.CAR_HARDWARE, 0L))
         },
-        dispatcher = Dispatchers.Unconfined,
+        parentScope = CoroutineScope(Dispatchers.Unconfined),
     ).apply { start() }
 
     private fun viewModel(activeRoute: Boolean = false) =
@@ -104,8 +106,8 @@ class CarRouteViewModelTest {
             feature,
             muenchen,
             activeRoute,
-            PlanTripInteractor(planner, vehicles, preferences, history, trips),
-            ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles)) { 9L },
+            PlanTripInteractor(planner, vehicles, preferences, history, trips, testDispatchers),
+            ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers),
             trips,
         )
 

@@ -1,6 +1,6 @@
 package org.julakali.chargeahead.shared.domain
 
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -84,6 +84,7 @@ suspend fun TripPlanning.planWithSettings(
     from: LatLon,
     destination: Destination,
     startSocPercent: Double?,
+    computation: CoroutineDispatcher,
 ): TripPlanResult {
     val vehicle = vehicles.vehicle.first() ?: return TripPlanResult.NoVehicle
     val soc = startSocPercent
@@ -92,7 +93,7 @@ suspend fun TripPlanning.planWithSettings(
     val arrivalSoc = vehicles.arrivalSocPercent.first()
     val filters = preferences.chargeFilters.first()
     val networks = preferences.networks.first()
-    return withContext(Dispatchers.Default) {
+    return withContext(computation) {
         plan(from, destination, vehicle, soc, arrivalSoc, filters, networks)
     }
 }

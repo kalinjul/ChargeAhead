@@ -2,18 +2,17 @@ package org.julakali.chargeahead.shared.db
 
 import androidx.room.RoomDatabase
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
+import kotlinx.coroutines.CoroutineDispatcher
 
 /** Room builds per platform: Android needs a `Context` for the database path. */
 expect class DatabaseFactory {
     fun builder(): RoomDatabase.Builder<ChargeSiteDatabase>
 }
 
-fun createChargeSiteDatabase(factory: DatabaseFactory): ChargeSiteDatabase =
+fun createChargeSiteDatabase(factory: DatabaseFactory, queryDispatcher: CoroutineDispatcher): ChargeSiteDatabase =
     factory.builder()
         .setDriver(BundledSQLiteDriver())
-        .setQueryCoroutineContext(Dispatchers.IO)
+        .setQueryCoroutineContext(queryDispatcher)
         .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
 

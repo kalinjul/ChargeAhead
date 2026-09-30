@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargePointState
@@ -88,7 +89,7 @@ class ObserveMapChargersTest {
                 return store
             }
         }
-        return MapChargersObserver(repository, statusRepository, preferences).also { it(MapChargersObserver.Params(viewport)) }
+        return MapChargersObserver(repository, statusRepository, preferences, testDispatchers).also { it(MapChargersObserver.Params(viewport)) }
     }
 
     private suspend fun MapChargersObserver.await(matching: (List<MapCharger>) -> Boolean = { true }): List<MapCharger> =
@@ -272,7 +273,7 @@ class ObserveMapChargersTest {
             ),
         )
 
-        RefreshChargerAvailabilityInteractor(repository, statusRepository, preferences)(RefreshChargerAvailabilityInteractor.Params(viewport)).getOrThrow()
+        RefreshChargerAvailabilityInteractor(repository, statusRepository, preferences, testDispatchers)(RefreshChargerAvailabilityInteractor.Params(viewport)).getOrThrow()
 
         assertEquals(listOf(listOf("live-hpc")), refreshedIds.map { it.toList() })
     }

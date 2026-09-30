@@ -6,6 +6,7 @@ import androidx.car.app.Session
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import org.julakali.chargeahead.shared.AppScope
 import org.julakali.chargeahead.shared.data.FusedLocationSource
 import org.julakali.chargeahead.shared.data.RememberingSoCSource
 import org.julakali.chargeahead.shared.domain.CarDiagnosticsRepository
@@ -48,6 +49,8 @@ class ChargeSession : Session(), KoinComponent {
             permissions = permissions,
             energyLevels = energyLevels,
             diagnostics = diagnostics,
+            parentScope = get(AppScope),
+            dispatchers = get(),
         )
         recorder.start()
         lifecycle.addObserver(object : DefaultLifecycleObserver {

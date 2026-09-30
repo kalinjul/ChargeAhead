@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.core.CorridorPlanner
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeStops
@@ -120,7 +121,7 @@ class ObserveChargeStopsTest {
     private fun observer(
         repository: SiteRepository,
         router: RouteEngine = FixedRoute(Route(a9, 170.0, 108.0)),
-    ) = ChargeStopsObserver(repository, vehicles, preferences, trips, router, CorridorPlanner()).also {
+    ) = ChargeStopsObserver(repository, vehicles, preferences, trips, router, CorridorPlanner(), testDispatchers).also {
         it(ChargeStopsObserver.Params(fixes, energy))
     }
 

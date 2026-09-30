@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.ui
 
+import org.julakali.chargeahead.shared.testAppScope
+import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.ChargeStopsState
 import org.julakali.chargeahead.shared.core.CorridorPlanner
@@ -48,6 +50,7 @@ import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStoreCarDiagnosticsRepository
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -137,7 +140,7 @@ class PhoneViewModelTest {
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
         val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val addCar = AddCarViewModel(vehicles, SelectVehicleInteractor(vehicles))
+        val addCar = AddCarViewModel(vehicles, SelectVehicleInteractor(vehicles), testDispatchers)
         val garage = GarageViewModel(
             vehicles,
             SelectVehicleInteractor(vehicles),
@@ -271,13 +274,13 @@ class PhoneViewModelTest {
         locationTimeoutMillis: Long = HomeViewModel.DEFAULT_LOCATION_TIMEOUT_MILLIS,
         statusSource: ChargePointStatusSource = ChargePointStatusSource { emptyMap() },
     ): HomeViewModel {
-        val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
+        val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })
         return HomeViewModel(
             stubFeature(),
-            MapChargersObserver(repository, statuses, preferences),
+            MapChargersObserver(repository, statuses, preferences, testDispatchers),
             RefreshMapChargersInteractor(repository, preferences),
-            RefreshChargerAvailabilityInteractor(repository, statuses, preferences),
+            RefreshChargerAvailabilityInteractor(repository, statuses, preferences, testDispatchers),
             LiveConnectorsObserver(statuses),
             RefreshLiveConnectorsInteractor(statuses),
             preferences,
@@ -292,12 +295,12 @@ class PhoneViewModelTest {
             locationSource = object : LocationSource {
                 override val updates: Flow<Fix> = fixes
             },
-            dispatcher = Dispatchers.Unconfined,
+            parentScope = CoroutineScope(Dispatchers.Unconfined),
         )
-        val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory()), TimeProvider { 0L })
+        val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
         val viewModel = CorridorViewModel(
             feature,
-            ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner()),
+            ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
             RefreshChargeStopsInteractor(repository, DataStorePreferencesRepository(InMemoryPreferencesDataStore())),
         )
 
@@ -345,7 +348,7 @@ class PhoneViewModelTest {
         locationSource = object : LocationSource {
             override val updates: Flow<Fix> = emptyFlow()
         },
-        dispatcher = Dispatchers.Unconfined,
+        parentScope = CoroutineScope(Dispatchers.Unconfined),
     )
 
     private object NoGeocoder : Geocoder {

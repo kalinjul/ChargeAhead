@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.db.DatabaseFactory
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
@@ -31,7 +32,9 @@ import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import org.koin.core.Koin
+import org.koin.core.scope.Scope
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 
@@ -45,9 +48,9 @@ private var graph: Koin? = null
 private fun graph(backend: BackendConfig): Koin =
     graph ?: koinApplication {
         modules(
-            settingsModule { createSettingsDataStore() },
+            settingsModule { createSettingsDataStore(dataStoreScope()) },
             module {
-                single<TripStorage> { DataStoreTripStorage(createTripDataStore(), legacy = get()) }
+                single<TripStorage> { DataStoreTripStorage(createTripDataStore(dataStoreScope()), legacy = get()) }
                 single<LocationSource> { CoreLocationSource() }
                 single { DatabaseFactory() }
                 single { backend }
@@ -55,6 +58,8 @@ private fun graph(backend: BackendConfig): Koin =
             chargeStopsModule(),
         )
     }.koin.also { graph = it }
+
+private fun Scope.dataStoreScope(): CoroutineScope = get<CoroutineScope>(AppScope) + get<AppCoroutineDispatchers>().io
 
 /**
  * @throws IllegalArgumentException when the backend is not configured; the app cannot run without it.

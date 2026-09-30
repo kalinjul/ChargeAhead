@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.ui
 
+import org.julakali.chargeahead.shared.testDispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -97,11 +99,11 @@ class TripViewModelTest {
                 override val energy: Flow<EnergyState?> = flowOf(EnergyState(soc, SoCSourceKind.CAR_HARDWARE, 0L))
             }
         },
-        dispatcher = Dispatchers.Unconfined,
+        parentScope = CoroutineScope(Dispatchers.Unconfined),
     )
 
     private fun viewModel(feature: ChargeStopsFeature): TripViewModel {
-        val planTrip = PlanTripInteractor(planner, vehicles, preferences, history, trips)
+        val planTrip = PlanTripInteractor(planner, vehicles, preferences, history, trips, testDispatchers)
         return TripViewModel(
             feature = feature,
             planTrip = planTrip,
