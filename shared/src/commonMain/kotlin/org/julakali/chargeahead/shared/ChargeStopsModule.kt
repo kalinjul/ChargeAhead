@@ -18,6 +18,7 @@ import org.julakali.chargeahead.shared.data.createHttpClient
 import org.julakali.chargeahead.shared.data.pruneCache
 import org.julakali.chargeahead.shared.db.ChargeSiteDatabase
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.CorridorPlanning
 import org.julakali.chargeahead.shared.domain.DataSourceDirectory
 import org.julakali.chargeahead.shared.domain.Geocoder
@@ -45,17 +46,23 @@ import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInter
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.RouteEngine
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import org.koin.core.Koin
 import org.koin.core.module.Module
@@ -66,16 +73,21 @@ import org.koin.dsl.module
 /**
  * The data graph behind both features, declared once for both platforms.
  *
- * The platform module supplies [LocationSource] (the phone's),
- * [org.julakali.chargeahead.shared.db.DatabaseFactory], [SettingsStore],
- * [org.julakali.chargeahead.shared.domain.TripStorage] and [BackendConfig].
+ * The platform modules supply [LocationSource] (the phone's),
+ * [org.julakali.chargeahead.shared.db.DatabaseFactory], the settings
+ * repositories (`settingsModule`), [org.julakali.chargeahead.shared.domain.TripStorage]
+ * and [BackendConfig].
  * Everything here is one instance per process.
  */
 fun chargeStopsModule(): Module = module {
+    single { AppCoroutineDispatchers(io = Dispatchers.IO, computation = Dispatchers.Default, main = Dispatchers.Main) }
+    single<CoroutineScope>(AppScope) {
+        CoroutineScope(SupervisorJob() + get<AppCoroutineDispatchers>().computation)
+    } withOptions { onClose { it?.cancel() } }
     single<TimeProvider> { TimeProvider { currentTimeMillis() } }
 
     single<HttpClient> { createHttpClient() } withOptions { onClose { it?.close() } }
-    single<ChargeSiteDatabase> { createChargeSiteDatabase(get()) }
+    single<ChargeSiteDatabase> { createChargeSiteDatabase(get(), get<AppCoroutineDispatchers>().io) }
 
     single<SiteRepository> {
         val backend = get<BackendConfig>()
@@ -85,6 +97,7 @@ fun chargeStopsModule(): Module = module {
                     source = BackendChargeSiteSource(get(), backend.baseUrl, backend.token),
                     database = get(),
                     time = get(),
+                    scope = get(AppScope),
                 ),
             ),
         )
@@ -112,27 +125,27 @@ fun chargeStopsModule(): Module = module {
         BackendDataSourceDirectory(get(), backend.baseUrl, backend.token)
     }
     factory { LoadDataSourcesInteractor(get()) }
-    factory { MapChargersObserver(get(), get(), get()) }
+    factory { MapChargersObserver(get(), get(), get(), get()) }
     factory { RefreshMapChargersInteractor(get(), get()) }
-    factory { RefreshChargerAvailabilityInteractor(get(), get(), get()) }
+    factory { RefreshChargerAvailabilityInteractor(get(), get(), get(), get()) }
     factory { LiveConnectorsObserver(get()) }
     factory { RefreshLiveConnectorsInteractor(get()) }
-    factory { ChargeNowObserver(get(), get()) }
+    factory { ChargeNowObserver(get(), get(), get()) }
     factory { RefreshChargeNowInteractor(get(), get()) }
     factory { DestinationSearchObserver(get(), get()) }
-    factory { PlanTripInteractor(get(), get(), get()) }
+    factory { PlanTripInteractor(get(), get(), get(), get(), get(), get()) }
     factory { UpdateArrivalSocInteractor(get()) }
     factory { ReplanWithArrivalSocInteractor(get(), get(), get()) }
     factory { CommitTripInteractor(get(), get()) }
     factory { EndTripInteractor(get()) }
     factory { DismissPlannedTripInteractor(get()) }
-    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get()) }
+    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get(), get(), get()) }
     factory { SelectVehicleInteractor(get()) }
     factory { RemoveVehicleInteractor(get()) }
     factory { UpdateManualSocInteractor(get()) }
     factory { UpdateChargeFiltersInteractor(get()) }
     factory { UpdateNetworksInteractor(get()) }
-    factory { ChargeStopsObserver(get(), get(), get(), get(), get()) }
+    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     single<NetworkRepository> {
         val backend = get<BackendConfig>()
@@ -154,20 +167,22 @@ fun Koin.newChargeStopsFeature(
     locationSource: LocationSource,
     hardwareSoCSource: SoCSource? = null,
 ): ChargeStopsFeature {
-    val settingsStore = get<SettingsStore>()
+    val vehicles = get<VehicleRepository>()
+    val preferences = get<PreferencesRepository>()
     val time = get<TimeProvider>()
     val database = get<ChargeSiteDatabase>()
     val refreshNetworks = get<RefreshNetworksInteractor>()
     val trips = get<TripRepository>()
     return ChargeStopsFeature(
         locationSource = locationSource,
+        parentScope = get(AppScope),
         socSource = CombinedSoCSource(
-            manual = ManualSoCSource(settingsStore, time),
+            manual = ManualSoCSource(vehicles, time),
             hardware = hardwareSoCSource,
         ),
         onStart = {
             runCatching {
-                val keys = settingsStore.networks.first().preferredOperators
+                val keys = preferences.networks.first().preferredOperators
                 pruneCache(database, keys, time.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
             }
             runCatching { trips.restore() }

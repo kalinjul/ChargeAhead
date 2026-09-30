@@ -2,7 +2,7 @@ package org.julakali.chargeahead.shared.domain.usecases
 
 import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.chargeNowArea
 import kotlinx.coroutines.flow.first
@@ -13,14 +13,14 @@ import kotlinx.coroutines.flow.first
  */
 class RefreshChargeNowInteractor(
     private val repository: SiteRepository,
-    private val settings: SettingsStore,
+    private val preferences: PreferencesRepository,
 ) : Interactor<RefreshChargeNowInteractor.Params, Unit>() {
 
     data class Params(val position: LatLon)
 
     override suspend fun doWork(params: Params) {
-        val filters = settings.chargeFilters.first()
-        val networks = settings.networks.first()
+        val filters = preferences.chargeFilters.first()
+        val networks = preferences.networks.first()
         repository.load(chargeNowArea(params.position, filters), networks.selectedKeys())
     }
 }

@@ -1,16 +1,16 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.ChargeNowRanker
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
 import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
 import org.julakali.chargeahead.shared.domain.chargeNowArea
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -29,7 +29,8 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChargeNowObserver(
     private val repository: SiteRepository,
-    private val settings: SettingsStore,
+    private val preferences: PreferencesRepository,
+    private val dispatchers: AppCoroutineDispatchers,
 ) : SubjectInteractor<ChargeNowObserver.Params, ChargeNowResult?>() {
 
     /** [position] `null` means: no location yet, and no result. */
@@ -37,13 +38,13 @@ class ChargeNowObserver(
 
     override fun createObservable(params: Params): Flow<ChargeNowResult?> {
         val position = params.position ?: return flowOf(null)
-        return combine(settings.chargeFilters, settings.networks, ::Pair)
+        return combine(preferences.chargeFilters, preferences.networks, ::Pair)
             .distinctUntilChanged()
             .flatMapLatest { (filters, networks) ->
                 val area = chargeNowArea(position, filters)
                 // Every DC site, so the ranker can relax the power and network filters.
                 repository.storedSitesIn(area.boundingBox, EVERY_DC_SITE).map { sites ->
-                    withContext(Dispatchers.Default) {
+                    withContext(dispatchers.computation) {
                         ChargeNowRanker.rank(
                             sites = sites.filter { it.position in area },
                             position = position,

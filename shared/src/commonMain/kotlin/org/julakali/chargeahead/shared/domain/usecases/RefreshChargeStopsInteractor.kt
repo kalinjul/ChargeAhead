@@ -2,7 +2,7 @@ package org.julakali.chargeahead.shared.domain.usecases
 
 import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.SearchArea
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import kotlinx.coroutines.flow.first
 
@@ -12,13 +12,13 @@ import kotlinx.coroutines.flow.first
  */
 class RefreshChargeStopsInteractor(
     private val repository: SiteRepository,
-    private val settings: SettingsStore,
+    private val preferences: PreferencesRepository,
 ) : Interactor<RefreshChargeStopsInteractor.Params, Unit>() {
 
     data class Params(val area: SearchArea)
 
     override suspend fun doWork(params: Params) {
         repository.invalidate()
-        repository.load(params.area, settings.networks.first().selectedKeys())
+        repository.load(params.area, preferences.networks.first().selectedKeys())
     }
 }

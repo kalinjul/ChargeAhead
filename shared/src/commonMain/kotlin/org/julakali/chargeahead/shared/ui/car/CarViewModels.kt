@@ -22,5 +22,5 @@ class CarViewModels(
 
     fun chargeNow(): CarChargeNowViewModel = CarChargeNowViewModel(feature, koin.get(), koin.get())
 
-    fun soc(): CarSoCViewModel = CarSoCViewModel(koin.get(), koin.get())
+    fun soc(): CarSoCViewModel = CarSoCViewModel(koin.get(), koin.get(), koin.get())
 }

@@ -8,7 +8,7 @@ import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
@@ -132,7 +132,7 @@ class TripViewModel(
     private val updateManualSoc: UpdateManualSocInteractor,
     private val dismissPlannedTrip: DismissPlannedTripInteractor,
     private val trips: TripRepository,
-    private val settings: SettingsStore,
+    private val vehicles: VehicleRepository,
 ) : ViewModel() {
 
     private val isPlanning = combine(planTrip.inProgress, replanWithArrivalSoc.inProgress) { plan, replan -> plan || replan }
@@ -150,7 +150,7 @@ class TripViewModel(
         selection,
         socEditor,
         arrivalSocEditor,
-        settings.manualSocPercent,
+        vehicles.manualSocPercent,
         feature.currentFix,
         socAskedForReplan,
     ) { plan, planning, sectionSelection, socInput, arrivalSocInput, socPercent, fix, askedForReplan ->
@@ -233,7 +233,7 @@ class TripViewModel(
 
     private fun openStartSocEditor() {
         viewModelScope.launch {
-            socEditor.value = settings.manualSocPercent.first()?.roundToInt()?.toString().orEmpty()
+            socEditor.value = vehicles.manualSocPercent.first()?.roundToInt()?.toString().orEmpty()
         }
     }
 
@@ -271,7 +271,7 @@ class TripViewModel(
     /** Opens the arrival-level editor on the level this plan was made with. */
     fun onArrivalSocEditRequested() {
         viewModelScope.launch {
-            arrivalSocEditor.value = settings.arrivalSocPercent.first().roundToInt().toString()
+            arrivalSocEditor.value = vehicles.arrivalSocPercent.first().roundToInt().toString()
         }
     }
 

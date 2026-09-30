@@ -2,7 +2,8 @@ package org.julakali.chargeahead.shared.ui.car
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
+import org.julakali.chargeahead.shared.domain.CarDiagnosticsRepository
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.ui.WhileUiSubscribed
@@ -27,15 +28,16 @@ private val SOC_STEPS = listOf(100, 90, 80, 70, 60, 50, 40, 30, 20, 10)
 
 /** Entering the state of charge by hand while driving, in steps from high to low. */
 class CarSoCViewModel(
-    settings: SettingsStore,
+    vehicles: VehicleRepository,
+    diagnostics: CarDiagnosticsRepository,
     private val updateManualSoc: UpdateManualSocInteractor,
 ) : ViewModel() {
 
     private val saved = MutableStateFlow(false)
 
     val uiState: StateFlow<CarSoCUiState> = combine(
-        settings.manualSocPercent,
-        settings.socDiagnostics,
+        vehicles.manualSocPercent,
+        diagnostics.socDiagnostics,
         saved,
     ) { percent, diagnostics, saved ->
         CarSoCUiState(

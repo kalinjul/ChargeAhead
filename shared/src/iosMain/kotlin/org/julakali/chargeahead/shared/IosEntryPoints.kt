@@ -2,19 +2,18 @@ package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
-import org.julakali.chargeahead.shared.data.LegacyTripSource
 import org.julakali.chargeahead.shared.db.DatabaseFactory
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
-import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripStorage
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.julakali.chargeahead.shared.settings.createTripDataStore
+import org.julakali.chargeahead.shared.settings.settingsModule
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.julakali.chargeahead.shared.ui.CorridorViewModel
 import org.julakali.chargeahead.shared.ui.HomeViewModel
@@ -25,13 +24,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.plus
 import org.koin.core.Koin
+import org.koin.core.scope.Scope
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
-
-/** The entry points for Swift: they resolve from the Koin graph on Swift's behalf. */
-fun createSettingsStore(): SettingsStore =
-    PersistentSettingsStore(createSettingsDataStore())
 
 /**
  * The process-wide graph, built on the first [createChargeStopsFeature] call;
@@ -40,14 +37,12 @@ fun createSettingsStore(): SettingsStore =
  */
 private var graph: Koin? = null
 
-private fun graph(backend: BackendConfig, settingsStore: SettingsStore): Koin =
+private fun graph(backend: BackendConfig): Koin =
     graph ?: koinApplication {
         modules(
+            settingsModule { createSettingsDataStore(dataStoreScope()) },
             module {
-                single { settingsStore }
-                single<TripStorage> {
-                    DataStoreTripStorage(createTripDataStore(), legacy = settingsStore as? LegacyTripSource)
-                }
+                single<TripStorage> { DataStoreTripStorage(createTripDataStore(dataStoreScope()), legacy = get()) }
                 single<LocationSource> { CoreLocationSource() }
                 single { DatabaseFactory() }
                 single { backend }
@@ -56,20 +51,20 @@ private fun graph(backend: BackendConfig, settingsStore: SettingsStore): Koin =
         )
     }.koin.also { graph = it }
 
+private fun Scope.dataStoreScope(): CoroutineScope = get<CoroutineScope>(AppScope) + get<AppCoroutineDispatchers>().io
+
 /**
- * @param settingsStore the same instance that also backs the settings view.
  * @throws IllegalArgumentException when the backend is not configured; the app cannot run without it.
  */
 fun createChargeStopsFeature(
     backendBaseUrl: String?,
     backendToken: String?,
-    settingsStore: SettingsStore,
 ): ChargeStopsFeature {
     val backend = requireNotNull(BackendConfig.of(backendBaseUrl, backendToken)) {
         "ChargeAheadBaseUrl and ChargeAheadToken must be set in Info.plist"
     }
     // Each caller owns its feature; the data graph beneath is shared.
-    return graph(backend, settingsStore).newChargeStopsFeature(locationSource = CoreLocationSource())
+    return graph(backend).newChargeStopsFeature(locationSource = CoreLocationSource())
 }
 
 /** The corridor list for CarPlay: every state change, on the main thread, until [stop]. */
@@ -124,7 +119,7 @@ class PhoneViewModels(private val feature: ChargeStopsFeature) {
 
     fun chargeNow(): ChargeNowViewModel = host.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
 
-    fun search(): SearchViewModel = host.get { SearchViewModel(feature, koin.get(), koin.get()) }
+    fun search(): SearchViewModel = host.get { SearchViewModel(feature, koin.get(), koin.get(), koin.get()) }
 
     fun clear() {
         host.clear()

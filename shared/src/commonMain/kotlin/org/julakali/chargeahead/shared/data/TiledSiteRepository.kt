@@ -22,9 +22,7 @@ import org.julakali.chargeahead.shared.domain.maxDcPowerKw
 import org.julakali.chargeahead.shared.domain.maxPowerKw
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -44,6 +42,8 @@ class TiledSiteRepository(
     private val source: ChargeSiteSource,
     database: ChargeSiteDatabase,
     private val time: TimeProvider,
+    /** Runs the fetches, so one survives the caller that started it for the others awaiting it. */
+    private val scope: CoroutineScope,
     private val ttlMillis: Long = DEFAULT_TTL_MILLIS,
     private val prefetchMarginKm: Double = DEFAULT_PREFETCH_MARGIN_KM,
 ) : SiteRepository {
@@ -51,7 +51,6 @@ class TiledSiteRepository(
     private val dao = database.chargeSites()
 
     // De-duplicates identical in-flight fetches.
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val inFlight = mutableMapOf<String, Deferred<List<ChargeSite>>>()
     private val inFlightGuard = Mutex()
 

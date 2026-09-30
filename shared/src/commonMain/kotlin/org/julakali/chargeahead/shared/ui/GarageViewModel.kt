@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.combine
 import org.julakali.chargeahead.shared.core.RangeCalculator
 import org.julakali.chargeahead.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.MAX_ARRIVAL_SOC_PERCENT
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
@@ -36,7 +36,7 @@ data class GarageUiState(
 
 /** The garage screen: choose, edit, remove a car. */
 class GarageViewModel(
-    private val settings: SettingsStore,
+    private val vehicles: VehicleRepository,
     private val selectVehicle: SelectVehicleInteractor,
     private val removeVehicle: RemoveVehicleInteractor,
     private val updateArrivalSoc: UpdateArrivalSocInteractor,
@@ -45,9 +45,9 @@ class GarageViewModel(
     private val arrivalSocEditor = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<GarageUiState> = combine(
-        settings.vehicles,
-        settings.vehicle,
-        settings.arrivalSocPercent,
+        vehicles.vehicles,
+        vehicles.vehicle,
+        vehicles.arrivalSocPercent,
         arrivalSocEditor,
     ) { vehicles, selected, arrivalSoc, arrivalEditor ->
         GarageUiState(
@@ -72,7 +72,7 @@ class GarageViewModel(
     /** Opens the arrival-level dialog on the level currently in force. */
     fun onArrivalSocEditRequested() {
         viewModelScope.launch {
-            arrivalSocEditor.value = settings.arrivalSocPercent.first().roundToInt().toString()
+            arrivalSocEditor.value = vehicles.arrivalSocPercent.first().roundToInt().toString()
         }
     }
 

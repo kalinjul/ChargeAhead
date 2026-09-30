@@ -89,8 +89,9 @@ cancel the write.
    edits would then race and the older one could win. Heavy computation
    inside a flow is a different matter and belongs in `withContext`
    (`NetworksViewModel` does this).
-10. **Dependencies are app-scoped objects** (`SettingsStore`,
-    `ChargeStopsFeature`, `TripRepository`) **and domain use cases**
+10. **Dependencies are app-scoped objects** (the settings repositories —
+    `VehicleRepository`, `PreferencesRepository`, … — `ChargeStopsFeature`,
+    `TripRepository`) **and domain use cases**
     (`MapChargersObserver`, `PlanTripInteractor`). A ViewModel takes what it needs in its
     constructor and nothing else — no `Context`, no `Activity`, no
     `CoroutineScope`.
@@ -115,14 +116,14 @@ data class ExampleUiState(
 }
 
 class ExampleViewModel(
-    private val settings: SettingsStore,
+    private val preferences: PreferencesRepository,
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
 
     val uiState: StateFlow<ExampleUiState> = combine(
         query,
-        settings.someFlow,
+        preferences.someFlow,
     ) { query, things ->
         ExampleUiState(items = things.filter { it.matches(query) }, query = query)
     }.stateIn(viewModelScope, WhileUiSubscribed, ExampleUiState())
@@ -132,7 +133,7 @@ class ExampleViewModel(
     }
 
     fun onThingRemoved(id: String) {
-        viewModelScope.launch { settings.remove(id) }
+        viewModelScope.launch { preferences.remove(id) }
     }
 }
 ```
@@ -224,8 +225,9 @@ no Compose — see `PhoneViewModelTest`:
   `Dispatchers.resetMain()` in `@AfterTest`. `viewModelScope` runs on the
   main dispatcher and a plain test JVM has none; `Unconfined` also keeps
   writes in the order they were issued.
-- `PersistentSettingsStore(InMemoryPreferencesDataStore())` is a real store on
-  in-memory storage — no fake needed.
+- `DataStoreVehicleRepository(InMemoryPreferencesDataStore())` (and the other
+  `DataStore…Repository` classes) is the real repository on in-memory
+  storage — no fake needed.
 - `uiState` only produces while something collects, so assert with
   `withTimeout(5_000) { viewModel.uiState.first { <condition> } }` instead
   of reading `.value`.

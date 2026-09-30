@@ -5,7 +5,7 @@ import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -31,14 +31,14 @@ class SoCSourceTest {
 
     @Test
     fun withoutInput_theManualSourceReturnsNothing() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
 
         assertNull(ManualSoCSource(store, clock).energy.first())
     }
 
     @Test
     fun withInput_theManualSourceReturnsTheValue() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         store.setManualSocPercent(64.0)
 
         val state = ManualSoCSource(store, clock).energy.first()
@@ -50,7 +50,7 @@ class SoCSourceTest {
 
     @Test
     fun withoutVehicleSource_theInputApplies() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         store.setManualSocPercent(50.0)
 
         val combined = CombinedSoCSource(ManualSoCSource(store, clock), hardware = null)
@@ -61,7 +61,7 @@ class SoCSourceTest {
     @Test
     fun theCarBeatsTheInput() = runBlocking {
         // A value from the vehicle wins.
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         store.setManualSocPercent(50.0)
         val carSource = FixedSource(SoCSourceKind.CAR_HARDWARE, fromTheCar(73.0))
 
@@ -75,7 +75,7 @@ class SoCSourceTest {
     @Test
     fun ifTheCarIsSilent_theInputAppliesAgain() = runBlocking {
         // The head unit delivers nothing.
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         store.setManualSocPercent(50.0)
         val carSource = FixedSource(SoCSourceKind.CAR_HARDWARE, value = null)
 
@@ -88,7 +88,7 @@ class SoCSourceTest {
 
     @Test
     fun ifBothAreSilent_thereIsNoChargeLevel() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         val combined = CombinedSoCSource(
             ManualSoCSource(store, clock),
             FixedSource(SoCSourceKind.CAR_HARDWARE, value = null),
@@ -99,34 +99,34 @@ class SoCSourceTest {
 
     @Test
     fun aCarReading_isStoredForAfterTheDisconnect() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         store.setManualSocPercent(90.0)
         val car = FixedSource(SoCSourceKind.CAR_HARDWARE, fromTheCar(42.4))
 
         RememberingSoCSource(car, store).energy.first()
 
-        assertEquals(42.4, store.manualSocPercent.value)
+        assertEquals(42.4, store.manualSocPercent.first())
     }
 
     @Test
     fun noCarReading_keepsTheStoredLevel() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         store.setManualSocPercent(90.0)
         val car = FixedSource(SoCSourceKind.CAR_HARDWARE, null)
 
         RememberingSoCSource(car, store).energy.first()
 
-        assertEquals(90.0, store.manualSocPercent.value)
+        assertEquals(90.0, store.manualSocPercent.first())
     }
 
     @Test
     fun aReadingWithinTheSamePercent_isNotRewritten() = runBlocking {
-        val store = PersistentSettingsStore(InMemoryPreferencesDataStore())
+        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         store.setManualSocPercent(42.0)
         val car = FixedSource(SoCSourceKind.CAR_HARDWARE, fromTheCar(42.3))
 
         RememberingSoCSource(car, store).energy.first()
 
-        assertEquals(42.0, store.manualSocPercent.value)
+        assertEquals(42.0, store.manualSocPercent.first())
     }
 }

@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.CHARGE_NOW_RELAX_FETCH_FACTOR
 import org.julakali.chargeahead.shared.domain.ChargeFilters
@@ -14,7 +15,7 @@ import org.julakali.chargeahead.shared.domain.RelaxedFilter
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -29,7 +30,7 @@ import kotlinx.coroutines.withTimeout
 class ObserveChargeNowTest {
 
     private val here = LatLon(48.0, 11.0)
-    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
     private val store = MutableStateFlow<List<ChargeSite>>(emptyList())
     private var fetched: List<ChargeSite> = emptyList()
     private val fetches = mutableListOf<Pair<SearchArea, Set<String>>>()
@@ -44,8 +45,8 @@ class ObserveChargeNowTest {
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = store
     }
 
-    private val observe = ChargeNowObserver(repository, settings)
-    private val refresh = RefreshChargeNowInteractor(repository, settings)
+    private val observe = ChargeNowObserver(repository, preferences, testDispatchers)
+    private val refresh = RefreshChargeNowInteractor(repository, preferences)
 
     /** [northKm] north of [here]. */
     private fun site(id: String, powerKw: Double, northKm: Double) = ChargeSite(
@@ -93,7 +94,7 @@ class ObserveChargeNowTest {
         // Only one site reaches the default minimum power, so the ranking relaxes it.
         assertEquals(listOf(RelaxedFilter.MIN_POWER), await { it != null }?.relaxed)
 
-        settings.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
+        preferences.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
 
         assertEquals(3, await { it?.relaxed?.isEmpty() == true }?.candidates?.size)
         assertTrue(fetches.isEmpty())
@@ -112,8 +113,8 @@ class ObserveChargeNowTest {
 
     @Test
     fun `the refill asks wider than the distance filter for the selected networks`() = runBlocking {
-        settings.setChargeFilters(ChargeFilters(maxDistanceKm = 10.0))
-        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
+        preferences.setChargeFilters(ChargeFilters(maxDistanceKm = 10.0))
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
 
         refresh(RefreshChargeNowInteractor.Params(here)).getOrThrow()
 

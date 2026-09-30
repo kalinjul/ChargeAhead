@@ -2,6 +2,7 @@ package org.julakali.chargeahead.shared.settings
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.CoroutineScope
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDefaults
@@ -12,13 +13,15 @@ import platform.Foundation.NSUserDomainMask
  * NSUserDefaults entries on first start and removes them there.
  */
 fun createSettingsDataStore(
+    scope: CoroutineScope,
     defaults: NSUserDefaults = NSUserDefaults.standardUserDefaults,
 ): DataStore<Preferences> =
     createSettingsDataStore(
         path = "${documentsDirectory()}/$SETTINGS_DATASTORE_FILE",
+        scope = scope,
         migrations = listOf(
             KeyValueMigration(
-                keys = PersistentSettingsStore.ALL_KEYS,
+                keys = SettingsKeys.ALL,
                 read = defaults::stringForKey,
                 remove = defaults::removeObjectForKey,
             ),
@@ -26,8 +29,8 @@ fun createSettingsDataStore(
     )
 
 /** The trip state in the app's documents directory, apart from the settings. */
-fun createTripDataStore(): DataStore<Preferences> =
-    createSettingsDataStore(path = "${documentsDirectory()}/$TRIP_DATASTORE_FILE")
+fun createTripDataStore(scope: CoroutineScope): DataStore<Preferences> =
+    createSettingsDataStore(path = "${documentsDirectory()}/$TRIP_DATASTORE_FILE", scope = scope)
 
 private fun documentsDirectory(): String =
     NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true).first() as String

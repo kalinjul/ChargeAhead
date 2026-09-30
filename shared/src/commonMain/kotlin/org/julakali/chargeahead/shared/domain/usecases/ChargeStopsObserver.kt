@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.ChargeStops
 import org.julakali.chargeahead.shared.domain.CorridorPlanning
 import org.julakali.chargeahead.shared.domain.Destination
@@ -10,14 +11,14 @@ import org.julakali.chargeahead.shared.domain.RefreshPolicy
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteStatus
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.cancellableRunCatching
 import org.julakali.chargeahead.shared.logWarning
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,10 +45,12 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChargeStopsObserver(
     private val repository: SiteRepository,
-    private val settings: SettingsStore,
+    private val vehicles: VehicleRepository,
+    private val preferences: PreferencesRepository,
     private val trips: TripRepository,
     private val routeEngine: RouteEngine,
     private val planning: CorridorPlanning,
+    private val dispatchers: AppCoroutineDispatchers,
     private val refreshPolicy: RefreshPolicy = RefreshPolicy(),
 ) : SubjectInteractor<ChargeStopsObserver.Params, ChargeStops?>() {
 
@@ -68,9 +71,9 @@ class ChargeStopsObserver(
         val routes = trips.state.map { it.destination }.distinctUntilChanged().flatMapLatest { routeTo(it, params.fixes) }
         return combine(
             params.fixes,
-            settings.vehicle,
+            vehicles.vehicle,
             params.energy,
-            settings.networks,
+            preferences.networks,
             routes,
         ) { fix, vehicle, energy, networks, route ->
             fix?.let { Inputs(it, vehicle, energy, networks, route) }
@@ -115,7 +118,7 @@ class ChargeStopsObserver(
             refill.value = if (result.isSuccess) ChargeStops.Refill.DONE else ChargeStops.Refill.FAILED
         }
         val stops = repository.storedSitesIn(area).map { sites ->
-            withContext(Dispatchers.Default) {
+            withContext(dispatchers.computation) {
                 corridor.stops(inputs.fix, area, sites, inputs.vehicle, inputs.energy, inputs.networks)
             }
         }

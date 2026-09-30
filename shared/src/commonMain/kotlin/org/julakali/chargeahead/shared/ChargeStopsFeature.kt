@@ -5,11 +5,8 @@ import org.julakali.chargeahead.shared.domain.EnergyState
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.SoCSource
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,14 +26,15 @@ import kotlin.coroutines.cancellation.CancellationException
 class ChargeStopsFeature(
     private val locationSource: LocationSource,
     private val socSource: SoCSource? = null,
-    dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    /** [close] cancels only the feature's own child of it. */
+    parentScope: CoroutineScope,
     /** Called by [close]. */
     private val onClose: () -> Unit = {},
     /** A one-shot task run on the feature's own scope at creation. */
     private val onStart: (suspend () -> Unit)? = null,
 ) {
 
-    private val scope = CoroutineScope(SupervisorJob() + dispatcher)
+    private val scope = parentScope.childScope()
 
     init {
         onStart?.let { task -> scope.launch { task() } }

@@ -34,16 +34,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 /// The shared entry points both scenes build on.
 enum SharedEntry {
 
-    /// One settings store for the whole process, so the feature reads the
-    /// same flows the settings UI writes.
-    static let settingsStore: SettingsStore = IosEntryPointsKt.createSettingsStore()
-
     /// A feature the caller owns and closes.
     static func newFeature() -> ChargeStopsFeature {
         IosEntryPointsKt.createChargeStopsFeature(
             backendBaseUrl: bundleValue("ChargeAheadBaseUrl"),
-            backendToken: bundleValue("ChargeAheadToken"),
-            settingsStore: settingsStore
+            backendToken: bundleValue("ChargeAheadToken")
         )
     }
 

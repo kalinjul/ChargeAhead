@@ -8,7 +8,8 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.Place
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
+import org.julakali.chargeahead.shared.domain.DestinationHistory
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import org.julakali.chargeahead.shared.toDestination
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -68,7 +69,8 @@ fun Double.asKmLabel(): String = when {
 class SearchViewModel(
     private val feature: ChargeStopsFeature,
     private val observeDestinationSearch: DestinationSearchObserver,
-    settings: SettingsStore,
+    vehicles: VehicleRepository,
+    history: DestinationHistory,
 ) : ViewModel() {
 
     private val input = MutableStateFlow(Input())
@@ -76,8 +78,8 @@ class SearchViewModel(
     val uiState: StateFlow<SearchUiState> = combine(
         input,
         observeDestinationSearch.flow,
-        settings.recentDestinations,
-        settings.vehicle,
+        history.recentDestinations,
+        vehicles.vehicle,
         feature.currentFix,
     ) { (query, pick), search, recent, vehicle, fix ->
         SearchUiState(

@@ -1,9 +1,11 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
@@ -18,10 +20,12 @@ import kotlinx.coroutines.flow.first
  */
 class ReplanCommittedTripInteractor(
     private val planner: TripPlanning,
-    private val settings: SettingsStore,
+    private val vehicles: VehicleRepository,
+    private val preferences: PreferencesRepository,
     private val trips: TripRepository,
     private val updateManualSoc: UpdateManualSocInteractor,
     private val time: TimeProvider,
+    private val dispatchers: AppCoroutineDispatchers,
 ) : Interactor<ReplanCommittedTripInteractor.Params, TripPlanResult?>() {
 
     /**
@@ -33,9 +37,9 @@ class ReplanCommittedTripInteractor(
     override suspend fun doWork(params: Params): TripPlanResult? {
         val destination = trips.state.value.committed?.plan?.destination ?: return null
         params.socPercent?.takeIf { params.storeSoc }?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)).getOrThrow() }
-        val result = planner.planWithSettings(settings, params.from, destination, params.socPercent)
+        val result = planner.planWithSettings(vehicles, preferences, params.from, destination, params.socPercent, dispatchers.computation)
         if (result is TripPlanResult.Planned) {
-            val plannedWith = params.socPercent ?: settings.manualSocPercent.first()
+            val plannedWith = params.socPercent ?: vehicles.manualSocPercent.first()
             val trip = CommittedTrip(result.plan, plannedWith, time.nowMillis())
             trips.update { it.replanned(trip) }
         }

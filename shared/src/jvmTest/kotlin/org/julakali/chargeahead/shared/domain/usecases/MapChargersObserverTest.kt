@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargePointState
@@ -17,7 +18,8 @@ import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -36,7 +38,7 @@ class ObserveMapChargersTest {
 
     private val viewport = BoundingBox(south = 51.0, west = 6.5, north = 51.4, east = 7.0)
 
-    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
     private val fetchedAreas = mutableListOf<SearchArea>()
     private val storedBoxes = mutableListOf<BoundingBox>()
     private val storedFilters = mutableListOf<MapFilter>()
@@ -70,9 +72,9 @@ class ObserveMapChargersTest {
     private fun observer(
         stored: List<ChargeSite>,
         fetched: List<ChargeSite> = emptyList(),
-        configure: suspend PersistentSettingsStore.() -> Unit = {},
+        configure: suspend PreferencesRepository.() -> Unit = {},
     ): MapChargersObserver {
-        runBlocking { settings.configure() }
+        runBlocking { preferences.configure() }
         val store = MutableStateFlow(stored)
         repository = object : SiteRepository {
             override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
@@ -87,7 +89,7 @@ class ObserveMapChargersTest {
                 return store
             }
         }
-        return MapChargersObserver(repository, statusRepository, settings).also { it(MapChargersObserver.Params(viewport)) }
+        return MapChargersObserver(repository, statusRepository, preferences, testDispatchers).also { it(MapChargersObserver.Params(viewport)) }
     }
 
     private suspend fun MapChargersObserver.await(matching: (List<MapCharger>) -> Boolean = { true }): List<MapCharger> =
@@ -118,7 +120,7 @@ class ObserveMapChargersTest {
         val collecting = launch { observe.flow.collect {} }
         withTimeout(5_000) { while (storedFilters.isEmpty()) delay(10) }
 
-        settings.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
+        preferences.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
 
         withTimeout(5_000) { while (storedFilters.size < 2) delay(10) }
         collecting.cancel()
@@ -195,7 +197,7 @@ class ObserveMapChargersTest {
         val observe = observer(stored = emptyList(), fetched = listOf(site("new", "Ionity", 350.0)))
         observe.await()
 
-        RefreshMapChargersInteractor(repository, settings)(RefreshMapChargersInteractor.Params(viewport)).getOrThrow()
+        RefreshMapChargersInteractor(repository, preferences)(RefreshMapChargersInteractor.Params(viewport)).getOrThrow()
 
         assertEquals(listOf("demo:new"), observe.await { it.isNotEmpty() }.map { it.site.id })
     }
@@ -271,7 +273,7 @@ class ObserveMapChargersTest {
             ),
         )
 
-        RefreshChargerAvailabilityInteractor(repository, statusRepository, settings)(RefreshChargerAvailabilityInteractor.Params(viewport)).getOrThrow()
+        RefreshChargerAvailabilityInteractor(repository, statusRepository, preferences, testDispatchers)(RefreshChargerAvailabilityInteractor.Params(viewport)).getOrThrow()
 
         assertEquals(listOf(listOf("live-hpc")), refreshedIds.map { it.toList() })
     }
