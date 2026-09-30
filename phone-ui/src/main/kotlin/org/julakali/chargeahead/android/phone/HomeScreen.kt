@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,12 +50,17 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeStop
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.ui.HomeUiState
 import org.julakali.chargeahead.shared.ui.HomeViewModel
+import org.julakali.chargeahead.shared.ui.SearchRow
+import org.julakali.chargeahead.shared.ui.SearchUiState
+import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.koin.androidx.compose.koinViewModel
 
-enum class HomeMode { BROWSING, SEARCHING, TRIP }
+private enum class HomeMode { BROWSING, SEARCHING, TRIP }
 
 /** The map screen with its state holder attached. */
 @Composable
@@ -62,8 +68,8 @@ fun HomeRoute(
     /** `null` until the platform has been asked. */
     hasPermission: Boolean?,
     planningInProgress: Boolean,
-    mode: HomeMode,
-    route: RouteOverlay?,
+    /** The planned trip: its route replaces the browsing markers, its destination the search bar. */
+    trip: TripPlan?,
     /** The trip sheet's peek, so the route fits above it. */
     mapBottomInset: Dp,
     onRequestPermission: () -> Unit,
@@ -74,18 +80,19 @@ fun HomeRoute(
     /** The committed trip's page; the pill is dimmed while there is none. */
     activeRouteEnabled: Boolean,
     onActiveRoute: () -> Unit,
-    /** A tap on the map while the results panel is open. */
-    onDismissSearch: () -> Unit,
     /** A numbered route marker was tapped, 1-based. */
     onStopTapped: (Int) -> Unit,
     /** Arrival and departure for a selected site that is a planned stop. */
     tripLineFor: (ChargeStop) -> String?,
-    /** Material's docked search bar with the hits inside, or the destination header. Gets a fly-to for the map. */
-    topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
+    /** A search hit was picked; the search has closed by then. */
+    onPick: (Destination) -> Unit,
+    onClearTrip: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
+    searchViewModel: SearchViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchUi by searchViewModel.uiState.collectAsStateWithLifecycle()
 
     // The pipeline may only run once the permission is there.
     LaunchedEffect(hasPermission) {
@@ -94,10 +101,10 @@ fun HomeRoute(
 
     HomeScreen(
         uiState = uiState,
+        search = searchUi,
+        trip = trip,
         hasPermission = hasPermission,
         planningInProgress = planningInProgress,
-        mode = mode,
-        route = route,
         mapBottomInset = mapBottomInset,
         onViewportChanged = viewModel::onViewportChanged,
         onChargerTapped = viewModel::onChargerSelected,
@@ -107,9 +114,14 @@ fun HomeRoute(
         onChargeNow = onChargeNow,
         activeRouteEnabled = activeRouteEnabled,
         onActiveRoute = onActiveRoute,
-        onDismissSearch = onDismissSearch,
         onStopTapped = onStopTapped,
-        topBar = topBar,
+        onSearchExpandedChange = { open -> if (open) searchViewModel.onOpened() else searchViewModel.onClosed() },
+        onQueryChange = searchViewModel::onQueryChanged,
+        onPick = { row ->
+            searchViewModel.onClosed()
+            onPick(row.destination)
+        },
+        onClearTrip = onClearTrip,
         modifier = modifier,
     )
 
@@ -126,10 +138,10 @@ fun HomeRoute(
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    search: SearchUiState,
+    trip: TripPlan?,
     hasPermission: Boolean?,
     planningInProgress: Boolean,
-    mode: HomeMode,
-    route: RouteOverlay?,
     mapBottomInset: Dp,
     onViewportChanged: (BoundingBox?) -> Unit,
     onChargerTapped: (MapCharger) -> Unit,
@@ -139,11 +151,19 @@ fun HomeScreen(
     onChargeNow: () -> Unit,
     activeRouteEnabled: Boolean,
     onActiveRoute: () -> Unit,
-    onDismissSearch: () -> Unit,
     onStopTapped: (Int) -> Unit,
-    topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
+    onSearchExpandedChange: (Boolean) -> Unit,
+    onQueryChange: (String) -> Unit,
+    onPick: (SearchRow) -> Unit,
+    onClearTrip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val mode = when {
+        search.expanded -> HomeMode.SEARCHING
+        trip != null -> HomeMode.TRIP
+        else -> HomeMode.BROWSING
+    }
+    val route = remember(trip) { trip?.toRouteOverlay() }
     val camera = rememberHomeCamera(uiState.position)
     val scope = rememberCoroutineScope()
 
@@ -171,7 +191,7 @@ fun HomeScreen(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) { detectTapGestures { onDismissSearch() } },
+                    .pointerInput(Unit) { detectTapGestures { onSearchExpandedChange(false) } },
             )
         }
 
@@ -197,10 +217,16 @@ fun HomeScreen(
                         )
                     }
                 }
-                // Material's bar brings its own panel; the slot renders the whole thing.
-                Box(Modifier.weight(1f)) {
-                    topBar { target -> scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) } }
-                }
+                HomeTopBar(
+                    search = search,
+                    trip = trip,
+                    onExpandedChange = onSearchExpandedChange,
+                    onQueryChange = onQueryChange,
+                    onPick = onPick,
+                    onClearTrip = onClearTrip,
+                    onFlyTo = { target -> scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) } },
+                    modifier = Modifier.weight(1f),
+                )
                 SideButton(visible = !searching, trailingGap = false) {
                     RoundIconButton(onClick = {
                         // With a position, center on it; otherwise ask for a fix.
@@ -351,6 +377,12 @@ fun HomeScreen(
         }
     }
 }
+
+private fun TripPlan.toRouteOverlay() = RouteOverlay(
+    points = route.points,
+    stops = stops.mapIndexed { index, stop -> RouteStop(index + 1, stop.site.position, operatorColor(stop.site)) },
+    destination = destination.position,
+)
 
 /** A button beside the bar that folds away sideways, so the bar can grow into its place. */
 @Composable

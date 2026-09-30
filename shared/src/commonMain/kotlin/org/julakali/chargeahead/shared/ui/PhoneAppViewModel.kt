@@ -10,8 +10,6 @@ import kotlinx.coroutines.flow.updateAndGet
 enum class TripListLayout { LIST, TILES }
 
 data class PhoneAppUiState(
-    /** The search bar has focus and the results panel is open. */
-    val searching: Boolean = false,
     val tripLayout: TripListLayout = TripListLayout.LIST,
     /** `null` until the platform has been asked once. */
     val hasLocationPermission: Boolean? = null,
@@ -28,7 +26,7 @@ sealed interface PhoneAppEvent {
     data object CheckLocationSettings : PhoneAppEvent
 }
 
-/** Everything around the map: search mode, trip layout, location handshake. */
+/** Everything around the map: trip layout, location handshake. */
 class PhoneAppViewModel(private val savedState: SavedStateHandle) : ViewModel() {
 
     private val state = MutableStateFlow(savedState.restoredUiState())
@@ -66,14 +64,6 @@ class PhoneAppViewModel(private val savedState: SavedStateHandle) : ViewModel() 
         }
     }
 
-    fun onSearchOpened() {
-        update { it.copy(searching = true) }
-    }
-
-    fun onSearchClosed() {
-        update { it.copy(searching = false) }
-    }
-
     fun onTripLayoutChanged(layout: TripListLayout) {
         update { it.copy(tripLayout = layout) }
     }
@@ -87,18 +77,15 @@ class PhoneAppViewModel(private val savedState: SavedStateHandle) : ViewModel() 
     }
 }
 
-private const val KEY_SEARCHING = "searching"
 private const val KEY_TRIP_LAYOUT = "tripLayout"
 
 // The location grant stays out: the platform re-checks it on every resume,
 // and a stale "granted" would skip the check.
 private fun SavedStateHandle.restoredUiState() = PhoneAppUiState(
-    searching = get<Boolean>(KEY_SEARCHING) ?: false,
     tripLayout = enum(KEY_TRIP_LAYOUT, TripListLayout.LIST),
 )
 
 private fun SavedStateHandle.store(state: PhoneAppUiState) {
-    this[KEY_SEARCHING] = state.searching
     this[KEY_TRIP_LAYOUT] = state.tripLayout.name
 }
 

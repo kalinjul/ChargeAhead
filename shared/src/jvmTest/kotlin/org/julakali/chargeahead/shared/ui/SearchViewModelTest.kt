@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.ui
 
+import androidx.lifecycle.SavedStateHandle
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.Address
 import org.julakali.chargeahead.shared.domain.Destination
@@ -84,7 +85,7 @@ class SearchViewModelTest {
     /** "Neu planen" reopens the search on the current destination as a pick; typing discards it. */
     @Test
     fun `opening with a prefill shows it as the committed pick`() = runBlocking<Unit> {
-        val viewModel = SearchViewModel(stubFeature(), DestinationSearchObserver(NoGeocoder, NoLocation), vehicles(), history())
+        val viewModel = searchViewModel()
         viewModel.onOpened(hamburg)
         val opened = viewModel.uiState.await { it.query.isNotEmpty() }
         assertEquals("Hamburg, Hamburg", opened.query)
@@ -97,9 +98,39 @@ class SearchViewModelTest {
 
     @Test
     fun `without a vehicle the state says so`() = runBlocking<Unit> {
-        val viewModel = SearchViewModel(stubFeature(), DestinationSearchObserver(NoGeocoder, NoLocation), vehicles(), history())
+        val viewModel = searchViewModel()
         assertFalse(viewModel.uiState.await { true }.hasVehicle)
     }
+
+    @Test
+    fun `opening and closing toggles the panel`() = runBlocking<Unit> {
+        val viewModel = searchViewModel()
+        viewModel.onOpened()
+        viewModel.uiState.await { it.expanded }
+        viewModel.onClosed()
+        viewModel.uiState.await { !it.expanded }
+    }
+
+    /** The field reports focus again while the panel is open. */
+    @Test
+    fun `reopening an open panel keeps the query`() = runBlocking<Unit> {
+        val viewModel = searchViewModel()
+        viewModel.onOpened()
+        viewModel.onQueryChanged("Ham")
+        viewModel.onOpened()
+        assertEquals("Ham", viewModel.uiState.await { it.expanded }.query)
+    }
+
+    /** #133 */
+    @Test
+    fun `an open panel comes back after process death`() = runBlocking<Unit> {
+        val savedState = SavedStateHandle()
+        searchViewModel(savedState).onOpened()
+        assertTrue(searchViewModel(savedState).uiState.await { true }.expanded)
+    }
+
+    private fun searchViewModel(savedState: SavedStateHandle = SavedStateHandle()) =
+        SearchViewModel(stubFeature(), DestinationSearchObserver(NoGeocoder, NoLocation), vehicles(), history(), savedState)
 
     private fun vehicles() = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
 
