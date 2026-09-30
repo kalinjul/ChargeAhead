@@ -18,6 +18,7 @@ import org.julakali.chargeahead.shared.data.createHttpClient
 import org.julakali.chargeahead.shared.data.pruneCache
 import org.julakali.chargeahead.shared.db.ChargeSiteDatabase
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.CorridorPlanning
 import org.julakali.chargeahead.shared.domain.DataSourceDirectory
 import org.julakali.chargeahead.shared.domain.Geocoder
@@ -56,6 +57,11 @@ import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersIntera
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import io.ktor.client.HttpClient
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import org.koin.core.Koin
 import org.koin.core.module.Module
@@ -72,10 +78,14 @@ import org.koin.dsl.module
  * Everything here is one instance per process.
  */
 fun chargeStopsModule(): Module = module {
+    single { AppCoroutineDispatchers(io = Dispatchers.IO, computation = Dispatchers.Default, main = Dispatchers.Main) }
+    single<CoroutineScope>(AppScope) {
+        CoroutineScope(SupervisorJob() + get<AppCoroutineDispatchers>().computation)
+    } withOptions { onClose { it?.cancel() } }
     single<TimeProvider> { TimeProvider { currentTimeMillis() } }
 
     single<HttpClient> { createHttpClient() } withOptions { onClose { it?.close() } }
-    single<ChargeSiteDatabase> { createChargeSiteDatabase(get()) }
+    single<ChargeSiteDatabase> { createChargeSiteDatabase(get(), get<AppCoroutineDispatchers>().io) }
 
     single<SiteRepository> {
         val backend = get<BackendConfig>()
@@ -85,6 +95,7 @@ fun chargeStopsModule(): Module = module {
                     source = BackendChargeSiteSource(get(), backend.baseUrl, backend.token),
                     database = get(),
                     time = get(),
+                    scope = get(AppScope),
                 ),
             ),
         )
@@ -112,27 +123,27 @@ fun chargeStopsModule(): Module = module {
         BackendDataSourceDirectory(get(), backend.baseUrl, backend.token)
     }
     factory { LoadDataSourcesInteractor(get()) }
-    factory { MapChargersObserver(get(), get(), get()) }
+    factory { MapChargersObserver(get(), get(), get(), get()) }
     factory { RefreshMapChargersInteractor(get(), get()) }
-    factory { RefreshChargerAvailabilityInteractor(get(), get(), get()) }
+    factory { RefreshChargerAvailabilityInteractor(get(), get(), get(), get()) }
     factory { LiveConnectorsObserver(get()) }
     factory { RefreshLiveConnectorsInteractor(get()) }
-    factory { ChargeNowObserver(get(), get()) }
+    factory { ChargeNowObserver(get(), get(), get()) }
     factory { RefreshChargeNowInteractor(get(), get()) }
     factory { DestinationSearchObserver(get(), get()) }
-    factory { PlanTripInteractor(get(), get(), get()) }
+    factory { PlanTripInteractor(get(), get(), get(), get()) }
     factory { UpdateArrivalSocInteractor(get()) }
     factory { ReplanWithArrivalSocInteractor(get(), get(), get()) }
     factory { CommitTripInteractor(get(), get()) }
     factory { EndTripInteractor(get()) }
     factory { DismissPlannedTripInteractor(get()) }
-    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get()) }
+    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get(), get()) }
     factory { SelectVehicleInteractor(get()) }
     factory { RemoveVehicleInteractor(get()) }
     factory { UpdateManualSocInteractor(get()) }
     factory { UpdateChargeFiltersInteractor(get()) }
     factory { UpdateNetworksInteractor(get()) }
-    factory { ChargeStopsObserver(get(), get(), get(), get(), get()) }
+    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     single<NetworkRepository> {
         val backend = get<BackendConfig>()
@@ -161,6 +172,7 @@ fun Koin.newChargeStopsFeature(
     val trips = get<TripRepository>()
     return ChargeStopsFeature(
         locationSource = locationSource,
+        parentScope = get(AppScope),
         socSource = CombinedSoCSource(
             manual = ManualSoCSource(settingsStore, time),
             hardware = hardwareSoCSource,

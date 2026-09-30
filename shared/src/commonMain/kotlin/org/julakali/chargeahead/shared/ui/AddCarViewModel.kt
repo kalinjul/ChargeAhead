@@ -2,11 +2,11 @@ package org.julakali.chargeahead.shared.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -25,6 +25,7 @@ data class AddCarUiState(
 class AddCarViewModel(
     settings: SettingsStore,
     private val selectVehicle: SelectVehicleInteractor,
+    dispatchers: AppCoroutineDispatchers,
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
@@ -42,7 +43,7 @@ class AddCarViewModel(
             },
         )
         // Off the main thread.
-    }.flowOn(Dispatchers.Default).stateIn(viewModelScope, WhileUiSubscribed, AddCarUiState())
+    }.flowOn(dispatchers.computation).stateIn(viewModelScope, WhileUiSubscribed, AddCarUiState())
 
     fun onQueryChanged(query: String) {
         this.query.value = query

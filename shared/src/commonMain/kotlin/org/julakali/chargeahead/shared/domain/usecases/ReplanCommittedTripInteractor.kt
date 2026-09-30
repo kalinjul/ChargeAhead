@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.LatLon
@@ -22,6 +23,7 @@ class ReplanCommittedTripInteractor(
     private val trips: TripRepository,
     private val updateManualSoc: UpdateManualSocInteractor,
     private val time: TimeProvider,
+    private val dispatchers: AppCoroutineDispatchers,
 ) : Interactor<ReplanCommittedTripInteractor.Params, TripPlanResult?>() {
 
     /**
@@ -33,7 +35,7 @@ class ReplanCommittedTripInteractor(
     override suspend fun doWork(params: Params): TripPlanResult? {
         val destination = trips.state.value.committed?.plan?.destination ?: return null
         params.socPercent?.takeIf { params.storeSoc }?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)).getOrThrow() }
-        val result = planner.planWithSettings(settings, params.from, destination, params.socPercent)
+        val result = planner.planWithSettings(settings, params.from, destination, params.socPercent, dispatchers.computation)
         if (result is TripPlanResult.Planned) {
             val plannedWith = params.socPercent ?: settings.manualSocPercent.first()
             val trip = CommittedTrip(result.plan, plannedWith, time.nowMillis())

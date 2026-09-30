@@ -8,9 +8,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
-import kotlinx.coroutines.SupervisorJob
 import okio.Path.Companion.toPath
 
 /** Settings file name, the same on every platform. */
@@ -25,8 +22,9 @@ const val TRIP_DATASTORE_FILE = "trip.preferences_pb"
  */
 fun createSettingsDataStore(
     path: String,
+    /** Runs the file I/O and lives as long as the store. */
+    scope: CoroutineScope,
     migrations: List<DataMigration<Preferences>> = emptyList(),
-    scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ): DataStore<Preferences> = PreferenceDataStoreFactory.createWithPath(
     // An unreadable file means lost settings, like a corrupt profile does.
     corruptionHandler = ReplaceFileCorruptionHandler { emptyPreferences() },

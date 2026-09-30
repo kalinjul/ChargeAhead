@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.ui
 
+import org.julakali.chargeahead.shared.testDispatchers
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -94,7 +96,7 @@ class CommittedTripViewModelTest {
                 override val energy: Flow<EnergyState?> = flowOf(EnergyState(soc, SoCSourceKind.CAR_HARDWARE, 0L))
             }
         },
-        dispatcher = Dispatchers.Unconfined,
+        parentScope = CoroutineScope(Dispatchers.Unconfined),
     )
 
     private val feature = feature()
@@ -107,7 +109,9 @@ class CommittedTripViewModelTest {
             settings,
             trips,
             UpdateManualSocInteractor(settings),
-        ) { 42L },
+            { 42L },
+            testDispatchers,
+        ),
         endTrip = EndTripInteractor(trips),
         trips = trips,
     )

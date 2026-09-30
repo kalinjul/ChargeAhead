@@ -11,14 +11,14 @@ import androidx.car.app.hardware.info.Mileage
 import androidx.car.app.hardware.info.Model
 import androidx.car.app.hardware.info.Speed
 import androidx.core.content.ContextCompat
+import org.julakali.chargeahead.shared.childScope
+import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.CarDataKind
 import org.julakali.chargeahead.shared.domain.CarDataPoint
 import org.julakali.chargeahead.shared.domain.CarDataStatus
 import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
@@ -33,6 +33,9 @@ class CarHardwareDebugRecorder(
     /** Shared with the SoC source. */
     private val energyLevels: CarEnergyLevels,
     private val settingsStore: SettingsStore,
+    /** Each [start] runs in a child of it that [stop] cancels. */
+    private val parentScope: CoroutineScope,
+    private val dispatchers: AppCoroutineDispatchers,
 ) {
 
     private var carInfo: CarInfo? = null
@@ -43,7 +46,7 @@ class CarHardwareDebugRecorder(
     private var scope: CoroutineScope? = null
 
     fun start() {
-        val newScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        val newScope = parentScope.childScope()
         scope = newScope
         val info = try {
             carContext.getCarService(CarHardwareManager::class.java).carInfo
@@ -60,12 +63,12 @@ class CarHardwareDebugRecorder(
             record(CarDataKind.ENERGY_PROFILE, profile.toPoint())
         }
 
-        newScope.launch(Dispatchers.Main) {
+        newScope.launch(dispatchers.main) {
             energyLevels.readings.collect(::recordEnergy)
         }
 
         // Re-register on every permission change.
-        newScope.launch(Dispatchers.Main) {
+        newScope.launch(dispatchers.main) {
             combine(permissions.granted(PERMISSION_SPEED), permissions.granted(PERMISSION_MILEAGE)) { _, _ -> }
                 .collect { registerListeners(info, executor) }
         }

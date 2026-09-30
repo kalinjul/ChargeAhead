@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
@@ -51,12 +52,12 @@ class PlanTripTest {
         }
     }
 
-    private val planTrip = PlanTripInteractor(planner, settings, trips)
+    private val planTrip = PlanTripInteractor(planner, settings, trips, testDispatchers)
     private val replanWithArrivalSoc =
         ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(settings), trips, planTrip)
     private val commitTrip = CommitTripInteractor(trips) { 7L }
     private val replanCommitted =
-        ReplanCommittedTripInteractor(planner, settings, trips, UpdateManualSocInteractor(settings)) { 9L }
+        ReplanCommittedTripInteractor(planner, settings, trips, UpdateManualSocInteractor(settings), { 9L }, testDispatchers)
 
     private fun plan(destination: Destination) = TripPlan(
         route = Route(listOf(from, destination.position), distanceKm = 170.0, durationMinutes = 100.0),

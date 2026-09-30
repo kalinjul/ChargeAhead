@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared.data
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.Network
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -11,7 +12,7 @@ import kotlin.test.assertEquals
 class RoomNetworkRepositoryTest {
 
     private var listed: List<Network> = emptyList()
-    private val repository = RoomNetworkRepository({ listed }, createChargeSiteDatabase(DatabaseFactory()))
+    private val repository = RoomNetworkRepository({ listed }, createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO))
 
     @Test
     fun `the backend's order becomes the rank`() = runBlocking {
