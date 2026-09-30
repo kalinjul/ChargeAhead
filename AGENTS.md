@@ -418,11 +418,14 @@ expect fun platformName(): String
 expect fun currentTimeMillis(): Long
 ```
 
-The iOS framework is called **`Shared`** (`import Shared`). Swift goes
-through `IosEntryPointsKt.createChargeStopsFeature(backendBaseUrl:backendToken:settingsStore:)` and
-`ChargeStopsWatcher` (which hosts `CorridorViewModel`) — both in `iosMain`, because Kotlin's default arguments
-don't reach the Objective-C header and a `StateFlow` isn't subscribable from
-Swift without SKIE.
+The iOS framework is called **`Shared`** (`import Shared`) and is built with
+SKIE: a `StateFlow` arrives in Swift as an `AsyncSequence`, `suspend` as
+`async`, Kotlin enums and sealed types as Swift enums. Swift creates the
+feature through `IosEntryPointsKt.createChargeStopsFeature(backendBaseUrl:backendToken:settingsStore:)`
+and the phone screens' ViewModels through `PhoneViewModels` (both in
+`iosMain`). A SwiftUI view holds them in a `ViewModelOwner` (`@StateObject`,
+clears them on `deinit`) and reads `uiState` with SKIE's `Observing`. CarPlay
+still goes through `ChargeStopsWatcher` until #152.
 
 ### Verifying data sources
 

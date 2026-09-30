@@ -1,7 +1,7 @@
 import Foundation
 import Shared
 
-/// Bridge to the shared framework for CarPlay and the phone UI.
+/// Bridge to the shared corridor list for CarPlay.
 ///
 /// `ChargeStopsWatcher` (see IosEntryPoints.kt) turns the Kotlin `StateFlow`
 /// into a plain callback.
@@ -13,19 +13,11 @@ final class ChargeStopsViewModel: ObservableObject {
     /// For callers without SwiftUI: CarPlay templates are swapped out manually.
     var onStateChange: ((ChargeStopsState) -> Void)?
 
-    /// One settings store for the whole process, so the feature reads the
-    /// same flows the settings UI writes.
-    static let settingsStore: SettingsStore = IosEntryPointsKt.createSettingsStore()
-
     let feature: ChargeStopsFeature
     private let watcher: ChargeStopsWatcher
 
     init() {
-        let feature = IosEntryPointsKt.createChargeStopsFeature(
-            backendBaseUrl: ChargeStopsViewModel.bundleValue("ChargeAheadBaseUrl"),
-            backendToken: ChargeStopsViewModel.bundleValue("ChargeAheadToken"),
-            settingsStore: ChargeStopsViewModel.settingsStore
-        )
+        let feature = SharedEntry.newFeature()
         self.feature = feature
         let watcher = ChargeStopsWatcher(feature: feature)
         self.watcher = watcher
@@ -51,40 +43,24 @@ final class ChargeStopsViewModel: ObservableObject {
     func refresh() {
         watcher.refresh()
     }
-
-    /// Injected into Info.plist via a build setting; the shared module stops
-    /// the app when the backend is not configured.
-    private static func bundleValue(_ key: String) -> String? {
-        guard let raw = Bundle.main.object(forInfoDictionaryKey: key) as? String else {
-            return nil
-        }
-        // A trailing space in the .xcconfig would end up in the request.
-        let value = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        return value.isEmpty ? nil : value
-    }
 }
 
 extension ChargeStopsViewModel {
 
     /// What to show when there's nothing in the list.
-    ///
-    /// No `switch`: Kotlin enums arrive as Objective-C classes, which can be
-    /// compared for equality but not pattern-matched.
     var statusKey: String {
-        let phase = state.phase
-        if phase == ChargeStopsState.Phase.waitingForLocation {
+        switch state.phase {
+        case .waitingForLocation:
             return "status_waiting_for_location"
-        }
-        if phase == ChargeStopsState.Phase.loading {
+        case .loading:
             return "status_loading"
-        }
-        if phase == ChargeStopsState.Phase.ready {
+        case .ready:
             return "status_no_stops"
+        case .failed:
+            return state.failure == .locationUnavailable
+                ? "status_location_unavailable"
+                : "status_sites_unavailable"
         }
-        if state.failure == ChargeStopsState.FailureReason.locationUnavailable {
-            return "status_location_unavailable"
-        }
-        return "status_sites_unavailable"
     }
 
     var statusText: String {

@@ -6,16 +6,18 @@ assistant (as of M1 — see [../ARCHITECTURE.md](../ARCHITECTURE.md) and
 
 ```
 ChargeAhead/
-├── AppDelegate.swift              Scene routing: phone vs. CarPlay
+├── AppDelegate.swift              Scene routing: phone vs. CarPlay; SharedEntry creates features
 ├── Info.plist                     UIApplicationSceneManifest, permission texts
 ├── ChargeAhead.entitlements       com.apple.developer.carplay-charging
 ├── de.lproj/Localizable.strings   German text for the phone UI and CarPlay
 ├── CarPlay/
 │   ├── CarPlaySceneDelegate.swift CPTemplateApplicationSceneDelegate, CPListTemplate
-│   └── ChargeStopsViewModel.swift bridge to Shared.ChargeStopsFeature
+│   └── ChargeStopsViewModel.swift corridor list for CarPlay (ChargeStopsWatcher)
 └── Phone/
-    ├── ContentView.swift          SwiftUI control view
-    └── PhoneSceneDelegate.swift   hosts ContentView in a UIHostingController
+    ├── HomeMapView.swift          map home, destination search, Jetzt laden — shared ViewModels via SKIE
+    ├── TripPlanView.swift         planned trip and its stops
+    ├── ContentView.swift          platform info
+    └── PhoneSceneDelegate.swift   hosts HomeMapView in a UIHostingController
 project.yml                        XcodeGen spec for the Xcode project
 ```
 
@@ -52,11 +54,12 @@ header, which doesn't get produced here:
   name of this static member for
   `CPTemplateApplicationSceneSessionRoleApplication` comes from memory of
   Apple's documentation, not from a locally verified source.
-- **Kotlin enums in the Swift header.** `ChargeStopsViewModel.statusKey`
-  compares `state.phase` with `==` instead of `switch`, because Kotlin
-  `enum`s are exported as Objective-C classes and aren't Swift `enum`s.
-  Whether the case names really are `ChargeStopsStatePhase.waitingForLocation`
-  etc. is unverified.
+- **SKIE's Swift layer.** The shared framework is built with SKIE, which
+  generates Swift on top of the Objective-C header at link time, so none of
+  it exists on Linux. Unverified: that `uiState` arrives as a flow `Observing`
+  and `.collect` accept, that Kotlin enums (`ChargeStopsState.Phase`) and
+  `onEnum(of:)` for sealed types (`ChargeNowUiState`) switch as written, and
+  that `TripPlanner.planTrip` is `async throws`.
 - **`ChargeStopFormatter.shared`** and whether `operator` (a Kotlin property
   on `ChargeSite`) becomes `operator_` in the Swift header — both depend on
   the specific Kotlin/Native export run.

@@ -1,75 +1,146 @@
 import SwiftUI
 import Shared
 
+/// Holds a set of shared ViewModels for as long as the SwiftUI view that owns it.
+final class ViewModelOwner: ObservableObject {
+    let viewModels: PhoneViewModels
+
+    init(feature: ChargeStopsFeature) {
+        viewModels = PhoneViewModels(feature: feature)
+    }
+
+    deinit {
+        viewModels.clear()
+    }
+}
+
+/// The phone's location and charge state, and the map's ViewModels over it.
+final class PhoneSession: ObservableObject {
+    let feature: ChargeStopsFeature
+    let viewModels: PhoneViewModels
+    let planner: TripPlanner
+    private var viewportCentre: LatLon?
+
+    init() {
+        feature = SharedEntry.newFeature()
+        viewModels = PhoneViewModels(feature: feature)
+        planner = TripPlanner()
+    }
+
+    deinit {
+        viewModels.clear()
+        feature.close()
+    }
+
+    /// The placeholder map is centered on the position, so its viewport follows it.
+    /// Small moves keep the viewport, or every fix would refill the markers.
+    func follow(_ position: LatLon?, on home: HomeViewModel) {
+        guard let position = position else { return }
+        if let centre = viewportCentre,
+           MapPlaceholderView.distanceKm(centre, position) < MapPlaceholderView.radiusKm / 5 {
+            return
+        }
+        viewportCentre = position
+        home.onViewportChanged(viewport: MapPlaceholderView.viewport(around: position))
+    }
+}
+
+extension HomeUiState {
+    /// Location status for the map's caption; `nil` when there is nothing to say.
+    var statusKey: String? {
+        if locationUnavailable { return "status_location_unavailable" }
+        if searchingLocation { return "status_waiting_for_location" }
+        if loadingSites { return "status_loading" }
+        return nil
+    }
+}
+
 /// The phone home: the map is the screen, actions float on top.
 /// TODO the map is still a placeholder drawing; pick a map SDK
 struct HomeMapView: View {
 
-    @StateObject private var viewModel = ChargeStopsViewModel()
+    @StateObject private var session = PhoneSession()
     @State private var showPlanSheet = false
     @State private var showChargeNow = false
     @State private var plan: TripPlan?
     @State private var planFailureText: String?
     @State private var planningInProgress = false
 
-    private var planningBridge: PlanningBridge {
-        PlanningBridge(feature: viewModel.feature)
-    }
-
     var body: some View {
+        let home = session.viewModels.home()
         NavigationStack {
-            ZStack {
-                MapPlaceholderView(
-                    position: viewModel.state.position,
-                    stops: viewModel.stops
-                )
-                .ignoresSafeArea(edges: .bottom)
+            Observing(home.uiState) { state in
+                ZStack {
+                    MapPlaceholderView(position: state.position, chargers: state.chargers)
+                        .ignoresSafeArea(edges: .bottom)
 
-                VStack {
-                    VStack(spacing: 2) {
-                        Text(NSLocalizedString("home_map_placeholder", comment: ""))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        if planningInProgress {
-                            ProgressView(NSLocalizedString("plan_planning", comment: ""))
-                                .padding(.top, 8)
+                    VStack {
+                        VStack(spacing: 2) {
+                            Text(NSLocalizedString("home_map_placeholder", comment: ""))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            if let status = state.statusKey {
+                                Text(NSLocalizedString(status, comment: ""))
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if planningInProgress {
+                                ProgressView(NSLocalizedString("plan_planning", comment: ""))
+                                    .padding(.top, 8)
+                            }
+                            if let failure = planFailureText {
+                                Text(failure)
+                                    .font(.footnote)
+                                    .foregroundStyle(.red)
+                                    .padding(.top, 8)
+                            }
                         }
-                        if let failure = planFailureText {
-                            Text(failure)
-                                .font(.footnote)
-                                .foregroundStyle(.red)
-                                .padding(.top, 8)
+                        .padding(.top, 8)
+
+                        Spacer()
+
+                        HStack(spacing: 12) {
+                            Button {
+                                showPlanSheet = true
+                            } label: {
+                                Label(
+                                    NSLocalizedString("home_pill_plan", comment: ""),
+                                    systemImage: "arrow.triangle.turn.up.right.diamond.fill"
+                                )
+                                .padding(.horizontal, 4)
+                            }
+                            .buttonStyle(.borderedProminent)
+
+                            Button {
+                                showChargeNow = true
+                            } label: {
+                                Label(
+                                    NSLocalizedString("home_pill_charge_now", comment: ""),
+                                    systemImage: "bolt.fill"
+                                )
+                                .padding(.horizontal, 4)
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.green)
                         }
+                        .padding(.bottom, 24)
                     }
-                    .padding(.top, 8)
-
-                    Spacer()
-
-                    HStack(spacing: 12) {
-                        Button {
-                            showPlanSheet = true
-                        } label: {
-                            Label(
-                                NSLocalizedString("home_pill_plan", comment: ""),
-                                systemImage: "arrow.triangle.turn.up.right.diamond.fill"
-                            )
-                            .padding(.horizontal, 4)
-                        }
-                        .buttonStyle(.borderedProminent)
-
-                        Button {
-                            showChargeNow = true
-                        } label: {
-                            Label(
-                                NSLocalizedString("home_pill_charge_now", comment: ""),
-                                systemImage: "bolt.fill"
-                            )
-                            .padding(.horizontal, 4)
-                        }
-                        .buttonStyle(.bordered)
-                        .tint(.green)
+                }
+                .navigationDestination(
+                    isPresented: Binding(
+                        get: { plan != nil },
+                        set: { presented in if !presented { plan = nil } },
+                    ),
+                ) {
+                    if let plannedTrip = plan {
+                        TripPlanView(plan: plannedTrip, ownPosition: state.position)
                     }
-                    .padding(.bottom, 24)
+                }
+                .sheet(isPresented: $showPlanSheet) {
+                    PlanSheetView(feature: session.feature) { destination in
+                        showPlanSheet = false
+                        startPlanning(to: destination, from: state.position)
+                    }
                 }
             }
             .navigationTitle(NSLocalizedString("app_name", comment: ""))
@@ -79,44 +150,32 @@ struct HomeMapView: View {
                     ContentView()
                 }
             }
-            .navigationDestination(
-                isPresented: Binding(
-                    get: { plan != nil },
-                    set: { presented in if !presented { plan = nil } },
-                ),
-            ) {
-                if let plannedTrip = plan {
-                    TripPlanView(plan: plannedTrip, ownPosition: viewModel.state.position)
-                }
-            }
-            .sheet(isPresented: $showPlanSheet) {
-                PlanSheetView(bridge: planningBridge) { destination in
-                    showPlanSheet = false
-                    startPlanning(to: destination)
-                }
-            }
             .sheet(isPresented: $showChargeNow) {
-                ChargeNowView(
-                    bridge: planningBridge,
-                    position: viewModel.state.position
-                )
+                ChargeNowView(feature: session.feature)
             }
+        }
+        .collect(flow: home.uiState) { state in
+            session.follow(state.position, on: home)
+        }
+        .onAppear {
+            home.onLocationPermissionGranted()
         }
     }
 
-    private func startPlanning(to destination: Destination) {
-        guard let position = viewModel.state.position else {
+    private func startPlanning(to destination: Destination, from position: LatLon?) {
+        guard let position = position else {
             planFailureText = NSLocalizedString("home_no_position", comment: "")
             return
         }
         planningInProgress = true
         planFailureText = nil
-        planningBridge.planTrip(from: position, destination: destination) { outcome in
+        Task { @MainActor in
+            let outcome = try? await session.planner.planTrip(from: position, destination: destination)
             planningInProgress = false
-            if let planned = outcome.plan {
+            if let planned = outcome?.plan {
                 plan = planned
             } else {
-                planFailureText = NSLocalizedString(failureKey(outcome.failure), comment: "")
+                planFailureText = NSLocalizedString(failureKey(outcome?.failure), comment: "")
             }
         }
     }
@@ -133,7 +192,32 @@ struct HomeMapView: View {
 /// Placeholder map: light ground, faint grid, pins, own position.
 struct MapPlaceholderView: View {
     let position: LatLon?
-    let stops: [ChargeStop]
+    let chargers: [MapCharger]
+
+    static let radiusKm = 25.0
+    private static let kmPerDegLat = 111.19
+
+    private static func kmPerDegLon(at lat: Double) -> Double {
+        kmPerDegLat * cos(lat * .pi / 180)
+    }
+
+    /// The area the drawing shows around `center`.
+    static func viewport(around center: LatLon) -> BoundingBox {
+        let latSpan = radiusKm / kmPerDegLat
+        let lonSpan = radiusKm / kmPerDegLon(at: center.lat)
+        return BoundingBox(
+            south: center.lat - latSpan,
+            west: center.lon - lonSpan,
+            north: center.lat + latSpan,
+            east: center.lon + lonSpan
+        )
+    }
+
+    static func distanceKm(_ a: LatLon, _ b: LatLon) -> Double {
+        let dx = (b.lon - a.lon) * kmPerDegLon(at: a.lat)
+        let dy = (b.lat - a.lat) * kmPerDegLat
+        return (dx * dx + dy * dy).squareRoot()
+    }
 
     var body: some View {
         Canvas { context, size in
@@ -152,10 +236,9 @@ struct MapPlaceholderView: View {
             }
 
             guard let center = position else { return }
-            let radiusKm = 25.0
-            let pxPerKm = min(size.width, size.height) / (radiusKm * 2)
-            let kmPerDegLat = 111.19
-            let kmPerDegLon = kmPerDegLat * cos(center.lat * .pi / 180)
+            let pxPerKm = min(size.width, size.height) / (Self.radiusKm * 2)
+            let kmPerDegLat = Self.kmPerDegLat
+            let kmPerDegLon = Self.kmPerDegLon(at: center.lat)
 
             func project(_ point: LatLon) -> CGPoint {
                 let dx = (point.lon - center.lon) * kmPerDegLon * pxPerKm
@@ -163,8 +246,8 @@ struct MapPlaceholderView: View {
                 return CGPoint(x: size.width / 2 + dx, y: size.height / 2 - dy)
             }
 
-            for stop in stops {
-                let at = project(stop.site.position)
+            for charger in chargers {
+                let at = project(charger.site.position)
                 context.fill(Path(ellipseIn: CGRect(x: at.x - 8, y: at.y - 8, width: 16, height: 16)), with: .color(.white))
                 context.fill(Path(ellipseIn: CGRect(x: at.x - 6, y: at.y - 6, width: 12, height: 12)), with: .color(.blue))
             }
@@ -177,32 +260,33 @@ struct MapPlaceholderView: View {
     }
 }
 
-/// Destination search — the shared Nominatim geocoder behind a plain text field.
+/// Destination search — the shared geocoder behind a plain text field.
 struct PlanSheetView: View {
-    let bridge: PlanningBridge
     let onPlan: (Destination) -> Void
 
+    @StateObject private var owner: ViewModelOwner
     @State private var query = ""
-    @State private var results: [Place] = []
+
+    init(feature: ChargeStopsFeature, onPlan: @escaping (Destination) -> Void) {
+        self.onPlan = onPlan
+        _owner = StateObject(wrappedValue: ViewModelOwner(feature: feature))
+    }
 
     var body: some View {
+        let search = owner.viewModels.search()
         NavigationStack {
-            List {
-                ForEach(results, id: \.name) { place in
-                    Button(place.name) {
-                        onPlan(Destination(name: place.name, position: place.position, address: ChargeStopFormatter.shared.detailLine(place: place)))
+            Observing(search.uiState) { state in
+                List {
+                    ForEach(state.results ?? [], id: \.name) { place in
+                        Button(place.name) {
+                            onPlan(Destination(name: place.name, position: place.position, address: ChargeStopFormatter.shared.detailLine(place: place)))
+                        }
                     }
                 }
             }
             .searchable(text: $query, prompt: NSLocalizedString("plan_search_hint", comment: ""))
             .onChange(of: query) { changed in
-                bridge.searchDestinations(query: changed)
-            }
-            .onAppear {
-                bridge.watchDestinationSearch { results = $0 }
-            }
-            .onDisappear {
-                bridge.close()
+                search.onQueryChanged(query: changed)
             }
             .navigationTitle(NSLocalizedString("plan_title", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
@@ -212,51 +296,60 @@ struct PlanSheetView: View {
 
 /// The best chargers nearby, on the shared ranking.
 struct ChargeNowView: View {
-    let bridge: PlanningBridge
-    let position: LatLon?
+    @StateObject private var owner: ViewModelOwner
 
-    @State private var result: ChargeNowResult?
+    init(feature: ChargeStopsFeature) {
+        _owner = StateObject(wrappedValue: ViewModelOwner(feature: feature))
+    }
 
     var body: some View {
+        let chargeNow = owner.viewModels.chargeNow()
         NavigationStack {
-            List {
-                if position == nil {
-                    Text(NSLocalizedString("home_no_position", comment: ""))
-                } else if let outcome = result {
-                    if !outcome.relaxed.isEmpty {
-                        Text(NSLocalizedString("cn_relaxed_note", comment: ""))
-                            .font(.footnote)
-                            .foregroundStyle(.red)
+            Observing(chargeNow.uiState) { state in
+                List {
+                    switch onEnum(of: state) {
+                    case .noPosition:
+                        Text(NSLocalizedString("home_no_position", comment: ""))
+                    case .loading:
+                        ProgressView(NSLocalizedString("cn_loading", comment: ""))
+                    case .ready(let ready):
+                        ChargeNowRows(result: ready.result)
                     }
-                    ForEach(Array(outcome.candidates.enumerated()), id: \.element.site.id) { index, candidate in
-                        Button {
-                            openInMaps(MapsHandoff.shared.navigateUrl(target: candidate.site.position))
-                        } label: {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("\(index + 1) · \(candidate.site.name)")
-                                    .font(.headline)
-                                Text("\(ChargeStopFormatter.shared.distanceLabel(distanceKm: candidate.distanceKm)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: candidate.maxPowerKw))")
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                    if outcome.candidates.isEmpty {
-                        Text(NSLocalizedString("cn_empty", comment: ""))
-                    }
-                } else {
-                    ProgressView(NSLocalizedString("cn_loading", comment: ""))
                 }
             }
             .navigationTitle(NSLocalizedString("cn_title", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
-                guard position != nil else { return }
-                bridge.chargeNow { result = $0 }
+                chargeNow.onSheetOpened()
             }
-            .onDisappear {
-                bridge.close()
+        }
+    }
+}
+
+private struct ChargeNowRows: View {
+    let result: ChargeNowResult
+
+    var body: some View {
+        if !result.relaxed.isEmpty {
+            Text(NSLocalizedString("cn_relaxed_note", comment: ""))
+                .font(.footnote)
+                .foregroundStyle(.red)
+        }
+        ForEach(Array(result.candidates.enumerated()), id: \.element.site.id) { index, candidate in
+            Button {
+                openInMaps(MapsHandoff.shared.navigateUrl(target: candidate.site.position))
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(index + 1) · \(candidate.site.name)")
+                        .font(.headline)
+                    Text("\(ChargeStopFormatter.shared.distanceLabel(distanceKm: candidate.distanceKm)) · \(ChargeStopFormatter.shared.powerKwLabel(powerKw: candidate.maxPowerKw))")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
+        }
+        if result.candidates.isEmpty {
+            Text(NSLocalizedString("cn_empty", comment: ""))
         }
     }
 }
