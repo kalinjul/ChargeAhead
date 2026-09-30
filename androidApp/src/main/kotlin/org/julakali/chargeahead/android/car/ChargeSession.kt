@@ -9,8 +9,9 @@ import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.shared.AppScope
 import org.julakali.chargeahead.shared.data.FusedLocationSource
 import org.julakali.chargeahead.shared.data.RememberingSoCSource
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.CarDiagnosticsRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.newChargeStopsFeature
 import org.julakali.chargeahead.shared.ui.car.CarViewModels
 import org.koin.core.component.KoinComponent
@@ -23,7 +24,7 @@ import org.koin.core.component.get
 class ChargeSession : Session(), KoinComponent {
 
     override fun onCreateScreen(intent: Intent): Screen {
-        val settings: SettingsStore = get()
+        val diagnostics: CarDiagnosticsRepository = get()
         val time: TimeProvider = get()
         val permissions = CarPermissions(carContext)
         val energyLevels = CarEnergyLevels(carContext, permissions, lifecycleScope)
@@ -35,9 +36,9 @@ class ChargeSession : Session(), KoinComponent {
                 source = CarHardwareSoCSource(
                     energyLevels = energyLevels,
                     time = time,
-                    settingsStore = settings,
+                    diagnosticsRepository = diagnostics,
                 ),
-                settingsStore = settings,
+                vehicles = get<VehicleRepository>(),
             ),
         )
 
@@ -47,7 +48,7 @@ class ChargeSession : Session(), KoinComponent {
             time = time,
             permissions = permissions,
             energyLevels = energyLevels,
-            settingsStore = settings,
+            diagnostics = diagnostics,
             parentScope = get(AppScope),
             dispatchers = get(),
         )

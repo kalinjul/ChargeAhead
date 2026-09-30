@@ -35,7 +35,10 @@ import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeNowInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
+import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.settings.DataStoreCarDiagnosticsRepository
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -54,7 +57,10 @@ class CarScreenViewModelsTest {
     fun tearDownMainDispatcher() = Dispatchers.resetMain()
 
     private val here = LatLon(48.0, 11.0)
-    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+    private val history = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
+    private val diagnostics = DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore())
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T = withTimeout(5_000) { first(matching) }
 
@@ -83,8 +89,8 @@ class CarScreenViewModelsTest {
         }
         val viewModel = CarChargeNowViewModel(
             feature,
-            ChargeNowObserver(repository, settings, testDispatchers),
-            RefreshChargeNowInteractor(repository, settings),
+            ChargeNowObserver(repository, preferences, testDispatchers),
+            RefreshChargeNowInteractor(repository, preferences),
         )
         assertEquals(ChargeNowUiState.NoPosition, viewModel.uiState.await { true })
 
@@ -106,8 +112,8 @@ class CarScreenViewModelsTest {
             }
         }
         val noLocation = object : LocationSource { override val updates: Flow<Fix> = emptyFlow() }
-        settings.addRecentDestination(hamburg)
-        val viewModel = CarDestinationSearchViewModel(settings, DestinationSearchObserver(geocoder, noLocation))
+        history.addRecentDestination(hamburg)
+        val viewModel = CarDestinationSearchViewModel(history, DestinationSearchObserver(geocoder, noLocation))
         assertEquals(listOf(hamburg), viewModel.uiState.await { it.recents.isNotEmpty() }.recents)
 
         viewModel.onSearchTextChanged("Berlin")
@@ -124,7 +130,7 @@ class CarScreenViewModelsTest {
 
     @Test
     fun `picking a charge level stores it and ends the screen`() = runBlocking<Unit> {
-        val viewModel = CarSoCViewModel(settings, UpdateManualSocInteractor(settings))
+        val viewModel = CarSoCViewModel(vehicles, diagnostics, UpdateManualSocInteractor(vehicles))
         assertNull(viewModel.uiState.await { true }.currentPercent)
 
         viewModel.onStepPicked(60)
@@ -135,11 +141,11 @@ class CarScreenViewModelsTest {
 
     @Test
     fun `the car reading shows only when the car delivered one`() = runBlocking<Unit> {
-        val viewModel = CarSoCViewModel(settings, UpdateManualSocInteractor(settings))
-        settings.recordSoCDiagnostics(SoCDiagnostics(0L, SoCDiagnostics.Outcome.NO_DATA, detail = "status 2"))
+        val viewModel = CarSoCViewModel(vehicles, diagnostics, UpdateManualSocInteractor(vehicles))
+        diagnostics.recordSoCDiagnostics(SoCDiagnostics(0L, SoCDiagnostics.Outcome.NO_DATA, detail = "status 2"))
         assertNull(viewModel.uiState.await { true }.carReading)
 
-        settings.recordSoCDiagnostics(SoCDiagnostics(1L, SoCDiagnostics.Outcome.AVAILABLE, detail = "72 %"))
+        diagnostics.recordSoCDiagnostics(SoCDiagnostics(1L, SoCDiagnostics.Outcome.AVAILABLE, detail = "72 %"))
         assertEquals("72 %", viewModel.uiState.await { it.carReading != null }.carReading)
     }
 }

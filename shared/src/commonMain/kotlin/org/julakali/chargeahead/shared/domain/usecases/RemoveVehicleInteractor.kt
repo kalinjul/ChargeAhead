@@ -1,15 +1,15 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
 import org.julakali.chargeahead.shared.domain.Interactor
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 
 class RemoveVehicleInteractor(
-    private val settings: SettingsStore,
+    private val vehicles: VehicleRepository,
 ) : Interactor<RemoveVehicleInteractor.Params, Unit>() {
 
     data class Params(val displayName: String)
 
     override suspend fun doWork(params: Params) {
-        settings.removeVehicle(params.displayName)
+        vehicles.removeVehicle(params.displayName)
     }
 }

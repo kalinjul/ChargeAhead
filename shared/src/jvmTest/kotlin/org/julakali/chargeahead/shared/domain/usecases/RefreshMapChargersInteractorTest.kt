@@ -8,7 +8,7 @@ import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.ViewportArea
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -18,7 +18,7 @@ class RefreshMapChargersTest {
 
     private val viewport = BoundingBox(south = 51.0, west = 6.5, north = 51.4, east = 7.0)
 
-    private val settings = PersistentSettingsStore(InMemoryPreferencesDataStore())
+    private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
     private val fetchedAreas = mutableListOf<SearchArea>()
     private val fetchedNetworks = mutableListOf<Set<String>>()
 
@@ -30,7 +30,7 @@ class RefreshMapChargersTest {
                 return emptyList()
             }
         },
-        settings = settings,
+        preferences = preferences,
     )
 
     @Test
@@ -42,7 +42,7 @@ class RefreshMapChargersTest {
 
     @Test
     fun `viewport fetch passes the network selection to the repository`() = runBlocking<Unit> {
-        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
 
         refresh(RefreshMapChargersInteractor.Params(viewport)).getOrThrow()
 
@@ -54,8 +54,8 @@ class RefreshMapChargersTest {
 
     @Test
     fun `slow mode fetches every network`() = runBlocking<Unit> {
-        settings.setChargeFilters(ChargeFilters(slowMode = true))
-        settings.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
+        preferences.setChargeFilters(ChargeFilters(slowMode = true))
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")))
 
         refresh(RefreshMapChargersInteractor.Params(viewport)).getOrThrow()
 
@@ -69,7 +69,7 @@ class RefreshMapChargersTest {
                 override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> =
                     error("offline")
             },
-            settings = settings,
+            preferences = preferences,
         )
 
         assertTrue(failing(RefreshMapChargersInteractor.Params(viewport)).isFailure)

@@ -2,7 +2,6 @@ package org.julakali.chargeahead.shared
 
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
-import org.julakali.chargeahead.shared.data.LegacyTripSource
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
@@ -11,13 +10,12 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
-import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripStorage
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.julakali.chargeahead.shared.settings.createTripDataStore
+import org.julakali.chargeahead.shared.settings.settingsModule
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.julakali.chargeahead.shared.ui.CorridorViewModel
@@ -26,7 +24,6 @@ import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.julakali.chargeahead.shared.ui.ViewModelHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -37,18 +34,9 @@ import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import org.koin.core.Koin
+import org.koin.core.scope.Scope
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
-
-/**
- * The entry points for Swift: they resolve from the Koin graph on Swift's
- * behalf, and [ChargeStopsWatcher] turns a `StateFlow` into a plain callback.
- */
-fun createSettingsStore(): SettingsStore =
-    PersistentSettingsStore(createSettingsDataStore(settingsScope))
-
-// Swift creates the settings store before the graph exists, so it can't use the graph's scope.
-private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 /**
  * The process-wide graph, built on the first [createChargeStopsFeature] call;
@@ -57,14 +45,12 @@ private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
  */
 private var graph: Koin? = null
 
-private fun graph(backend: BackendConfig, settingsStore: SettingsStore): Koin =
+private fun graph(backend: BackendConfig): Koin =
     graph ?: koinApplication {
         modules(
+            settingsModule { createSettingsDataStore(dataStoreScope()) },
             module {
-                single { settingsStore }
-                single<TripStorage> {
-                    DataStoreTripStorage(createTripDataStore(get<CoroutineScope>(AppScope) + get<AppCoroutineDispatchers>().io), legacy = settingsStore as? LegacyTripSource)
-                }
+                single<TripStorage> { DataStoreTripStorage(createTripDataStore(dataStoreScope()), legacy = get()) }
                 single<LocationSource> { CoreLocationSource() }
                 single { DatabaseFactory() }
                 single { backend }
@@ -73,20 +59,20 @@ private fun graph(backend: BackendConfig, settingsStore: SettingsStore): Koin =
         )
     }.koin.also { graph = it }
 
+private fun Scope.dataStoreScope(): CoroutineScope = get<CoroutineScope>(AppScope) + get<AppCoroutineDispatchers>().io
+
 /**
- * @param settingsStore the same instance that also backs the settings view.
  * @throws IllegalArgumentException when the backend is not configured; the app cannot run without it.
  */
 fun createChargeStopsFeature(
     backendBaseUrl: String?,
     backendToken: String?,
-    settingsStore: SettingsStore,
 ): ChargeStopsFeature {
     val backend = requireNotNull(BackendConfig.of(backendBaseUrl, backendToken)) {
         "ChargeAheadBaseUrl and ChargeAheadToken must be set in Info.plist"
     }
     // Each caller owns its feature; the data graph beneath is shared.
-    return graph(backend, settingsStore).newChargeStopsFeature(locationSource = CoreLocationSource())
+    return graph(backend).newChargeStopsFeature(locationSource = CoreLocationSource())
 }
 
 /** The corridor list for Swift: every state change, on the main thread, until [stop]. */
@@ -133,7 +119,7 @@ class PlanningBridge(feature: ChargeStopsFeature) {
     private val planTrip: PlanTripInteractor = koin.get()
     private val viewModels = ViewModelHost()
     private val chargeNowViewModel = viewModels.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
-    private val searchViewModel = viewModels.get { SearchViewModel(feature, koin.get(), koin.get()) }
+    private val searchViewModel = viewModels.get { SearchViewModel(feature, koin.get(), koin.get(), koin.get()) }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var chargeNowJob: Job? = null
     private var searchJob: Job? = null

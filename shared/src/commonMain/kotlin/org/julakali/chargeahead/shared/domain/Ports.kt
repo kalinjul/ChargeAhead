@@ -89,8 +89,8 @@ interface SoCSource {
     val energy: Flow<EnergyState?>
 }
 
-/** What the driver has configured. Outlives the process. */
-interface SettingsStore {
+/** The driver's vehicles and charge levels. Outlives the process. */
+interface VehicleRepository {
     /** The selected vehicle. */
     val vehicle: Flow<VehicleProfile?>
 
@@ -103,20 +103,7 @@ interface SettingsStore {
     /** How full the battery should still be at the destination. */
     val arrivalSocPercent: Flow<Double>
 
-    val networks: Flow<NetworkPreferences>
-
-    /** Hard limits for the phone flows (planning, "charge now"). */
-    val chargeFilters: Flow<ChargeFilters>
-
-    /** The outcome of the last attempt to read the charge level from the vehicle. */
-    val socDiagnostics: Flow<SoCDiagnostics?>
-
-    /** Everything the car hardware last delivered, one point per [CarDataKind]. */
-    val carDebugData: Flow<List<CarDataPoint>>
-
-    /** Recently used destinations, newest first. */
-    val recentDestinations: Flow<List<Destination>>
-
+    /** Selects [profile] and adds it to the garage, or updates it there. */
     suspend fun setVehicle(profile: VehicleProfile?)
 
     /** Removes from the garage; if it was the selected vehicle, the first remaining one takes over. */
@@ -125,13 +112,35 @@ interface SettingsStore {
     suspend fun setManualSocPercent(socPercent: Double?)
 
     suspend fun setArrivalSocPercent(socPercent: Double)
+}
+
+/** Which chargers the driver wants to see. Outlives the process. */
+interface PreferencesRepository {
+    val networks: Flow<NetworkPreferences>
+
+    /** Hard limits for the phone flows (planning, "charge now"). */
+    val chargeFilters: Flow<ChargeFilters>
+
+    suspend fun setNetworks(preferences: NetworkPreferences)
 
     suspend fun setChargeFilters(filters: ChargeFilters)
+}
+
+interface DestinationHistory {
+    /** Recently used destinations, newest first. */
+    val recentDestinations: Flow<List<Destination>>
 
     /** Puts [destination] first in the history. */
     suspend fun addRecentDestination(destination: Destination)
+}
 
-    suspend fun setNetworks(preferences: NetworkPreferences)
+/** What the car last told us, kept for the phone's debug views. */
+interface CarDiagnosticsRepository {
+    /** The outcome of the last attempt to read the charge level from the vehicle. */
+    val socDiagnostics: Flow<SoCDiagnostics?>
+
+    /** Everything the car hardware last delivered, one point per [CarDataKind]. */
+    val carDebugData: Flow<List<CarDataPoint>>
 
     suspend fun recordSoCDiagnostics(diagnostics: SoCDiagnostics)
 

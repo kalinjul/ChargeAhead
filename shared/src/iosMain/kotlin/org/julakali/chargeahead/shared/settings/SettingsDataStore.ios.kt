@@ -21,7 +21,7 @@ fun createSettingsDataStore(
         scope = scope,
         migrations = listOf(
             KeyValueMigration(
-                keys = PersistentSettingsStore.ALL_KEYS,
+                keys = SettingsKeys.ALL,
                 read = defaults::stringForKey,
                 remove = defaults::removeObjectForKey,
             ),

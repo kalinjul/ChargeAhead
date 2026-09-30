@@ -12,7 +12,7 @@ const val MAX_MAP_CHARGERS = 200
 
 private const val RENDER_PADDING_VIEWPORTS = 2.0
 
-internal fun SettingsStore.mapFilter(): Flow<MapFilter> =
+internal fun PreferencesRepository.mapFilter(): Flow<MapFilter> =
     combine(chargeFilters, networks, MapFilter::of).distinctUntilChanged()
 
 /** The stored sites the map shows for [viewport]: those in a padded box, capped nearest-first. */

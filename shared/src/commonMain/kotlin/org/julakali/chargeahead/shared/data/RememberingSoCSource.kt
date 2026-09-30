@@ -1,7 +1,7 @@
 package org.julakali.chargeahead.shared.data
 
 import org.julakali.chargeahead.shared.domain.EnergyState
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import kotlinx.coroutines.flow.Flow
@@ -15,7 +15,7 @@ import kotlin.math.roundToInt
  */
 class RememberingSoCSource(
     private val source: SoCSource,
-    private val settingsStore: SettingsStore,
+    private val vehicles: VehicleRepository,
 ) : SoCSource {
 
     override val kind: SoCSourceKind = source.kind
@@ -23,9 +23,9 @@ class RememberingSoCSource(
     override val energy: Flow<EnergyState?> = source.energy.onEach { state ->
         if (state == null) return@onEach
         // Only write on whole-percent changes.
-        val stored = settingsStore.manualSocPercent.first()
+        val stored = vehicles.manualSocPercent.first()
         if (stored?.roundToInt() != state.socPercent.roundToInt()) {
-            settingsStore.setManualSocPercent(state.socPercent)
+            vehicles.setManualSocPercent(state.socPercent)
         }
     }
 }

@@ -14,14 +14,13 @@ import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
-import org.julakali.chargeahead.shared.domain.SettingsStore
 import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.PersistentSettingsStore
+import org.julakali.chargeahead.shared.settings.settingsModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import org.koin.core.Koin
@@ -40,9 +39,9 @@ class ChargeStopsModuleTest {
     private fun <T> withGraph(block: (Koin) -> T): T {
         val app = koinApplication {
             modules(
+                settingsModule { InMemoryPreferencesDataStore() },
                 module {
                     single<LocationSource> { fakeLocationSource }
-                    single<SettingsStore> { PersistentSettingsStore(InMemoryPreferencesDataStore()) }
                     single { DatabaseFactory() }
                     single<TripStorage> { TripStorage.None }
                     single { BackendConfig("https://backend.invalid", "token") }

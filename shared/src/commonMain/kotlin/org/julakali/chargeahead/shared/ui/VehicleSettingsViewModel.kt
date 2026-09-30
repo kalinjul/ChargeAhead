@@ -4,7 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ConnectorType
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.VehicleRepository
+import org.julakali.chargeahead.shared.domain.CarDiagnosticsRepository
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.VehicleProfile
@@ -40,7 +41,8 @@ data class VehicleSettingsUiState(
  * level. Every valid change is written through immediately.
  */
 class VehicleSettingsViewModel(
-    settings: SettingsStore,
+    vehicles: VehicleRepository,
+    diagnostics: CarDiagnosticsRepository,
     feature: ChargeStopsFeature,
     private val selectVehicle: SelectVehicleInteractor,
 ) : ViewModel() {
@@ -50,9 +52,9 @@ class VehicleSettingsViewModel(
 
     val uiState: StateFlow<VehicleSettingsUiState> = combine(
         form,
-        settings.vehicle,
-        settings.manualSocPercent,
-        settings.socDiagnostics,
+        vehicles.vehicle,
+        vehicles.manualSocPercent,
+        diagnostics.socDiagnostics,
         feature.currentEnergy,
     ) { form, vehicle, socPercent, diagnostics, energy ->
         val edited = form ?: Form(

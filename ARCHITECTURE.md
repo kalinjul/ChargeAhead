@@ -52,8 +52,8 @@ charging stations nobody would actually drive to — village chargers
 perpendicular to the direction of travel. The corridor remains as the
 **fallback** when no destination is set.
 
-Implemented: the destination and destination history live in the
-`SettingsStore`, the route is computed **once per destination** and trimmed
+Implemented: the destination lives in the `TripRepository` and the
+destination history in `DestinationHistory`, the route is computed **once per destination** and trimmed
 at the front only as the drive progresses. In the car, the destination can
 be switched from the history — a text field is something the Car App
 Library deliberately doesn't offer.
@@ -278,7 +278,8 @@ interface ChargeSiteSource {
 interface LocationSource   { val updates: Flow<Fix> }          // position + heading + speed
 interface SoCSource        { val energy: Flow<EnergyState?>; val kind: SoCSourceKind }
 interface RouteProvider    { fun searchArea(fix: Fix, rangeKm: Double): SearchArea }
-interface SettingsStore    { val vehicle: Flow<VehicleProfile?>; val networks: Flow<NetworkPrefs> }
+interface VehicleRepository     { val vehicle: Flow<VehicleProfile?>; … }
+interface PreferencesRepository { val networks: Flow<NetworkPreferences>; … }
 ```
 
 `SearchArea` is deliberately abstract (sector **or** polyline buffer), so
@@ -645,7 +646,7 @@ dependency.
 
 ```
 ChargeStopsFeature ─┐                        app-scoped, one per process
-SettingsStore     ──┼──► XViewModel ──► uiState: StateFlow<XUiState>
+settings repos    ──┼──► XViewModel ──► uiState: StateFlow<XUiState>
 use cases (domain)──┘         ▲                        │
                               │ on…() events           ▼
                         XRoute (androidApp) ──► XScreen (stateless Compose)
@@ -667,15 +668,16 @@ DataStore file (`DataStoreTripStorage`), read back when the feature starts,
 so a trip survives process death, a restart and a cache schema bump. Only
 the trip interactors write it.
 
-A `SettingsStore` write from the UI goes through one of them
+A settings write from the UI goes through one of them
 (`SelectVehicleInteractor`, `UpdateManualSocInteractor`, …). ViewModels
-read the store's flows directly, but never call a setter — that
+read the repositories' flows directly, but never call a setter — that
 keeps one write in one place, testable without a ViewModel and with an
 `inProgress` flag of its own. Data sources that write back what they
 observed (`RememberingSoCSource`, `CarHardwareSoCSource`) still write
 directly.
 
-**Scoping.** `SettingsStore` (`appModule`, androidApp) and the phone's
+**Scoping.** The settings repositories (`settingsModule`, opened by the
+platform module over one DataStore file) and the phone's
 `ChargeStopsFeature` and `TripRepository` (`chargeStopsModule`, shared) are
 application-scoped Koin singletons — the
 ViewModels share them, because two instances would mean two location streams

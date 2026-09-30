@@ -6,7 +6,7 @@ import org.julakali.chargeahead.shared.domain.ChargePointStatus
 import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.MapFilter
-import org.julakali.chargeahead.shared.domain.SettingsStore
+import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
@@ -32,7 +32,7 @@ import kotlinx.coroutines.flow.map
 class MapChargersObserver(
     private val repository: SiteRepository,
     private val statusRepository: ChargePointStatusRepository,
-    private val settings: SettingsStore,
+    private val preferences: PreferencesRepository,
     private val dispatchers: AppCoroutineDispatchers,
 ) : SubjectInteractor<MapChargersObserver.Params, List<MapCharger>>() {
 
@@ -41,7 +41,7 @@ class MapChargersObserver(
 
     override fun createObservable(params: Params): Flow<List<MapCharger>> {
         val viewport = params.viewport ?: return flowOf(emptyList())
-        return settings.mapFilter().flatMapLatest { filter ->
+        return preferences.mapFilter().flatMapLatest { filter ->
             combine(
                 repository.mapChargersIn(viewport, filter, dispatchers.computation),
                 statusRepository.statuses,

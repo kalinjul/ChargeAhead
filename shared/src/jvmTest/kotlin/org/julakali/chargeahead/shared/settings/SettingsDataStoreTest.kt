@@ -6,6 +6,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import kotlin.io.path.createTempDirectory
@@ -36,12 +37,12 @@ class SettingsDataStoreTest {
     // the first one before opening the next.
     private fun <T> withStore(
         migrations: List<KeyValueMigration> = emptyList(),
-        block: suspend (PersistentSettingsStore) -> T,
+        block: suspend (DataStoreVehicleRepository) -> T,
     ): T = runBlocking {
         val job = SupervisorJob()
         try {
             val dataStore = createSettingsDataStore(file.absolutePath, CoroutineScope(Dispatchers.IO + job), migrations)
-            block(PersistentSettingsStore(dataStore))
+            block(DataStoreVehicleRepository(dataStore))
         } finally {
             job.cancelAndJoin()
         }
@@ -51,14 +52,14 @@ class SettingsDataStoreTest {
     fun aSavedProfile_survivesARestart_onDisk() {
         withStore { it.setVehicle(vehicle) }
 
-        assertEquals(vehicle, withStore { it.vehicle.value })
+        assertEquals(vehicle, withStore { it.vehicle.first() })
     }
 
     @Test
     fun aCorruptFile_isTreatedAsNoSettings() {
         file.writeText("kein Protobuf")
 
-        assertNull(withStore { it.vehicle.value })
+        assertNull(withStore { it.vehicle.first() })
     }
 
     @Test
@@ -71,26 +72,26 @@ class SettingsDataStoreTest {
             "energy.manualSocPercent" to "64.0",
             "unrelated" to "stays",
         )
-        val migration = KeyValueMigration(PersistentSettingsStore.ALL_KEYS, old::get, { old.remove(it) })
+        val migration = KeyValueMigration(SettingsKeys.ALL, old::get, { old.remove(it) })
 
         val (migratedVehicle, migratedSoc) = withStore(listOf(migration)) {
-            it.vehicle.value to it.manualSocPercent.value
+            it.vehicle.first() to it.manualSocPercent.first()
         }
 
         assertEquals(vehicle, migratedVehicle)
         assertEquals(64.0, migratedSoc)
         assertEquals(mapOf("unrelated" to "stays"), old)
         // Without the old entries, the next start reads DataStore alone.
-        assertEquals(vehicle, withStore(listOf(migration)) { it.vehicle.value })
+        assertEquals(vehicle, withStore(listOf(migration)) { it.vehicle.first() })
     }
 
     @Test
     fun aValueAlreadyInDataStore_winsOverTheOldStore() {
         withStore { it.setManualSocPercent(30.0) }
         val old = mutableMapOf("energy.manualSocPercent" to "64.0")
-        val migration = KeyValueMigration(PersistentSettingsStore.ALL_KEYS, old::get, { old.remove(it) })
+        val migration = KeyValueMigration(SettingsKeys.ALL, old::get, { old.remove(it) })
 
-        assertEquals(30.0, withStore(listOf(migration)) { it.manualSocPercent.value })
+        assertEquals(30.0, withStore(listOf(migration)) { it.manualSocPercent.first() })
         assertTrue(old.isEmpty())
     }
 }
