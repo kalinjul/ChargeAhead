@@ -16,18 +16,18 @@ and drive it with Google Maps. Also on Android Auto and CarPlay.
 
 <table align="center">
   <tr>
-    <td valign="top" width="33%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/HomeSearchPreviewsKt/SearchResultsHits_748aa731_0.png" alt="Destination search results"></td>
-    <td valign="top" width="33%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/TripSheetPreviewsKt/TripSheetList_748aa731_0.png" alt="Planned trip with three charging stops"></td>
-    <td valign="top" width="33%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/ActiveRoutePreviewsKt/ActiveRoutePage_748aa731_0.png" alt="Active route to München"></td>
+    <td valign="top" width="25%"><img src="docs/images/home-map.png" alt="Charging stations on the map around Kempten"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/HomeSearchPreviewsKt/SearchResultsHits_748aa731_0.png" alt="Destination search results"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/TripSheetPreviewsKt/TripSheetList_748aa731_0.png" alt="Planned trip with three charging stops"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/ActiveRoutePreviewsKt/ActiveRoutePage_748aa731_0.png" alt="Active route to München"></td>
   </tr>
   <tr>
-    <td align="center"><sub><b>1 · Search a destination</b></sub></td>
-    <td align="center"><sub><b>2 · Get the charging stops</b></sub></td>
-    <td align="center"><sub><b>3 · Drive the active route</b></sub></td>
+    <td align="center"><sub><b>Chargers around you</b></sub></td>
+    <td align="center"><sub><b>Search a destination</b></sub></td>
+    <td align="center"><sub><b>Get the charging stops</b></sub></td>
+    <td align="center"><sub><b>Drive the active route</b></sub></td>
   </tr>
 </table>
-
-<p align="center"><sub>The pictures are the screenshot-test goldens, so they always match the current UI.</sub></p>
 
 ---
 
