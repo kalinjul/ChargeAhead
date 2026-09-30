@@ -182,7 +182,7 @@ fun HomeGoogleMap(
         properties = MapProperties(isMyLocationEnabled = hasLocationPermission, mapStyleOptions = mapStyle),
         onMapLoaded = { mapLoaded = true },
         // The bar on top and the trip sheet below cover the map; a route must fit between them.
-        contentPadding = PaddingValues(top = TOP_CHROME_HEIGHT, bottom = bottomInset),
+        contentPadding = PaddingValues(top = TOP_CONTROLS_HEIGHT, bottom = bottomInset),
         // The SDK's own buttons would sit inside the status bar; ours replace them.
         uiSettings = MapUiSettings(zoomControlsEnabled = false, myLocationButtonEnabled = false, compassEnabled = false),
         modifier = modifier,
@@ -253,5 +253,5 @@ const val PILL_ZOOM = 11f
 private const val BOUNDS_PADDING_PX = 120
 
 /** Status bar, search bar and one row of controls. */
-private val TOP_CHROME_HEIGHT = 150.dp
+private val TOP_CONTROLS_HEIGHT = 150.dp
 
