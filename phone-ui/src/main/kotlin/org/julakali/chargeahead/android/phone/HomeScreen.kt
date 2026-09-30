@@ -1,10 +1,12 @@
 package org.julakali.chargeahead.android.phone
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +31,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -36,9 +39,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -148,7 +153,10 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
 
     Box(modifier = modifier) {
-        if (hasGoogleMapsKey) {
+        if (LocalInspectionMode.current) {
+            // Previews have no Maps SDK; a plain backdrop keeps them the same with or without a key.
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+        } else if (hasGoogleMapsKey) {
             HomeGoogleMap(
                 position = uiState.position,
                 // The route replaces the browsing markers.
@@ -367,3 +375,63 @@ private fun SideButton(visible: Boolean, trailingGap: Boolean, content: @Composa
         }
     }
 }
+
+@Composable
+private fun HomePreview(
+    uiState: HomeUiState = HomeUiState(position = LatLon(53.5511, 9.9937)),
+    hasPermission: Boolean? = true,
+    planningInProgress: Boolean = false,
+    activeRouteEnabled: Boolean = true,
+) {
+    ChargeAheadTheme {
+        HomeScreen(
+            uiState = uiState,
+            hasPermission = hasPermission,
+            planningInProgress = planningInProgress,
+            mode = HomeMode.BROWSING,
+            route = null,
+            mapBottomInset = 0.dp,
+            onViewportChanged = {},
+            onChargerTapped = {},
+            onRequestPermission = {},
+            onLocate = {},
+            onSettings = {},
+            onChargeNow = {},
+            activeRouteEnabled = activeRouteEnabled,
+            onActiveRoute = {},
+            onDismissSearch = {},
+            onStopTapped = {},
+            topBar = {
+                HomeDockedSearchBar(query = "", searching = false, expanded = false, onExpandedChange = {}, onQueryChange = {}, onClear = {}) {}
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeBrowsingPreview() = HomePreview()
+
+@Preview(widthDp = 400, heightDp = 800, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeBrowsingDarkPreview() = HomePreview()
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeZoomedOutLoadingPreview() = HomePreview(
+    uiState = HomeUiState(position = LatLon(53.5511, 9.9937), belowMinZoom = true, loadingSites = true),
+    activeRouteEnabled = false,
+)
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeLocationUnavailablePreview() = HomePreview(uiState = HomeUiState(searchingLocation = true, locationUnavailable = true))
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeWithoutPermissionPreview() = HomePreview(uiState = HomeUiState(), hasPermission = false)
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomePlanningPreview() = HomePreview(planningInProgress = true)
