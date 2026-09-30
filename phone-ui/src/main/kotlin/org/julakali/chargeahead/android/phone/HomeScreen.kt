@@ -5,6 +5,8 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -177,58 +181,17 @@ fun HomeScreen(
 
         // Burger, bar, locate on one line. While searching the sides fold away and
         // Material's docked bar takes the whole width; compass and spinner hang on the right.
+        // The opened bar grows downward, so nothing here may be placed relative to its height.
         val searching = mode == HomeMode.SEARCHING
-        Column(
+        Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
-                .padding(16.dp)
+                .padding(SCREEN_MARGIN)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SideButton(visible = !searching, trailingGap = true) {
-                    RoundIconButton(onClick = onSettings) {
-                        Icon(
-                            Icons.Outlined.Menu,
-                            contentDescription = stringResource(R.string.home_settings),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                }
-                // Material's bar brings its own panel; the slot renders the whole thing.
-                Box(Modifier.weight(1f)) {
-                    topBar { target -> scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) } }
-                }
-                SideButton(visible = !searching, trailingGap = false) {
-                    RoundIconButton(onClick = {
-                        // With a position, center on it; otherwise ask for a fix.
-                        val target = uiState.position
-                        if (target == null) {
-                            onLocate()
-                        } else {
-                            scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), LOCATE_ZOOM)) }
-                        }
-                    }) {
-                        if (uiState.searchingLocation) {
-                            CircularProgressIndicator(
-                                strokeWidth = 2.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        } else {
-                            Icon(
-                                Icons.Filled.MyLocation,
-                                contentDescription = stringResource(R.string.map_my_location),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    }
-                }
-            }
-            Row(Modifier.fillMaxWidth()) {
+            // Drawn first, so the opened panel covers it.
+            Row(Modifier.fillMaxWidth().padding(top = SEARCH_BAR_HEIGHT + 8.dp)) {
                 Column(
                     Modifier.weight(1f),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -243,7 +206,7 @@ fun HomeScreen(
                         )
                     }
                 }
-                SideButton(visible = !searching, trailingGap = false) {
+                SideButton(visible = !searching, edge = ScreenEdge.END) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -266,6 +229,48 @@ fun HomeScreen(
                             CircularProgressIndicator(
                                 strokeWidth = 2.dp,
                                 color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                }
+            }
+            Row(verticalAlignment = Alignment.Top) {
+                SideButton(visible = !searching, edge = ScreenEdge.START, modifier = Modifier.height(SEARCH_BAR_HEIGHT)) {
+                    RoundIconButton(onClick = onSettings) {
+                        Icon(
+                            Icons.Outlined.Menu,
+                            contentDescription = stringResource(R.string.home_settings),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
+                // Material's bar brings its own panel; the slot renders the whole thing.
+                Box(Modifier.weight(1f)) {
+                    topBar { target -> scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) } }
+                }
+                SideButton(visible = !searching, edge = ScreenEdge.END, modifier = Modifier.height(SEARCH_BAR_HEIGHT)) {
+                    RoundIconButton(onClick = {
+                        // With a position, center on it; otherwise ask for a fix.
+                        val target = uiState.position
+                        if (target == null) {
+                            onLocate()
+                        } else {
+                            scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), LOCATE_ZOOM)) }
+                        }
+                    }) {
+                        if (uiState.searchingLocation) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        } else {
+                            Icon(
+                                Icons.Filled.MyLocation,
+                                contentDescription = stringResource(R.string.map_my_location),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
                         }
@@ -352,18 +357,35 @@ fun HomeScreen(
     }
 }
 
-/** A button beside the bar that folds away sideways, so the bar can grow into its place. */
+private enum class ScreenEdge { START, END }
+
+/** A button beside the bar that slides off its screen edge while the bar grows into its place. */
 @Composable
-private fun SideButton(visible: Boolean, trailingGap: Boolean, content: @Composable () -> Unit) {
+private fun SideButton(
+    visible: Boolean,
+    edge: ScreenEdge,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    // The slot shrinks unclipped while the button slides, so it clears the screen margin instead of being cut off.
+    val margin = with(LocalDensity.current) { SCREEN_MARGIN.roundToPx() }
+    val towards = if (edge == ScreenEdge.START) Alignment.Start else Alignment.End
+    val offScreen: (Int) -> Int = { width -> if (edge == ScreenEdge.START) -(width + margin) else width + margin }
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(ChargeAheadMotion.effects()) + expandHorizontally(ChargeAheadMotion.spatial()),
-        exit = fadeOut(ChargeAheadMotion.effects()) + shrinkHorizontally(ChargeAheadMotion.spatial()),
+        enter = fadeIn(ChargeAheadMotion.effects()) +
+            slideInHorizontally(ChargeAheadMotion.spatial(), offScreen) +
+            expandHorizontally(ChargeAheadMotion.spatial(), expandFrom = towards, clip = false),
+        exit = fadeOut(ChargeAheadMotion.effects()) +
+            slideOutHorizontally(ChargeAheadMotion.spatial(), offScreen) +
+            shrinkHorizontally(ChargeAheadMotion.spatial(), shrinkTowards = towards, clip = false),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (!trailingGap) Spacer(Modifier.width(10.dp))
+        Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+            if (edge == ScreenEdge.END) Spacer(Modifier.width(10.dp))
             content()
-            if (trailingGap) Spacer(Modifier.width(10.dp))
+            if (edge == ScreenEdge.START) Spacer(Modifier.width(10.dp))
         }
     }
 }
+
+private val SCREEN_MARGIN = 16.dp

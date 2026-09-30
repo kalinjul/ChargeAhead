@@ -25,7 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /** The bar's height: Material's search field is 56dp; the destination header matches it. */
-val CHROME_HEIGHT = 56.dp
+val SEARCH_BAR_HEIGHT = 56.dp
 
 /** 46dp floating circle: the bar may be taller, the buttons stay light. */
 @Composable

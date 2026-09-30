@@ -37,6 +37,9 @@ Dependency direction: `androidApp` → `phone-ui` → `shared`, `ui-tests` → `
 ## Language
 
 - **Identifiers, types, filenames: English.** `ChargeSite`, not `Ladesaeule`.
+- **Mobile vocabulary, not web or desktop jargon.** No "chrome" for the UI
+  around the content, in code or in prose. Name the actual thing: search bar,
+  controls, app shell, top bar.
 - **Comments and documentation: English.** Write a comment only when it's
   truly needed — not a blind comment on every function. A comment explains
   *why*, not *what*: a hidden constraint, a subtle invariant, a workaround, a

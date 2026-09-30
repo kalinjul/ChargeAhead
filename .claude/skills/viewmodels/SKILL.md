@@ -175,8 +175,8 @@ viewModelOf(::ExampleViewModel)
 
 `koinViewModel()` resolves it through Koin, scoped to the Navigation3 entry
 when the Route sits inside `NavDisplay` (cleared on pop) and to the activity
-when it sits in the chrome around it (map, drawer, sheets). A ViewModel that
-both the chrome and a page need must be resolved in the chrome and handed
+when it sits in the app shell around it (map, drawer, sheets). A ViewModel that
+both the shell and a page need must be resolved in the shell and handed
 down. Forgetting the declaration
 fails at runtime, not at compile time — add it in the same commit.
 
