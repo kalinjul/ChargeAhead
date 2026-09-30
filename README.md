@@ -1,70 +1,133 @@
-# ChargeAhead
+<div align="center">
 
-Charging-stop assistant for **Android Auto** and **Apple CarPlay**. Shows the
-next reachable charging stations ahead while driving — sorted by distance,
-filtered by vehicle and charging network, rated against the remaining range.
+# ⚡ ChargeAhead
 
-Shared logic in Kotlin Multiplatform, car UI native twice.
+**Plan your EV road trip — charging stops included.**
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — design, platform constraints, data sources
-- **[ROADMAP.md](ROADMAP.md)** — milestones, planned UI, open points
-- **[AGENTS.md](AGENTS.md)** — conventions and the shared contract
-- **[docs/android-auto-testen.md](docs/android-auto-testen.md)** — seeing the app in the Desktop Head Unit
-- **[iosApp/README.md](iosApp/README.md)** — what to do on a Mac
-- **[docs/ci-cd.md](docs/ci-cd.md)** — CI, releasing to the Play Store, secrets
+Pick a destination, get the charging stops that fit your car and battery,
+and drive it with Google Maps. Also on Android Auto and CarPlay.
 
-## Status: M1 — corridor and real data
+[![CI](https://github.com/kalinjul/ChargeAhead/actions/workflows/ci.yml/badge.svg)](https://github.com/kalinjul/ChargeAhead/actions/workflows/ci.yml)
+![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin-Multiplatform-7F52FF?logo=kotlin&logoColor=white)
+![Android](https://img.shields.io/badge/Android-phone%20%2B%20Auto-3DDC84?logo=android&logoColor=white)
+![iOS](https://img.shields.io/badge/iOS-in%20progress-lightgrey?logo=apple&logoColor=white)
 
-The app determines the location, spans a ±35° sector in the direction of
-travel, queries the ChargeAhead backend for the enclosing area, and shows the
-results sorted by distance. Recomputed after 2 km, after 60 s, or
-immediately on a heading change over 45°; queried only when the corridor
-leaves the most recently fetched area.
+</div>
 
-Not yet in place: vehicle profile and charge level. Reachability therefore
-stays `UNKNOWN` throughout — guessing it would be worse than leaving it
-open. That's coming in M2.
+<table align="center">
+  <tr>
+    <td valign="top" width="25%"><img src="docs/images/home-map.png" alt="Charging stations on the map around Kempten"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/HomeSearchPreviewsKt/SearchResultsHits_748aa731_0.png" alt="Destination search results"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/TripSheetPreviewsKt/TripSheetList_748aa731_0.png" alt="Planned trip with three charging stops"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/ActiveRoutePreviewsKt/ActiveRoutePage_748aa731_0.png" alt="Active route to München"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Chargers around you</b></sub></td>
+    <td align="center"><sub><b>Search a destination</b></sub></td>
+    <td align="center"><sub><b>Get the charging stops</b></sub></td>
+    <td align="center"><sub><b>Drive the active route</b></sub></td>
+  </tr>
+</table>
 
-The mapping of the backend's answers can be checked against the real
-backend with:
+---
+
+## What it does
+
+| Feature | |
+|---|---|
+| 🔎 **Plan a trip** | Type a destination in the search bar; the route and its charging stops appear in a sheet over the map — arrival charge level, charge window and times per stop. |
+| 🚗 **Your car, your numbers** | A garage of vehicle profiles (battery, consumption, connectors, DC peak power) and the current charge level. Without them, reachability stays open instead of being guessed. |
+| 🧭 **Navigate with Google Maps** | Send the whole route, one section, or a single stop to Google Maps. The sent trip stays the active route until you end it, and can be re-planned on the way. |
+| 🗺️ **Chargers on the map** | Charging stations around you with live availability and a filter for power, distance and charging networks. |
+| ⚡ **Jetzt laden** | The three best chargers nearby. If none fit, the filter relaxes step by step: power → networks → distance. |
+| 🖥️ **In the car** | Android Auto (CarPlay to follow) brings the planned route, destination search, charge now and the charge level onto the car's screen — using the car's own battery reading where the head unit provides one. |
+
+The UI is German, on purpose — the app is built for the German market.
+
+## Status
+
+| Platform | State |
+|---|---|
+| **Android** | Everyday use: trip planning, Google Maps hand-off, map, charge now, garage, active route. |
+| **Android Auto** | Run in the car (Pixel + DHU): route, destination search, charge now, charge level, hand-off to navigation. |
+| **iOS** | Core screens on the shared ViewModels; the map is still a placeholder, no garage yet. |
+| **CarPlay** | Code written, waiting on Apple's charging entitlement. Moving to the same screens as Android Auto ([#152](https://github.com/kalinjul/ChargeAhead/issues/152)). |
+
+Milestones and open questions: **[ROADMAP.md](ROADMAP.md)**.
+
+## How it's built
+
+```
+shared/      Kotlin Multiplatform — domain, planning, ViewModels, data layer
+phone-ui/    Compose phone UI (Android library)
+androidApp/  Android app: CarAppService (Android Auto) + MainActivity
+ui-tests/    Robolectric behaviour tests + screenshot goldens
+iosApp/      Swift: SwiftUI phone UI + CarPlay scene
+```
+
+Everything that computes lives once, in `shared`: route planning, reachability,
+formatting and the screen state. Android and iOS only draw it — so the car
+shows the same numbers as the phone, on both platforms. Charging sites, live status, networks,
+routing and the destination search come from the ChargeAhead backend.
+
+## Getting started
+
+**Prerequisites:** JDK 17, an Android SDK with Platform 37,
+and access to the ChargeAhead backend.
+
+1. Put the SDK path and the backend into `local.properties` (git-ignored):
+
+   ```properties
+   sdk.dir=/path/to/Android/Sdk
+   chargeAheadBaseUrl=https://YOUR_HOST
+   chargeAheadToken=YOUR_TOKEN
+   googleMapsApiKey=YOUR_MAPS_KEY
+   ```
+
+2. Add the Maven access for the backend's contract module to
+   `~/.gradle/gradle.properties`:
+
+   ```properties
+   chargeahead.maven.user=…
+   chargeahead.maven.password=…
+   ```
+
+3. Build and install:
+
+   ```bash
+   ./gradlew :androidApp:installDebug
+   ```
+
+Without backend address and token the app stops at startup; without a Maps
+key it says so in place of the map. For iOS, the same values go into
+`iosApp/Secrets.xcconfig` — see [iosApp/README.md](iosApp/README.md).
+
+## Testing
+
+```bash
+./gradlew testAll
+```
+
+That runs the shared unit tests, the Robolectric UI tests and the screenshot
+comparison. The backend mapping can additionally be checked against the real
+service:
 
 ```bash
 CHARGEAHEAD_LIVE=1 ./gradlew :shared:jvmTest --tests '*BackendChargeSiteLiveContractTest'
 ```
 
-What **can't** be checked on this development machine (Linux): anything
-needing the generated Objective-C header or a device. The Swift code parses
-(`tools/check-swift.sh`) but isn't type-checked — see
-[iosApp/README.md](iosApp/README.md).
+Android Auto only runs on real hardware; the Desktop Head Unit makes it
+testable from a desk. Swift can only be syntax-checked on Linux
+(`tools/check-swift.sh`).
 
-## Building
+## Documentation
 
-```bash
-./gradlew :androidApp:assembleDebug
-```
-
-```bash
-./gradlew :shared:jvmTest
-```
-
-```bash
-./gradlew :androidApp:installDebug
-```
-
-Requires JDK 17 and an Android SDK with Platform 36 and Build-Tools 36. The
-path to the SDK lives in `local.properties` (not in the repository).
-
-## Backend
-
-The app gets its charging sites, networks, routes and destination search
-from the ChargeAhead backend and does not run without it: it stops at
-startup when address or token are missing. Neither belongs in the
-repository:
-
-- **Android** — in `local.properties`:
-  ```properties
-  chargeAheadBaseUrl=https://YOUR_HOST
-  chargeAheadToken=YOUR_TOKEN
-  ```
-- **iOS** — in `iosApp/Secrets.xcconfig` (not checked in), see
-  [iosApp/README.md](iosApp/README.md).
+| Document | Covers |
+|---|---|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Design, platform constraints, data sources |
+| [ROADMAP.md](ROADMAP.md) | Milestones, planned UI, open points |
+| [AGENTS.md](AGENTS.md) | Conventions and the shared contract |
+| [docs/testing.md](docs/testing.md) | Test layers, screenshot goldens |
+| [docs/android-auto-testen.md](docs/android-auto-testen.md) | The app in the Desktop Head Unit |
+| [docs/ci-cd.md](docs/ci-cd.md) | CI, Play Store releases, secrets |
+| [iosApp/README.md](iosApp/README.md) | What to do on a Mac |
