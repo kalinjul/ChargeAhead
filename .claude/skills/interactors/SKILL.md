@@ -68,12 +68,12 @@ The worked example is `MapChargersObserver`, used by `HomeViewModel`.
    `UpdateArrivalSocInteractor`). A `data` source writing back what it
    observed (`RememberingSoCSource`, `CarHardwareSoCSource`) is not a UI
    event and keeps its direct write.
-10. **Observers are used only in ViewModels.** The Swift bridge, a car
+10. **Observers are used only in ViewModels.** A SwiftUI view, a car
     `Screen` or a feature class never calls a `SubjectInteractor` or
     collects its `flow`; it goes through the shared ViewModel for that
     screen and collects its `uiState`, created with `ViewModelHost` and
-    `clear()`ed when it ends (see `PlanningBridge`, and `screenViewModel`
-    for car screens).
+    `clear()`ed when it ends (see `PhoneViewModels` in `iosMain`, and
+    `screenViewModel` for car screens).
 
 ## In the ViewModel
 

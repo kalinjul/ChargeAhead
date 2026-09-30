@@ -35,7 +35,7 @@ data class SearchUiState(
     /** The geocoder itself failed. */
     val failed: Boolean = false,
     val hasVehicle: Boolean = false,
-    /** Raw hits, for the iOS bridge. */
+    /** Raw hits, for the iOS search sheet. */
     val results: List<Place>? = emptyList(),
 ) {
     val isQueryTooShort: Boolean get() = query.trim().length < MIN_QUERY_LENGTH

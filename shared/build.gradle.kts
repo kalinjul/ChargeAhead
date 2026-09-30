@@ -6,6 +6,16 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     // Room's annotation processing (entities/DAO live in commonMain).
     alias(libs.plugins.ksp)
+    // Swift-friendly header: StateFlow as AsyncSequence, suspend as async,
+    // Kotlin enums and sealed types as Swift enums.
+    alias(libs.plugins.skie)
+}
+
+skie {
+    features {
+        // The SwiftUI views observe uiState with Observing { } and .collect.
+        enableSwiftUIObservingPreview = true
+    }
 }
 
 kotlin {

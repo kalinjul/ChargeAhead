@@ -4,11 +4,9 @@ import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
-import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
-import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
@@ -16,21 +14,15 @@ import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.julakali.chargeahead.shared.settings.createTripDataStore
 import org.julakali.chargeahead.shared.settings.settingsModule
-import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.julakali.chargeahead.shared.ui.CorridorViewModel
-import org.julakali.chargeahead.shared.ui.SearchUiState
+import org.julakali.chargeahead.shared.ui.HomeViewModel
 import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.julakali.chargeahead.shared.ui.ViewModelHost
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import org.koin.core.Koin
@@ -75,7 +67,7 @@ fun createChargeStopsFeature(
     return graph(backend).newChargeStopsFeature(locationSource = CoreLocationSource())
 }
 
-/** The corridor list for Swift: every state change, on the main thread, until [stop]. */
+/** The corridor list for CarPlay: every state change, on the main thread, until [stop]. */
 class ChargeStopsWatcher(feature: ChargeStopsFeature) {
 
     private val koin: Koin = requireNotNull(graph) {
@@ -110,72 +102,48 @@ data class TripPlanOutcome(
     enum class TripPlanFailure { NO_VEHICLE, NO_ROUTE, NO_CHARGER_IN_REACH }
 }
 
-/** The phone planning flows as plain callbacks on the main thread; [close] ends them. */
-class PlanningBridge(feature: ChargeStopsFeature) {
+/**
+ * The phone screens' ViewModels over [feature]. A SwiftUI owner holds one per
+ * screen or sheet and calls [clear] when it goes away.
+ */
+class PhoneViewModels(private val feature: ChargeStopsFeature) {
 
     private val koin: Koin = requireNotNull(graph) {
         "No graph yet — call createChargeStopsFeature first"
     }
-    private val planTrip: PlanTripInteractor = koin.get()
-    private val viewModels = ViewModelHost()
-    private val chargeNowViewModel = viewModels.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
-    private val searchViewModel = viewModels.get { SearchViewModel(feature, koin.get(), koin.get(), koin.get()) }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private var chargeNowJob: Job? = null
-    private var searchJob: Job? = null
+    private val host = ViewModelHost()
 
-    fun planTrip(
-        from: LatLon,
-        destination: Destination,
-        onResult: (TripPlanOutcome) -> Unit,
-    ) {
-        scope.launch {
-            val outcome = planTrip(PlanTripInteractor.Params(from, destination)).fold(
-                onSuccess = { result ->
-                    when (result) {
-                        is TripPlanResult.Planned -> TripPlanOutcome(result.plan, null)
-                        is TripPlanResult.NoVehicle -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_VEHICLE)
-                        is TripPlanResult.NoRoute -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE)
-                        is TripPlanResult.NoChargerInReach ->
-                            TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_CHARGER_IN_REACH)
-                    }
-                },
-                onFailure = { TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE) },
-            )
-            onResult(outcome)
-        }
+    fun home(): HomeViewModel = host.get {
+        HomeViewModel(feature, koin.get(), koin.get(), koin.get(), koin.get(), koin.get(), koin.get())
     }
 
-    /** Ranks from the feature's current position and reports every change until [close]. */
-    fun chargeNow(onResult: (ChargeNowResult) -> Unit) {
-        chargeNowJob?.cancel()
-        chargeNowJob = scope.launch {
-            chargeNowViewModel.uiState
-                .mapNotNull { (it as? ChargeNowUiState.Ready)?.result }
-                .collect(onResult)
-        }
-        chargeNowViewModel.onSheetOpened()
-    }
+    fun chargeNow(): ChargeNowViewModel = host.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
 
-    /** Reports the places found for the latest [searchDestinations] query until [close]. */
-    fun watchDestinationSearch(onChange: (List<Place>) -> Unit) {
-        searchJob?.cancel()
-        searchJob = scope.launch {
-            searchViewModel.uiState
-                .filter { !it.searching }
-                .map { it.results.orEmpty() }
-                .distinctUntilChanged()
-                .collect(onChange)
-        }
-    }
+    fun search(): SearchViewModel = host.get { SearchViewModel(feature, koin.get(), koin.get(), koin.get()) }
 
-    /** Debounced; queries shorter than [SearchUiState.MIN_QUERY_LENGTH] find nothing. */
-    fun searchDestinations(query: String) {
-        searchViewModel.onQueryChanged(query)
+    fun clear() {
+        host.clear()
     }
+}
 
-    fun close() {
-        scope.cancel()
-        viewModels.clear()
-    }
+/** Plans a trip for Swift, which sees [planTrip] as `async`. */
+class TripPlanner {
+
+    private val planTrip: PlanTripInteractor = requireNotNull(graph) {
+        "No graph yet — call createChargeStopsFeature first"
+    }.get()
+
+    suspend fun planTrip(from: LatLon, destination: Destination): TripPlanOutcome =
+        planTrip(PlanTripInteractor.Params(from, destination)).fold(
+            onSuccess = { result ->
+                when (result) {
+                    is TripPlanResult.Planned -> TripPlanOutcome(result.plan, null)
+                    is TripPlanResult.NoVehicle -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_VEHICLE)
+                    is TripPlanResult.NoRoute -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE)
+                    is TripPlanResult.NoChargerInReach ->
+                        TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_CHARGER_IN_REACH)
+                }
+            },
+            onFailure = { TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE) },
+        )
 }
