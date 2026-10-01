@@ -20,6 +20,7 @@
 
     <string name="car_route_planning">Route wird geplant …</string>
     <string name="car_route_send_all">Ganze Route an Maps senden</string>
+    <string name="car_route_send_all_hint">Nur mit dem Telefon in der Hand</string>
     <string name="car_route_open_phone">Öffne PowerTrip auf deinem Smartphone, damit die Route an Maps geschickt werden kann.</string>
     <string name="car_route_next_stop_only">Nur nächster Ladestopp</string>
     <string name="car_route_navigate">Navigation starten</string>

@@ -40,10 +40,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The committed route on the host's map: every charging stop as a numbered
- * marker in its operator's colour, the car's position, the destination as
- * the anchor. A stop opens its detail; the strip sends the route to Maps or
- * re-plans.
+ * The route on the host's map: every charging stop as a numbered marker in
+ * its operator's colour, the car's position, the destination as the anchor.
+ * Navigation goes one stop at a time through the host, and starting it
+ * commits a plan made here. A stop opens its detail; the last row still
+ * sends the whole route through the phone, for those who want Maps to hold
+ * every waypoint.
  */
 class RouteScreen(
     carContext: CarContext,
@@ -51,7 +53,7 @@ class RouteScreen(
     private val destination: Destination,
     private val title: String = destination.name,
     /** Show the active route as the phone keeps it, instead of planning here; leaves when it ends. */
-    activeRoute: Boolean = false,
+    private val activeRoute: Boolean = false,
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
@@ -109,11 +111,12 @@ class RouteScreen(
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
         val here = viewModel.feature.currentFix.value?.position
 
-        // Every row is a marker: the host's limit is the only cut.
+        // Every stop is a marker; the whole-route send takes the last slot.
         val itemList = ItemList.Builder()
-        plan.stops.take(contentLimit).forEachIndexed { index, stop ->
+        plan.stops.take(contentLimit - 1).forEachIndexed { index, stop ->
             itemList.addItem(stopRow(index + 1, stop, here))
         }
+        itemList.addItem(sendAllRow(plan))
 
         return PlaceListMapTemplate.Builder()
             .setItemList(itemList.build())
@@ -123,7 +126,7 @@ class RouteScreen(
             .setAnchor(destinationAnchor())
             .setActionStrip(
                 ActionStrip.Builder()
-                    .addAction(sendAllAction(plan))
+                    .addAction(navigateAction(plan))
                     .addAction(replanAction())
                     .build(),
             )
@@ -169,8 +172,30 @@ class RouteScreen(
     }
 
     /** Strip actions render icon-only on most hosts. */
-    private fun sendAllAction(plan: TripPlan): Action = Action.Builder()
-        .setIcon(icon(R.drawable.ic_send))
+    private fun navigateAction(plan: TripPlan): Action = Action.Builder()
+        .setIcon(icon(R.drawable.ic_destination))
+        .setOnClickListener { startNavigation(plan) }
+        .build()
+
+    /**
+     * The next stop goes to the host's navigation, which is the one hand-off
+     * that keeps the driver in the car. A plan made here becomes the active
+     * route first and the grid takes over, so coming back lands on it.
+     */
+    private fun startNavigation(plan: TripPlan) {
+        val target = plan.stops.firstOrNull()?.site?.let { it.name to it.position } ?: (destination.name to destination.position)
+        if (!activeRoute) {
+            viewModel.onNavigationStarted()
+            screenManager.popToRoot()
+        }
+        navigateTo(carContext, target.first, target.second)
+    }
+
+    private fun sendAllRow(plan: TripPlan): Row = Row.Builder()
+        .setTitle(carContext.getString(R.string.car_route_send_all))
+        .addText(carContext.getString(R.string.car_route_send_all_hint))
+        // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
+        .setImage(icon(R.drawable.ic_send, CarColor.PRIMARY), Row.IMAGE_TYPE_ICON)
         .setOnClickListener { sendRouteToMaps(plan) }
         .build()
 
@@ -260,7 +285,7 @@ class RouteScreen(
                 Action.Builder()
                     .setTitle(carContext.getString(R.string.car_route_navigate))
                     .setBackgroundColor(CarColor.PRIMARY)
-                    .setOnClickListener { navigateTo(carContext, destination.name, destination.position) }
+                    .setOnClickListener { (viewModel.uiState.value as? CarRouteUiState.Ready)?.plan?.let(::startNavigation) }
                     .build(),
             )
             .addAction(chargeNowTitledAction())

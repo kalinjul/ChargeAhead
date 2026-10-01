@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.android.car
 
 import android.app.Application
+import androidx.car.app.CarContext
 import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.CarColor
 import androidx.car.app.model.ForegroundCarColorSpan
@@ -8,6 +9,8 @@ import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.PlaceListMapTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
+import androidx.car.app.testing.ScreenController
+import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.sync.Mutex
 import org.julakali.chargeahead.android.car.CarTestGraph.Companion.click
 import org.julakali.chargeahead.android.car.CarTestGraph.Companion.distanceOf
@@ -22,6 +25,7 @@ import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -92,7 +96,7 @@ class RouteScreenTest {
     }
 
     @Test
-    fun `every stop is a numbered marker in its operator colour, cut only by the host's limit`() {
+    fun `every stop is a numbered marker in its operator colour, the whole-route send takes the last slot`() {
         val graph = graph()
         graph.withVehicle()
         val limit = graph.carContext.getCarService(ConstraintManager::class.java).getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
@@ -102,12 +106,16 @@ class RouteScreenTest {
 
         val rows = template.itemList!!.items.map { it as Row }
         assertEquals(limit, rows.size)
+        assertEquals(string(R.string.car_route_send_all), rows.last().title.toString())
+        assertEquals(string(R.string.car_route_send_all_hint), rows.last().texts.single().toString())
+        assertNull(rows.last().metadata?.place)
+        val stops = rows.dropLast(1)
         assertEquals(
-            plan.stops.take(limit).mapIndexed { index, stop -> ChargeStopFormatter.plannedStopTitle(index + 1, stop) },
-            rows.map { it.title.toString() },
+            plan.stops.take(limit - 1).mapIndexed { index, stop -> ChargeStopFormatter.plannedStopTitle(index + 1, stop) },
+            stops.map { it.title.toString() },
         )
-        val markers = rows.map { it.metadata!!.place!!.marker!! }
-        assertEquals((1..limit).map(Int::toString), markers.map { it.label.toString() })
+        val markers = stops.map { it.metadata!!.place!!.marker!! }
+        assertEquals((1 until limit).map(Int::toString), markers.map { it.label.toString() })
         assertEquals(operatorCarColor(plan.stops.first().site), markers.first().color)
         assertEquals(2, template.actionStrip!!.actions.size)
         assertTrue(template.isCurrentLocationEnabled)
@@ -130,6 +138,31 @@ class RouteScreenTest {
         val colour = line.spans.map { it.carSpan }.filterIsInstance<ForegroundCarColorSpan>().single().color
         assertEquals(CarColor.RED, colour)
         assertEquals(string(R.string.car_route_charge, "300 kW", "24 min"), stop.texts[1].toString())
+    }
+
+    @Test
+    fun `starting navigation commits the plan, hands the first stop to the host and returns to the grid`() {
+        val graph = graph()
+        graph.withVehicle()
+        val plan = plan(stops = 2)
+        graph.planner.result = TripPlanResult.Planned(plan)
+        // The grid is the root; the route sits on top of it, as after a destination search.
+        graph.screens.push(CarHomeScreen(graph.carContext, graph.feature, graph.session, graph.permissions))
+        val screen = RouteScreen(graph.carContext, graph.session, munich, permissions = graph.permissions)
+        graph.screens.push(screen)
+        // The test manager pops only screens that have a lifecycle, as the host's does.
+        ScreenController(screen).moveToState(Lifecycle.State.STARTED)
+        settle()
+        val template = screen.onGetTemplate() as PlaceListMapTemplate
+        assertNull(graph.trips.state.value.committed)
+
+        click(template.actionStrip!!.actions.first())
+
+        assertEquals(plan, graph.trips.state.value.committed!!.plan)
+        val intent = graph.carContext.startCarAppIntents.single()
+        assertEquals(CarContext.ACTION_NAVIGATE, intent.action)
+        assertTrue(intent.data.toString().contains("Lader%201"))
+        assertTrue(graph.screens.screensRemoved.contains(screen))
     }
 
     @Test

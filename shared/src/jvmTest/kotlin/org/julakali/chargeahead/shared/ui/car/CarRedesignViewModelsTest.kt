@@ -101,6 +101,19 @@ class CarRedesignViewModelsTest {
     }
 
     @Test
+    fun `starting navigation from a plan made in the car commits it`() = runBlocking<Unit> {
+        vehicles.setVehicle(VehicleProfile("Test-EV", 75.0, 18.0, setOf(ConnectorType.CCS2)))
+        val viewModel = routeViewModel(feature(MutableStateFlow(EnergyState(55.0, SoCSourceKind.MANUAL, 0L)), SoCSourceKind.MANUAL), activeRoute = false)
+        viewModel.uiState.await { it is CarRouteUiState.Ready }
+        assertNull(trips.state.value.committed)
+
+        viewModel.onNavigationStarted()
+
+        assertEquals(plan, trips.state.value.committed!!.plan)
+        assertEquals(55.0, trips.state.value.committed!!.startSocPercent)
+    }
+
+    @Test
     fun `a picked level re-plans with it and keeps it as the manual one`() = runBlocking<Unit> {
         withVehicleAndCommittedTrip()
         val viewModel = routeViewModel(feature(MutableStateFlow(null), SoCSourceKind.MANUAL))
@@ -146,7 +159,7 @@ class CarRedesignViewModelsTest {
         CommitTripInteractor(trips, time)(CommitTripInteractor.Params(plan, startSocPercent = 60.0)).getOrThrow()
     }
 
-    private fun routeViewModel(feature: ChargeStopsFeature): CarRouteViewModel {
+    private fun routeViewModel(feature: ChargeStopsFeature, activeRoute: Boolean = true): CarRouteViewModel {
         val preferences = DataStorePreferencesRepository(settings)
         val planner = object : TripPlanning {
             override suspend fun plan(
@@ -165,9 +178,10 @@ class CarRedesignViewModelsTest {
         return CarRouteViewModel(
             feature = feature,
             destination = plan.destination,
-            activeRoute = true,
+            activeRoute = activeRoute,
             planTrip = PlanTripInteractor(planner, vehicles, preferences, DataStoreDestinationHistory(settings), trips, dispatchers),
             replanCommittedTrip = ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles), time, dispatchers),
+            commitTrip = CommitTripInteractor(trips, time),
             trips = trips,
         )
     }

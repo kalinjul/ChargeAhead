@@ -80,6 +80,8 @@ class CarHomeScreen(
 
         return GridTemplate.Builder()
             .setSingleList(tiles.build())
+            // Four tiles have to fit one row on an 800px head unit; the default size wraps and scrolls.
+            .setItemSize(GridTemplate.ITEM_SIZE_SMALL)
             .setHeader(header())
             .build()
     }

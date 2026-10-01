@@ -10,6 +10,7 @@ import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripState
 import org.julakali.chargeahead.shared.domain.reportedByCar
+import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import org.julakali.chargeahead.shared.ui.WhileUiSubscribed
@@ -47,6 +48,7 @@ class CarRouteViewModel(
     private val activeRoute: Boolean,
     private val planTrip: PlanTripInteractor,
     private val replanCommittedTrip: ReplanCommittedTripInteractor,
+    private val commitTrip: CommitTripInteractor,
     trips: TripRepository,
 ) : ViewModel() {
 
@@ -101,6 +103,19 @@ class CarRouteViewModel(
         if (!feature.currentEnergy.value.reportedByCar) return false
         onRefresh()
         return true
+    }
+
+    /**
+     * Navigation started from a plan made here: it becomes the committed
+     * trip, as sending it to Maps does on the phone. An active route is
+     * committed already.
+     */
+    fun onNavigationStarted() {
+        if (activeRoute) return
+        val plan = (uiState.value as? CarRouteUiState.Ready)?.plan ?: return
+        viewModelScope.launch {
+            commitTrip(CommitTripInteractor.Params(plan, startSocPercent = feature.currentEnergy.value?.socPercent))
+        }
     }
 
     /** Re-plans from the level just picked, which is kept as the stored one. */

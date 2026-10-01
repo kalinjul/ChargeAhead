@@ -22,7 +22,7 @@ fun carUiModule(): Module = module {
         factoryOf(::CarChargeNowViewModel)
         factoryOf(::CarSoCViewModel)
         factory { (destination: Destination, activeRoute: Boolean) ->
-            CarRouteViewModel(get(), destination, activeRoute, get(), get(), get())
+            CarRouteViewModel(get(), destination, activeRoute, get(), get(), get(), get())
         }
         factory { (site: ChargeSite) -> CarSiteDetailViewModel(get(), site, get()) }
     }
