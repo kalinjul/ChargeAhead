@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.android.phone
 
 import android.content.Context
+import android.provider.Settings
 import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -571,7 +572,12 @@ val LocalNow = staticCompositionLocalOf<() -> LocalTime> { { LocalTime.now() } }
 /** Wall-clock arrival, from [now] plus the ETA offset, in the device's 12h/24h style. */
 fun etaText(context: Context, minutesFromStart: Double, now: LocalTime): String {
     val locale = context.resources.configuration.locales[0]
-    val skeleton = if (DateFormat.is24HourFormat(context)) "Hm" else "hm"
+    // "j" lets ICU pick the locale's hour cycle; DateFormat.is24HourFormat would ask Locale.getDefault() instead.
+    val skeleton = when (Settings.System.getString(context.contentResolver, Settings.System.TIME_12_24)) {
+        "24" -> "Hm"
+        "12" -> "hm"
+        else -> "jm"
+    }
     val pattern = DateFormat.getBestDateTimePattern(locale, skeleton)
     return now.plusMinutes(minutesFromStart.toLong()).format(DateTimeFormatter.ofPattern(pattern, locale))
 }

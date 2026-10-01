@@ -42,32 +42,32 @@ private fun Bar(query: String, searching: Boolean = false, clearable: Boolean = 
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HomeSearchBarEmpty() = Bar(query = "")
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HomeSearchBarWithQuery() = Bar(query = "München Marienplatz")
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HomeSearchBarSearching() = Bar(query = "München", searching = true)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HomeSearchBarClearable() = Bar(query = "", clearable = true)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HomeSearchBarExpanded() = Bar(query = "München", expanded = true)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HomeSearchBarExpandedEmpty() = Bar(query = "", expanded = true)
 
@@ -80,7 +80,7 @@ private fun row(title: String, detail: String?, distanceKm: Double?, recent: Boo
 )
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun SearchResultsRecents() {
     Framed {
@@ -97,7 +97,7 @@ fun SearchResultsRecents() {
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun SearchResultsHits() {
     Framed {
@@ -116,7 +116,7 @@ fun SearchResultsHits() {
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun SearchResultsFailed() {
     Framed {
@@ -125,7 +125,7 @@ fun SearchResultsFailed() {
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun SearchResultsEmpty() {
     Framed {
@@ -135,23 +135,23 @@ fun SearchResultsEmpty() {
 
 // Dark theme: the same components under UI_MODE_NIGHT_YES.
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun HomeSearchBarWithQueryDark() = Bar(query = "München Marienplatz")
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun HomeSearchBarExpandedDark() = Bar(query = "München", expanded = true)
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun SearchResultsHitsDark() = SearchResultsHits()
 
 // Material's DockedSearchBar path, for comparison with the custom pill.
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun DockedSearchBarCollapsed() {
     Framed {
@@ -160,7 +160,7 @@ fun DockedSearchBarCollapsed() {
 }
 
 @PreviewTest
-@Preview(showBackground = true, heightDp = 520)
+@Preview(locale = "de", showBackground = true, heightDp = 520)
 @Composable
 fun DockedSearchBarExpandedWithHits() {
     Framed {
