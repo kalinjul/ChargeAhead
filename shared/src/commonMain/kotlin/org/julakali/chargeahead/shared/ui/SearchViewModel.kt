@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopFormatter
@@ -29,6 +30,8 @@ data class SearchRow(
 )
 
 data class SearchUiState(
+    /** The bar has focus and the results panel is open. */
+    val expanded: Boolean = false,
     val query: String = "",
     val rows: List<SearchRow> = emptyList(),
     val searching: Boolean = false,
@@ -71,18 +74,22 @@ class SearchViewModel(
     private val observeDestinationSearch: DestinationSearchObserver,
     vehicles: VehicleRepository,
     history: DestinationHistory,
+    private val savedState: SavedStateHandle,
 ) : ViewModel() {
 
     private val input = MutableStateFlow(Input())
+    private val expanded = MutableStateFlow(savedState.get<Boolean>(KEY_EXPANDED) ?: false)
 
     val uiState: StateFlow<SearchUiState> = combine(
-        input,
+        combine(expanded, input, ::Pair),
         observeDestinationSearch.flow,
         history.recentDestinations,
         vehicles.vehicle,
         feature.currentFix,
-    ) { (query, pick), search, recent, vehicle, fix ->
+    ) { (open, entry), search, recent, vehicle, fix ->
+        val (query, pick) = entry
         SearchUiState(
+            expanded = open,
             query = query,
             rows = pick?.let { listOf(SearchRow(it, it.name, it.address, fix?.position?.distanceKmTo(it.position), recent = false)) }
                 ?: searchRows(query, search.results, recent, fix?.position),
@@ -102,6 +109,9 @@ class SearchViewModel(
      * sits in the field as a pick, not as a query: typing over it starts searching.
      */
     fun onOpened(prefill: Destination? = null) {
+        // The field reports focus again while already open; that must not wipe the query.
+        if (expanded.value && prefill == null) return
+        setExpanded(true)
         input.value = Input(query = prefill?.let(ChargeStopFormatter::label) ?: "", pick = prefill)
         search("")
     }
@@ -112,7 +122,13 @@ class SearchViewModel(
     }
 
     fun onClosed() {
+        setExpanded(false)
         onQueryChanged("")
+    }
+
+    private fun setExpanded(value: Boolean) {
+        expanded.value = value
+        savedState[KEY_EXPANDED] = value
     }
 
     private fun search(query: String) {
@@ -121,3 +137,5 @@ class SearchViewModel(
 
     private data class Input(val query: String = "", val pick: Destination? = null)
 }
+
+private const val KEY_EXPANDED = "expanded"
