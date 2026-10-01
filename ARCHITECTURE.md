@@ -592,11 +592,20 @@ the platform layer does nothing but translate.
 
 | Screen | Android Auto | CarPlay (target, #152) |
 |---|---|---|
-| Home: destination, "Jetzt laden", active route | `CarHomeScreen`, `ListTemplate` | `CPListTemplate` |
+| Home: tiles for destination, "Jetzt laden", charge level, active route; a committed trip pushes the route by itself | `CarHomeScreen`, `GridTemplate` | `CPGridTemplate` |
 | Destination search with recents | `DestinationSearchScreen`, `SearchTemplate` | `CPSearchTemplate` |
-| Route: planned stops, tap hands over to navigation | `RouteScreen`, `ListTemplate` | `CPListTemplate` |
-| Charge now: the best three nearby | `ChargeNowScreen`, `ListTemplate` | `CPListTemplate` |
-| Manual charge level | `SoCScreen` | `CPListTemplate` |
+| Route: stops as numbered markers on the host's map, "Navigation starten" commits and hands the first stop to the host, "Neu planen" with the car's reading or the picker | `RouteScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
+| Charge now: the best nearby as markers, host refresh after panning | `ChargeNowScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
+| Site detail: address, distance, charge, live points, "Navigieren" | `SiteDetailScreen`, `PaneTemplate` | `CPInformationTemplate` |
+| Manual charge level, also the picker before a re-plan | `SoCScreen`, `ListTemplate` | `CPListTemplate` |
+| What the car reports, behind the home header's info | `CarDebugScreen`, `ListTemplate` | — |
+
+All of it on Car App API level 1. The host owns layout and camera: a grid
+picks its own column count from the tile size, a place map frames the rows
+on screen, a title has the host's size. A `CarAppTheme` hands the host the
+brand colours for `CarColor.PRIMARY` and `SECONDARY`. Map templates need
+`androidx.car.app.MAP_TEMPLATES` in the manifest, or the host answers with
+a crash screen.
 
 **The corridor list is being phased out.** It was the car's only screen in
 M1: stations in a sector ahead, without a destination. Android Auto replaced

@@ -43,7 +43,7 @@ sealed interface CarRouteUiState {
  * phone keeps it.
  */
 class CarRouteViewModel(
-    val feature: ChargeStopsFeature,
+    private val feature: ChargeStopsFeature,
     private val destination: Destination,
     private val activeRoute: Boolean,
     private val planTrip: PlanTripInteractor,
