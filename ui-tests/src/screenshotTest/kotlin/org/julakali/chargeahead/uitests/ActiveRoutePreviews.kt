@@ -16,7 +16,7 @@ import org.julakali.chargeahead.android.phone.components.AppTopBar
 import com.android.tools.screenshot.PreviewTest
 import org.julakali.chargeahead.android.phone.ActiveRouteScreen
 import org.julakali.chargeahead.shared.domain.CommittedTrip
-import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.domain.SectionSelection
 
 @Composable
 private fun Screen(selection: SectionSelection = SectionSelection(), planning: Boolean = false) {

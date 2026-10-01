@@ -70,7 +70,7 @@ import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
-import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import java.time.LocalTime
 import kotlin.math.roundToInt

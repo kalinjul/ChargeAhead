@@ -39,7 +39,7 @@ import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.ui.CommittedTripEvent
 import org.julakali.chargeahead.shared.ui.CommittedTripViewModel
-import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt

@@ -15,7 +15,7 @@ import org.julakali.chargeahead.android.phone.SocEditing
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.TripSummary
 import org.julakali.chargeahead.android.phone.headerLine
-import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.domain.SectionSelection
 
 @Composable
 private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionSelection()) {

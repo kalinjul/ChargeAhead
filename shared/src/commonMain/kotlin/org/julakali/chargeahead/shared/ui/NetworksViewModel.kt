@@ -9,6 +9,9 @@ import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
+import org.julakali.chargeahead.shared.domain.usecases.SelectableNetworksObserver
+import org.julakali.chargeahead.shared.domain.committedFirst
+import org.julakali.chargeahead.shared.domain.SelectableNetwork
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
@@ -40,9 +43,10 @@ data class NetworksUiState(
  */
 class NetworksViewModel(
     private val preferences: PreferencesRepository,
-    networkRepository: NetworkRepository,
+    private val observeSelectable: SelectableNetworksObserver,
+    /** The same rows unsearched, for freezing an order over all of them. */
+    private val observeAllSelectable: SelectableNetworksObserver,
     private val updateNetworks: UpdateNetworksInteractor,
-    dispatchers: AppCoroutineDispatchers,
 ) : ViewModel() {
 
     private val search = MutableStateFlow("")
@@ -59,30 +63,13 @@ class NetworksViewModel(
     /** The pending debounced commit, restarted on every edit. */
     private var commitJob: Job? = null
 
-    /** The rows to choose from, each name folded once for search and sorting. */
-    private val catalog: Flow<List<Pair<Network, String>>> =
-        combine(networkRepository.networks, preferences.networks) { known, stored ->
-            stored.selectable(known).map { it to OperatorKey.folded(it.name) }
-        }
-            .distinctUntilChanged()
-            .flowOn(dispatchers.computation)
-
-    /** The catalog rows that survive the search, in catalog order. */
-    private val matches: Flow<List<Pair<Network, String>>> = combine(
-        catalog,
-        search.map { it.trim() }.distinctUntilChanged(),
-    ) { catalog, query ->
-        if (query.isEmpty()) {
-            catalog
-        } else {
-            val needle = OperatorKey.folded(query)
-            catalog.filter { (_, folded) -> folded.contains(needle) }
-        }
+    init {
+        observeSelectable(SelectableNetworksObserver.Params(query = ""))
+        observeAllSelectable(SelectableNetworksObserver.Params(query = ""))
     }
-        .flowOn(dispatchers.computation)
 
     val uiState: StateFlow<NetworksUiState> = combine(
-        matches,
+        observeSelectable.flow,
         preferences.networks,
         staged,
         search,
@@ -100,6 +87,7 @@ class NetworksViewModel(
     fun onSearchChanged(query: String) {
         val cleared = search.value.isNotBlank() && query.isBlank()
         search.value = query
+        observeSelectable(SelectableNetworksObserver.Params(query))
         // Clearing the field rebuilds the list anyway, so re-sort here.
         if (cleared) refreshOrder()
     }
@@ -122,7 +110,8 @@ class NetworksViewModel(
     /** Re-freeze the order from the selection as it stands, edits included. */
     private fun refreshOrder() {
         viewModelScope.launch {
-            displayOrder.value = (staged.value ?: preferences.networks.first()).orderedKeys(catalog.first())
+            // The frozen order covers the whole catalog, whatever the search shows of it.
+            displayOrder.value = (staged.value ?: preferences.networks.first()).orderedKeys(observeAllSelectable.flow.first())
         }
     }
 
@@ -156,21 +145,14 @@ class NetworksViewModel(
         staged.value = null
     }
 
-    /** The frozen order applied to whatever [matches] survived the search. */
-    private fun List<String>?.orderFor(matches: List<Pair<Network, String>>): List<Network>? {
+    /** The frozen order applied to whatever rows survived the search. */
+    private fun List<String>?.orderFor(matches: List<SelectableNetwork>): List<Network>? {
         val order = this ?: return null
         val index = order.withIndex().associate { (i, key) -> key to i }
-        return matches.map { it.first }.sortedBy { index[it.key] ?: Int.MAX_VALUE }
+        return matches.map { it.network }.sortedBy { index[it.key] ?: Int.MAX_VALUE }
     }
 
-    /** Committed picks first, then alphabetical. */
-    private fun List<Pair<Network, String>>.committedFirst(committed: NetworkPreferences): List<Network> =
-        sortedWith(
-            compareByDescending<Pair<Network, String>> { it.first.key in committed.preferredOperators }
-                .thenBy { it.second },
-        ).map { it.first }
-
-    private fun NetworkPreferences.orderedKeys(catalog: List<Pair<Network, String>>): List<String> =
+    private fun NetworkPreferences.orderedKeys(catalog: List<SelectableNetwork>): List<String> =
         catalog.committedFirst(this).map { it.key }
 
     private companion object {

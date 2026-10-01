@@ -1,4 +1,4 @@
-package org.julakali.chargeahead.shared.ui
+package org.julakali.chargeahead.shared.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

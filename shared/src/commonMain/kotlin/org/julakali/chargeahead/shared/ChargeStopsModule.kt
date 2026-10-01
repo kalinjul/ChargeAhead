@@ -68,6 +68,9 @@ import org.koin.core.module.dsl.onClose
 import org.koin.core.module.dsl.withOptions
 import org.koin.dsl.module
 import org.julakali.chargeahead.shared.domain.usecases.StartAppInteractor
+import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
+import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
+import org.julakali.chargeahead.shared.domain.usecases.SelectableNetworksObserver
 import org.julakali.chargeahead.shared.domain.SiteCache
 import org.koin.core.qualifier.named
 import org.koin.core.parameter.parametersOf
@@ -136,6 +139,9 @@ fun chargeStopsModule(): Module = module {
     factory { UpdateNetworksInteractor(get()) }
     factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
+    factory { SelectableNetworksObserver(get(), get(), get()) }
+    factory { GarageObserver(get<VehicleRepository>()) }
+    factory { VehiclePresetsObserver(get<VehicleRepository>(), get()) }
     single<NetworkRepository> { RoomNetworkRepository(BackendNetworkListSource(get()), get()) }
     factory { RefreshNetworksInteractor(get()) }
 

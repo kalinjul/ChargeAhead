@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.core
 
+import org.julakali.chargeahead.shared.domain.RangeCalculator
+
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.Connector

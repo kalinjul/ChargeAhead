@@ -1,7 +1,6 @@
-package org.julakali.chargeahead.shared.core
+package org.julakali.chargeahead.shared.domain
 
 import io.ktor.http.encodeURLParameter
-import org.julakali.chargeahead.shared.domain.LatLon
 
 /**
  * Builds the URLs that hand navigation to Google Maps.

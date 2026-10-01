@@ -1,7 +1,5 @@
-package org.julakali.chargeahead.shared.core
+package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.domain.ConnectorType
-import org.julakali.chargeahead.shared.domain.VehicleProfile
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
