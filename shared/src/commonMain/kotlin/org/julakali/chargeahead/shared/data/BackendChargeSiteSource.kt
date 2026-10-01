@@ -11,7 +11,6 @@ import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SectorArea
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -28,15 +27,12 @@ import org.julakali.chargeahead.api.NetworkFilterDto
 /** Charging sites from the ChargeAhead backend instead of from a provider directly. */
 class BackendChargeSiteSource(
     private val httpClient: HttpClient,
-    private val baseUrl: String,
-    private val token: String,
 ) : ChargeSiteSource {
 
     override val id: String = SOURCE_ID
 
     override suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
-        val response: ChargeSitesResponse = httpClient.post("${baseUrl.trimEnd('/')}$PATH") {
-            bearerAuth(token)
+        val response: ChargeSitesResponse = httpClient.post(PATH) {
             contentType(ContentType.Application.Json)
             setBody(ChargeSitesRequest(area = area.toDto(), networks = networkKeys.map { NetworkFilterDto(key = it) }))
         }.body()
@@ -46,7 +42,7 @@ class BackendChargeSiteSource(
 
     companion object {
         const val SOURCE_ID: String = "chargeahead"
-        private const val PATH = "/v1/charge-sites"
+        private const val PATH = "v1/charge-sites"
     }
 }
 

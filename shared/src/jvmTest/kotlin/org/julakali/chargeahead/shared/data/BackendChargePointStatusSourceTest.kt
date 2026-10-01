@@ -23,7 +23,8 @@ class BackendChargePointStatusSourceTest {
 
     private fun sourceRespondingWith(body: (List<String>) -> String) = BackendChargePointStatusSource(
         createHttpClient(
-            MockEngine { request ->
+            backend = TestBackend,
+            engine = MockEngine { request ->
                 assertTrue(request.url.toString().endsWith("/v1/charge-point-status"))
                 val ids = Json.parseToJsonElement((request.body as TextContent).text)
                     .jsonObject.getValue("siteIds").jsonArray.map { it.jsonPrimitive.content }
@@ -35,8 +36,6 @@ class BackendChargePointStatusSourceTest {
                 )
             },
         ),
-        baseUrl = "https://example.invalid/",
-        token = "test-token",
     )
 
     @Test

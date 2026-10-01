@@ -36,7 +36,7 @@ class BackendDataSourceDirectoryTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }
-        val directory = BackendDataSourceDirectory(createHttpClient(engine), "https://example.invalid/", "test-token")
+        val directory = BackendDataSourceDirectory(createHttpClient(engine, TestBackend))
 
         val source = directory.dataSources().single()
 

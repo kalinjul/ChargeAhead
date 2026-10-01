@@ -86,15 +86,14 @@ fun chargeStopsModule(): Module = module {
     } withOptions { onClose { it?.cancel() } }
     single<TimeProvider> { TimeProvider { currentTimeMillis() } }
 
-    single<HttpClient> { createHttpClient() } withOptions { onClose { it?.close() } }
+    single<HttpClient> { createHttpClient(backend = get()) } withOptions { onClose { it?.close() } }
     single<ChargeSiteDatabase> { createChargeSiteDatabase(get(), get<AppCoroutineDispatchers>().io) }
 
     single<SiteRepository> {
-        val backend = get<BackendConfig>()
         MergingSiteRepository(
             listOf(
                 TiledSiteRepository(
-                    source = BackendChargeSiteSource(get(), backend.baseUrl, backend.token),
+                    source = BackendChargeSiteSource(get()),
                     database = get(),
                     time = get(),
                     scope = get(AppScope),
@@ -103,27 +102,15 @@ fun chargeStopsModule(): Module = module {
         )
     }
 
-    single<RouteEngine> {
-        val backend = get<BackendConfig>()
-        BackendRouteEngine(get(), backend.baseUrl, backend.token)
-    }
+    single<RouteEngine> { BackendRouteEngine(get()) }
 
-    single<Geocoder> {
-        val backend = get<BackendConfig>()
-        BackendGeocoder(get(), backend.baseUrl, backend.token)
-    }
+    single<Geocoder> { BackendGeocoder(get()) }
 
     single<TripPlanning> { TripPlanner(get(), get()) }
     single { TripRepository(get()) }
     single<CorridorPlanning> { CorridorPlanner() }
-    single<ChargePointStatusRepository> {
-        val backend = get<BackendConfig>()
-        CachingChargePointStatusRepository(BackendChargePointStatusSource(get(), backend.baseUrl, backend.token), get())
-    }
-    single<DataSourceDirectory> {
-        val backend = get<BackendConfig>()
-        BackendDataSourceDirectory(get(), backend.baseUrl, backend.token)
-    }
+    single<ChargePointStatusRepository> { CachingChargePointStatusRepository(BackendChargePointStatusSource(get()), get()) }
+    single<DataSourceDirectory> { BackendDataSourceDirectory(get()) }
     factory { LoadDataSourcesInteractor(get()) }
     factory { MapChargersObserver(get(), get(), get(), get()) }
     factory { RefreshMapChargersInteractor(get(), get()) }
@@ -147,10 +134,7 @@ fun chargeStopsModule(): Module = module {
     factory { UpdateNetworksInteractor(get()) }
     factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
-    single<NetworkRepository> {
-        val backend = get<BackendConfig>()
-        RoomNetworkRepository(BackendNetworkListSource(get(), backend.baseUrl, backend.token), get())
-    }
+    single<NetworkRepository> { RoomNetworkRepository(BackendNetworkListSource(get()), get()) }
     factory { RefreshNetworksInteractor(get()) }
 
     // The phone's feature. Never closed.

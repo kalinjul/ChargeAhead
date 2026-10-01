@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.data
 
+import org.julakali.chargeahead.shared.BackendConfig
+
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PolylineArea
@@ -33,9 +35,7 @@ class BackendChargeSiteLiveContractTest {
     private val area = SectorArea.circle(location, radiusKm = 175.0)
 
     private fun source() = BackendChargeSiteSource(
-        createHttpClient(),
-        baseUrl = requireNotNull(baseUrl),
-        token = requireNotNull(token),
+        createHttpClient(backend = BackendConfig(requireNotNull(baseUrl), requireNotNull(token))),
     )
 
     @Test

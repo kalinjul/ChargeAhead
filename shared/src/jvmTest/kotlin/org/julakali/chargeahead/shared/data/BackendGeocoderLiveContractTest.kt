@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.data
 
+import org.julakali.chargeahead.shared.BackendConfig
+
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlinx.coroutines.runBlocking
@@ -27,9 +29,7 @@ class BackendGeocoderLiveContractTest {
     private val munich = LatLon(48.137, 11.575)
 
     private fun geocoder() = BackendGeocoder(
-        createHttpClient(),
-        baseUrl = requireNotNull(baseUrl),
-        token = requireNotNull(token),
+        createHttpClient(backend = BackendConfig(requireNotNull(baseUrl), requireNotNull(token))),
     )
 
     /** A partial word finds the place. */

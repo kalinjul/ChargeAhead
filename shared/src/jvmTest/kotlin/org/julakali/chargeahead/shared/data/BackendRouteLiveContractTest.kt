@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.data
 
+import org.julakali.chargeahead.shared.BackendConfig
+
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlinx.coroutines.runBlocking
@@ -30,9 +32,7 @@ class BackendRouteLiveContractTest {
     private val to = LatLon(49.4521, 11.0767)
 
     private fun engine() = BackendRouteEngine(
-        createHttpClient(),
-        baseUrl = requireNotNull(baseUrl),
-        token = requireNotNull(token),
+        createHttpClient(backend = BackendConfig(requireNotNull(baseUrl), requireNotNull(token))),
     )
 
     @Test

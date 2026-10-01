@@ -36,9 +36,7 @@ class BackendRouteEngineTest {
             )
         }
         return BackendRouteEngine(
-            createHttpClient(engine),
-            baseUrl = "https://example.invalid/",
-            token = "test-token",
+            createHttpClient(engine, TestBackend),
         )
     }
 
@@ -215,7 +213,7 @@ class BackendRouteEngineTest {
     @Test
     fun anUpstreamFailurePropagates() {
         val mock = MockEngine { respondError(HttpStatusCode.BadGateway) }
-        val engine = BackendRouteEngine(createHttpClient(mock), "https://example.invalid", "test-token")
+        val engine = BackendRouteEngine(createHttpClient(mock, TestBackend))
 
         assertFailsWith<Exception> { runBlocking { engine.route(from, to) } }
     }
