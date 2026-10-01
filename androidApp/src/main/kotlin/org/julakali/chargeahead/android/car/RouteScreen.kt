@@ -11,6 +11,7 @@ import androidx.car.app.model.Action
 import androidx.car.app.model.ActionStrip
 import androidx.car.app.model.CarColor
 import androidx.car.app.model.CarLocation
+import androidx.car.app.model.CarText
 import androidx.car.app.model.Header
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.MessageTemplate
@@ -140,30 +141,25 @@ class RouteScreen(
             .build()
 
     /**
-     * "1. EnBW", then one line: how far from here, the charge it is reached
-     * with (yellow under 20, red under 10 percent) and how long the stop
-     * takes. One line, because the host frames its map around the rows on
-     * screen: the shorter the rows, the more of the route is on the map.
+     * One line, title only: "1. EnBW · 73 km · laden bis 68 %". The host
+     * frames its map around the rows on screen, so the shorter the rows, the
+     * more of the route is on the map. The arrival level and the charge time
+     * live in the detail.
      */
     private fun stopRow(ordinal: Int, stop: PlannedStop, here: LatLon?): Row {
-        val arrival = carContext.getString(R.string.car_route_arrival, stop.arrivalSocPercent.toInt())
-        val arrivalColor = when {
-            stop.arrivalSocPercent < 10 -> CarColor.RED
-            stop.arrivalSocPercent < 20 -> CarColor.YELLOW
-            else -> null
+        val name = ChargeStopFormatter.plannedStopTitle(ordinal, stop)
+        val charge = carContext.getString(R.string.car_route_charge, stop.departureSocPercent.toInt())
+        val title = if (here != null) {
+            distanceLine(here.distanceKmTo(stop.site.position), suffix = charge, leading = name)
+        } else {
+            CarText.create("$name · $charge")
         }
-        val charge = carContext.getString(R.string.car_route_charge, ChargeStopFormatter.minutesLabel(stop.chargeMinutes))
-        val builder = Row.Builder()
-            .setTitle(ChargeStopFormatter.plannedStopTitle(ordinal, stop))
+        return Row.Builder()
+            .setTitle(title)
             .setMetadata(placeMetadata(stop.site.position, ordinal.toString(), operatorCarColor(stop.site)))
             .setBrowsable(true)
             .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, stop.site, stop)) }
-        if (here != null) {
-            builder.addText(distanceLine(here.distanceKmTo(stop.site.position), arrival, arrivalColor, trailing = charge))
-        } else {
-            builder.addText("$arrival · $charge")
-        }
-        return builder.build()
+            .build()
     }
 
     /** Strip actions render icon-only on most hosts. */

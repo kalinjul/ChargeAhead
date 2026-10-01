@@ -25,8 +25,7 @@
     <string name="car_route_next_stop_only">Nur nächster Ladestopp</string>
     <string name="car_route_navigate">Navigation starten</string>
     <string name="car_route_replan">Neu planen</string>
-    <string name="car_route_arrival">Ankunft %1$d %%</string>
-    <string name="car_route_charge">%1$s laden</string>
+    <string name="car_route_charge">laden bis %1$d %%</string>
     <string name="car_detail_navigate">Navigieren</string>
     <string name="car_detail_back">Zurück</string>
     <string name="car_detail_charge">%1$d → %2$d %% in %3$s</string>

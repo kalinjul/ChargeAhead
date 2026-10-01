@@ -3,8 +3,6 @@ package org.julakali.chargeahead.android.car
 import android.app.Application
 import androidx.car.app.CarContext
 import androidx.car.app.constraints.ConstraintManager
-import androidx.car.app.model.CarColor
-import androidx.car.app.model.ForegroundCarColorSpan
 import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.PlaceListMapTemplate
 import androidx.car.app.model.Row
@@ -110,10 +108,9 @@ class RouteScreenTest {
         assertEquals(string(R.string.car_route_send_all_hint), rows.last().texts.single().toString())
         assertNull(rows.last().metadata?.place)
         val stops = rows.dropLast(1)
-        assertEquals(
-            plan.stops.take(limit - 1).mapIndexed { index, stop -> ChargeStopFormatter.plannedStopTitle(index + 1, stop) },
-            stops.map { it.title.toString() },
-        )
+        plan.stops.take(limit - 1).forEachIndexed { index, stop ->
+            assertTrue(stops[index].title.toString().startsWith(ChargeStopFormatter.plannedStopTitle(index + 1, stop)))
+        }
         val markers = stops.map { it.metadata!!.place!!.marker!! }
         assertEquals((1 until limit).map(Int::toString), markers.map { it.label.toString() })
         assertEquals(operatorCarColor(plan.stops.first().site), markers.first().color)
@@ -124,21 +121,18 @@ class RouteScreenTest {
     }
 
     @Test
-    fun `a stop row leads with the distance from here and colours a low arrival level`() {
+    fun `a stop row is one line with name, distance from here and the level it charges to`() {
         val graph = graph()
         graph.withVehicle()
 
-        val template = graph.templateFor(TripPlanResult.Planned(plan(stops = 1, arrivalSocPercent = 8.0))) as PlaceListMapTemplate
+        val template = graph.templateFor(TripPlanResult.Planned(plan(stops = 1))) as PlaceListMapTemplate
 
         val stop = template.itemList!!.items.first() as Row
-        val line = stop.texts.first()
         // Stop 1 sits 0.5° south and 0.1° east of the fix: a little under 56 km.
-        assertEquals(56.0, distanceOf(line)!!, 1.0)
-        assertTrue(line.toString().endsWith("${string(R.string.car_route_arrival, 8)} · ${string(R.string.car_route_charge, "24 min")}"))
-        val coloured = line.spans.single { it.carSpan is ForegroundCarColorSpan }
-        assertEquals(CarColor.RED, (coloured.carSpan as ForegroundCarColorSpan).color)
-        assertEquals(string(R.string.car_route_arrival, 8), line.toString().substring(coloured.start, coloured.end))
-        assertEquals(1, stop.texts.size)
+        assertEquals(56.0, distanceOf(stop.title)!!, 1.0)
+        assertTrue(stop.title.toString().startsWith("1. Operator 1 · "))
+        assertTrue(stop.title.toString().endsWith(" · ${string(R.string.car_route_charge, 80)}"))
+        assertTrue(stop.texts.isEmpty())
     }
 
     @Test
