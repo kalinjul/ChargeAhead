@@ -1,5 +1,11 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import kotlinx.coroutines.flow.flowOf
+
+import kotlinx.coroutines.flow.Flow
+
+import org.julakali.chargeahead.shared.domain.MapFilter
+
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeSite
@@ -24,6 +30,9 @@ class RefreshMapChargersTest {
 
     private val refresh = RefreshMapChargersInteractor(
         repository = object : SiteRepository {
+            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override suspend fun invalidate() {}
             override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 fetchedAreas += area
                 fetchedNetworks += networkKeys
@@ -66,6 +75,9 @@ class RefreshMapChargersTest {
     fun `a failing fetch comes back as a failure`() = runBlocking<Unit> {
         val failing = RefreshMapChargersInteractor(
             repository = object : SiteRepository {
+                override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+                override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+                override suspend fun invalidate() {}
                 override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> =
                     error("offline")
             },

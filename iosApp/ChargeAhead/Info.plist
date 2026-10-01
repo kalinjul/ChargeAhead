@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>de</string>
 	<key>CFBundleDisplayName</key>
-	<string>ChargeAhead</string>
+	<string>PowerTrip</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -27,7 +27,7 @@
 	     requires position and heading. Without this text, iOS rejects the
 	     request without even prompting. -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>ChargeAhead braucht deinen Standort, um erreichbare Ladestopps in Fahrtrichtung anzuzeigen.</string>
+	<string>PowerTrip braucht deinen Standort, um erreichbare Ladestopps in Fahrtrichtung anzuzeigen.</string>
 
 	<!-- The backend address and token do not belong in the repository.
 	     They come from the build settings CHARGEAHEAD_BASE_URL and

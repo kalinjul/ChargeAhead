@@ -34,7 +34,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.julakali.chargeahead.shared.ChargeStopFormatter
-import org.julakali.chargeahead.shared.core.MapsHandoff
+import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.TripPlan
@@ -313,8 +313,8 @@ private fun TripPlan.stopLine(context: Context, selected: ChargeStop, now: Local
     stops.firstOrNull { it.site.id == selected.site.id }?.let { stop ->
         context.getString(
             R.string.trip_stop_times,
-            etaText(stop.arrivalMinutesFromStart, now),
-            etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
+            etaText(context, stop.arrivalMinutesFromStart, now),
+            etaText(context, stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
         )
     }
 

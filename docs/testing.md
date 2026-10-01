@@ -33,9 +33,17 @@ pinned through `LocalNow` so trip times don't drift.
 
 ./gradlew :shared:jvmTest                          # unit tests
 ./gradlew :ui-tests:testDebugUnitTest              # behaviour tests
-./gradlew :ui-tests:validateDebugScreenshotTest    # screenshots vs. goldens
-./gradlew :ui-tests:updateDebugScreenshotTest      # re-record goldens
+tools/screenshots.sh validate                      # screenshots vs. goldens, in docker
+tools/screenshots.sh update                        # re-record goldens, in docker
 ```
+
+The two gradle screenshot tasks also run natively, but only the container
+render counts: layoutlib anti-aliases differently on macOS and Linux, and
+a golden recorded on a Mac fails on CI (and the other way round). The
+script runs them on `linux/amd64` with the JDK CI uses, the host SDK
+mounted read-only and its own Gradle home under `~/.chargeahead-linux`.
+The first run pulls everything and takes a few minutes; later ones are
+quicker. `docker` has to be running.
 
 Goldens live in `ui-tests/src/screenshotTestDebug/reference/`, one PNG per
 `@PreviewTest` function. The validate task writes an HTML report with
@@ -44,12 +52,12 @@ reference, actual and diff to
 
 Tolerance is 0.1 % (`imageDifferenceThreshold` in `ui-tests/build.gradle.kts`).
 A single recoloured 24dp badge in a sheet-sized image is about 0.3 %, so
-anything looser lets colour changes of small elements through; CI renders
-with the same JDK as Studio's JBR, which keeps glyph anti-aliasing noise
-below the threshold. If a run ever fails on noise alone, raise it in small
-steps and look at what it starts hiding. CI validates on Linux;
-when a golden changes on purpose, record it locally, look at the diff, commit
-the PNG.
+anything looser lets colour changes of small elements through. Glyph and
+vector anti-aliasing is only stable within one platform, which is why
+goldens are rendered in the container and nowhere else. If a run ever fails
+on noise alone, raise it in small steps and look at what it starts hiding.
+When a golden changes on purpose, `tools/screenshots.sh update`, look at the
+diff, commit the PNG.
 
 ## Writing tests
 
@@ -70,6 +78,11 @@ the PNG.
 - Robolectric runs SDK 35 (`ui-tests/src/test/resources/robolectric.properties`)
   because it doesn't emulate 37 yet, and the test JVM opens a few `java.base`
   packages that Robolectric reflects into (`ui-tests/build.gradle.kts`).
+- Locale: the same file sets `qualifiers=de-rDE`, and every `@Preview` carries
+  `locale = "de"`, so comma decimals ("3,5 km") and 24h times ("16:08") are
+  what the assertions and goldens see. A class that needs a bigger window
+  writes `@Config(qualifiers = "+w600dp-h1000dp")` — without the `+` the
+  locale is gone and the test runs in en-US.
 
 ## PhoneApp flow tests
 

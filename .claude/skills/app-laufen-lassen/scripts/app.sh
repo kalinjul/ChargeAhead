@@ -15,8 +15,32 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
 # resolves against the application id and silently misses.
 PKG=org.julakali.chargeahead
 ACTIVITY="$PKG/org.julakali.chargeahead.android.phone.MainActivity"
-AVD="${APP_AVD:-Medium_Phone_API_36.0}"
-EMULATOR_BIN="${ANDROID_EMULATOR:-$HOME/Android/Sdk/emulator/emulator}"
+
+# --- Where this machine keeps the SDK (Linux, macOS, or whatever the IDE wrote) ---
+sdk_root() {
+    local candidate
+    for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do
+        [[ -n "$candidate" && -d "$candidate" ]] && { echo "$candidate"; return; }
+    done
+    [[ -f "$REPO/local.properties" ]] && sed -n 's/^sdk\.dir=//p' "$REPO/local.properties" | head -1
+}
+SDK="$(sdk_root || true)"
+# The SDK's own copies first, then PATH: the sandbox shell has neither on PATH.
+ADB="${ADB:-$SDK/platform-tools/adb}"; [[ -x "$ADB" ]] || ADB=adb
+adb() { "$ADB" "$@"; }
+EMULATOR_BIN="${ANDROID_EMULATOR:-$SDK/emulator/emulator}"
+# APP_AVD, else the first AVD this machine has.
+AVD="${APP_AVD:-$("$EMULATOR_BIN" -list-avds 2>/dev/null | head -1)}"
+
+# Runs a command detached from this shell. setsid is Linux; macOS has none and
+# nohup in the background is enough there.
+detach() {
+    if command -v setsid >/dev/null 2>&1; then
+        setsid nohup "$@" >/dev/null 2>&1 &
+    else
+        nohup "$@" >/dev/null 2>&1 &
+    fi
+}
 
 usage() {
     cat <<'USAGE'
@@ -52,10 +76,12 @@ set -- "${ARGS[@]:-}"
 
 pick_device() {
     [[ -n "$SERIAL" ]] && { echo "$SERIAL"; return; }
-    local all; mapfile -t all < <(adb devices | awk 'NR>1 && $2=="device"{print $1}')
+    # No mapfile: macOS ships bash 3.2.
+    local all=() d
+    while IFS= read -r d; do [[ -n "$d" ]] && all+=("$d"); done < <(adb devices | awk 'NR>1 && $2=="device"{print $1}')
     local want="${WANT:-}"
     local matching=()
-    for d in "${all[@]}"; do
+    for d in ${all[@]+"${all[@]}"}; do
         case "$want" in
             emulator) [[ "$d" == emulator-* ]] && matching+=("$d") ;;
             phone)    [[ "$d" != emulator-* ]] && matching+=("$d") ;;
@@ -63,7 +89,7 @@ pick_device() {
         esac
     done
     case "${#matching[@]}" in
-        0) echo "No matching device. Attached: ${all[*]:-none}" >&2; exit 1 ;;
+        0) echo "No matching device. Attached: ${all[*]-none}" >&2; exit 1 ;;
         1) echo "${matching[0]}" ;;
         *) echo "Multiple devices: ${matching[*]}" >&2
            echo "Choose with --phone, --emulator or --device <serial>." >&2; exit 1 ;;
@@ -77,7 +103,9 @@ cmd_emulator() {
     if adb devices | awk 'NR>1 && $1 ~ /^emulator-/ && $2=="device"' | grep -q .; then
         echo "Emulator is already running."; return
     fi
-    setsid nohup "$EMULATOR_BIN" -avd "$AVD" >/dev/null 2>&1 &
+    [[ -x "$EMULATOR_BIN" ]] || { echo "No emulator binary at $EMULATOR_BIN; set ANDROID_EMULATOR." >&2; exit 1; }
+    [[ -n "$AVD" ]] || { echo "No AVD on this machine; create one in Android Studio or set APP_AVD." >&2; exit 1; }
+    detach "$EMULATOR_BIN" -avd "$AVD"
     # By serial, not plain adb: with a phone attached, plain adb refuses.
     for _ in $(seq 1 60); do
         local serial; serial=$(adb devices | awk 'NR>1 && $1 ~ /^emulator-/ {print $1; exit}')

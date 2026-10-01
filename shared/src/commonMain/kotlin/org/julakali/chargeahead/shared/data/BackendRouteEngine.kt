@@ -6,7 +6,6 @@ import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteSegment
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -23,13 +22,10 @@ import org.julakali.chargeahead.api.RouteResponse
  */
 class BackendRouteEngine(
     private val httpClient: HttpClient,
-    private val baseUrl: String,
-    private val token: String,
 ) : RouteEngine {
 
     override suspend fun route(from: LatLon, to: LatLon): Route? {
-        val response = httpClient.post("${baseUrl.trimEnd('/')}$PATH") {
-            bearerAuth(token)
+        val response = httpClient.post(PATH) {
             contentType(ContentType.Application.Json)
             setBody(RouteRequest(from = from.toDto(), to = to.toDto()))
         }
@@ -58,7 +54,7 @@ class BackendRouteEngine(
     }
 
     private companion object {
-        const val PATH = "/v1/route"
+        const val PATH = "v1/route"
     }
 }
 

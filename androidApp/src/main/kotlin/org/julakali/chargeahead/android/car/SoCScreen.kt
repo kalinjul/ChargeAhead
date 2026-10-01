@@ -11,17 +11,22 @@ import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.julakali.chargeahead.shared.ui.car.CarSoCViewModel
+import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
 
-/** Enter the state of charge manually while driving, in steps from high to low. */
+/**
+ * Enter the state of charge manually while driving, in steps from high to
+ * low. A caller that needs the pick, like a re-plan, gets it through [onPicked].
+ */
 class SoCScreen(
     carContext: CarContext,
-    viewModels: CarViewModels,
+    session: Scope,
     private val permissions: CarPermissions,
+    private val onPicked: ((Int) -> Unit)? = null,
 ) : Screen(carContext) {
 
-    private val viewModel = screenViewModel { viewModels.soc() }
+    private val viewModel = screenViewModel { session.get<CarSoCViewModel>() }
 
     // The permission is the platform's; only it stays here.
     private var hasCarFuelPermission =
@@ -93,7 +98,10 @@ class SoCScreen(
     private fun buildRow(percent: Int): Row =
         Row.Builder()
             .setTitle(carContext.getString(R.string.car_soc_percent, percent))
-            .setOnClickListener { viewModel.onStepPicked(percent) }
+            .setOnClickListener {
+                viewModel.onStepPicked(percent)
+                onPicked?.invoke(percent)
+            }
             .build()
 
     /** What the vehicle delivered on the last attempt. */

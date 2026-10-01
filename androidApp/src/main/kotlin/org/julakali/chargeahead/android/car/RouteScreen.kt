@@ -8,11 +8,15 @@ import androidx.car.app.CarToast
 import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.Action
+import androidx.car.app.model.ActionStrip
 import androidx.car.app.model.CarColor
+import androidx.car.app.model.CarLocation
 import androidx.car.app.model.Header
 import androidx.car.app.model.ItemList
-import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.MessageTemplate
+import androidx.car.app.model.Place
+import androidx.car.app.model.PlaceListMapTemplate
+import androidx.car.app.model.PlaceMarker
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.Lifecycle
@@ -20,31 +24,39 @@ import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.PhoneUiVisibility
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
-import org.julakali.chargeahead.shared.core.MapsHandoff
 import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.MapsHandoff
+import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.ui.car.CarRouteUiState
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.julakali.chargeahead.shared.ui.car.CarRouteViewModel
+import org.koin.core.parameter.parametersOf
+import org.koin.core.scope.Scope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The committed route: its planned charging stops, numbered like an
- * itinerary. Tapping a stop hands it straight to the navigation app.
+ * The route on the host's map: every charging stop as a numbered marker in
+ * the brand colour, the car's position, the destination as the anchor.
+ * Navigation goes one stop at a time through the host, and starting it
+ * commits a plan made here. A stop opens its detail; the last row still
+ * sends the whole route through the phone, for those who want Maps to hold
+ * every waypoint.
  */
 class RouteScreen(
     carContext: CarContext,
-    private val viewModels: CarViewModels,
+    private val session: Scope,
     private val destination: Destination,
     private val title: String = destination.name,
     /** Show the active route as the phone keeps it, instead of planning here; leaves when it ends. */
-    activeRoute: Boolean = false,
+    private val activeRoute: Boolean = false,
+    private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
-    private val viewModel = screenViewModel { viewModels.route(destination, activeRoute) }
+    private val viewModel = screenViewModel { session.get<CarRouteViewModel> { parametersOf(destination, activeRoute) } }
 
     init {
         // onGetTemplate() is synchronous; changes are picked up via invalidate().
@@ -82,9 +94,10 @@ class RouteScreen(
         } else {
             R.string.car_route_planning
         }
-        return ListTemplate.Builder()
+        return PlaceListMapTemplate.Builder()
             .setLoading(true)
-            .setHeader(header(withRefresh = false, subtitle = carContext.getString(waitingText)))
+            .setTitle(titleText(carContext.getString(waitingText)))
+            .setHeaderAction(Action.BACK)
             .build()
     }
 
@@ -92,32 +105,79 @@ class RouteScreen(
         // The row count is dictated by the host.
         val contentLimit = carContext
             .getCarService(ConstraintManager::class.java)
-            .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
-
+            .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
+        // Every stop is a marker; the whole-route send takes the last slot.
         val itemList = ItemList.Builder()
-        itemList.addItem(sendAllRow(plan))
         plan.stops.take(contentLimit - 1).forEachIndexed { index, stop ->
-            itemList.addItem(stopRow(index + 1, stop))
+            val previousKm = plan.stops.getOrNull(index - 1)?.kmFromStart ?: 0.0
+            itemList.addItem(stopRow(index + 1, stop, legKm = stop.kmFromStart - previousKm))
         }
+        itemList.addItem(sendAllRow(plan))
 
-        return ListTemplate.Builder()
-            .setSingleList(itemList.build())
-            .setHeader(header(withRefresh = true))
-            .addAction(chargeNowFab())
+        return PlaceListMapTemplate.Builder()
+            .setItemList(itemList.build())
+            .setTitle(title)
+            .setHeaderAction(Action.BACK)
+            .setCurrentLocationEnabled(true)
+            .setAnchor(destinationAnchor())
+            .setActionStrip(
+                ActionStrip.Builder()
+                    .addAction(navigateAction(plan))
+                    .addAction(replanAction())
+                    .build(),
+            )
             .build()
     }
 
-    private fun stopRow(ordinal: Int, stop: PlannedStop): Row = Row.Builder()
-        .setTitle(ChargeStopFormatter.plannedStopTitle(ordinal, stop))
-        .apply { ChargeStopFormatter.plannedStopAddressLine(stop)?.let(::addText) }
-        .addText(ChargeStopFormatter.plannedStopDetailLine(stop))
-        .setOnClickListener { navigateTo(carContext, stop.site.name, stop.site.position) }
+    /** The destination, flagged on the map so the stops read as a line towards it. */
+    private fun destinationAnchor(): Place =
+        Place.Builder(CarLocation.create(destination.position.lat, destination.position.lon))
+            .setMarker(PlaceMarker.Builder().setIcon(icon(R.drawable.ic_destination), PlaceMarker.TYPE_ICON).build())
+            .build()
+
+    /**
+     * "Ionity" over "142 km, laden bis 68 %", the distance being the leg
+     * from the previous stop (from the start for the first). The host
+     * numbers the row after its marker. Arrival level and charge time live
+     * in the detail.
+     */
+    private fun stopRow(ordinal: Int, stop: PlannedStop, legKm: Double): Row {
+        val name = OperatorShortName.of(stop.site.operator) ?: stop.site.operator ?: stop.site.name
+        val charge = carContext.getString(R.string.car_route_charge, stop.departureSocPercent.toInt())
+        return Row.Builder()
+            .setTitle(name)
+            .addText(distanceLine(legKm, suffix = charge, separator = ", "))
+            .setMetadata(placeMetadata(stop.site.position, ordinal.toString()))
+            .setBrowsable(true)
+            .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, stop.site, stop)) }
+            .build()
+    }
+
+    /** Strip actions render icon-only on most hosts. */
+    private fun navigateAction(plan: TripPlan): Action = Action.Builder()
+        .setIcon(icon(R.drawable.ic_destination))
+        .setOnClickListener { startNavigation(plan) }
         .build()
+
+    /**
+     * The next stop goes to the host's navigation, which is the one hand-off
+     * that keeps the driver in the car. A plan made here becomes the active
+     * route first and the grid takes over, so coming back lands on it.
+     */
+    private fun startNavigation(plan: TripPlan) {
+        val target = plan.stops.firstOrNull()?.site?.let { it.name to it.position } ?: (destination.name to destination.position)
+        if (!activeRoute) {
+            viewModel.onNavigationStarted()
+            screenManager.popToRoot()
+        }
+        navigateTo(carContext, target.first, target.second)
+    }
 
     private fun sendAllRow(plan: TripPlan): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_route_send_all))
+        .addText(carContext.getString(R.string.car_route_send_all_hint))
         // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
-        .setImage(icon(R.drawable.ic_destination), Row.IMAGE_TYPE_ICON)
+        .setImage(icon(R.drawable.ic_send, CarColor.PRIMARY), Row.IMAGE_TYPE_ICON)
         .setOnClickListener { sendRouteToMaps(plan) }
         .build()
 
@@ -186,21 +246,28 @@ class RouteScreen(
         false
     }
 
-    /** Floating "charge now" button; hosts render FABs icon-only. */
-    private fun chargeNowFab(): Action = Action.Builder()
-        .setIcon(icon(R.drawable.ic_bolt))
-        .setBackgroundColor(CarColor.PRIMARY)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, viewModels)) }
+    /**
+     * "Neu planen": with the car's own reading right away, otherwise the
+     * percent picker first, and its pick re-plans.
+     */
+    private fun replanAction(): Action = Action.Builder()
+        .setIcon(icon(R.drawable.ic_refresh))
+        .setOnClickListener {
+            if (!viewModel.onReplanRequested()) {
+                screenManager.push(SoCScreen(carContext, session, permissions, onPicked = viewModel::onReplanWith))
+            }
+        }
         .build()
 
     /** Destination in reach without charging: no list to show, just the handoff. */
     private fun directTemplate(): Template =
         MessageTemplate.Builder(carContext.getString(R.string.car_route_direct))
-            .setHeader(header(withRefresh = true))
+            .setHeader(header())
             .addAction(
                 Action.Builder()
                     .setTitle(carContext.getString(R.string.car_route_navigate))
-                    .setOnClickListener { navigateTo(carContext, destination.name, destination.position) }
+                    .setBackgroundColor(CarColor.PRIMARY)
+                    .setOnClickListener { (viewModel.uiState.value as? CarRouteUiState.Ready)?.plan?.let(::startNavigation) }
                     .build(),
             )
             .addAction(chargeNowTitledAction())
@@ -208,32 +275,22 @@ class RouteScreen(
 
     private fun messageTemplate(message: String): Template =
         MessageTemplate.Builder(message)
-            .setHeader(header(withRefresh = true))
+            .setHeader(header())
             .addAction(chargeNowTitledAction())
             .build()
 
-    /** Body actions may carry titles — unlike the icon-only FAB. */
+    /** Body actions may carry titles — unlike the strip's icons. */
     private fun chargeNowTitledAction(): Action = Action.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, viewModels)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
         .build()
 
-    private fun header(withRefresh: Boolean, subtitle: String? = null): Header {
-        val builder = Header.Builder()
-            .setTitle(titleText(subtitle))
-            .setStartHeaderAction(Action.BACK)
-
-        if (withRefresh) {
-            // Re-plans with the freshest position and charge state.
-            builder.addEndHeaderAction(
-                Action.Builder()
-                    .setIcon(icon(R.drawable.ic_refresh))
-                    .setOnClickListener(viewModel::onRefresh)
-                    .build(),
-            )
-        }
-        return builder.build()
-    }
+    private fun header(): Header = Header.Builder()
+        .setTitle(title)
+        .setStartHeaderAction(Action.BACK)
+        // Re-plans with the freshest position and charge state.
+        .addEndHeaderAction(replanAction())
+        .build()
 
     private fun titleText(subtitle: String?): String = subtitle?.let { "$title · $it" } ?: title
 }

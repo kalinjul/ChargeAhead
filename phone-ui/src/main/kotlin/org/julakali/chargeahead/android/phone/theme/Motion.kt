@@ -4,7 +4,7 @@ import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.tween
 
 /**
- * The chrome's animation specs, one per purpose, so no screen picks its own
+ * The app's animation specs, one per purpose, so no screen picks its own
  * number. Durations are Material 3's motion tokens (short4 = 200 ms,
  * medium1 = 250 ms, medium4 = 300 ms, fade-through 90 out / 210 in); swap for `MaterialTheme.motionScheme` once it is public.
  */

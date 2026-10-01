@@ -10,6 +10,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.withContext
 import platform.CoreLocation.CLLocation
 import platform.CoreLocation.CLLocationManager
 import platform.CoreLocation.CLLocationManagerDelegateProtocol
@@ -55,6 +56,9 @@ class CoreLocationSource : LocationSource {
             delegate.description
         }
     }.flowOn(Dispatchers.Main)
+
+    /** The manager's last known location, which it keeps across instances. */
+    override suspend fun currentFix(): Fix? = withContext(Dispatchers.Main) { CLLocationManager().location?.toFix() }
 
     @OptIn(ExperimentalForeignApi::class)
     private fun CLLocation.toFix(): Fix {

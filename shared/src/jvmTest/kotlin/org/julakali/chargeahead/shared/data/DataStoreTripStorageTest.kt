@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.data
 
+import androidx.datastore.preferences.core.stringPreferencesKey
+
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -15,6 +17,7 @@ import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteSegment
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripState
+import org.julakali.chargeahead.shared.persistenceJson
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
 import org.julakali.chargeahead.shared.settings.SettingsLegacyTripSource
@@ -35,6 +38,27 @@ class DataStoreTripStorageTest {
         storage.write(state)
 
         assertEquals(state, DataStoreTripStorage(preferences).read())
+    }
+
+    /** No mirror types: what is on disk is the domain types' own JSON. */
+    @Test
+    fun `the payload is the domain types' own json`() = runBlocking {
+        val state = TripState(destination = munich, planned = plan, committed = committed)
+
+        storage.write(state)
+
+        assertEquals(persistenceJson.encodeToString(state), preferences.data.first()[stringPreferencesKey("trip.state")])
+    }
+
+    /** A connector type from a newer build reads as unknown instead of costing the trip. */
+    @Test
+    fun `an unknown connector type reads as unknown`() = runBlocking {
+        val raw = persistenceJson.encodeToString(TripState(destination = munich, planned = plan))
+            .replace("\"CCS2\"", "\"MCS\"")
+        val stored = DataStoreTripStorage(InMemoryPreferencesDataStore(mapOf("trip.state" to raw)))
+
+        val connector = stored.read()!!.planned!!.stops.single().site.connectors.single()
+        assertEquals(ConnectorType.UNKNOWN, connector.type)
     }
 
     @Test

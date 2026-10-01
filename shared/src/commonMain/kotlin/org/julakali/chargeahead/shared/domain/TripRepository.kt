@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.domain
 
+import kotlinx.serialization.Serializable
+
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,6 +12,8 @@ import kotlinx.coroutines.sync.withLock
  * Where the driver is headed. [planned] is the trip on the map, [committed]
  * the one sent to Maps; both can exist at once.
  */
+// Persisted as JSON, like everything it holds: a new field needs a default or old data reads as none.
+@Serializable
 data class TripState(
     /** The last destination planned to, even when that plan failed. */
     val destination: Destination? = null,

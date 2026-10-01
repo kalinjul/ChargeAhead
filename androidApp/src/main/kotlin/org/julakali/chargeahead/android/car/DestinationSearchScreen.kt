@@ -12,7 +12,8 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.toDestination
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.julakali.chargeahead.shared.ui.car.CarDestinationSearchViewModel
+import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
 
 /**
@@ -21,10 +22,11 @@ import kotlinx.coroutines.launch
  */
 class DestinationSearchScreen(
     carContext: CarContext,
-    private val viewModels: CarViewModels,
+    private val session: Scope,
+    private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
-    private val viewModel = screenViewModel { viewModels.destinationSearch() }
+    private val viewModel = screenViewModel { session.get<CarDestinationSearchViewModel>() }
 
     init {
         // onGetTemplate() is synchronous; changes are picked up via invalidate().
@@ -75,6 +77,6 @@ class DestinationSearchScreen(
     private fun choose(destination: Destination) {
         // The search screen replaces itself with the route.
         screenManager.pop()
-        screenManager.push(RouteScreen(carContext, viewModels, destination))
+        screenManager.push(RouteScreen(carContext, session, destination, permissions = permissions))
     }
 }

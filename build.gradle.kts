@@ -10,15 +10,28 @@ plugins {
 }
 
 /** Every test that runs without a device, in one go. Always re-runs, always tells the score. */
-val testTasks = listOf(":shared:jvmTest", ":ui-tests:testDebugUnitTest", ":ui-tests:validateDebugScreenshotTest")
+val testTasks = listOf(
+    ":shared:jvmTest",
+    ":androidApp:testDebugUnitTest",
+    ":ui-tests:testDebugUnitTest",
+    ":validateScreenshots",
+)
+
+// Goldens only match where they were rendered; tools/screenshots.sh explains.
+tasks.register<Exec>("validateScreenshots") {
+    group = "verification"
+    description = "Screenshot validation in the Linux container CI uses (tools/screenshots.sh)."
+    commandLine("tools/screenshots.sh", "validate")
+}
 
 tasks.register("testAll") {
     group = "verification"
-    description = "Shared unit tests, phone UI behaviour tests and screenshot validation."
+    description = "Shared unit tests, car screen tests, phone UI behaviour tests and screenshot validation."
     dependsOn(testTasks)
     doLast {
         val results = listOf(
             "shared unit tests" to file("shared/build/test-results/jvmTest"),
+            "car screen tests" to file("androidApp/build/test-results/testDebugUnitTest"),
             "UI behaviour tests" to file("ui-tests/build/test-results/testDebugUnitTest"),
             "screenshot tests" to file("ui-tests/build/test-results/validateDebugScreenshotTest"),
         )

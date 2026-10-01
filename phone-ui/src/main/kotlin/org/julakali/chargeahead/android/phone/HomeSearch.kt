@@ -47,6 +47,9 @@ import androidx.compose.material3.TopAppBar
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.offset
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
@@ -93,7 +96,8 @@ fun HomeSearchBar(
     LaunchedEffect(takeFocus) {
         if (takeFocus) focusRequester.requestFocus()
     }
-    val startPadding by animateDpAsState(if (expanded) 4.dp else 16.dp, ChargeAheadMotion.spatial(), label = "search bar start")
+    // Read only while placing, so the animation doesn't recompose the text field every frame.
+    val startPadding = animateDpAsState(if (expanded) 4.dp else 16.dp, ChargeAheadMotion.spatial(), label = "search bar start")
     // Centred pill ↔ start-aligned field: the text is laid out at the start and slid by an
     // offset that shrinks to zero, so nothing gets re-measured or clipped on the way.
     val centring by animateFloatAsState(if (expanded) 0f else 1f, ChargeAheadMotion.spatial(), label = "search text centring")
@@ -104,7 +108,7 @@ fun HomeSearchBar(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             // As tall as Material's field, so the pill matches the buttons beside it.
-            modifier = Modifier.defaultMinSize(minHeight = CHROME_HEIGHT).padding(start = startPadding, end = 6.dp).fillMaxWidth(),
+            modifier = Modifier.defaultMinSize(minHeight = SEARCH_BAR_HEIGHT).startPadding { startPadding.value }.padding(end = 6.dp).fillMaxWidth(),
         ) {
             AnimatedVisibility(
                 visible = expanded,
@@ -215,7 +219,7 @@ fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, onTi
                 }
             },
             // Same height as the search bar it fades into, so the slot doesn't grow mid-fade.
-            expandedHeight = CHROME_HEIGHT,
+            expandedHeight = SEARCH_BAR_HEIGHT,
             windowInsets = WindowInsets(0),
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
         )
@@ -360,3 +364,9 @@ fun HomeDockedSearchBar(
 
 /** Six result rows; the list scrolls for the rest. */
 private val DOCKED_RESULTS_HEIGHT = 64.dp * 6
+
+private fun Modifier.startPadding(start: () -> Dp): Modifier = layout { measurable, constraints ->
+    val startPx = start().roundToPx()
+    val placeable = measurable.measure(constraints.offset(horizontal = -startPx))
+    layout(placeable.width + startPx, placeable.height) { placeable.place(startPx, 0) }
+}

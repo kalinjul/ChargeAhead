@@ -30,3 +30,13 @@ data class NetworkPreferences(
         return known.filter { it.rank != null || it.key in preferredOperators } + unknown
     }
 }
+
+/** A catalog row of the network picker, its name folded once for search and sorting. */
+data class SelectableNetwork(val network: Network, val folded: String) {
+    val key: String get() = network.key
+}
+
+/** Committed picks first, then alphabetical by folded name. */
+fun List<SelectableNetwork>.committedFirst(committed: NetworkPreferences): List<Network> =
+    sortedWith(compareByDescending<SelectableNetwork> { it.key in committed.preferredOperators }.thenBy { it.folded })
+        .map { it.network }

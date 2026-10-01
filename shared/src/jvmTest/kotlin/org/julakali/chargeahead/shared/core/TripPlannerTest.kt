@@ -1,5 +1,13 @@
 package org.julakali.chargeahead.shared.core
 
+import kotlinx.coroutines.flow.flowOf
+
+import kotlinx.coroutines.flow.Flow
+
+import org.julakali.chargeahead.shared.domain.MapFilter
+
+import org.julakali.chargeahead.shared.domain.BoundingBox
+
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.ChargeFilters
@@ -74,6 +82,9 @@ class TripPlannerTest {
     )
 
     private fun repositoryWith(sites: List<ChargeSite>): SiteRepository = object : SiteRepository {
+        override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+        override suspend fun invalidate() {}
         override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = sites
     }
 
@@ -437,6 +448,9 @@ class TripPlannerTest {
         val route = straightRoute()
         val queriedRadii = mutableListOf<Double>()
         val repository = object : SiteRepository {
+            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override suspend fun invalidate() {}
             override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 queriedRadii += area.radiusKm
                 return sitesAlong(route)
@@ -458,6 +472,9 @@ class TripPlannerTest {
         val route = straightRoute()
         val capturedNetworks = mutableListOf<Set<String>>()
         val repository = object : SiteRepository {
+            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override suspend fun invalidate() {}
             override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 capturedNetworks += networkKeys
                 return sitesAlong(route)
