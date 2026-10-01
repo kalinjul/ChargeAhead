@@ -110,14 +110,19 @@ class CarHomeScreen(
         screenManager.push(ChargeNowScreen(carContext, session))
     }
 
-    /** Manual state of charge, for cars that don't report their battery. */
+    /** The level as a battery drawn to it, in steps of ten; empty when nothing is known. */
     private fun socTile(socPercent: Int?): GridItem = tile(
         carContext.getString(R.string.car_home_soc),
-        R.drawable.ic_battery,
+        batteryIcon(socPercent),
         text = socPercent?.let { carContext.getString(R.string.car_home_soc_percent, it) }
             ?: carContext.getString(R.string.car_home_soc_unset),
     ) {
         screenManager.push(SoCScreen(carContext, session, permissions))
+    }
+
+    private fun batteryIcon(socPercent: Int?): Int {
+        val step = ((socPercent ?: 0).coerceIn(0, 100) + 5) / 10 * 10
+        return BATTERY_ICONS.getValue(step)
     }
 
     private fun activeRouteTile(destination: Destination): GridItem =
@@ -158,3 +163,17 @@ class CarHomeScreen(
             )
             .build()
 }
+
+private val BATTERY_ICONS = mapOf(
+    0 to R.drawable.ic_battery_0,
+    10 to R.drawable.ic_battery_10,
+    20 to R.drawable.ic_battery_20,
+    30 to R.drawable.ic_battery_30,
+    40 to R.drawable.ic_battery_40,
+    50 to R.drawable.ic_battery_50,
+    60 to R.drawable.ic_battery_60,
+    70 to R.drawable.ic_battery_70,
+    80 to R.drawable.ic_battery_80,
+    90 to R.drawable.ic_battery_90,
+    100 to R.drawable.ic_battery_100,
+)

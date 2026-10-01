@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Battery at 50 %: the host tints tile icons in one colour, so the level is geometry. Generated, all eleven alike. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M7,4 h10 v18 h-10 z M8.5,5.5 v15 h7 v-15 z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M10,2 h4 v2 h-4 z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M8.5,13 h7 v7.5 h-7 z" />
+</vector>

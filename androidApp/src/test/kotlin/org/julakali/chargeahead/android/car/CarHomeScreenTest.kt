@@ -57,6 +57,7 @@ class CarHomeScreenTest {
             tiles.map { it.title.toString() },
         )
         assertEquals(string(R.string.car_home_soc_unset), tiles.last().text.toString())
+        assertEquals(R.drawable.ic_battery_0, tiles.last().image!!.icon!!.resId)
     }
 
     @Test
@@ -64,6 +65,7 @@ class CarHomeScreenTest {
         val tiles = graph(energy = EnergyState(63.0, SoCSourceKind.MANUAL, 0L)).tiles()
 
         assertEquals(string(R.string.car_home_soc_percent, 63), tiles.last().text.toString())
+        assertEquals(R.drawable.ic_battery_60, tiles.last().image!!.icon!!.resId)
     }
 
     @Test
