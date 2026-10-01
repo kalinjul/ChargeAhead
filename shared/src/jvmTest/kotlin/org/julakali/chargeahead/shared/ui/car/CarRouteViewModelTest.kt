@@ -92,6 +92,7 @@ class CarRouteViewModelTest {
 
     private val feature = ChargeStopsFeature(
         locationSource = object : LocationSource {
+            override suspend fun currentFix(): Fix? = null
             override val updates: Flow<Fix> = fixes
         },
         socSource = object : SoCSource {

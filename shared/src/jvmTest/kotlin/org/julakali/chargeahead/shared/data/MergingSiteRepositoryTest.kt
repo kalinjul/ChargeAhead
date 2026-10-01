@@ -1,5 +1,13 @@
 package org.julakali.chargeahead.shared.data
 
+import kotlinx.coroutines.flow.flowOf
+
+import kotlinx.coroutines.flow.Flow
+
+import org.julakali.chargeahead.shared.domain.MapFilter
+
+import org.julakali.chargeahead.shared.domain.BoundingBox
+
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
@@ -20,6 +28,8 @@ class MergingSiteRepositoryTest {
     private val area = SectorArea.circle(location, radiusKm = 40.0)
 
     private class FixedSiteRepository(private val sites: List<ChargeSite>) : SiteRepository {
+        override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
         var queries = 0
             private set
         var invalidations = 0
@@ -36,6 +46,8 @@ class MergingSiteRepositoryTest {
     }
 
     private class RecordingSiteRepository(private val sites: List<ChargeSite> = emptyList()) : SiteRepository {
+        override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
         var recordedNetworks: Set<String>? = null
             private set
 
@@ -49,6 +61,9 @@ class MergingSiteRepositoryTest {
     }
 
     private class BrokenSiteRepository(private val reason: String = "No signal") : SiteRepository {
+        override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+        override suspend fun invalidate() {}
         override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> =
             throw IllegalStateException(reason)
     }

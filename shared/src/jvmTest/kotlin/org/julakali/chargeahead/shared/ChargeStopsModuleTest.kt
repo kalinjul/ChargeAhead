@@ -33,6 +33,7 @@ import kotlin.test.assertSame
 class ChargeStopsModuleTest {
 
     private val fakeLocationSource = object : LocationSource {
+        override suspend fun currentFix(): Fix? = null
         override val updates: Flow<Fix> = emptyFlow()
     }
 

@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.ui.car
 
+import kotlinx.coroutines.flow.flowOf
+
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,7 +70,10 @@ class CarScreenViewModelsTest {
     fun `charge now waits for a position, then ranks what the refill stored`() = runBlocking<Unit> {
         val fixes = MutableSharedFlow<Fix>(replay = 1)
         val feature = ChargeStopsFeature(
-            locationSource = object : LocationSource { override val updates: Flow<Fix> = fixes },
+            locationSource = object : LocationSource {
+                override suspend fun currentFix(): Fix? = null
+                override val updates: Flow<Fix> = fixes
+            },
             parentScope = CoroutineScope(Dispatchers.Unconfined),
         ).apply { start() }
         val nearby = ChargeSite(
@@ -80,6 +85,8 @@ class CarScreenViewModelsTest {
         )
         val store = MutableStateFlow<List<ChargeSite>>(emptyList())
         val repository = object : SiteRepository {
+            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override suspend fun invalidate() {}
             override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 store.update { listOf(nearby) }
                 return listOf(nearby)
@@ -111,7 +118,10 @@ class CarScreenViewModelsTest {
                 return listOf(berlin)
             }
         }
-        val noLocation = object : LocationSource { override val updates: Flow<Fix> = emptyFlow() }
+        val noLocation = object : LocationSource {
+            override suspend fun currentFix(): Fix? = null
+            override val updates: Flow<Fix> = emptyFlow()
+        }
         history.addRecentDestination(hamburg)
         val viewModel = CarDestinationSearchViewModel(history, DestinationSearchObserver(geocoder, noLocation))
         assertEquals(listOf(hamburg), viewModel.uiState.await { it.recents.isNotEmpty() }.recents)

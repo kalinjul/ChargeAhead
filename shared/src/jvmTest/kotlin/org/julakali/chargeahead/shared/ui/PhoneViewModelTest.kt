@@ -293,6 +293,7 @@ class PhoneViewModelTest {
         val fixes = MutableSharedFlow<Fix>(extraBufferCapacity = 1)
         val feature = ChargeStopsFeature(
             locationSource = object : LocationSource {
+                override suspend fun currentFix(): Fix? = null
                 override val updates: Flow<Fix> = fixes
             },
             parentScope = CoroutineScope(Dispatchers.Unconfined),
@@ -346,6 +347,7 @@ class PhoneViewModelTest {
 
     private fun stubFeature() = ChargeStopsFeature(
         locationSource = object : LocationSource {
+            override suspend fun currentFix(): Fix? = null
             override val updates: Flow<Fix> = emptyFlow()
         },
         parentScope = CoroutineScope(Dispatchers.Unconfined),
@@ -360,6 +362,7 @@ class PhoneViewModelTest {
     }
 
     private object NoLocation : LocationSource {
+        override suspend fun currentFix(): Fix? = null
         override val updates: Flow<Fix> = emptyFlow()
     }
 
