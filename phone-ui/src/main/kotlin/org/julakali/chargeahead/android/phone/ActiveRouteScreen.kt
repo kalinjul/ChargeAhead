@@ -150,7 +150,7 @@ fun ActiveRouteScreen(
                     maxLines = 1,
                 )
                 Text(
-                    stringResource(R.string.trip_arr, etaText(plan.totalMinutes, LocalNow.current()), plan.arrivalSocPercent.roundToInt()),
+                    stringResource(R.string.trip_arr, etaText(LocalContext.current, plan.totalMinutes, LocalNow.current()), plan.arrivalSocPercent.roundToInt()),
                     style = MaterialTheme.typography.bodyMedium.tabular,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

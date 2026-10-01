@@ -27,7 +27,7 @@ import org.robolectric.annotation.Config
 
 /** Tall and wide enough that every row and tile is on screen. */
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "w600dp-h1000dp")
+@Config(qualifiers = "+w600dp-h1000dp")
 class TripSheetContentTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
@@ -104,8 +104,8 @@ class TripSheetContentTest {
             compose.onNodeWithText(
                 compose.string(
                     R.string.trip_stop_times,
-                    etaText(stop.arrivalMinutesFromStart, Fixtures.now),
-                    etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes, Fixtures.now),
+                    etaText(compose.activity, stop.arrivalMinutesFromStart, Fixtures.now),
+                    etaText(compose.activity, stop.arrivalMinutesFromStart + stop.chargeMinutes, Fixtures.now),
                 ),
             ).assertIsDisplayed()
         }
@@ -187,7 +187,7 @@ class TripSheetContentTest {
         stops.forEach { stop ->
             compose.onNodeWithText(stop.site.operator!!).assertIsDisplayed()
             compose.onNodeWithText(
-                compose.string(R.string.trip_tile_arrival, etaText(stop.arrivalMinutesFromStart, Fixtures.now)),
+                compose.string(R.string.trip_tile_arrival, etaText(compose.activity, stop.arrivalMinutesFromStart, Fixtures.now)),
             ).assertIsDisplayed()
         }
     }

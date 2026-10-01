@@ -127,6 +127,7 @@
 
     <!-- Phone: map home -->
     <string name="common_back">Zurück</string>
+    <string name="value_unknown">—</string>
     <string name="home_pill_charge_now">Jetzt laden</string>
     <string name="home_pill_active_route">Aktive Route</string>
     <string name="active_route_title">Aktive Route</string>
@@ -171,6 +172,8 @@
     <string name="drawer_car">Auto</string>
     <string name="drawer_networks">Netzwerke</string>
     <string name="drawer_min_power">Mindestleistung</string>
+    <string name="drawer_power_step">%1$d kW</string>
+    <string name="drawer_ac">AC</string>
     <string name="drawer_slow_mode">AC-Modus</string>
     <string name="drawer_slow_mode_hint">ignoriert alle Filter und zeigt Lader unter 50 kW</string>
     <string name="drawer_max_distance">Max. Entfernung (Jetzt laden): %1$s km</string>
@@ -207,6 +210,8 @@
 
     <!-- Phone: trip plan -->
     <string name="trip_summary_distance">%1$d km</string>
+    <string name="trip_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="trip_duration_minutes">%1$d min</string>
     <string name="trip_stop_charge">%1$d kW | %2$d%% - %3$d%%</string>
     <string name="trip_stop_times">Ankunft %1$s | Abfahrt %2$s</string>
     <string name="trip_tile_charge">%1$d kW · %2$d min</string>

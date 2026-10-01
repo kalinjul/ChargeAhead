@@ -36,7 +36,7 @@ import org.julakali.chargeahead.shared.domain.ChargeSite
 /** The phone app end to end, on the faked graph of [PhoneAppHarness]. */
 @RunWith(RobolectricTestRunner::class)
 // Robolectric's default screen is 320x470 dp; the trip sheet's peek is a third of that.
-@Config(qualifiers = "w411dp-h891dp-xxhdpi")
+@Config(qualifiers = "+w411dp-h891dp-xxhdpi")
 class PhoneAppFlowTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()

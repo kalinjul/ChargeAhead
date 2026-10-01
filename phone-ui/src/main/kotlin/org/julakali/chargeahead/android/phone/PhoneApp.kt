@@ -313,8 +313,8 @@ private fun TripPlan.stopLine(context: Context, selected: ChargeStop, now: Local
     stops.firstOrNull { it.site.id == selected.site.id }?.let { stop ->
         context.getString(
             R.string.trip_stop_times,
-            etaText(stop.arrivalMinutesFromStart, now),
-            etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
+            etaText(context, stop.arrivalMinutesFromStart, now),
+            etaText(context, stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
         )
     }
 

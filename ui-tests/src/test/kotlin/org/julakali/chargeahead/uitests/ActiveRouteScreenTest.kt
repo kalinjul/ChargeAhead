@@ -25,7 +25,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "w600dp-h1000dp")
+@Config(qualifiers = "+w600dp-h1000dp")
 class ActiveRouteScreenTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()

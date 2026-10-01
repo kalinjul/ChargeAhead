@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.android.phone
 
+import android.content.Context
+import android.text.format.DateFormat
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -73,6 +76,7 @@ import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 
 /** The charge-level editors behind the trip's start and destination rows. */
@@ -277,6 +281,7 @@ private fun StopRail(
     val last = plan.stops.size + 1
     val pen = socEditing?.let { painterResource(R.drawable.ic_pen) }
     val now = LocalNow.current()
+    val context = LocalContext.current
 
     LazyColumn(modifier = modifier.padding(horizontal = 16.dp)) {
         item(key = "start") {
@@ -324,8 +329,8 @@ private fun StopRail(
                 MetaLine(
                     stringResource(
                         R.string.trip_stop_times,
-                        etaText(stop.arrivalMinutesFromStart, now),
-                        etaText(stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
+                        etaText(context, stop.arrivalMinutesFromStart, now),
+                        etaText(context, stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
                     ),
                 )
             }
@@ -348,7 +353,7 @@ private fun StopRail(
                     overflow = TextOverflow.Ellipsis,
                 )
                 MetaLine(
-                    stringResource(R.string.trip_arr, etaText(plan.totalMinutes, now), plan.arrivalSocPercent.roundToInt()),
+                    stringResource(R.string.trip_arr, etaText(context, plan.totalMinutes, now), plan.arrivalSocPercent.roundToInt()),
                 )
             }
         }
@@ -451,6 +456,7 @@ private fun StopTiles(
 ) {
     val selecting = selection.selecting
     val now = LocalNow.current()
+    val context = LocalContext.current
     // Centred in the room the list would take, so the action row stays where it was.
     Box(modifier, contentAlignment = Alignment.Center) {
         LazyRow(
@@ -476,7 +482,7 @@ private fun StopTiles(
                             overflow = TextOverflow.Ellipsis,
                         )
                         MetaLine(stringResource(R.string.trip_tile_charge, stop.maxPowerKw.roundToInt(), stop.chargeMinutes.roundToInt()))
-                        MetaLine(stringResource(R.string.trip_tile_arrival, etaText(stop.arrivalMinutesFromStart, now)))
+                        MetaLine(stringResource(R.string.trip_tile_arrival, etaText(context, stop.arrivalMinutesFromStart, now)))
                     }
                 }
             }
@@ -547,20 +553,27 @@ fun TripPlan.headerLine(): String = listOf(
 ).joinToString(" · ")
 
 /** "9h 16m" or "42 min" — durations, not clock times; one shape for the header and the sheet. */
+@Composable
 fun minutesText(minutes: Double): String {
     val total = minutes.roundToInt()
     val hours = total / 60
     val rest = total % 60
-    return if (hours > 0) "${hours}h ${rest}m" else "$rest min"
+    return if (hours > 0) {
+        stringResource(R.string.trip_duration_hours_minutes, hours, rest)
+    } else {
+        stringResource(R.string.trip_duration_minutes, rest)
+    }
 }
 
 /** The clock the trip rows read; tests pin it so times don't drift. */
 val LocalNow = staticCompositionLocalOf<() -> LocalTime> { { LocalTime.now() } }
 
-/** Wall-clock arrival, from [now] plus the ETA offset. */
-fun etaText(minutesFromStart: Double, now: LocalTime): String {
-    val eta = now.plusMinutes(minutesFromStart.toLong())
-    return "%02d:%02d".format(eta.hour, eta.minute)
+/** Wall-clock arrival, from [now] plus the ETA offset, in the device's 12h/24h style. */
+fun etaText(context: Context, minutesFromStart: Double, now: LocalTime): String {
+    val locale = context.resources.configuration.locales[0]
+    val skeleton = if (DateFormat.is24HourFormat(context)) "Hm" else "hm"
+    val pattern = DateFormat.getBestDateTimePattern(locale, skeleton)
+    return now.plusMinutes(minutesFromStart.toLong()).format(DateTimeFormatter.ofPattern(pattern, locale))
 }
 
 /** The collapsed sheet shows the first stops, in either layout. */

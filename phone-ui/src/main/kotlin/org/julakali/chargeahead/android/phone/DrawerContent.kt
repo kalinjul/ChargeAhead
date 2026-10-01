@@ -182,7 +182,7 @@ private fun AcModeToggle(active: Boolean, onToggle: (Boolean) -> Unit, modifier:
             // A small "AC" badge that lights up with the mode.
             Surface(shape = MaterialTheme.shapes.small, color = accent.copy(alpha = if (shown) 1f else 0.12f)) {
                 Text(
-                    "AC",
+                    stringResource(R.string.drawer_ac),
                     style = MaterialTheme.typography.labelSmall,
                     color = if (shown) MaterialTheme.colorScheme.onPrimary else accent,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
@@ -223,7 +223,7 @@ private fun PowerSegments(filters: ChargeFilters, onFilters: (ChargeFilters) -> 
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    "${step.roundToInt()} kW",
+                    stringResource(R.string.drawer_power_step, step.roundToInt()),
                     style = MaterialTheme.typography.labelMedium.tabular,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(vertical = 8.dp),
