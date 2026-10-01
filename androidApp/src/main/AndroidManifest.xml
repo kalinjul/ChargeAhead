@@ -9,6 +9,8 @@
          150 km-radius corridor, and some users won't grant the fine one. -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- The host refuses PlaceListMapTemplate without this, with a crash screen, not a log line. -->
+    <uses-permission android:name="androidx.car.app.MAP_TEMPLATES" />
 
     <!-- Charge level from the vehicle (from M2 on). Purely opportunistic: in
          projection, very few head units supply this data, and without it the
@@ -58,6 +60,10 @@
         <meta-data
             android:name="androidx.car.app.minCarApiLevel"
             android:value="1" />
+
+        <meta-data
+            android:name="androidx.car.app.theme"
+            android:resource="@style/CarAppTheme" />
 
         <activity
             android:name=".phone.MainActivity"

@@ -109,6 +109,7 @@ class CarRouteViewModelTest {
             activeRoute,
             PlanTripInteractor(planner, vehicles, preferences, history, trips, testDispatchers),
             ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers),
+            CommitTripInteractor(trips) { 9L },
             trips,
         )
 

@@ -11,15 +11,32 @@
     <string name="car_home_enter_destination">Ziel eingeben</string>
     <string name="car_home_charge_now">Jetzt laden</string>
     <string name="car_home_active_route">Aktive Route</string>
+    <string name="car_home_soc">Ladestand</string>
+    <string name="car_home_soc_unset">–</string>
+    <string name="car_home_soc_percent">%1$d %%</string>
+    <string name="car_debug_energy">Ladestand, wie die App ihn nutzt</string>
+    <string name="car_debug_energy_value">%1$d %% · %2$s</string>
+    <string name="car_debug_source_manual">eingetragen</string>
+    <string name="car_debug_source_car">vom Fahrzeug</string>
+    <string name="car_debug_source_cloud">aus der Hersteller-Cloud</string>
+    <string name="car_debug_fix">Position</string>
+    <string name="car_debug_fix_value">%1$s · %2$s km/h · %3$s°</string>
+    <string name="car_debug_just_now">gerade eben</string>
 
     <string name="car_search_empty">Keine Treffer. Am besten mit Ort suchen, z. B. „Hbf Kiel“.</string>
     <string name="car_search_submit_hint">Zum Suchen unten auf der Tastatur die Lupe drücken.</string>
 
     <string name="car_route_planning">Route wird geplant …</string>
     <string name="car_route_send_all">Ganze Route an Maps senden</string>
+    <string name="car_route_send_all_hint">Nur mit dem Telefon in der Hand</string>
     <string name="car_route_open_phone">Öffne PowerTrip auf deinem Smartphone, damit die Route an Maps geschickt werden kann.</string>
     <string name="car_route_next_stop_only">Nur nächster Ladestopp</string>
     <string name="car_route_navigate">Navigation starten</string>
+    <string name="car_route_replan">Neu planen</string>
+    <string name="car_route_charge">laden bis %1$d %%</string>
+    <string name="car_detail_navigate">Navigieren</string>
+    <string name="car_detail_back">Zurück</string>
+    <string name="car_detail_charge">%1$d → %2$d %% in %3$s</string>
     <string name="car_route_no_vehicle">Kein Fahrzeugprofil. Bitte am Telefon in der Garage anlegen.</string>
     <string name="car_route_no_route">Keine Route zum Ziel gefunden.</string>
     <string name="car_route_no_charger">Nach %1$s kein erreichbarer Schnelllader mehr auf der Strecke.</string>

@@ -1,7 +1,9 @@
 package org.julakali.chargeahead.shared.ui.car
 
 import org.julakali.chargeahead.shared.ChargeStopsFeature
+import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.ui.CarDataViewModel
 import org.koin.core.Koin
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.factoryOf
@@ -20,9 +22,12 @@ fun carUiModule(): Module = module {
         factoryOf(::CarDestinationSearchViewModel)
         factoryOf(::CarChargeNowViewModel)
         factoryOf(::CarSoCViewModel)
+        // The phone's debug view model, same data, read in the car.
+        factoryOf(::CarDataViewModel)
         factory { (destination: Destination, activeRoute: Boolean) ->
-            CarRouteViewModel(get(), destination, activeRoute, get(), get(), get())
+            CarRouteViewModel(get(), destination, activeRoute, get(), get(), get(), get())
         }
+        factory { (site: ChargeSite) -> CarSiteDetailViewModel(get(), site, get()) }
     }
 }
 

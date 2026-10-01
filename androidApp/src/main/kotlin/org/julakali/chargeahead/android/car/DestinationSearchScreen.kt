@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 class DestinationSearchScreen(
     carContext: CarContext,
     private val session: Scope,
+    private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
     private val viewModel = screenViewModel { session.get<CarDestinationSearchViewModel>() }
@@ -76,6 +77,6 @@ class DestinationSearchScreen(
     private fun choose(destination: Destination) {
         // The search screen replaces itself with the route.
         screenManager.pop()
-        screenManager.push(RouteScreen(carContext, session, destination))
+        screenManager.push(RouteScreen(carContext, session, destination, permissions = permissions))
     }
 }

@@ -15,11 +15,15 @@ import org.julakali.chargeahead.shared.ui.car.CarSoCViewModel
 import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
 
-/** Enter the state of charge manually while driving, in steps from high to low. */
+/**
+ * Enter the state of charge manually while driving, in steps from high to
+ * low. A caller that needs the pick, like a re-plan, gets it through [onPicked].
+ */
 class SoCScreen(
     carContext: CarContext,
     session: Scope,
     private val permissions: CarPermissions,
+    private val onPicked: ((Int) -> Unit)? = null,
 ) : Screen(carContext) {
 
     private val viewModel = screenViewModel { session.get<CarSoCViewModel>() }
@@ -94,7 +98,10 @@ class SoCScreen(
     private fun buildRow(percent: Int): Row =
         Row.Builder()
             .setTitle(carContext.getString(R.string.car_soc_percent, percent))
-            .setOnClickListener { viewModel.onStepPicked(percent) }
+            .setOnClickListener {
+                viewModel.onStepPicked(percent)
+                onPicked?.invoke(percent)
+            }
             .build()
 
     /** What the vehicle delivered on the last attempt. */

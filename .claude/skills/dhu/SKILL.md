@@ -110,9 +110,9 @@ launcher.
 **USB (`$D start`)** is the default and needs nothing but the cable.
 
 **ADB (`$D start --adb`)** additionally needs the head unit server, started
-from the same developer menu. It stops on every disconnect, on every app
-reinstall and when the phone sleeps, and must be restarted before every
-attempt. The script checks this beforehand and says so, instead of failing
+from the same developer menu. It stops when the connection drops and when
+the phone sleeps, and has to be started again then; an app reinstall
+leaves it running. The script checks this beforehand and says so, instead of failing
 with a confusing abort. On macOS this is the mode that works reliably; USB
 accessory mode depends on the cable and the Mac's USB stack. A phone on
 wireless debugging shows up on adb like a cabled one, with a serial like
