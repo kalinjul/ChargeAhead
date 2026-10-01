@@ -42,7 +42,10 @@ class ChargeNowViewModel(
             result.isEmpty && refreshing -> ChargeNowUiState.Loading
             else -> ChargeNowUiState.Ready(result)
         }
-    }.stateIn(viewModelScope, WhileUiSubscribed, ChargeNowUiState.NoPosition)
+        // Loading first: the modal sheet sizes itself on its first frame, and the skeleton is tall enough
+        // for the half-height anchor. A one-line "no position" opens it expanded, which turns into the
+        // whole screen the moment the results arrive.
+    }.stateIn(viewModelScope, WhileUiSubscribed, ChargeNowUiState.Loading)
 
     init {
         observeChargeNow(ChargeNowObserver.Params(position = null))
