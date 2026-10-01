@@ -50,7 +50,8 @@ class SiteDetailScreen(
 
         val pane = Pane.Builder()
         rows(state.distanceKm, state.live).take(rowLimit).forEach(pane::addRow)
-        pane.setImage(icon(R.drawable.ic_powertrip))
+        // The host fills the slot edge to edge: a square drawable with air around the mark survives that.
+        pane.setImage(icon(R.drawable.splash_icon))
         pane.addAction(
             Action.Builder()
                 .setTitle(carContext.getString(R.string.car_detail_navigate))

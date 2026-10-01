@@ -52,4 +52,4 @@ internal fun distanceLine(distanceKm: Double, suffix: String? = null, suffixColo
     return CarText.create(text)
 }
 
-private const val SEPARATOR = "· "
+private const val SEPARATOR = " · "
