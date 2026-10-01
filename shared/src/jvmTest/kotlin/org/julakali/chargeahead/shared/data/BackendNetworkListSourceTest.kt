@@ -32,7 +32,7 @@ class BackendNetworkListSourceTest {
                 headers = headersOf(HttpHeaders.ContentType, "application/json"),
             )
         }
-        val source = BackendNetworkListSource(createHttpClient(engine), "https://example.invalid/", "test-token")
+        val source = BackendNetworkListSource(createHttpClient(engine, TestBackend))
 
         val networks = source.networks()
 

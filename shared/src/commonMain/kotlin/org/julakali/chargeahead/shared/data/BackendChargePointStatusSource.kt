@@ -2,7 +2,6 @@ package org.julakali.chargeahead.shared.data
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
@@ -16,14 +15,11 @@ import org.julakali.chargeahead.shared.domain.ChargePointStatusSource
 
 class BackendChargePointStatusSource(
     private val httpClient: HttpClient,
-    private val baseUrl: String,
-    private val token: String,
 ) : ChargePointStatusSource {
 
     override suspend fun status(siteIds: List<String>): Map<String, List<ChargePointStatus>> =
         siteIds.distinct().chunked(MAX_SITES_PER_REQUEST).flatMap { chunk ->
-            val response: ChargePointStatusResponse = httpClient.post("${baseUrl.trimEnd('/')}$PATH") {
-                bearerAuth(token)
+            val response: ChargePointStatusResponse = httpClient.post(PATH) {
                 contentType(ContentType.Application.Json)
                 setBody(ChargePointStatusRequest(siteIds = chunk))
             }.body()
@@ -31,7 +27,7 @@ class BackendChargePointStatusSource(
         }.toMap()
 
     companion object {
-        private const val PATH = "/v1/charge-point-status"
+        private const val PATH = "v1/charge-point-status"
 
         /** The backend rejects larger requests. */
         const val MAX_SITES_PER_REQUEST = 500

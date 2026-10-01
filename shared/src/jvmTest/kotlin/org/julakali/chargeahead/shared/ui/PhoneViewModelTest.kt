@@ -22,6 +22,7 @@ import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
@@ -38,6 +39,8 @@ import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilit
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
+import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Route
@@ -140,9 +143,10 @@ class PhoneViewModelTest {
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
         val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val addCar = AddCarViewModel(vehicles, SelectVehicleInteractor(vehicles), testDispatchers)
+        val addCar = AddCarViewModel(VehiclePresetsObserver(vehicles, testDispatchers), SelectVehicleInteractor(vehicles))
         val garage = GarageViewModel(
             vehicles,
+            GarageObserver(vehicles),
             SelectVehicleInteractor(vehicles),
             RemoveVehicleInteractor(vehicles),
             UpdateArrivalSocInteractor(vehicles),
@@ -293,6 +297,7 @@ class PhoneViewModelTest {
         val fixes = MutableSharedFlow<Fix>(extraBufferCapacity = 1)
         val feature = ChargeStopsFeature(
             locationSource = object : LocationSource {
+                override suspend fun currentFix(): Fix? = null
                 override val updates: Flow<Fix> = fixes
             },
             parentScope = CoroutineScope(Dispatchers.Unconfined),
@@ -346,6 +351,7 @@ class PhoneViewModelTest {
 
     private fun stubFeature() = ChargeStopsFeature(
         locationSource = object : LocationSource {
+            override suspend fun currentFix(): Fix? = null
             override val updates: Flow<Fix> = emptyFlow()
         },
         parentScope = CoroutineScope(Dispatchers.Unconfined),
@@ -360,6 +366,7 @@ class PhoneViewModelTest {
     }
 
     private object NoLocation : LocationSource {
+        override suspend fun currentFix(): Fix? = null
         override val updates: Flow<Fix> = emptyFlow()
     }
 

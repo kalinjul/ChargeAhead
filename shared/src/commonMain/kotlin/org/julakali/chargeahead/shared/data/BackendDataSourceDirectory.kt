@@ -2,7 +2,6 @@ package org.julakali.chargeahead.shared.data
 
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
-import io.ktor.client.request.bearerAuth
 import io.ktor.client.request.get
 import org.julakali.chargeahead.api.DataSourceDto
 import org.julakali.chargeahead.api.DataSourcesResponse
@@ -16,19 +15,16 @@ import org.julakali.chargeahead.shared.domain.License
 /** The sources the backend draws on; only it knows which are connected. */
 class BackendDataSourceDirectory(
     private val httpClient: HttpClient,
-    private val baseUrl: String,
-    private val token: String,
 ) : DataSourceDirectory {
 
     override suspend fun dataSources(): List<DataSource> {
-        val response: DataSourcesResponse = httpClient.get("${baseUrl.trimEnd('/')}$PATH") {
-            bearerAuth(token)
+        val response: DataSourcesResponse = httpClient.get(PATH) {
         }.body()
         return response.sources.map { it.toDomain() }
     }
 
     private companion object {
-        const val PATH = "/v1/data-sources"
+        const val PATH = "v1/data-sources"
     }
 }
 

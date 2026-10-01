@@ -37,6 +37,7 @@ import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import org.julakali.chargeahead.shared.settings.settingsModule
@@ -69,8 +70,10 @@ class PhoneAppHarness {
     )
 
     val trips: TripRepository get() = GlobalContext.get().get()
+    val vehicles: VehicleRepository get() = GlobalContext.get().get()
 
-    fun start(withVehicle: Boolean = true) {
+    /** [nearby] sits next to the phone, within "charge now" reach; the corridor sites are hundreds of km out. */
+    fun start(withVehicle: Boolean = true, nearby: List<ChargeSite> = emptyList()) {
         val app = ApplicationProvider.getApplicationContext<Application>()
         Shadows.shadowOf(app).grantPermissions(
             Manifest.permission.ACCESS_FINE_LOCATION,
@@ -93,17 +96,17 @@ class PhoneAppHarness {
         startKoin {
             androidContext(app)
             allowOverride(true)
-            modules(settingsModule { settingsFile }, chargeStopsModule(), sharedUiModule(), fakes())
+            modules(settingsModule { settingsFile }, chargeStopsModule(), sharedUiModule(), fakes(sites + nearby))
         }
     }
 
     fun stop() = stopKoin()
 
-    private fun fakes() = module {
+    private fun fakes(allSites: List<ChargeSite>) = module {
         single<LocationSource> { FakeLocationSource(fix) }
         single<Geocoder> { FakeGeocoder(Place("München", "München, Bayern", muenchen)) }
         single<RouteEngine> { StraightLineRouteEngine() }
-        single<SiteRepository> { FakeSiteRepository(sites) }
+        single<SiteRepository> { FakeSiteRepository(allSites) }
         single<ChargePointStatusRepository> { NoStatuses }
         single<DataSourceDirectory> { NoDataSources }
         single<NetworkRepository> { NoNetworks }
@@ -154,6 +157,7 @@ private class StraightLineRouteEngine : RouteEngine {
 }
 
 private class FakeSiteRepository(private val sites: List<ChargeSite>) : SiteRepository {
+    override suspend fun invalidate() {}
     override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = sites
     override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(sites)
     override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(sites)

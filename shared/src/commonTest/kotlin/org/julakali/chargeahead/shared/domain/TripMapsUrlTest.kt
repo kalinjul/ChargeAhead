@@ -1,12 +1,5 @@
-package org.julakali.chargeahead.shared.ui
+package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.core.MapsHandoff
-import org.julakali.chargeahead.shared.domain.ChargeSite
-import org.julakali.chargeahead.shared.domain.Destination
-import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.PlannedStop
-import org.julakali.chargeahead.shared.domain.Route
-import org.julakali.chargeahead.shared.domain.TripPlan
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

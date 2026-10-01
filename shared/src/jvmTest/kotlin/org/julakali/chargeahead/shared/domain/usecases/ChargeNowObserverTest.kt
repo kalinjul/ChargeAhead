@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import kotlinx.coroutines.flow.flowOf
+
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.CHARGE_NOW_RELAX_FETCH_FACTOR
@@ -36,6 +38,8 @@ class ObserveChargeNowTest {
     private val fetches = mutableListOf<Pair<SearchArea, Set<String>>>()
 
     private val repository = object : SiteRepository {
+        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+        override suspend fun invalidate() {}
         override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
             fetches += area to networkKeys
             store.update { it + fetched }

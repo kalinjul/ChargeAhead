@@ -1,7 +1,5 @@
-package org.julakali.chargeahead.shared.core
+package org.julakali.chargeahead.shared.domain
 
-import org.julakali.chargeahead.shared.domain.DEFAULT_RESERVE_SOC_PERCENT
-import org.julakali.chargeahead.shared.domain.VehicleProfile
 
 /**
  * Remaining range and arrival charge level.

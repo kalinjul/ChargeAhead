@@ -37,9 +37,7 @@ class BackendChargeSiteSourceTest {
             )
         }
         return BackendChargeSiteSource(
-            createHttpClient(engine),
-            baseUrl = "https://example.invalid/",
-            token = "test-token",
+            createHttpClient(engine, TestBackend),
         )
     }
 
@@ -158,9 +156,7 @@ class BackendChargeSiteSourceTest {
     fun aServerErrorPropagates() {
         val engine = MockEngine { respondError(HttpStatusCode.BadGateway) }
         val source = BackendChargeSiteSource(
-            createHttpClient(engine),
-            baseUrl = "https://example.invalid",
-            token = "test-token",
+            createHttpClient(engine, TestBackend),
         )
 
         assertFailsWith<Exception> { runBlocking { source.query(area, emptySet()) } }

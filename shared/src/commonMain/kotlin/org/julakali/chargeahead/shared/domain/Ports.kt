@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.shared.domain
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 
 /** Ongoing stream of location fixes. */
 interface LocationSource {
@@ -11,7 +10,7 @@ interface LocationSource {
      * The best fix obtainable right now — the platform's last known one, or a
      * freshly computed one. `null` when none can be had.
      */
-    suspend fun currentFix(): Fix? = null
+    suspend fun currentFix(): Fix?
 }
 
 /** The charging networks worth offering, largest first. */
@@ -68,15 +67,21 @@ interface SiteRepository {
      * check — and again whenever the store changes. An empty list is valid;
      * [load] refills.
      */
-    fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+    fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>>
 
     /** Every stored site in [area], unfiltered, and again whenever the store changes. */
-    fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+    fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>>
 
     /**
      * Discards the stock so the next access actually queries.
      */
-    suspend fun invalidate() {}
+    suspend fun invalidate()
+}
+
+/** Housekeeping on the stored sites, run once at app start. */
+fun interface SiteCache {
+    /** Drops stale coverage and sites of networks nobody asked for, keeping [preferredNetworkKeys]. */
+    suspend fun prune(preferredNetworkKeys: Set<String>)
 }
 
 /**

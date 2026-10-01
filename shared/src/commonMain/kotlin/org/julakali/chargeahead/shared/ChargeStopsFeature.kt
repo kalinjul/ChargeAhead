@@ -30,15 +30,9 @@ class ChargeStopsFeature(
     parentScope: CoroutineScope,
     /** Called by [close]. */
     private val onClose: () -> Unit = {},
-    /** A one-shot task run on the feature's own scope at creation. */
-    private val onStart: (suspend () -> Unit)? = null,
 ) {
 
     private val scope = parentScope.childScope()
-
-    init {
-        onStart?.let { task -> scope.launch { task() } }
-    }
 
     private val courseTracker = CourseTracker()
 

@@ -3,12 +3,11 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.combine
-import org.julakali.chargeahead.shared.core.RangeCalculator
 import org.julakali.chargeahead.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.VehicleRepository
-import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
@@ -37,6 +36,7 @@ data class GarageUiState(
 /** The garage screen: choose, edit, remove a car. */
 class GarageViewModel(
     private val vehicles: VehicleRepository,
+    private val observeGarage: GarageObserver,
     private val selectVehicle: SelectVehicleInteractor,
     private val removeVehicle: RemoveVehicleInteractor,
     private val updateArrivalSoc: UpdateArrivalSocInteractor,
@@ -45,20 +45,23 @@ class GarageViewModel(
     private val arrivalSocEditor = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<GarageUiState> = combine(
-        vehicles.vehicles,
-        vehicles.vehicle,
+        observeGarage.flow,
         vehicles.arrivalSocPercent,
         arrivalSocEditor,
-    ) { vehicles, selected, arrivalSoc, arrivalEditor ->
+    ) { garage, arrivalSoc, arrivalEditor ->
         GarageUiState(
-            vehicles = vehicles,
-            selected = selected,
+            vehicles = garage.vehicles,
+            selected = garage.selected,
             arrivalSocPercent = arrivalSoc,
             arrivalSocInput = arrivalEditor,
-            selectedFullRangeKm = selected?.let { RangeCalculator.rangeKm(it, socPercent = 100.0, reserveSocPercent = 0.0) },
-            selectedPresetConsumption = selected?.let { VehicleCatalog.presetFor(it.displayName)?.consumptionKwhPer100Km },
+            selectedFullRangeKm = garage.selectedFullRangeKm,
+            selectedPresetConsumption = garage.selectedPresetConsumption,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, GarageUiState())
+
+    init {
+        observeGarage(GarageObserver.Params())
+    }
 
     /** Selecting also stores an edited profile. */
     fun onVehicleSelected(profile: VehicleProfile) {

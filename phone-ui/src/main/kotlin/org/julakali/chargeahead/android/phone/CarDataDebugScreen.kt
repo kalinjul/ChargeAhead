@@ -66,7 +66,7 @@ fun CarDataDebugScreen(
                         )
                     }
                     Text(
-                        point?.displayValue() ?: "—",
+                        point?.displayValue() ?: stringResource(R.string.value_unknown),
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (point?.status == CarDataStatus.AVAILABLE) {
                             MaterialTheme.colorScheme.onSurface
@@ -96,7 +96,7 @@ private fun CarDataKind.label(): String = stringResource(
 
 @Composable
 private fun CarDataPoint.displayValue(): String = when (status) {
-    CarDataStatus.AVAILABLE -> value ?: "—"
+    CarDataStatus.AVAILABLE -> value ?: stringResource(R.string.value_unknown)
     CarDataStatus.NO_PERMISSION -> stringResource(R.string.cardata_no_permission)
     CarDataStatus.NO_DATA -> stringResource(R.string.cardata_no_data)
     CarDataStatus.NO_CAR_HARDWARE -> stringResource(R.string.cardata_no_hardware)

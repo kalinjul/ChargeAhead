@@ -10,10 +10,11 @@ import androidx.car.app.Session
  */
 class ChargeCarAppService : CarAppService() {
 
-    override fun createHostValidator(): HostValidator {
-        // TODO replace with a real HostValidator before release: this lets any app bind.
-        return HostValidator.ALLOW_ALL_HOSTS_VALIDATOR
-    }
+    // Google's own hosts: Android Auto, Android Automotive and the desktop head unit. Anyone else stays out.
+    override fun createHostValidator(): HostValidator =
+        HostValidator.Builder(applicationContext)
+            .addAllowedHosts(androidx.car.app.R.array.hosts_allowlist_sample)
+            .build()
 
     override fun onCreateSession(): Session {
         return ChargeSession()

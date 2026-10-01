@@ -1,5 +1,13 @@
 package org.julakali.chargeahead.shared.core
 
+import kotlinx.coroutines.flow.flowOf
+
+import kotlinx.coroutines.flow.Flow
+
+import org.julakali.chargeahead.shared.domain.MapFilter
+
+import org.julakali.chargeahead.shared.domain.BoundingBox
+
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.Connector
@@ -64,6 +72,9 @@ class RoutedListAgreementTest {
             override suspend fun route(from: LatLon, to: LatLon): Route = route
         }
         val repository = object : SiteRepository {
+            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override suspend fun invalidate() {}
             override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = sites
         }
         val plan = assertIs<TripPlanResult.Planned>(

@@ -11,17 +11,18 @@ import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.julakali.chargeahead.shared.ui.car.CarSoCViewModel
+import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
 
 /** Enter the state of charge manually while driving, in steps from high to low. */
 class SoCScreen(
     carContext: CarContext,
-    viewModels: CarViewModels,
+    session: Scope,
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
-    private val viewModel = screenViewModel { viewModels.soc() }
+    private val viewModel = screenViewModel { session.get<CarSoCViewModel>() }
 
     // The permission is the platform's; only it stays here.
     private var hasCarFuelPermission =

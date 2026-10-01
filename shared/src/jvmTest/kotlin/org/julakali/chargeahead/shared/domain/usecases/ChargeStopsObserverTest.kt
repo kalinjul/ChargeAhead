@@ -1,5 +1,11 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import kotlinx.coroutines.flow.flowOf
+
+import org.julakali.chargeahead.shared.domain.MapFilter
+
+import org.julakali.chargeahead.shared.domain.BoundingBox
+
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.core.CorridorPlanner
 import org.julakali.chargeahead.shared.domain.ChargeSite
@@ -75,6 +81,7 @@ class ObserveChargeStopsTest {
 
     /** A store that the fetch fills with [sites], or fails while [broken]. */
     private inner class FakeRepository(var sites: List<ChargeSite>) : SiteRepository {
+        override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
         private val store = MutableStateFlow<List<ChargeSite>>(emptyList())
         val fetched = mutableListOf<Pair<SearchArea, Set<String>>>()
         var broken = false

@@ -45,3 +45,13 @@ const val DEFAULT_ARRIVAL_SOC_PERCENT = DEFAULT_RESERVE_SOC_PERCENT
 
 /** The highest arrival level worth offering. */
 const val MAX_ARRIVAL_SOC_PERCENT = 80.0
+
+/** The garage as the screen shows it. */
+data class Garage(
+    val vehicles: List<VehicleProfile> = emptyList(),
+    val selected: VehicleProfile? = null,
+    /** The selected car's range on a full battery, down to 0 %. */
+    val selectedFullRangeKm: Double? = null,
+    /** The catalog consumption, when the selected car was added from a preset. */
+    val selectedPresetConsumption: Double? = null,
+)

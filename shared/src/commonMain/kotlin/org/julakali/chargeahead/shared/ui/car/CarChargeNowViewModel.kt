@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
 
 /** "Charge now" in the car: ranks from the first position that arrives, and again on refresh. */
 class CarChargeNowViewModel(
-    private val feature: ChargeStopsFeature,
+    internal val feature: ChargeStopsFeature,
     private val observeChargeNow: ChargeNowObserver,
     private val refreshChargeNow: RefreshChargeNowInteractor,
 ) : ViewModel() {
