@@ -89,6 +89,13 @@ class CarHomeScreen(
     private fun header(): Header = Header.Builder()
         .setTitle(title())
         .setStartHeaderAction(Action.APP_ICON)
+        // What the car reports, for debugging in the car itself.
+        .addEndHeaderAction(
+            Action.Builder()
+                .setIcon(icon(R.drawable.ic_info))
+                .setOnClickListener { screenManager.push(CarDebugScreen(carContext, session)) }
+                .build(),
+        )
         .build()
 
     private fun title(): String = carContext.getString(R.string.app_name)

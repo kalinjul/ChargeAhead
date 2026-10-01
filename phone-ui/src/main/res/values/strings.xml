@@ -14,6 +14,14 @@
     <string name="car_home_soc">Ladestand</string>
     <string name="car_home_soc_unset">–</string>
     <string name="car_home_soc_percent">%1$d %%</string>
+    <string name="car_debug_energy">Ladestand, wie die App ihn nutzt</string>
+    <string name="car_debug_energy_value">%1$d %% · %2$s</string>
+    <string name="car_debug_source_manual">eingetragen</string>
+    <string name="car_debug_source_car">vom Fahrzeug</string>
+    <string name="car_debug_source_cloud">aus der Hersteller-Cloud</string>
+    <string name="car_debug_fix">Position</string>
+    <string name="car_debug_fix_value">%1$s · %2$s km/h · %3$s°</string>
+    <string name="car_debug_just_now">gerade eben</string>
 
     <string name="car_search_empty">Keine Treffer. Am besten mit Ort suchen, z. B. „Hbf Kiel“.</string>
     <string name="car_search_submit_hint">Zum Suchen unten auf der Tastatur die Lupe drücken.</string>
