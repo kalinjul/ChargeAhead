@@ -1,4 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.ChargeAhead" parent="@android:style/Theme.Material.NoActionBar" />
+
+    <!-- The system splash: brand ground with the launcher mark, then the app theme takes over. -->
+    <style name="Theme.ChargeAhead.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <!-- same colour as the window: invisible disc, but it grows the icon slot from 192dp to 240dp -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.ChargeAhead</item>
+    </style>
 </resources>

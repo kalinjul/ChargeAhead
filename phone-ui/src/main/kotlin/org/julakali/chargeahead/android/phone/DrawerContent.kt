@@ -6,17 +6,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -29,7 +29,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.AppSlider
 import org.julakali.chargeahead.android.phone.components.PrefRow
@@ -61,21 +60,8 @@ fun DrawerContent(
             .padding(bottom = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        // Drawer head: bolt + wordmark over a hairline.
         Column {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(9.dp),
-                modifier = Modifier.padding(vertical = 14.dp),
-            ) {
-                Icon(
-                    painterResource(R.drawable.ic_bolt),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(21.dp),
-                )
-                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp))
-            }
+            DrawerHead(Modifier.padding(vertical = 14.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
 
@@ -230,5 +216,22 @@ private fun PowerSegments(filters: ChargeFilters, onFilters: (ChargeFilters) -> 
                 )
             }
         }
+    }
+}
+
+/** The brand mark and wordmark; the wordmark drawable has a night variant. */
+@Composable
+fun DrawerHead(modifier: Modifier = Modifier) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = modifier,
+    ) {
+        Image(painterResource(R.drawable.ic_powertrip), contentDescription = null, modifier = Modifier.height(24.dp))
+        Image(
+            painterResource(R.drawable.logo_powertrip_text),
+            contentDescription = stringResource(R.string.app_name),
+            modifier = Modifier.height(32.dp),
+        )
     }
 }

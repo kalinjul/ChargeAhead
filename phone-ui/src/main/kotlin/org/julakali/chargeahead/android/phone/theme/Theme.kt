@@ -62,14 +62,15 @@ object ChargeAheadColors {
 val TextStyle.tabular: TextStyle get() = copy(fontFeatureSettings = "tnum")
 
 private val MockupScheme = lightColorScheme(
-    primary = Color(0xFF1A73E8),
+    // Brand purple, from the powertrip mark.
+    primary = Color(0xFF7F77DD),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFE8F0FE),
-    onPrimaryContainer = Color(0xFF174EA6),
+    primaryContainer = Color(0xFFECEAFB),
+    onPrimaryContainer = Color(0xFF26215C),
     secondary = Color(0xFF5F6368),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFE8F0FE),
-    onSecondaryContainer = Color(0xFF174EA6),
+    secondaryContainer = Color(0xFFECEAFB),
+    onSecondaryContainer = Color(0xFF26215C),
     tertiary = Color(0xFF188038),
     onTertiary = Color.White,
     tertiaryContainer = Color(0xFFE6F4EA),
@@ -96,14 +97,15 @@ private val MockupScheme = lightColorScheme(
 
 // Dark grey surfaces, Google's dark-mode accents; not an inversion of the light scheme.
 private val DarkScheme = darkColorScheme(
-    primary = Color(0xFF8AB4F8),
-    onPrimary = Color(0xFF062E6F),
-    primaryContainer = Color(0xFF283C5C),
-    onPrimaryContainer = Color(0xFFD2E3FC),
+    // The launcher's light purple on the dark ground.
+    primary = Color(0xFFAFA9EC),
+    onPrimary = Color(0xFF26215C),
+    primaryContainer = Color(0xFF3B3684),
+    onPrimaryContainer = Color(0xFFE5E2FA),
     secondary = Color(0xFF9AA0A6),
     onSecondary = Color(0xFF202124),
-    secondaryContainer = Color(0xFF283C5C),
-    onSecondaryContainer = Color(0xFFD2E3FC),
+    secondaryContainer = Color(0xFF3B3684),
+    onSecondaryContainer = Color(0xFFE5E2FA),
     tertiary = Color(0xFF81C995),
     onTertiary = Color(0xFF0D3B1E),
     tertiaryContainer = Color(0xFF1E3B2A),

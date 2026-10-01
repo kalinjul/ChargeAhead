@@ -14,8 +14,15 @@ val testTasks = listOf(
     ":shared:jvmTest",
     ":androidApp:testDebugUnitTest",
     ":ui-tests:testDebugUnitTest",
-    ":ui-tests:validateDebugScreenshotTest",
+    ":validateScreenshots",
 )
+
+// Goldens only match where they were rendered; tools/screenshots.sh explains.
+tasks.register<Exec>("validateScreenshots") {
+    group = "verification"
+    description = "Screenshot validation in the Linux container CI uses (tools/screenshots.sh)."
+    commandLine("tools/screenshots.sh", "validate")
+}
 
 tasks.register("testAll") {
     group = "verification"

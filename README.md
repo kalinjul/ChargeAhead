@@ -17,9 +17,9 @@ and drive it with Google Maps. Also on Android Auto and CarPlay.
 <table align="center">
   <tr>
     <td valign="top" width="25%"><img src="docs/images/home-map.png" alt="Charging stations on the map around Kempten"></td>
-    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/HomeSearchPreviewsKt/SearchResultsHits_748aa731_0.png" alt="Destination search results"></td>
-    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/TripSheetPreviewsKt/TripSheetList_748aa731_0.png" alt="Planned trip with three charging stops"></td>
-    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/ActiveRoutePreviewsKt/ActiveRoutePage_748aa731_0.png" alt="Active route to München"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/HomeSearchPreviewsKt/SearchResultsHits_8252daa8_0.png" alt="Destination search results"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/TripSheetPreviewsKt/TripSheetList_8252daa8_0.png" alt="Planned trip with three charging stops"></td>
+    <td valign="top" width="25%"><img src="ui-tests/src/screenshotTestDebug/reference/org/julakali/chargeahead/uitests/ActiveRoutePreviewsKt/ActiveRoutePage_8252daa8_0.png" alt="Active route to München"></td>
   </tr>
   <tr>
     <td align="center"><sub><b>Chargers around you</b></sub></td>
@@ -109,8 +109,11 @@ key it says so in place of the map. For iOS, the same values go into
 ```
 
 That runs the shared unit tests, the Robolectric UI tests and the screenshot
-comparison. The backend mapping can additionally be checked against the real
-service:
+comparison. The screenshot step needs Docker: goldens only match where they
+were rendered, so `tools/screenshots.sh` validates and records them in the
+Linux container CI uses (`update` to re-record, then look at the PNGs; details
+in [docs/testing.md](docs/testing.md)). The backend mapping can additionally
+be checked against the real service:
 
 ```bash
 CHARGEAHEAD_LIVE=1 ./gradlew :shared:jvmTest --tests '*BackendChargeSiteLiveContractTest'
