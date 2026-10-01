@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ChargeAhead</string>
+    <string name="app_name">PowerTrip</string>
 
     <!-- Android Auto -->
 
@@ -17,7 +17,7 @@
 
     <string name="car_route_planning">Route wird geplant …</string>
     <string name="car_route_send_all">Ganze Route an Maps senden</string>
-    <string name="car_route_open_phone">Öffne ChargeAhead auf deinem Smartphone, damit die Route an Maps geschickt werden kann.</string>
+    <string name="car_route_open_phone">Öffne PowerTrip auf deinem Smartphone, damit die Route an Maps geschickt werden kann.</string>
     <string name="car_route_next_stop_only">Nur nächster Ladestopp</string>
     <string name="car_route_navigate">Navigation starten</string>
     <string name="car_route_no_vehicle">Kein Fahrzeugprofil. Bitte am Telefon in der Garage anlegen.</string>
@@ -177,7 +177,7 @@
     <string name="drawer_slow_mode">AC-Modus</string>
     <string name="drawer_slow_mode_hint">ignoriert alle Filter und zeigt Lader unter 50 kW</string>
     <string name="drawer_max_distance">Max. Entfernung (Jetzt laden): %1$s km</string>
-    <string name="drawer_about">Über ChargeAhead</string>
+    <string name="drawer_about">Über PowerTrip</string>
     <string name="drawer_legal">Impressum &amp; Datenschutz</string>
     <string name="drawer_licenses">Lizenzen</string>
     <string name="drawer_car_none">Kein Fahrzeug angelegt</string>
