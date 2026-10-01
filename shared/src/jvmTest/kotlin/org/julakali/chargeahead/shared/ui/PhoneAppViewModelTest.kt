@@ -63,15 +63,13 @@ class PhoneAppViewModelTest {
     }
 
 
-    /** #133: search mode and trip layout come back after process death. */
+    /** #133 */
     @Test
-    fun `the saved state restores search mode and layout`() {
-        viewModel.onSearchOpened()
+    fun `the saved state restores the trip layout`() {
         viewModel.onTripLayoutChanged(TripListLayout.TILES)
 
         val restored = PhoneAppViewModel(savedState).uiState.value
 
-        assertEquals(true, restored.searching)
         assertEquals(TripListLayout.TILES, restored.tripLayout)
     }
 

@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.uitests
 
 import androidx.activity.ComponentActivity
-import androidx.compose.material3.Text
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -11,10 +10,11 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
-import org.julakali.chargeahead.android.phone.HomeMode
 import org.julakali.chargeahead.android.phone.HomeScreen
 import org.julakali.chargeahead.android.phone.R
+import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.HomeUiState
+import org.julakali.chargeahead.shared.ui.SearchUiState
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -27,7 +27,7 @@ class HomeScreenTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun home(
-        mode: HomeMode = HomeMode.BROWSING,
+        trip: TripPlan? = null,
         uiState: HomeUiState = HomeUiState(),
         onSettings: () -> Unit = {},
         activeRouteEnabled: Boolean = false,
@@ -35,10 +35,10 @@ class HomeScreenTest {
     ) = compose.setThemedContent {
         HomeScreen(
             uiState = uiState,
+            search = SearchUiState(),
+            trip = trip,
             hasPermission = true,
             planningInProgress = false,
-            mode = mode,
-            route = null,
             mapBottomInset = 0.dp,
             onViewportChanged = {},
             onChargerTapped = {},
@@ -48,9 +48,11 @@ class HomeScreenTest {
             onChargeNow = {},
             activeRouteEnabled = activeRouteEnabled,
             onActiveRoute = onActiveRoute,
-            onDismissSearch = {},
             onStopTapped = {},
-            topBar = { Text("top bar") },
+            onSearchExpandedChange = {},
+            onQueryChange = {},
+            onPick = {},
+            onClearTrip = {},
         )
     }
 
@@ -83,7 +85,7 @@ class HomeScreenTest {
 
     @Test
     fun `a trip hides the pills`() {
-        home(mode = HomeMode.TRIP)
+        home(trip = Fixtures.plan)
         compose.onNodeWithText(compose.string(R.string.home_pill_charge_now)).assertDoesNotExist()
         compose.onNodeWithText(compose.string(R.string.home_pill_active_route)).assertDoesNotExist()
     }

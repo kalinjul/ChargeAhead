@@ -17,11 +17,6 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.MapsHandoff
@@ -41,7 +35,6 @@ import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.DrawerUiState
 import org.julakali.chargeahead.shared.ui.DrawerViewModel
 import org.julakali.chargeahead.shared.ui.HomeViewModel
-import org.julakali.chargeahead.shared.ui.SearchRow
 import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.julakali.chargeahead.shared.ui.PhoneAppViewModel
 import org.julakali.chargeahead.shared.ui.TripEvent
@@ -87,24 +80,12 @@ fun PhoneApp(librariesRes: Int) {
         initialValue = SheetValue.PartiallyExpanded,
         skipHiddenState = true,
     )
-    val focusManager = LocalFocusManager.current
     val clock = LocalNow.current
     val navigator = rememberPhoneNavigator()
 
-    fun closeSearch() {
-        phoneAppViewModel.onSearchClosed()
-        focusManager.clearFocus()
-        searchViewModel.onClosed()
-    }
 
     fun collapseTripSheet() {
         scope.launch { sheetState.partialExpand() }
-    }
-
-    // No vehicle? Planning reports it as an event.
-    fun pickRow(row: SearchRow) {
-        closeSearch()
-        tripViewModel.plan(row.destination)
     }
 
     fun sendToMaps(link: String) {
@@ -118,7 +99,7 @@ fun PhoneApp(librariesRes: Int) {
         snackbar = snackbar,
         scope = scope,
         onPlanReady = {
-            closeSearch()
+            searchViewModel.onClosed()
             scope.launch { sheetState.partialExpand() }
         },
         onOpenGarage = { navigator.openFromRoot(Garage) },
@@ -152,12 +133,7 @@ fun PhoneApp(librariesRes: Int) {
             HomeRoute(
                 hasPermission = phoneAppUi.hasLocationPermission,
                 planningInProgress = tripUi is TripUiState.Planning,
-                mode = when {
-                    phoneAppUi.searching -> HomeMode.SEARCHING
-                    planned != null -> HomeMode.TRIP
-                    else -> HomeMode.BROWSING
-                },
-                route = remember(planned?.plan) { planned?.plan?.toRouteOverlay() },
+                trip = planned?.plan,
                 // The fit runs the moment the trip appears; the sheet is still rising then.
                 mapBottomInset = if (planned != null) tripPeekHeight() else 0.dp,
                 onRequestPermission = phoneAppViewModel::onLocationPermissionRequested,
@@ -166,7 +142,6 @@ fun PhoneApp(librariesRes: Int) {
                 onChargeNow = { navigator.open(ChargeNow) },
                 activeRouteEnabled = committedUi.trip != null,
                 onActiveRoute = { navigator.openFromRoot(ActiveRoute) },
-                onDismissSearch = ::closeSearch,
                 onStopTapped = { index ->
                     planned?.plan?.stops?.getOrNull(index - 1)?.let { homeViewModel.onSiteSelected(it.site) }
                 },
@@ -175,38 +150,9 @@ fun PhoneApp(librariesRes: Int) {
                     val plan = if (navigator.backStack.lastOrNull() == ActiveRoute) committedUi.trip?.plan else planned?.plan
                     plan?.stopLine(context, selected, clock())
                 },
-                topBar = { flyTo ->
-                    val trip = planned
-                    // Header and bar swap with Material's fade-through instead of a hard cut.
-                    AnimatedContent(
-                        targetState = trip != null && !phoneAppUi.searching,
-                        transitionSpec = { fadeIn(ChargeAheadMotion.fadeThroughIn()) togetherWith fadeOut(ChargeAheadMotion.fadeThroughOut()) },
-                        label = "top slot",
-                    ) { showHeader ->
-                    if (showHeader && trip != null) {
-                        DestinationHeader(
-                            // The short name (town, or street and number), not the full label.
-                            title = trip.plan.destination.name,
-                            subtitle = trip.plan.headerLine(),
-                            onClear = tripViewModel::clear,
-                            onTitleClick = { flyTo(trip.plan.destination.position) },
-                            // Material's bar brings its own surface, the header has to bring one too.
-                            standalone = true,
-                        )
-                    } else {
-                        HomeDockedSearchBar(
-                            query = searchUi.query,
-                            searching = searchUi.searching,
-                            expanded = phoneAppUi.searching,
-                            onExpandedChange = { open -> if (open) phoneAppViewModel.onSearchOpened() else closeSearch() },
-                            onQueryChange = searchViewModel::onQueryChanged,
-                            onClear = { searchViewModel.onQueryChanged("") },
-                        ) {
-                            SearchResultsPanel(uiState = searchUi, onPick = ::pickRow, standalone = false)
-                        }
-                    }
-                    }
-                },
+                // No vehicle? Planning reports it as an event.
+                onPick = tripViewModel::plan,
+                onClearTrip = tripViewModel::clear,
                 // No scaffold padding: the map draws under the status bar.
                 modifier = Modifier
                     .fillMaxSize()
@@ -234,7 +180,7 @@ fun PhoneApp(librariesRes: Int) {
     navigator.ScreenStep(
         when {
             drawerState.isOpen -> null
-            phoneAppUi.searching -> ::closeSearch
+            searchUi.expanded -> searchViewModel::onClosed
             planned != null && sheetState.currentValue == SheetValue.Expanded -> ::collapseTripSheet
             planned != null -> tripViewModel::clear
             else -> null
@@ -301,12 +247,6 @@ private fun TripEventEffect(
         viewModel.onEventHandled()
     }
 }
-
-private fun TripPlan.toRouteOverlay() = RouteOverlay(
-    points = route.points,
-    stops = stops.mapIndexed { index, stop -> RouteStop(index + 1, stop.site.position, operatorColor(stop.site)) },
-    destination = destination.position,
-)
 
 /** Arrival and departure, when [selected] is one of this trip's stops. */
 private fun TripPlan.stopLine(context: Context, selected: ChargeStop, now: LocalTime): String? =

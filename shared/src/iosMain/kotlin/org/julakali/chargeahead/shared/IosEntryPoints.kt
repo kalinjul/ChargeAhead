@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared
 
+import androidx.lifecycle.SavedStateHandle
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.db.DatabaseFactory
@@ -128,7 +129,7 @@ class PhoneViewModels(private val feature: ChargeStopsFeature) {
 
     fun chargeNow(): ChargeNowViewModel = host.get { session.get<ChargeNowViewModel>() }
 
-    fun search(): SearchViewModel = host.get { session.get<SearchViewModel>() }
+    fun search(): SearchViewModel = host.get { session.get<SearchViewModel> { parametersOf(SavedStateHandle()) } }
 
     fun clear() {
         host.clear()

@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
@@ -7,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,17 +34,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadTheme
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -53,12 +59,17 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeStop
+import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.ui.HomeUiState
 import org.julakali.chargeahead.shared.ui.HomeViewModel
+import org.julakali.chargeahead.shared.ui.SearchRow
+import org.julakali.chargeahead.shared.ui.SearchUiState
+import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.koin.androidx.compose.koinViewModel
 
-enum class HomeMode { BROWSING, SEARCHING, TRIP }
+private enum class HomeMode { BROWSING, SEARCHING, TRIP }
 
 /** The map screen with its state holder attached. */
 @Composable
@@ -66,8 +77,8 @@ fun HomeRoute(
     /** `null` until the platform has been asked. */
     hasPermission: Boolean?,
     planningInProgress: Boolean,
-    mode: HomeMode,
-    route: RouteOverlay?,
+    /** The planned trip: its route replaces the browsing markers, its destination the search bar. */
+    trip: TripPlan?,
     /** The trip sheet's peek, so the route fits above it. */
     mapBottomInset: Dp,
     onRequestPermission: () -> Unit,
@@ -78,18 +89,19 @@ fun HomeRoute(
     /** The committed trip's page; the pill is dimmed while there is none. */
     activeRouteEnabled: Boolean,
     onActiveRoute: () -> Unit,
-    /** A tap on the map while the results panel is open. */
-    onDismissSearch: () -> Unit,
     /** A numbered route marker was tapped, 1-based. */
     onStopTapped: (Int) -> Unit,
     /** Arrival and departure for a selected site that is a planned stop. */
     tripLineFor: (ChargeStop) -> String?,
-    /** Material's docked search bar with the hits inside, or the destination header. Gets a fly-to for the map. */
-    topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
+    /** A search hit was picked; the search has closed by then. */
+    onPick: (Destination) -> Unit,
+    onClearTrip: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
+    searchViewModel: SearchViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val searchUi by searchViewModel.uiState.collectAsStateWithLifecycle()
 
     // The pipeline may only run once the permission is there.
     LaunchedEffect(hasPermission) {
@@ -98,10 +110,10 @@ fun HomeRoute(
 
     HomeScreen(
         uiState = uiState,
+        search = searchUi,
+        trip = trip,
         hasPermission = hasPermission,
         planningInProgress = planningInProgress,
-        mode = mode,
-        route = route,
         mapBottomInset = mapBottomInset,
         onViewportChanged = viewModel::onViewportChanged,
         onChargerTapped = viewModel::onChargerSelected,
@@ -111,9 +123,14 @@ fun HomeRoute(
         onChargeNow = onChargeNow,
         activeRouteEnabled = activeRouteEnabled,
         onActiveRoute = onActiveRoute,
-        onDismissSearch = onDismissSearch,
         onStopTapped = onStopTapped,
-        topBar = topBar,
+        onSearchExpandedChange = { open -> if (open) searchViewModel.onOpened() else searchViewModel.onClosed() },
+        onQueryChange = searchViewModel::onQueryChanged,
+        onPick = { row ->
+            searchViewModel.onClosed()
+            onPick(row.destination)
+        },
+        onClearTrip = onClearTrip,
         modifier = modifier,
     )
 
@@ -130,10 +147,10 @@ fun HomeRoute(
 @Composable
 fun HomeScreen(
     uiState: HomeUiState,
+    search: SearchUiState,
+    trip: TripPlan?,
     hasPermission: Boolean?,
     planningInProgress: Boolean,
-    mode: HomeMode,
-    route: RouteOverlay?,
     mapBottomInset: Dp,
     onViewportChanged: (BoundingBox?) -> Unit,
     onChargerTapped: (MapCharger) -> Unit,
@@ -143,16 +160,27 @@ fun HomeScreen(
     onChargeNow: () -> Unit,
     activeRouteEnabled: Boolean,
     onActiveRoute: () -> Unit,
-    onDismissSearch: () -> Unit,
     onStopTapped: (Int) -> Unit,
-    topBar: @Composable (flyTo: (LatLon) -> Unit) -> Unit,
+    onSearchExpandedChange: (Boolean) -> Unit,
+    onQueryChange: (String) -> Unit,
+    onPick: (SearchRow) -> Unit,
+    onClearTrip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val mode = when {
+        search.expanded -> HomeMode.SEARCHING
+        trip != null -> HomeMode.TRIP
+        else -> HomeMode.BROWSING
+    }
+    val route = remember(trip) { trip?.toRouteOverlay() }
     val camera = rememberHomeCamera(uiState.position)
     val scope = rememberCoroutineScope()
 
     Box(modifier = modifier) {
-        if (hasGoogleMapsKey) {
+        if (LocalInspectionMode.current) {
+            // Previews have no Maps SDK; a plain backdrop keeps them the same with or without a key.
+            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainer))
+        } else if (hasGoogleMapsKey) {
             HomeGoogleMap(
                 position = uiState.position,
                 // The route replaces the browsing markers.
@@ -175,7 +203,7 @@ fun HomeScreen(
             Box(
                 Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) { detectTapGestures { onDismissSearch() } },
+                    .pointerInput(Unit) { detectTapGestures { onSearchExpandedChange(false) } },
             )
         }
 
@@ -246,10 +274,16 @@ fun HomeScreen(
                         )
                     }
                 }
-                // Material's bar brings its own panel; the slot renders the whole thing.
-                Box(Modifier.weight(1f)) {
-                    topBar { target -> scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) } }
-                }
+                HomeTopBar(
+                    search = search,
+                    trip = trip,
+                    onExpandedChange = onSearchExpandedChange,
+                    onQueryChange = onQueryChange,
+                    onPick = onPick,
+                    onClearTrip = onClearTrip,
+                    onFlyTo = { target -> scope.launch { camera.animate(CameraUpdateFactory.newLatLngZoom(target.toLatLng(), HOME_ZOOM)) } },
+                    modifier = Modifier.weight(1f),
+                )
                 SideButton(visible = !searching, edge = ScreenEdge.END, modifier = Modifier.height(SEARCH_BAR_HEIGHT)) {
                     RoundIconButton(onClick = {
                         // With a position, center on it; otherwise ask for a fix.
@@ -357,6 +391,12 @@ fun HomeScreen(
     }
 }
 
+private fun TripPlan.toRouteOverlay() = RouteOverlay(
+    points = route.points,
+    stops = stops.mapIndexed { index, stop -> RouteStop(index + 1, stop.site.position, operatorColor(stop.site)) },
+    destination = destination.position,
+)
+
 private enum class ScreenEdge { START, END }
 
 /** A button beside the bar that slides off its screen edge while the bar grows into its place. */
@@ -389,3 +429,63 @@ private fun SideButton(
 }
 
 private val SCREEN_MARGIN = 16.dp
+
+@Composable
+private fun HomePreview(
+    uiState: HomeUiState = HomeUiState(position = LatLon(53.5511, 9.9937)),
+    hasPermission: Boolean? = true,
+    planningInProgress: Boolean = false,
+    activeRouteEnabled: Boolean = true,
+) {
+    ChargeAheadTheme {
+        HomeScreen(
+            uiState = uiState,
+            hasPermission = hasPermission,
+            planningInProgress = planningInProgress,
+            mode = HomeMode.BROWSING,
+            route = null,
+            mapBottomInset = 0.dp,
+            onViewportChanged = {},
+            onChargerTapped = {},
+            onRequestPermission = {},
+            onLocate = {},
+            onSettings = {},
+            onChargeNow = {},
+            activeRouteEnabled = activeRouteEnabled,
+            onActiveRoute = {},
+            onDismissSearch = {},
+            onStopTapped = {},
+            topBar = {
+                HomeDockedSearchBar(query = "", searching = false, expanded = false, onExpandedChange = {}, onQueryChange = {}, onClear = {}) {}
+            },
+            modifier = Modifier.fillMaxSize(),
+        )
+    }
+}
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeBrowsingPreview() = HomePreview()
+
+@Preview(widthDp = 400, heightDp = 800, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+private fun HomeBrowsingDarkPreview() = HomePreview()
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeZoomedOutLoadingPreview() = HomePreview(
+    uiState = HomeUiState(position = LatLon(53.5511, 9.9937), belowMinZoom = true, loadingSites = true),
+    activeRouteEnabled = false,
+)
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeLocationUnavailablePreview() = HomePreview(uiState = HomeUiState(searchingLocation = true, locationUnavailable = true))
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomeWithoutPermissionPreview() = HomePreview(uiState = HomeUiState(), hasPermission = false)
+
+@Preview(widthDp = 400, heightDp = 800)
+@Composable
+private fun HomePlanningPreview() = HomePreview(planningInProgress = true)
