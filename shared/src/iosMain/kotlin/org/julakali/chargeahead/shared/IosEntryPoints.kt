@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.shared
 
 import androidx.lifecycle.SavedStateHandle
-import org.koin.core.parameter.parametersOf
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.db.DatabaseFactory
