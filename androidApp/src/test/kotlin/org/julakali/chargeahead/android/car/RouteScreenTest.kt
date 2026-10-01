@@ -134,10 +134,11 @@ class RouteScreenTest {
         val line = stop.texts.first()
         // Stop 1 sits 0.5° south and 0.1° east of the fix: a little under 56 km.
         assertEquals(56.0, distanceOf(line)!!, 1.0)
-        assertTrue(line.toString().endsWith(string(R.string.car_route_arrival, 8)))
-        val colour = line.spans.map { it.carSpan }.filterIsInstance<ForegroundCarColorSpan>().single().color
-        assertEquals(CarColor.RED, colour)
-        assertEquals(string(R.string.car_route_charge, "300 kW", "24 min"), stop.texts[1].toString())
+        assertTrue(line.toString().endsWith("${string(R.string.car_route_arrival, 8)} · ${string(R.string.car_route_charge, "24 min")}"))
+        val coloured = line.spans.single { it.carSpan is ForegroundCarColorSpan }
+        assertEquals(CarColor.RED, (coloured.carSpan as ForegroundCarColorSpan).color)
+        assertEquals(string(R.string.car_route_arrival, 8), line.toString().substring(coloured.start, coloured.end))
+        assertEquals(1, stop.texts.size)
     }
 
     @Test

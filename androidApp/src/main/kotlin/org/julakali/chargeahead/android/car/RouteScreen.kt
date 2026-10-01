@@ -140,9 +140,10 @@ class RouteScreen(
             .build()
 
     /**
-     * "1. EnBW", then how far from here and what charge it is reached with,
-     * then the charging itself. The arrival level turns yellow under 20 and
-     * red under 10 percent.
+     * "1. EnBW", then one line: how far from here, the charge it is reached
+     * with (yellow under 20, red under 10 percent) and how long the stop
+     * takes. One line, because the host frames its map around the rows on
+     * screen: the shorter the rows, the more of the route is on the map.
      */
     private fun stopRow(ordinal: Int, stop: PlannedStop, here: LatLon?): Row {
         val arrival = carContext.getString(R.string.car_route_arrival, stop.arrivalSocPercent.toInt())
@@ -151,23 +152,17 @@ class RouteScreen(
             stop.arrivalSocPercent < 20 -> CarColor.YELLOW
             else -> null
         }
+        val charge = carContext.getString(R.string.car_route_charge, ChargeStopFormatter.minutesLabel(stop.chargeMinutes))
         val builder = Row.Builder()
             .setTitle(ChargeStopFormatter.plannedStopTitle(ordinal, stop))
             .setMetadata(placeMetadata(stop.site.position, ordinal.toString(), operatorCarColor(stop.site)))
             .setBrowsable(true)
             .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, stop.site, stop)) }
         if (here != null) {
-            builder.addText(distanceLine(here.distanceKmTo(stop.site.position), arrival, arrivalColor))
+            builder.addText(distanceLine(here.distanceKmTo(stop.site.position), arrival, arrivalColor, trailing = charge))
         } else {
-            builder.addText(arrival)
+            builder.addText("$arrival · $charge")
         }
-        builder.addText(
-            carContext.getString(
-                R.string.car_route_charge,
-                ChargeStopFormatter.powerKwLabel(stop.maxPowerKw),
-                ChargeStopFormatter.minutesLabel(stop.chargeMinutes),
-            ),
-        )
         return builder.build()
     }
 
