@@ -7,6 +7,7 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.http.headersOf
 import kotlinx.coroutines.runBlocking
 import org.julakali.chargeahead.shared.domain.ConnectorType
+import org.julakali.chargeahead.shared.domain.RoadLoad
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,8 +51,12 @@ class BackendVehicleCatalogSourceTest {
                 VehiclePreset(
                     "48d30005-4e77-446c-bfcf-3152d1884a65", "Fiat 500e 42 kWh", 37.3, 13.8, 85.0,
                     setOf(ConnectorType.CCS2, ConnectorType.TYPE2),
+                    RoadLoad(120.0, 0.5, 0.03, 1400.0, 0.88, 0.6, 0.6),
                 ),
-                VehiclePreset("7d0e7c3a-0000-4000-8000-000000000001", "Stadtflitzer", 20.0, 12.0, 0.0, setOf(ConnectorType.TYPE2)),
+                VehiclePreset(
+                    "7d0e7c3a-0000-4000-8000-000000000001", "Stadtflitzer", 20.0, 12.0, 0.0, setOf(ConnectorType.TYPE2),
+                    RoadLoad(100.0, 0.4, 0.025, 1000.0, 0.88, 0.5, 0.6),
+                ),
             ),
             presets,
         )

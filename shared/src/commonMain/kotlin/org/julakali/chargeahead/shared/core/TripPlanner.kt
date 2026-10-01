@@ -49,7 +49,7 @@ class TripPlanner(
         } ?: return TripPlanResult.NoRoute
 
         val candidates = candidatesAlong(route, vehicle, networks)
-        val consumption = SpeedAwareConsumption(vehicle.consumptionKwhPer100Km)
+        val consumption = RoadLoadConsumption(vehicle)
         val totalKm = route.distanceKm
 
         // What has to be left at the destination, never below the reserve.

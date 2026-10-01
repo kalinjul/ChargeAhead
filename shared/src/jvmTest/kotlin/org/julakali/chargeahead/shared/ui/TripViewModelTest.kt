@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.ui
 
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -103,7 +104,7 @@ class TripViewModelTest {
     )
 
     private fun viewModel(feature: ChargeStopsFeature): TripViewModel {
-        val planTrip = PlanTripInteractor(planner, vehicles, preferences, history, trips, testDispatchers)
+        val planTrip = PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, history, trips, testDispatchers)
         return TripViewModel(
             feature = feature,
             planTrip = planTrip,

@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
@@ -142,6 +143,7 @@ class TripLifecycleInteractorsTest {
         return ReplanCommittedTripInteractor(
             planner = planner,
             vehicles = vehicles,
+            catalog = FakeVehicleCatalog(),
             preferences = DataStorePreferencesRepository(settings),
             trips = trips,
             updateManualSoc = UpdateManualSocInteractor(vehicles),

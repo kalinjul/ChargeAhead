@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared.core
 
 import org.julakali.chargeahead.shared.domain.Route
+import org.julakali.chargeahead.shared.domain.VehicleProfile
 
 /**
  * How much energy a stretch of a route costs.
@@ -28,13 +29,26 @@ class ConstantConsumption(private val kwhPer100Km: Double) : ConsumptionModel {
 }
 
 /**
- * Scales the driver's consumption with the speed each stretch of the route
- * implies.
+ * Prices each stretch of the route from the car's road-load curve at that
+ * stretch's speed. The driver's consumption is read as the WLTP figure: the
+ * curve is scaled so the WLTP cycle reproduces it.
  */
-class SpeedAwareConsumption(
-    private val kwhPer100Km: Double,
-    private val referenceSpeedKmh: Double = REFERENCE_SPEED_KMH,
-) : ConsumptionModel {
+class RoadLoadConsumption(vehicle: VehicleProfile) : ConsumptionModel {
+
+    private val roadLoad = vehicle.roadLoad ?: genericRoadLoad(vehicle.consumptionKwhPer100Km)
+    private val correction = vehicle.consumptionKwhPer100Km / wltpKwhPer100Km(roadLoad)
+
+    /** Battery energy per 100 km at a stretch averaging [speedKmh]. */
+    fun kwhPer100KmAt(speedKmh: Double): Double {
+        // A stretch averaging walking pace is a jam; the auxiliary term divides by the speed.
+        val speed = speedKmh.coerceIn(MIN_SPEED_KMH, MAX_SPEED_KMH)
+        val efficiency = roadLoad.drivetrainEfficiency
+        val rolling = roadLoad.forceN(speed) / (36.0 * efficiency)
+        val auxiliary = roadLoad.auxiliaryPowerKw * 100.0 / speed
+        val acceleration = ROTATING_MASS_FACTOR * roadLoad.massKg * kineticJoulesPerKgAndMetre(speed) *
+            (1.0 / efficiency - roadLoad.recuperationShare) / 36.0
+        return correction * (rolling + auxiliary + acceleration)
+    }
 
     override fun energyKwh(route: Route, fromKm: Double, toKm: Double): Double {
         val from = fromKm.coerceIn(0.0, route.distanceKm)
@@ -43,7 +57,7 @@ class SpeedAwareConsumption(
 
         var energy = 0.0
         forEachOverlap(route, from, to) { km, speedKmh ->
-            energy += km / 100.0 * kwhPer100Km * factorAt(speedKmh)
+            energy += km / 100.0 * kwhPer100KmAt(speedKmh)
         }
         return energy
     }
@@ -55,7 +69,7 @@ class SpeedAwareConsumption(
 
         forEachOverlap(route, from, route.distanceKm) { km, speedKmh ->
             if (budget > 0.0) {
-                val perKm = kwhPer100Km * factorAt(speedKmh) / 100.0
+                val perKm = kwhPer100KmAt(speedKmh) / 100.0
                 val affordableKm = budget / perKm
                 if (affordableKm >= km) {
                     reached += km
@@ -72,8 +86,7 @@ class SpeedAwareConsumption(
         // this the planner would think every route ends exactly at the range
         // limit and would plan a stop for a trip that comfortably makes it.
         if (budget > 0.0) {
-            val perKm = kwhPer100Km * factorAt(averageSpeedKmh(route)) / 100.0
-            reached += budget / perKm
+            reached += budget / (kwhPer100KmAt(averageSpeedKmh(route)) / 100.0)
         }
         return reached
     }
@@ -105,37 +118,39 @@ class SpeedAwareConsumption(
         if (covered < to) action(to - covered, averageSpeedKmh(route))
     }
 
-    private fun factorAt(speedKmh: Double): Double {
-        // A segment averaging walking pace is a traffic light, not a driving
-        // style, and the auxiliary term divides by this.
-        val speed = speedKmh.coerceIn(MIN_SPEED_KMH, MAX_SPEED_KMH)
-        val ratio = speed / referenceSpeedKmh
-        val factor = ROLLING_SHARE + DRAG_SHARE * ratio * ratio + AUXILIARY_SHARE / ratio
-        return factor.coerceIn(MIN_FACTOR, MAX_FACTOR)
-    }
-
     private fun averageSpeedKmh(route: Route): Double =
-        if (route.durationMinutes <= 0.0) referenceSpeedKmh
+        if (route.durationMinutes <= 0.0) FALLBACK_SPEED_KMH
         else route.distanceKm / route.durationMinutes * 60.0
 
-    companion object {
-
-        const val REFERENCE_SPEED_KMH = 100.0
-
-        /**
-         * Shares of the three terms at the reference speed for a mid-size EV.
-         * They add up to one, which is what makes the model return the
-         * configured value there unchanged.
-         */
-        private const val ROLLING_SHARE = 0.45
-        private const val DRAG_SHARE = 0.45
-        private const val AUXILIARY_SHARE = 0.10
-
-        private const val MIN_SPEED_KMH = 30.0
-        private const val MAX_SPEED_KMH = 200.0
-
-        /** The shape is an approximation; these keep a bad segment from becoming an absurd plan. */
-        private const val MIN_FACTOR = 0.7
-        private const val MAX_FACTOR = 1.6
+    private companion object {
+        const val MIN_SPEED_KMH = 10.0
+        const val MAX_SPEED_KMH = 200.0
+        const val FALLBACK_SPEED_KMH = 100.0
     }
 }
+
+/**
+ * Kinetic energy put in per metre driven, in J/kg, for a stretch averaging
+ * [speedKmh]. Up to 92 km/h these are the WLTC phases; the drop towards
+ * steady motorway driving above that is an assumption.
+ */
+internal fun kineticJoulesPerKgAndMetre(speedKmh: Double): Double {
+    val points = KINETIC_BY_SPEED
+    if (speedKmh <= points.first().first) return points.first().second
+    for (i in 1 until points.size) {
+        val (upperSpeed, upperValue) = points[i]
+        if (speedKmh <= upperSpeed) {
+            val (lowerSpeed, lowerValue) = points[i - 1]
+            return lowerValue + (upperValue - lowerValue) * (speedKmh - lowerSpeed) / (upperSpeed - lowerSpeed)
+        }
+    }
+    return points.last().second
+}
+
+private val KINETIC_BY_SPEED = listOf(
+    18.9 to 0.207,
+    39.5 to 0.199,
+    56.7 to 0.134,
+    92.0 to 0.125,
+    120.0 to 0.06,
+)

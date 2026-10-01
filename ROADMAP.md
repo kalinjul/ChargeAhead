@@ -104,7 +104,8 @@ Still open:
 3. **Consumption model** — **speed is in** (2026-09-14). `Route` carries a
    speed profile (`segments`, per-stretch distance and time), the backend
    supplies it from the routing provider's own steps, and
-   `SpeedAwareConsumption` prices each stretch at the speed it implies. The
+   `RoadLoadConsumption` prices each stretch from the car's road-load curve
+   (backend catalog, or a generic one) at the speed it implies. The
    charging curve went the same way: `GenericChargeCurve` replaced the flat
    `AVERAGE_CURVE_FACTOR = 0.65`, and charge time is integrated over the SoC
    band. Both are described in ARCHITECTURE.md §5.1.

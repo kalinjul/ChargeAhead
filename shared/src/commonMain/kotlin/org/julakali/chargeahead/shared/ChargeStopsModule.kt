@@ -129,19 +129,19 @@ fun chargeStopsModule(): Module = module {
     factory { ChargeNowObserver(get(), get(), get()) }
     factory { RefreshChargeNowInteractor(get(), get()) }
     factory { DestinationSearchObserver(get(), get()) }
-    factory { PlanTripInteractor(get(), get(), get(), get(), get(), get()) }
+    factory { PlanTripInteractor(get(), get(), get(), get(), get(), get(), get()) }
     factory { UpdateArrivalSocInteractor(get()) }
     factory { ReplanWithArrivalSocInteractor(get(), get(), get()) }
     factory { CommitTripInteractor(get(), get()) }
     factory { EndTripInteractor(get()) }
     factory { DismissPlannedTripInteractor(get()) }
-    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get(), get(), get()) }
+    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { SelectVehicleInteractor(get()) }
     factory { RemoveVehicleInteractor(get()) }
     factory { UpdateManualSocInteractor(get()) }
     factory { UpdateChargeFiltersInteractor(get()) }
     factory { UpdateNetworksInteractor(get()) }
-    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get()) }
+    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     factory { SelectableNetworksObserver(get(), get(), get()) }
     factory { GarageObserver(get<VehicleRepository>(), get()) }

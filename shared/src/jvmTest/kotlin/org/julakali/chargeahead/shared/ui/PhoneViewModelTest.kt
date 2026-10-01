@@ -328,7 +328,7 @@ class PhoneViewModelTest {
         val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
         val viewModel = CorridorViewModel(
             feature,
-            ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
+            ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), FakeVehicleCatalog(), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
             RefreshChargeStopsInteractor(repository, DataStorePreferencesRepository(InMemoryPreferencesDataStore())),
         )
 

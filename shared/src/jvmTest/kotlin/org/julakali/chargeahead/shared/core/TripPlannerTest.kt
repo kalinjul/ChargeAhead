@@ -356,9 +356,20 @@ class TripPlannerTest {
         acceptedConnectors = setOf(ConnectorType.CCS2),
     )
 
-    /** At the reference speed 1 % of this battery is 5 km, which keeps the numbers below readable. */
+    /** The speed at which the model hands back the entered consumption: 1 % of this battery is 5 km there. */
+    private val neutralSpeedKmh: Double = run {
+        val consumption = RoadLoadConsumption(model3)
+        var low = 60.0
+        var high = 150.0
+        repeat(40) {
+            val middle = (low + high) / 2.0
+            if (consumption.kwhPer100KmAt(middle) < model3.consumptionKwhPer100Km) low = middle else high = middle
+        }
+        (low + high) / 2.0
+    }
+
     private fun planWithStopsAt300And600(routeKm: Double, firstStopPowerKw: Double = 150.0): TripPlan {
-        val route = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH, km = routeKm)
+        val route = straightRoute(averageSpeedKmh = neutralSpeedKmh, km = routeKm)
         return assertIs<TripPlanResult.Planned>(
             runBlocking {
                 planner(route, listOf(siteAt(route, 300.0, firstStopPowerKw), siteAt(route, 600.0)))
@@ -382,7 +393,7 @@ class TripPlannerTest {
         assertEquals(stop.chargeMinutes, plan.chargeMinutes, 1e-9)
         assertEquals(
             plan.totalMinutes,
-            stop.etaMinutesFromStart + (660.0 - stop.kmFromStart) / SpeedAwareConsumption.REFERENCE_SPEED_KMH * 60.0,
+            stop.etaMinutesFromStart + (660.0 - stop.kmFromStart) / neutralSpeedKmh * 60.0,
             0.5,
             "the stretched stop's ETA must include its longer charge",
         )
@@ -412,7 +423,7 @@ class TripPlannerTest {
     /** Preferences are prices since #72: a leg with only other networks still plans. */
     @Test
     fun `a non-preferred network is used when nothing else is in reach`() {
-        val route = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH)
+        val route = straightRoute(averageSpeedKmh = 100.0)
         val onlyIonity = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
         val plan = assertIs<TripPlanResult.Planned>(
             runBlocking {
@@ -439,7 +450,7 @@ class TripPlannerTest {
     /** Penalties steer the choice but are not time: a preferred stop may save less than nothing. */
     @Test
     fun `savings are real minutes without the network penalty`() {
-        val route = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH)
+        val route = straightRoute(averageSpeedKmh = 100.0)
         val ionity = siteAt(route, 300.0).copy(id = "demo:ionity", operator = "Ionity", networkKey = "ionity")
         val audi = siteAt(route, 300.0, powerKw = 300.0).copy(id = "demo:audi")
         val onlyIonity = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
@@ -525,7 +536,7 @@ class TripPlannerTest {
                 RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 330.0 / 205.0 * 60.0),
             ),
         )
-        fun reference(km: Double) = straightRoute(averageSpeedKmh = SpeedAwareConsumption.REFERENCE_SPEED_KMH, km = km)
+        fun reference(km: Double) = straightRoute(averageSpeedKmh = neutralSpeedKmh, km = km)
         fun twoStops(route: Route, firstKw: Double) = listOf(siteAt(route, 300.0, firstKw), siteAt(route, 600.0))
         return buildList {
             for (arrival in listOf(0.0, 10.0, 50.0, 70.0)) {
@@ -536,7 +547,7 @@ class TripPlannerTest {
                 add(Scenario("660 km at $speed km/h", route, sitesAlong(route), id4, 90.0))
             }
             add(Scenario("mixed segments", mixed, sitesAlong(mixed), id4, 90.0))
-            add(Scenario("nearly empty start", flat, sitesAlong(flat, everyKm = 15.0), id4, 15.0))
+            add(Scenario("nearly empty start", flat, sitesAlong(flat, everyKm = 15.0), id4, 17.0))
             add(Scenario("sparse 150 kW chargers", flat, sitesAlong(flat, powerKw = 150.0, everyKm = 120.0), id4, 60.0))
             for (km in listOf(660.0, 690.0, 750.0)) {
                 val route = reference(km)

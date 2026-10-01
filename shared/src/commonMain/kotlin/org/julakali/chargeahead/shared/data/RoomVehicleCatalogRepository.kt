@@ -35,6 +35,7 @@ class RoomVehicleCatalogRepository(
         dcPeakPowerKw = dcPeakPowerKw,
         connectors = connectors.mapTo(LinkedHashSet()) { it.name },
         position = position,
+        roadLoad = roadLoad,
     )
 
     private fun VehicleModelEntity.toPreset() = VehiclePreset(
@@ -46,5 +47,6 @@ class RoomVehicleCatalogRepository(
         connectors = connectors.mapNotNullTo(LinkedHashSet()) { stored ->
             ConnectorType.entries.firstOrNull { it.name == stored }
         },
+        roadLoad = roadLoad,
     )
 }

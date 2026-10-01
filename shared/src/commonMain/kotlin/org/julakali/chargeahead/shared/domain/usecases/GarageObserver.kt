@@ -6,8 +6,7 @@ import org.julakali.chargeahead.shared.domain.Garage
 import org.julakali.chargeahead.shared.domain.RangeCalculator
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
-import org.julakali.chargeahead.shared.domain.VehiclePreset
-import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.presetOf
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 
 /** The garage: the cars, the selected one, and what the catalog and the range model say about it. */
@@ -28,8 +27,4 @@ class GarageObserver(
                 selectedPresetConsumption = selected?.let { presets.presetOf(it)?.consumptionKwhPer100Km },
             )
         }
-
-    // A car from before the catalog carried ids is matched by name.
-    private fun List<VehiclePreset>.presetOf(vehicle: VehicleProfile): VehiclePreset? =
-        if (vehicle.modelId != null) firstOrNull { it.id == vehicle.modelId } else firstOrNull { it.name == vehicle.displayName }
 }

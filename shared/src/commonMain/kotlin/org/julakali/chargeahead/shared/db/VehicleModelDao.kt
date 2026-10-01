@@ -1,12 +1,14 @@
 package org.julakali.chargeahead.shared.db
 
 import androidx.room.Dao
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.Insert
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+import org.julakali.chargeahead.shared.domain.RoadLoad
 
 @Entity(tableName = "vehicleModel")
 data class VehicleModelEntity(
@@ -19,6 +21,7 @@ data class VehicleModelEntity(
     val connectors: Set<String>,
     // Position on the backend's list.
     val position: Int,
+    @Embedded(prefix = "roadLoad_") val roadLoad: RoadLoad?,
 )
 
 @Dao

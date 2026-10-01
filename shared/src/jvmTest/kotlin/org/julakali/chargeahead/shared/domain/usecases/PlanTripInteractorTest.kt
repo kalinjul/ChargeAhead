@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
+import org.julakali.chargeahead.shared.testPresets
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ConnectorType
@@ -39,6 +41,7 @@ class PlanTripTest {
     private data class Call(val from: LatLon, val startSocPercent: Double, val arrivalSocPercent: Double)
 
     private val calls = mutableListOf<Call>()
+    private var plannedWith: VehicleProfile? = null
     private var outcome: (Destination) -> TripPlanResult = { destination -> TripPlanResult.Planned(plan(destination)) }
 
     private val planner = object : TripPlanning {
@@ -52,16 +55,17 @@ class PlanTripTest {
             networks: NetworkPreferences,
         ): TripPlanResult {
             calls += Call(from, startSocPercent, arrivalSocPercent)
+            plannedWith = vehicle
             return outcome(destination)
         }
     }
 
-    private val planTrip = PlanTripInteractor(planner, vehicles, preferences, history, trips, testDispatchers)
+    private val planTrip = PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, history, trips, testDispatchers)
     private val replanWithArrivalSoc =
         ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(vehicles), trips, planTrip)
     private val commitTrip = CommitTripInteractor(trips) { 7L }
     private val replanCommitted =
-        ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers)
+        ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers)
 
     private fun plan(destination: Destination) = TripPlan(
         route = Route(listOf(from, destination.position), distanceKm = 170.0, durationMinutes = 100.0),
@@ -71,6 +75,25 @@ class PlanTripTest {
         chargeMinutes = 0.0,
         arrivalSocPercent = 40.0,
     )
+
+    @Test
+    fun `a car from the catalog is planned with the catalog's curve`() = runBlocking<Unit> {
+        val preset = testPresets.first()
+        vehicles.setVehicle(preset.toProfile())
+
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+
+        assertEquals(preset.roadLoad, plannedWith?.roadLoad)
+    }
+
+    @Test
+    fun `a hand-typed car is planned without a curve`() = runBlocking<Unit> {
+        vehicles.setVehicle(vehicle)
+
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+
+        assertNull(plannedWith?.roadLoad)
+    }
 
     @Test
     fun `without a vehicle nothing is planned`() = runBlocking {

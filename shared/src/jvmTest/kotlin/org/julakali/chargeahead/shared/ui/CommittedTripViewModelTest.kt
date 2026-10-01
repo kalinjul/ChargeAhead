@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.ui
 
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -109,6 +110,7 @@ class CommittedTripViewModelTest {
         replanCommittedTrip = ReplanCommittedTripInteractor(
             planner,
             vehicles,
+            FakeVehicleCatalog(),
             DataStorePreferencesRepository(InMemoryPreferencesDataStore()),
             trips,
             UpdateManualSocInteractor(vehicles),

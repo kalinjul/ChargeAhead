@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.ui.car
 
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
@@ -179,8 +180,8 @@ class CarRedesignViewModelsTest {
             feature = feature,
             destination = plan.destination,
             activeRoute = activeRoute,
-            planTrip = PlanTripInteractor(planner, vehicles, preferences, DataStoreDestinationHistory(settings), trips, dispatchers),
-            replanCommittedTrip = ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles), time, dispatchers),
+            planTrip = PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, DataStoreDestinationHistory(settings), trips, dispatchers),
+            replanCommittedTrip = ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, trips, UpdateManualSocInteractor(vehicles), time, dispatchers),
             commitTrip = CommitTripInteractor(trips, time),
             trips = trips,
         )

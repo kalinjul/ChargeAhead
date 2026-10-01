@@ -10,6 +10,8 @@ data class VehicleProfile(
     val dcPeakPowerKw: Double? = null,
     /** The catalog model the car was added from; `null` for one typed in by hand. */
     val modelId: String? = null,
+    /** The catalog's curve for [modelId], attached for planning; not stored with the garage. */
+    val roadLoad: RoadLoad? = null,
 ) {
     init {
         require(usableBatteryKwh > 0.0) { "usableBatteryKwh must be positive" }
@@ -29,6 +31,7 @@ data class VehiclePreset(
     /** 0 for a vehicle without a DC inlet. */
     val dcPeakPowerKw: Double,
     val connectors: Set<ConnectorType>,
+    val roadLoad: RoadLoad? = null,
 ) {
     fun toProfile(): VehicleProfile = VehicleProfile(
         displayName = name,
@@ -80,3 +83,30 @@ data class Garage(
     /** The catalog consumption, when the selected car was added from a preset. */
     val selectedPresetConsumption: Double? = null,
 )
+
+/**
+ * How the car's consumption depends on speed: `F(v) = f0 + f1·v + f2·v²` in N
+ * with v in km/h, plus what it takes to run the car and to speed it up.
+ */
+data class RoadLoad(
+    val f0: Double,
+    val f1: Double,
+    val f2: Double,
+    val massKg: Double,
+    /** Battery to wheel, 0..1. */
+    val drivetrainEfficiency: Double,
+    /** Heating, air conditioning and electronics while driving. */
+    val auxiliaryPowerKw: Double,
+    /** Share of the braking energy that goes back into the battery, 0..1. */
+    val recuperationShare: Double,
+) {
+    fun forceN(speedKmh: Double): Double = f0 + f1 * speedKmh + f2 * speedKmh * speedKmh
+}
+
+/** The preset [vehicle] was added from; a car from before presets carried ids is matched by name. */
+fun List<VehiclePreset>.presetOf(vehicle: VehicleProfile): VehiclePreset? =
+    if (vehicle.modelId != null) firstOrNull { it.id == vehicle.modelId } else firstOrNull { it.name == vehicle.displayName }
+
+/** The car with its catalog curve; `null` curve for one typed in by hand. */
+fun VehicleProfile.withRoadLoadFrom(presets: List<VehiclePreset>): VehicleProfile =
+    copy(roadLoad = presets.presetOf(this)?.roadLoad)

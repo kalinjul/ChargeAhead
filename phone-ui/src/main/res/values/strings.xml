@@ -81,7 +81,7 @@
     <string name="phone_settings_intro">Beide Werte stehen im Datenblatt. Wichtig ist die <b>nutzbare</b> Kapazität, nicht die Bruttokapazität — sie ist meist einige Kilowattstunden kleiner.</string>
     <string name="phone_field_name">Bezeichnung (frei wählbar)</string>
     <string name="phone_field_battery">Nutzbare Kapazität in kWh</string>
-    <string name="phone_field_consumption">Verbrauch in kWh je 100 km</string>
+    <string name="phone_field_consumption">Durchschnittsverbrauch in kWh je 100 km</string>
     <string name="phone_field_soc">Ladestand in Prozent</string>
     <string name="phone_connectors_heading">Steckertypen, die das Fahrzeug annimmt</string>
     <string name="phone_connectors_hint">Nichts ausgewählt heißt: nicht filtern.</string>
@@ -287,8 +287,8 @@
     <string name="garage_dc_unknown">unbekannt</string>
     <string name="garage_range">Reichweite</string>
     <string name="garage_range_value">≈ %1$d km</string>
-    <string name="garage_consumption">Dein Verbrauch: %1$s kWh/100 km</string>
-    <string name="garage_consumption_hint">Datenblatt sagt %1$s — an die eigene Fahrweise anpassen. Gemeint ist der Wert bei rund 100 km/h; für schnellere oder langsamere Abschnitte rechnet die Planung selbst um.</string>
+    <string name="garage_consumption">Dein Durchschnittsverbrauch: %1$s kWh/100 km</string>
+    <string name="garage_consumption_hint">Datenblatt (WLTP) sagt %1$s — an die eigene Fahrweise anpassen. Gemeint ist der Durchschnitt über Stadt, Land und Autobahn; für jeden Abschnitt der Route rechnet die Planung selbst um.</string>
     <string name="garage_search">Fahrzeug suchen</string>
     <string name="garage_added">%1$s steht jetzt in der Garage</string>
     <string name="garage_add_title">Auto hinzufügen</string>

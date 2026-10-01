@@ -4,6 +4,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import org.julakali.chargeahead.api.VehiclesResponse
+import org.julakali.chargeahead.shared.domain.RoadLoad
 import org.julakali.chargeahead.shared.domain.VehicleCatalogSource
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 
@@ -21,6 +22,9 @@ class BackendVehicleCatalogSource(
                 consumptionKwhPer100Km = model.consumptionKwhPer100Km,
                 dcPeakPowerKw = model.dcPeakPowerKw,
                 connectors = model.connectors.mapTo(LinkedHashSet()) { it.toDomain() },
+                roadLoad = with(model.roadLoad) {
+                    RoadLoad(f0, f1, f2, massKg, drivetrainEfficiency, auxiliaryPowerKw, recuperationShare)
+                },
             )
         }
     }

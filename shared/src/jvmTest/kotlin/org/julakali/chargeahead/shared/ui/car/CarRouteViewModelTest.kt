@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.ui.car
 
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -107,8 +108,8 @@ class CarRouteViewModelTest {
             feature,
             muenchen,
             activeRoute,
-            PlanTripInteractor(planner, vehicles, preferences, history, trips, testDispatchers),
-            ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers),
+            PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, history, trips, testDispatchers),
+            ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers),
             CommitTripInteractor(trips) { 9L },
             trips,
         )

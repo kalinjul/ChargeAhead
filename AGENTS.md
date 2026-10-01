@@ -274,6 +274,7 @@ data class VehicleProfile(
     val acceptedConnectors: Set<ConnectorType>,   // empty = no filtering
     val dcPeakPowerKw: Double? = null,            // null = unknown; charge-time estimates use site power alone
     val modelId: String? = null,                  // the catalog model it was added from; null when typed in by hand
+    val roadLoad: RoadLoad? = null,               // the catalog's curve, attached when planning; not stored with the garage
 )
 
 enum class SoCSourceKind { MANUAL, CAR_HARDWARE, OEM_CLOUD }
