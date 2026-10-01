@@ -5,11 +5,11 @@ process, and that host is either a real head unit or the **Desktop Head
 Unit (DHU)** — a desktop program that simulates a head unit and connects to
 the phone over ADB.
 
-The DHU is already installed on this machine:
-
-```
-/home/julakali/Android/Sdk/extras/google/auto/desktop-head-unit
-```
+The DHU lives in the SDK under `extras/google/auto/desktop-head-unit`:
+`~/Android/Sdk/...` on Linux, `~/Library/Android/sdk/...` on macOS. It is
+installed through Android Studio → SDK Manager → SDK Tools → "Android Auto
+Desktop Head Unit emulator". `.claude/skills/dhu/scripts/dhu.sh doctor`
+finds it and checks everything else the DHU needs.
 
 ## It doesn't work on the emulator
 
@@ -101,7 +101,7 @@ The DHU also reads its commands from standard input. Starting it with
 immediate, silent exit.
 
 ```bash
-/home/julakali/Android/Sdk/extras/google/auto/desktop-head-unit
+~/Library/Android/sdk/extras/google/auto/desktop-head-unit   # macOS; ~/Android/Sdk/... on Linux
 ```
 
 The Android Auto launch screen appears in the DHU window. The charging-stop
