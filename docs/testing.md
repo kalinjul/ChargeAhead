@@ -70,6 +70,11 @@ the PNG.
 - Robolectric runs SDK 35 (`ui-tests/src/test/resources/robolectric.properties`)
   because it doesn't emulate 37 yet, and the test JVM opens a few `java.base`
   packages that Robolectric reflects into (`ui-tests/build.gradle.kts`).
+- Locale: the same file sets `qualifiers=de-rDE`, and every `@Preview` carries
+  `locale = "de"`, so comma decimals ("3,5 km") and 24h times ("16:08") are
+  what the assertions and goldens see. A class that needs a bigger window
+  writes `@Config(qualifiers = "+w600dp-h1000dp")` — without the `+` the
+  locale is gone and the test runs in en-US.
 
 ## PhoneApp flow tests
 
