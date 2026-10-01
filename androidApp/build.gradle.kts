@@ -117,6 +117,13 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -124,6 +131,15 @@ android {
     kotlin {
         compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
     }
+}
+
+// Robolectric pokes at JDK internals that newer JDKs seal by default.
+tasks.withType<Test>().configureEach {
+    jvmArgs(
+        "--add-opens", "java.base/jdk.internal.access=ALL-UNNAMED",
+        "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+        "--add-opens", "java.base/java.io=ALL-UNNAMED",
+    )
 }
 
 dependencies {
@@ -140,4 +156,10 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.play.services.location)
+
+    // Car screen tests: the Car App Library's test host under Robolectric.
+    testImplementation(libs.car.app.testing)
+    testImplementation(libs.junit4)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }
