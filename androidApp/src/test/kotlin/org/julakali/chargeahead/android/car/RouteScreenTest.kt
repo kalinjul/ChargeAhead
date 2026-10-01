@@ -46,10 +46,12 @@ import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.domain.VehicleProfile
-import org.julakali.chargeahead.shared.newChargeStopsFeature
+import org.julakali.chargeahead.shared.SessionFeature
+import org.koin.core.parameter.parametersOf
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import org.julakali.chargeahead.shared.settings.settingsModule
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.julakali.chargeahead.shared.ui.car.carSession
+import org.julakali.chargeahead.shared.ui.car.carUiModule
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -85,9 +87,9 @@ class RouteScreenTest {
         startKoin {
             androidContext(ApplicationProvider.getApplicationContext())
             allowOverride(true)
-            modules(settingsModule { settingsFile }, chargeStopsModule(), fakes())
+            modules(settingsModule { settingsFile }, chargeStopsModule(), carUiModule(), fakes())
         }
-        feature = GlobalContext.get().newChargeStopsFeature(locationSource = FakeLocationSource(fix))
+        feature = GlobalContext.get().get(SessionFeature) { parametersOf(FakeLocationSource(fix), null) }
         feature.start()
     }
 
@@ -115,7 +117,7 @@ class RouteScreenTest {
     /** The screen's template once the plan the fake returns has landed. */
     private fun templateFor(result: TripPlanResult): Template {
         planner.result = result
-        val screen = RouteScreen(carContext, CarViewModels(GlobalContext.get(), feature), munich)
+        val screen = RouteScreen(carContext, GlobalContext.get().carSession(feature), munich)
         shadowOf(Looper.getMainLooper()).idle()
         return screen.onGetTemplate()
     }
@@ -176,7 +178,7 @@ class RouteScreenTest {
         withVehicle()
         planner.result = TripPlanResult.NoRoute
         planner.gate = Mutex(locked = true)
-        val screen = RouteScreen(carContext, CarViewModels(GlobalContext.get(), feature), munich)
+        val screen = RouteScreen(carContext, GlobalContext.get().carSession(feature), munich)
         shadowOf(Looper.getMainLooper()).idle()
 
         assertTrue((screen.onGetTemplate() as ListTemplate).isLoading)

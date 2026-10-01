@@ -20,7 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.PhoneUiVisibility
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
-import org.julakali.chargeahead.shared.core.MapsHandoff
+import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
