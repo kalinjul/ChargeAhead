@@ -3,6 +3,7 @@ package org.julakali.chargeahead.android.car
 import android.app.Application
 import androidx.car.app.CarContext
 import androidx.car.app.constraints.ConstraintManager
+import androidx.car.app.model.CarColor
 import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.PlaceListMapTemplate
 import androidx.car.app.model.Row
@@ -94,7 +95,7 @@ class RouteScreenTest {
     }
 
     @Test
-    fun `every stop is a numbered marker in its operator colour, the whole-route send takes the last slot`() {
+    fun `every stop is a numbered brand-coloured marker, the whole-route send takes the last slot`() {
         val graph = graph()
         graph.withVehicle()
         val limit = graph.carContext.getCarService(ConstraintManager::class.java).getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
@@ -111,7 +112,7 @@ class RouteScreenTest {
         stops.forEach { assertNotNull(distanceOf(it.title)) }
         val markers = stops.map { it.metadata!!.place!!.marker!! }
         assertEquals((1 until limit).map(Int::toString), markers.map { it.label.toString() })
-        assertEquals(operatorCarColor(plan.stops.first().site), markers.first().color)
+        assertEquals(CarColor.PRIMARY, markers.first().color)
         assertEquals(2, template.actionStrip!!.actions.size)
         assertTrue(template.isCurrentLocationEnabled)
         assertEquals(munich.position.lat, template.anchor!!.location!!.latitude, 1e-9)
@@ -119,7 +120,7 @@ class RouteScreenTest {
     }
 
     @Test
-    fun `a stop row is one line with the distance from here and the level it charges to`() {
+    fun `a stop row is one line with operator, distance from here and the level it charges to`() {
         val graph = graph()
         graph.withVehicle()
 
@@ -128,8 +129,8 @@ class RouteScreenTest {
         val stop = template.itemList!!.items.first() as Row
         // Stop 1 sits 0.5° south and 0.1° east of the fix: a little under 56 km.
         assertEquals(56.0, distanceOf(stop.title)!!, 1.0)
+        assertTrue(stop.title.toString().startsWith("Operator 1 · "))
         assertTrue(stop.title.toString().endsWith(" · ${string(R.string.car_route_charge, 80)}"))
-        assertTrue(stop.title.toString().contains("Operator").not())
         assertTrue(stop.texts.isEmpty())
     }
 

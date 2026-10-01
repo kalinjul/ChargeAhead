@@ -96,7 +96,7 @@ class ChargeNowScreen(
         .setTitle(candidate.site.name)
         .addText(distanceLine(candidate.distanceKm, ChargeStopFormatter.powerKwLabel(candidate.maxPowerKw)))
         .addText(ChargeStopFormatter.chargeNowSecondaryLine(candidate))
-        .setMetadata(placeMetadata(candidate.site.position, ordinal.toString(), operatorCarColor(candidate.site)))
+        .setMetadata(placeMetadata(candidate.site.position, ordinal.toString()))
         .setBrowsable(true)
         .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, candidate.site)) }
         .build()

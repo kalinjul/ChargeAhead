@@ -11,26 +11,21 @@ import androidx.car.app.model.Place
 import androidx.car.app.model.PlaceMarker
 import android.text.SpannableString
 import android.text.Spanned
-import androidx.compose.ui.graphics.toArgb
-import org.julakali.chargeahead.android.phone.operatorColor
-import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.LatLon
 
-/** A numbered marker at [position] in [color], as the row metadata the place map reads. */
-internal fun placeMetadata(position: LatLon, label: String, color: CarColor = CarColor.PRIMARY): Metadata =
+/**
+ * A numbered marker at [position] in the brand colour, as the row metadata
+ * the place map reads. The host numbers the row with it too, and the
+ * phone's operator palette is too dark for that on the host's black list.
+ */
+internal fun placeMetadata(position: LatLon, label: String): Metadata =
     Metadata.Builder()
         .setPlace(
             Place.Builder(CarLocation.create(position.lat, position.lon))
-                .setMarker(PlaceMarker.Builder().setLabel(label).setColor(color).build())
+                .setMarker(PlaceMarker.Builder().setLabel(label).setColor(CarColor.PRIMARY).build())
                 .build(),
         )
         .build()
-
-/** The badge colour the phone's trip map gives this site, so both maps tell the same story. */
-internal fun operatorCarColor(site: ChargeSite): CarColor {
-    val argb = operatorColor(site).toArgb()
-    return CarColor.createCustom(argb, argb)
-}
 
 /**
  * A row line around the distance, which the host formats in the car's own

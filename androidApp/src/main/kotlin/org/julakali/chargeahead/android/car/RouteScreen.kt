@@ -28,6 +28,7 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MapsHandoff
+import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
@@ -42,7 +43,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The route on the host's map: every charging stop as a numbered marker in
- * its operator's colour, the car's position, the destination as the anchor.
+ * the brand colour, the car's position, the destination as the anchor.
  * Navigation goes one stop at a time through the host, and starting it
  * commits a plan made here. A stop opens its detail; the last row still
  * sends the whole route through the phone, for those who want Maps to hold
@@ -141,22 +142,23 @@ class RouteScreen(
             .build()
 
     /**
-     * One line, title only: "73 km · laden bis 68 %". The host numbers the
-     * row after its marker and renders the title in its own size, and it
-     * frames its map around the rows on screen, so the shorter the rows, the
-     * more of the route is on the map. Name, arrival level and charge time
-     * live in the detail.
+     * One line, title only: "EnBW · 73 km · laden bis 68 %". The host
+     * numbers the row after its marker and renders the title in its own
+     * size (there is no bold span in the car text model), and it frames its
+     * map around the rows on screen, so the shorter the rows, the more of
+     * the route is on the map. Arrival level and charge time live in the detail.
      */
     private fun stopRow(ordinal: Int, stop: PlannedStop, here: LatLon?): Row {
+        val name = OperatorShortName.of(stop.site.operator) ?: stop.site.operator ?: stop.site.name
         val charge = carContext.getString(R.string.car_route_charge, stop.departureSocPercent.toInt())
         val title = if (here != null) {
-            distanceLine(here.distanceKmTo(stop.site.position), suffix = charge)
+            distanceLine(here.distanceKmTo(stop.site.position), suffix = charge, leading = name)
         } else {
-            CarText.create("${ChargeStopFormatter.plannedStopTitle(ordinal, stop)} · $charge")
+            CarText.create("$name · $charge")
         }
         return Row.Builder()
             .setTitle(title)
-            .setMetadata(placeMetadata(stop.site.position, ordinal.toString(), operatorCarColor(stop.site)))
+            .setMetadata(placeMetadata(stop.site.position, ordinal.toString()))
             .setBrowsable(true)
             .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, stop.site, stop)) }
             .build()
