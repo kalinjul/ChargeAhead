@@ -1,15 +1,19 @@
 package org.julakali.chargeahead.android.car
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.Action
 import androidx.car.app.model.CarColor
+import androidx.car.app.model.CarIcon
 import androidx.car.app.model.Header
 import androidx.car.app.model.Pane
 import androidx.car.app.model.PaneTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
+import androidx.core.graphics.drawable.IconCompat
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
@@ -50,9 +54,7 @@ class SiteDetailScreen(
 
         val pane = Pane.Builder()
         rows(state.distanceKm, state.live).take(rowLimit).forEach(pane::addRow)
-        // A bitmap: the host mangles the stacked vector (nested scale, tinted white). Near square, so the
-        // host's edge-to-edge fill keeps it whole; a wide lockup would be cut.
-        pane.setImage(icon(R.drawable.logo_powertrip_stacked))
+        pane.setImage(paneLogo())
         pane.addAction(
             Action.Builder()
                 .setTitle(carContext.getString(R.string.car_detail_navigate))
@@ -106,5 +108,19 @@ class SiteDetailScreen(
         return rows
     }
 
+    /**
+     * The stacked logo as pixels, not a resource id: the host caches icons by
+     * id across installs and once served a stale render of a renamed
+     * drawable here, and it mangled the vector before that. Scaled down,
+     * because the pixels cross the binder with every template.
+     */
+    private fun paneLogo(): CarIcon {
+        val full = BitmapFactory.decodeResource(carContext.resources, R.drawable.logo_powertrip_stacked)
+        val scaled = Bitmap.createScaledBitmap(full, PANE_LOGO_PX, PANE_LOGO_PX, true)
+        return CarIcon.Builder(IconCompat.createWithBitmap(scaled)).build()
+    }
+
     private fun strongestPowerKw(): Double = stop?.maxPowerKw ?: (site.connectors.maxOfOrNull { it.maxPowerKw } ?: 0.0)
 }
+
+private const val PANE_LOGO_PX = 256
