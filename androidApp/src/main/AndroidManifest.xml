@@ -59,6 +59,10 @@
             android:name="androidx.car.app.minCarApiLevel"
             android:value="1" />
 
+        <meta-data
+            android:name="androidx.car.app.theme"
+            android:resource="@style/CarAppTheme" />
+
         <activity
             android:name=".phone.MainActivity"
             android:exported="true"
