@@ -440,10 +440,10 @@ private fun HomePreview(
     ChargeAheadTheme {
         HomeScreen(
             uiState = uiState,
+            search = SearchUiState(),
+            trip = null,
             hasPermission = hasPermission,
             planningInProgress = planningInProgress,
-            mode = HomeMode.BROWSING,
-            route = null,
             mapBottomInset = 0.dp,
             onViewportChanged = {},
             onChargerTapped = {},
@@ -453,11 +453,11 @@ private fun HomePreview(
             onChargeNow = {},
             activeRouteEnabled = activeRouteEnabled,
             onActiveRoute = {},
-            onDismissSearch = {},
             onStopTapped = {},
-            topBar = {
-                HomeDockedSearchBar(query = "", searching = false, expanded = false, onExpandedChange = {}, onQueryChange = {}, onClear = {}) {}
-            },
+            onSearchExpandedChange = {},
+            onQueryChange = {},
+            onPick = {},
+            onClearTrip = {},
             modifier = Modifier.fillMaxSize(),
         )
     }
