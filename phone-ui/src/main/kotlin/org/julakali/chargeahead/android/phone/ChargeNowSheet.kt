@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -68,7 +69,10 @@ fun ChargeNowSheetContent(
     onNavigate: (ChargeNowCandidate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // One height in every state: the modal sheet anchors at half only when the content is taller
+    // than half the screen, and it measures that on the first frame. A list that is sometimes
+    // shorter would open the sheet expanded at content height instead.
+    Column(modifier = modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.cn_title), style = MaterialTheme.typography.titleMedium)
 
         when (uiState) {
