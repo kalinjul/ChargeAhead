@@ -47,7 +47,7 @@ class SiteDetailScreenTest {
         val chargeRow = template.pane.rows.first { distanceOf(it.title) != null }
         assertEquals(56.0, distanceOf(chargeRow.title)!!, 1.0)
         assertTrue(chargeRow.title.toString().endsWith(string(R.string.car_detail_charge, 15, 80, "24 min")))
-        assertTrue(template.pane.rows.any { it.title.toString() == "Operator 1" })
+        assertTrue(template.pane.rows.none { it.title.toString() == "Operator 1" })
 
         val navigate = template.pane.actions.first()
         assertEquals(string(R.string.car_detail_navigate), navigate.title.toString())

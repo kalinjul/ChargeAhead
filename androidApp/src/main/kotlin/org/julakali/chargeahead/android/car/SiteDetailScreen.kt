@@ -76,7 +76,7 @@ class SiteDetailScreen(
             .build()
     }
 
-    /** Address, distance with the charge, the charge points (live when known), the operator. */
+    /** Address, distance with the charge, the charge points (live when known). The title names the site. */
     private fun rows(distanceKm: Double?, live: List<LiveConnectorGroup>?): List<Row> {
         val rows = mutableListOf<Row>()
         ChargeStopFormatter.addressLine(site)?.let { rows += Row.Builder().setTitle(it).build() }
@@ -102,7 +102,6 @@ class SiteDetailScreen(
             rows += Row.Builder().setTitle(first).apply { connectorLines.drop(1).take(2).forEach(::addText) }.build()
         }
 
-        site.operator?.let { rows += Row.Builder().setTitle(it).build() }
         return rows
     }
 
