@@ -109,7 +109,7 @@ class RouteScreenTest {
         assertEquals(string(R.string.car_route_send_all_hint), rows.last().texts.single().toString())
         assertNull(rows.last().metadata?.place)
         val stops = rows.dropLast(1)
-        stops.forEach { assertNotNull(distanceOf(it.title)) }
+        stops.forEach { assertNotNull(distanceOf(it.texts.single())) }
         val markers = stops.map { it.metadata!!.place!!.marker!! }
         assertEquals((1 until limit).map(Int::toString), markers.map { it.label.toString() })
         assertEquals(CarColor.PRIMARY, markers.first().color)
@@ -120,7 +120,7 @@ class RouteScreenTest {
     }
 
     @Test
-    fun `a stop row is one line with operator, the leg to it and the level it charges to`() {
+    fun `a stop row is the operator over the leg to it and the level it charges to`() {
         val graph = graph()
         graph.withVehicle()
 
@@ -128,10 +128,9 @@ class RouteScreenTest {
 
         val rows = template.itemList!!.items.map { it as Row }
         // The fixture puts the stops 100 km apart along the route.
-        assertEquals(listOf(100.0, 100.0, 100.0), rows.take(3).map { distanceOf(it.title) })
-        assertTrue(rows.first().title.toString().startsWith("Operator 1 · "))
-        assertTrue(rows.first().title.toString().endsWith(" · ${string(R.string.car_route_charge, 80)}"))
-        assertTrue(rows.first().texts.isEmpty())
+        assertEquals(listOf(100.0, 100.0, 100.0), rows.take(3).map { distanceOf(it.texts.single()) })
+        assertEquals("Operator 1", rows.first().title.toString())
+        assertTrue(rows.first().texts.single().toString().endsWith(", ${string(R.string.car_route_charge, 80)}"))
     }
 
     @Test

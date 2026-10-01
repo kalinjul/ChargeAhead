@@ -38,6 +38,7 @@ internal fun distanceLine(
     suffixColor: CarColor? = null,
     trailing: String? = null,
     leading: String? = null,
+    separator: String = SEPARATOR,
 ): CarText {
     val distance = if (distanceKm < 1.0) {
         Distance.create(distanceKm * 1000, Distance.UNIT_METERS)
@@ -45,11 +46,11 @@ internal fun distanceLine(
         Distance.create(distanceKm, Distance.UNIT_KILOMETERS_P1)
     }
     // The span replaces the placeholder character; the host decides the digits.
-    val head = leading?.let { it + SEPARATOR }.orEmpty()
-    val text = SpannableString(head + listOfNotNull(" ", suffix, trailing).joinToString(SEPARATOR))
+    val head = leading?.let { it + separator }.orEmpty()
+    val text = SpannableString(head + listOfNotNull(" ", suffix, trailing).joinToString(separator))
     text.setSpan(DistanceSpan.create(distance), head.length, head.length + 1, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
     if (suffix != null && suffixColor != null) {
-        val start = head.length + 1 + SEPARATOR.length
+        val start = head.length + 1 + separator.length
         text.setSpan(ForegroundCarColorSpan.create(suffixColor), start, start + suffix.length, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
     }
     return CarText.create(text)

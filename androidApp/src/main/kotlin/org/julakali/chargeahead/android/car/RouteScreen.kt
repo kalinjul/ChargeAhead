@@ -136,19 +136,17 @@ class RouteScreen(
             .build()
 
     /**
-     * One line, title only: "EnBW · 142 km · laden bis 68 %", the distance
-     * being the leg from the previous stop (from the start for the first).
-     * The host numbers the row after its marker and renders the title in
-     * its own size (there is no bold span in the car text model), and it
-     * frames its map around the rows on screen, so the shorter the rows,
-     * the more of the route is on the map. Arrival level and charge time
-     * live in the detail.
+     * "Ionity" over "142 km, laden bis 68 %", the distance being the leg
+     * from the previous stop (from the start for the first). The host
+     * numbers the row after its marker. Arrival level and charge time live
+     * in the detail.
      */
     private fun stopRow(ordinal: Int, stop: PlannedStop, legKm: Double): Row {
         val name = OperatorShortName.of(stop.site.operator) ?: stop.site.operator ?: stop.site.name
         val charge = carContext.getString(R.string.car_route_charge, stop.departureSocPercent.toInt())
         return Row.Builder()
-            .setTitle(distanceLine(legKm, suffix = charge, leading = name))
+            .setTitle(name)
+            .addText(distanceLine(legKm, suffix = charge, separator = ", "))
             .setMetadata(placeMetadata(stop.site.position, ordinal.toString()))
             .setBrowsable(true)
             .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, stop.site, stop)) }
