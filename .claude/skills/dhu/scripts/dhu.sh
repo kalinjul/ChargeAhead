@@ -8,7 +8,21 @@
 # after kilobytes.
 set -euo pipefail
 
-DHU_BIN="${DHU_BIN:-$HOME/Android/Sdk/extras/google/auto/desktop-head-unit}"
+# --- Where this machine keeps the SDK (Linux, macOS, or whatever the IDE wrote) ---
+REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../../.." && pwd)"
+sdk_root() {
+    local candidate
+    for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do
+        [[ -n "$candidate" && -d "$candidate" ]] && { echo "$candidate"; return; }
+    done
+    [[ -f "$REPO/local.properties" ]] && sed -n 's/^sdk\.dir=//p' "$REPO/local.properties" | head -1
+}
+SDK="$(sdk_root || true)"
+# The SDK's own copy first, then PATH: the sandbox shell has neither on PATH.
+ADB="${ADB:-$SDK/platform-tools/adb}"; [[ -x "$ADB" ]] || ADB=adb
+adb() { "$ADB" "$@"; }
+
+DHU_BIN="${DHU_BIN:-$SDK/extras/google/auto/desktop-head-unit}"
 RUN_DIR="${DHU_RUN_DIR:-${TMPDIR:-/tmp}/dhu-control}"
 FIFO="$RUN_DIR/in"
 LOG="$RUN_DIR/out.log"
@@ -31,11 +45,32 @@ dhu.sh <command>
   shot <file>     Write a DHU screenshot to the file.
   log [lines]     Show the last lines of DHU output.
   status          Is it running? Is a phone attached?
+  doctor          Check SDK, DHU, adb, phone and head unit server; say what is missing.
   stop            Stop the DHU and its permanent writer.
 USAGE
 }
 
 running() { [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; }
+
+# Runs a command detached from this shell. setsid is Linux; macOS has none and
+# nohup in the background is enough there.
+detach() {
+    if command -v setsid >/dev/null 2>&1; then
+        setsid nohup "$@" >/dev/null 2>&1 &
+    else
+        nohup "$@" >/dev/null 2>&1 &
+    fi
+    echo $!
+}
+
+# The DHU block-buffers its output unless it thinks it has a terminal. stdbuf
+# is coreutils, so Linux has it; macOS gets a pty from python's pty module
+# instead (BSD script would want a terminal on stdin, and stdin is the FIFO).
+unbuffered() {
+    if [[ "$(uname)" == Darwin ]]; then echo "python3 -c 'import pty,sys; sys.exit(pty.spawn(sys.argv[1:]))'"
+    elif command -v stdbuf >/dev/null 2>&1; then echo "stdbuf -o0 -e0"
+    else echo ""; fi
+}
 
 require_running() {
     running || { echo "DHU is not running. Run 'dhu.sh start' first." >&2; exit 1; }
@@ -68,8 +103,7 @@ cmd_start() {
     mkdir -p "$RUN_DIR"; rm -f "$FIFO"; mkfifo "$FIFO"; : > "$LOG"
 
     # Permanent writer: keeps the FIFO open so the DHU never sees EOF.
-    setsid nohup sh -c "sleep 86400 > '$FIFO'" >/dev/null 2>&1 &
-    echo $! > "$RUN_DIR/writer.pid"
+    detach sh -c "sleep 86400 > '$FIFO'" > "$RUN_DIR/writer.pid"
     sleep 1
 
     if [[ -z "$mode" ]]; then
@@ -86,9 +120,9 @@ cmd_start() {
         fi
     fi
 
+    local prefix; prefix="$(unbuffered)"
     ( cd "$(dirname "$DHU_BIN")" \
-      && setsid nohup sh -c "exec stdbuf -o0 -e0 '$DHU_BIN' $mode $config < '$FIFO'" >> "$LOG" 2>&1 &
-      echo $! > "$PIDFILE" )
+      && detach sh -c "exec $prefix '$DHU_BIN' $mode $config < '$FIFO' >> '$LOG' 2>&1" > "$PIDFILE" )
     sleep 12
 
     if grep -q "Attached\|connected" "$LOG" 2>/dev/null; then
@@ -111,15 +145,47 @@ cmd_shot() {
     echo "No screenshot appeared — is the connection still up?" >&2; exit 1
 }
 
+# Everything that has to be true before 'start' can work, with the fix for each.
+cmd_doctor() {
+    local ok=0
+    say() { printf '%s %s\n' "$1" "$2"; }
+    [[ -n "$SDK" && -d "$SDK" ]] && say "ok  " "SDK: $SDK" || { say "FAIL" "no Android SDK found; set ANDROID_HOME"; ok=1; }
+    [[ -x "$DHU_BIN" ]] && say "ok  " "DHU: $DHU_BIN" \
+        || { say "FAIL" "DHU not installed: Android Studio -> SDK Manager -> SDK Tools -> 'Android Auto Desktop Head Unit emulator'"; ok=1; }
+    "$ADB" version >/dev/null 2>&1 && say "ok  " "adb: $ADB" || { say "FAIL" "adb not found; platform-tools missing from $SDK"; ok=1; }
+    [[ -n "$(unbuffered)" ]] && say "ok  " "unbuffered output via: $(unbuffered)" || say "warn" "no stdbuf/script: DHU output will lag"
+    local phones; phones=$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device" && $1 !~ /^emulator-/ {print $1}' | tr '\n' ' ')
+    if [[ -n "$phones" ]]; then say "ok  " "phone(s) on adb: $phones"; else say "FAIL" "no phone on adb (emulators don't count: their Android Auto is a stub)"; ok=1; fi
+    if [[ -n "$phones" ]]; then
+        local serial="${ANDROID_SERIAL:-${phones%% *}}"
+        if adb -s "$serial" shell netstat -lnt 2>/dev/null | grep -q 5277; then
+            say "ok  " "head unit server listening on $serial"
+        else
+            say "warn" "no head unit server on $serial: needed for 'start --adb' (Android Auto -> Settings -> version 10x -> menu -> Start head unit server; it stops on every disconnect)"
+        fi
+        adb -s "$serial" shell pm list packages 2>/dev/null | grep -q org.julakali.chargeahead \
+            && say "ok  " "app installed on $serial" || say "warn" "app not on $serial: ANDROID_SERIAL=$serial ./gradlew :androidApp:installDebug"
+    fi
+    return $ok
+}
+
 cmd_status() {
     if running; then echo "DHU: running (PID $(cat "$PIDFILE"))"; else echo "DHU: not running"; fi
     local dev; dev=$(adb devices | awk 'NR>1 && $2=="device"{print $1}' | tr '\n' ' ')
     echo "Devices on adb: ${dev:-none}"
 }
 
+# Kills a process and everything under it. Without setsid (macOS) the DHU and
+# its pty wrapper are children of the shell we recorded, not a process group.
+kill_tree() {
+    local pid=$1 child
+    for child in $(pgrep -P "$pid" 2>/dev/null); do kill_tree "$child"; done
+    kill "$pid" 2>/dev/null || true
+}
+
 cmd_stop() {
-    [[ -f "$PIDFILE" ]] && kill "$(cat "$PIDFILE")" 2>/dev/null || true
-    [[ -f "$RUN_DIR/writer.pid" ]] && kill "$(cat "$RUN_DIR/writer.pid")" 2>/dev/null || true
+    [[ -f "$PIDFILE" ]] && kill_tree "$(cat "$PIDFILE")"
+    [[ -f "$RUN_DIR/writer.pid" ]] && kill_tree "$(cat "$RUN_DIR/writer.pid")"
     rm -f "$PIDFILE" "$RUN_DIR/writer.pid" "$FIFO"
     echo "DHU stopped."
 }
@@ -131,6 +197,7 @@ case "${1:-}" in
     shot)   shift; cmd_shot "${1:-}" ;;
     log)    tail -n "${2:-20}" "$LOG" | grep -vE "ALSA|[Jj]ack|Cannot connect to server" ;;
     status) cmd_status ;;
+    doctor) cmd_doctor ;;
     stop)   cmd_stop ;;
     *)      usage; exit 1 ;;
 esac

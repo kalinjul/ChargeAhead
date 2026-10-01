@@ -30,6 +30,14 @@ With multiple devices attached, every command requires `--phone`,
 `--emulator` or `--device <serial>` — better to ask than to install on the
 wrong device.
 
+The script finds the SDK on its own (`ANDROID_HOME`, `ANDROID_SDK_ROOT`,
+`~/Library/Android/sdk` on macOS, `~/Android/Sdk` on Linux, or
+`local.properties`) and uses its `adb` and `emulator`, so nothing has to be
+on PATH. `emulator` starts `APP_AVD` or, unset, the first AVD on the
+machine. It runs under macOS's stock `/bin/bash` 3.2. Gradle still needs
+`JAVA_HOME`; on a Mac without a system JDK:
+`export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`.
+
 ## Interacting
 
 **Never reuse coordinates.** Always `shot` first, look at the image, read the
