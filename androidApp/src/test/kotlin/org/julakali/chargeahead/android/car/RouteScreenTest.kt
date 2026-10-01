@@ -120,18 +120,18 @@ class RouteScreenTest {
     }
 
     @Test
-    fun `a stop row is one line with operator, distance from here and the level it charges to`() {
+    fun `a stop row is one line with operator, the leg to it and the level it charges to`() {
         val graph = graph()
         graph.withVehicle()
 
-        val template = graph.templateFor(TripPlanResult.Planned(plan(stops = 1))) as PlaceListMapTemplate
+        val template = graph.templateFor(TripPlanResult.Planned(plan(stops = 3))) as PlaceListMapTemplate
 
-        val stop = template.itemList!!.items.first() as Row
-        // Stop 1 sits 0.5° south and 0.1° east of the fix: a little under 56 km.
-        assertEquals(56.0, distanceOf(stop.title)!!, 1.0)
-        assertTrue(stop.title.toString().startsWith("Operator 1 · "))
-        assertTrue(stop.title.toString().endsWith(" · ${string(R.string.car_route_charge, 80)}"))
-        assertTrue(stop.texts.isEmpty())
+        val rows = template.itemList!!.items.map { it as Row }
+        // The fixture puts the stops 100 km apart along the route.
+        assertEquals(listOf(100.0, 100.0, 100.0), rows.take(3).map { distanceOf(it.title) })
+        assertTrue(rows.first().title.toString().startsWith("Operator 1 · "))
+        assertTrue(rows.first().title.toString().endsWith(" · ${string(R.string.car_route_charge, 80)}"))
+        assertTrue(rows.first().texts.isEmpty())
     }
 
     @Test
