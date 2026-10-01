@@ -3,7 +3,7 @@
 Source material for the PowerTrip brand, as delivered. The app does not read
 these files; the drawables were generated from them and are committed. When
 a file here changes, regenerate the drawable, re-record the goldens
-(`:ui-tests:updateDebugScreenshotTest`) and look at them.
+(`tools/screenshots.sh update`) and look at them.
 
 | source | becomes |
 |---|---|
