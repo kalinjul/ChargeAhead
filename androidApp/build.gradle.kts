@@ -152,6 +152,7 @@ dependencies {
     // Phone UI lives in its own module; MainActivity here only wires it up.
     implementation(project(":phone-ui"))
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material.icons.extended)

@@ -62,7 +62,7 @@
         <activity
             android:name=".phone.MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.ChargeAhead">
+            android:theme="@style/Theme.ChargeAhead.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

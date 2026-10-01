@@ -1,13 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.ChargeAhead" parent="@android:style/Theme.Material.NoActionBar" />
-
-    <!-- The system splash: brand ground with the launcher mark, then the app theme takes over. -->
+    <!--
+      The branding image is a platform attribute from API 31 on; the compat
+      library has no alias for it. The wordmark sits under the mark, since the
+      icon slot is a circle that would crop the stacked logo.
+    -->
     <style name="Theme.ChargeAhead.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
         <!-- same colour as the window: invisible disc, but it grows the icon slot from 192dp to 240dp -->
         <item name="windowSplashScreenIconBackgroundColor">@color/ic_launcher_background</item>
+        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_branding</item>
         <item name="postSplashScreenTheme">@style/Theme.ChargeAhead</item>
     </style>
 </resources>
