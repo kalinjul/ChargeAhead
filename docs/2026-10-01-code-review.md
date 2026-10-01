@@ -247,3 +247,35 @@ The ten tests worth writing first:
 
 Then a `RouteScreenTest` with `androidx.car.app.testing` for the car's
 message templates and the constraint-trimmed list.
+
+## Decisions and what shipped (2026-10-01)
+
+Interviewed and decided the same day; everything below is on the branch
+`review-round`, one PR, each item test-first.
+
+1. Host validator: Google's shipped allowlist, now. Pinned by `ChargeCarAppServiceTest`.
+2. Persistence: the domain types are serialized directly, one `persistenceJson`
+   for settings, trip and Room. A committed trip from before the update is
+   dropped once. `Connector.type` got a default so an unknown enum coerces.
+3. Ports: the three defaulted members are required; `CoreLocationSource`
+   answers `currentFix` from the manager's last known location.
+4. Ktor: `DefaultRequest` carries base URL and bearer, `HttpRequestRetry`
+   gives server errors two more tries. The six sources only name their path.
+5. Startup: `StartAppInteractor`, called from the Android app, the car session
+   and the iOS entry point; the feature lost its `onStart`.
+6. DI: `viewModelOf` everywhere; a car session (and an iOS caller) gets its
+   feature from a Koin scope (`carSession`, `phoneSession`) with the feature
+   declared on it. `CarViewModels` and the iOS constructor list are gone.
+7. Formatting: resources plus platform formatters; previews and Robolectric
+   render in German (`de-rDE`), goldens re-recorded.
+8. Sheet heights: fixed on `charge-now-sheet-height` (separate branch).
+9. Tests: Room converters, car diagnostics store, trip lifecycle interactors,
+   `RouteScreen` through the car app test host, four phone flows. `testAll`
+   now runs the car screen tests too.
+10. Logic moves: `SelectableNetworksObserver`, `GarageObserver`,
+    `VehiclePresetsObserver`; `MapsHandoff`, `RangeCalculator`,
+    `SectionSelection` and `mapsUrl` live in domain.
+
+Left for later from the should-fix lists: the typed DataStore keys and the
+one-release vehicle migration, `kotlin.time.Clock` for `TimeProvider`,
+`@Upsert`, the `Combine.kt` arities, the car screens' `repeatOnLifecycle`.
