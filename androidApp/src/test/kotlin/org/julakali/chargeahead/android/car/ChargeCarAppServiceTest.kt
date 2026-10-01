@@ -1,6 +1,8 @@
 package org.julakali.chargeahead.android.car
 
 import android.app.Application
+import android.content.pm.PackageManager
+import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -23,5 +25,14 @@ class ChargeCarAppServiceTest {
 
         assertFalse("an empty allowlist is allow-all in disguise", allowed.isEmpty())
         assertTrue(allowed.containsKey("com.google.android.projection.gearhead"))
+    }
+
+    /** The place map templates are refused by the host, with a crash screen, unless this is declared. */
+    @Test
+    fun `the manifest asks for the map templates`() {
+        val context = ApplicationProvider.getApplicationContext<Application>()
+        val info = context.packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
+
+        assertTrue(info.requestedPermissions!!.contains("androidx.car.app.MAP_TEMPLATES"))
     }
 }
