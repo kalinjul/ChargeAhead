@@ -3,14 +3,12 @@ package org.julakali.chargeahead.shared.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
-import org.julakali.chargeahead.shared.domain.VehicleRepository
-import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -23,30 +21,23 @@ data class AddCarUiState(
 
 /** The add-car screen: search the catalog, tap to add. */
 class AddCarViewModel(
-    vehicles: VehicleRepository,
+    private val observePresets: VehiclePresetsObserver,
     private val selectVehicle: SelectVehicleInteractor,
-    dispatchers: AppCoroutineDispatchers,
 ) : ViewModel() {
 
     private val query = MutableStateFlow("")
 
-    val uiState: StateFlow<AddCarUiState> = combine(
-        query,
-        vehicles.vehicles,
-    ) { query, owned ->
-        val ownedNames = owned.mapTo(HashSet()) { it.displayName }
-        val needle = query.trim()
-        AddCarUiState(
-            query = query,
-            matches = VehicleCatalog.all.filter {
-                it.name !in ownedNames && it.name.contains(needle, ignoreCase = true)
-            },
-        )
-        // Off the main thread.
-    }.flowOn(dispatchers.computation).stateIn(viewModelScope, WhileUiSubscribed, AddCarUiState())
+    val uiState: StateFlow<AddCarUiState> = combine(query, observePresets.flow) { query, matches ->
+        AddCarUiState(query = query, matches = matches)
+    }.stateIn(viewModelScope, WhileUiSubscribed, AddCarUiState())
+
+    init {
+        observePresets(VehiclePresetsObserver.Params(query = ""))
+    }
 
     fun onQueryChanged(query: String) {
         this.query.value = query
+        observePresets(VehiclePresetsObserver.Params(query))
     }
 
     /** Adds the preset and selects it. */

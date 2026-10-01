@@ -12,9 +12,15 @@ import org.julakali.chargeahead.shared.data.RememberingSoCSource
 import org.julakali.chargeahead.shared.domain.CarDiagnosticsRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.VehicleRepository
-import org.julakali.chargeahead.shared.newChargeStopsFeature
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.julakali.chargeahead.shared.SessionFeature
+import org.julakali.chargeahead.shared.ChargeStopsFeature
+import org.julakali.chargeahead.shared.ui.car.carSession
 import org.koin.core.component.KoinComponent
+import org.koin.core.parameter.parametersOf
+import org.julakali.chargeahead.shared.domain.usecases.StartAppInteractor
+import org.julakali.chargeahead.shared.domain.invoke
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
 import org.koin.core.component.get
 
 /**
@@ -30,17 +36,14 @@ class ChargeSession : Session(), KoinComponent {
         val energyLevels = CarEnergyLevels(carContext, permissions, lifecycleScope)
 
         // The car's own feature, with the vehicle's charge state.
-        val feature = getKoin().newChargeStopsFeature(
-            locationSource = FusedLocationSource(carContext),
-            hardwareSoCSource = RememberingSoCSource(
-                source = CarHardwareSoCSource(
-                    energyLevels = energyLevels,
-                    time = time,
-                    diagnosticsRepository = diagnostics,
-                ),
-                vehicles = get<VehicleRepository>(),
-            ),
+        val hardwareSoC = RememberingSoCSource(
+            source = CarHardwareSoCSource(energyLevels = energyLevels, time = time, diagnosticsRepository = diagnostics),
+            vehicles = get<VehicleRepository>(),
         )
+        val feature: ChargeStopsFeature = get(SessionFeature) { parametersOf(FusedLocationSource(carContext), hardwareSoC) }
+        val session = getKoin().carSession(feature)
+        // A car session may be the first thing this process does.
+        get<CoroutineScope>(AppScope).launch { get<StartAppInteractor>()() }
 
         // For the phone's debug view.
         val recorder = CarHardwareDebugRecorder(
@@ -61,10 +64,11 @@ class ChargeSession : Session(), KoinComponent {
 
             override fun onDestroy(owner: LifecycleOwner) {
                 recorder.stop()
+                session.close()
                 feature.close()
             }
         })
 
-        return CarHomeScreen(carContext, feature, CarViewModels(getKoin(), feature), permissions)
+        return CarHomeScreen(carContext, feature, session, permissions)
     }
 }

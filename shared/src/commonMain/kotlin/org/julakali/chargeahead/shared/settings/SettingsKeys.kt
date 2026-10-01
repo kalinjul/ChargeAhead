@@ -7,7 +7,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.json.Json
+import org.julakali.chargeahead.shared.persistenceJson
 
 /** The keys of the settings file; every repository over it writes only its own. */
 internal object SettingsKeys {
@@ -35,7 +35,7 @@ internal object SettingsKeys {
     )
 }
 
-internal val settingsJson = Json { ignoreUnknownKeys = true }
+internal val settingsJson = persistenceJson
 
 // Everything is stored as a string, as it was in SharedPreferences and
 // NSUserDefaults, so the migrated values keep their keys and format.

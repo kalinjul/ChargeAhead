@@ -51,7 +51,7 @@ data class HomeUiState(
  * app-scoped [ChargeStopsFeature].
  */
 class HomeViewModel(
-    private val feature: ChargeStopsFeature,
+    internal val feature: ChargeStopsFeature,
     private val observeMapChargers: MapChargersObserver,
     private val refreshMapChargers: RefreshMapChargersInteractor,
     private val refreshChargerAvailability: RefreshChargerAvailabilityInteractor,

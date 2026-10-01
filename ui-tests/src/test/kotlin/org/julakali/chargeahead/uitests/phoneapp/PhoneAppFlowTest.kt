@@ -3,7 +3,17 @@ package org.julakali.chargeahead.uitests.phoneapp
 import android.content.Intent
 import androidx.activity.ComponentActivity
 import androidx.activity.ComponentDialog
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.onFirst
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import org.julakali.chargeahead.android.phone.LocalNow
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadTheme
+import org.julakali.chargeahead.shared.domain.distanceKmTo
+import org.julakali.chargeahead.uitests.Fixtures
 import androidx.compose.ui.test.isDisplayed
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -30,13 +40,13 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.Shadows
 import org.robolectric.shadows.ShadowDialog
-import org.julakali.chargeahead.shared.core.MapsHandoff
+import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeSite
 
 /** The phone app end to end, on the faked graph of [PhoneAppHarness]. */
 @RunWith(RobolectricTestRunner::class)
 // Robolectric's default screen is 320x470 dp; the trip sheet's peek is a third of that.
-@Config(qualifiers = "w411dp-h891dp-xxhdpi")
+@Config(qualifiers = "+w411dp-h891dp-xxhdpi")
 class PhoneAppFlowTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
@@ -295,6 +305,94 @@ class PhoneAppFlowTest {
         compose.onNodeWithText(compose.string(R.string.phone_detail_navigate)).performClick()
 
         assertEquals(MapsHandoff.geoUri(stop.position, stop.name), nextStartedUrl())
+    }
+
+    @Test
+    fun `back closes a stop's detail sheet and leaves the trip in place`() {
+        launch()
+        searchAndPick()
+        waitForTrip()
+        showTiles()
+        val stop = plannedSites().first()
+
+        compose.onNodeWithText(stop.operator!!, substring = true).performClick()
+        waitForText(compose.string(R.string.phone_detail_navigate))
+
+        pressBack()
+
+        waitForTextGone(compose.string(R.string.phone_detail_navigate))
+        compose.onNodeWithText("München", substring = true).assertIsDisplayed()
+        compose.onNodeWithText(stop.operator!!, substring = true).assertIsDisplayed()
+    }
+
+    @Test
+    fun `auto in the drawer leads to the garage, where a preset becomes the car`() {
+        launch()
+        val preset = "Tesla Model S 100D (2017)"
+        openDrawer()
+
+        compose.onNodeWithText(compose.string(R.string.drawer_car)).performClick()
+        waitForText(compose.string(R.string.garage_add))
+
+        compose.onNodeWithText(compose.string(R.string.garage_add)).performClick()
+        waitForText(preset)
+        compose.onNodeWithText(preset).performClick()
+
+        // Picking pops back to the garage, which now lists and uses the preset.
+        waitForText(compose.string(R.string.garage_added, preset))
+        compose.onNodeWithText(compose.string(R.string.garage_add)).assertIsDisplayed()
+        compose.onAllNodesWithText(preset).onFirst().assertIsDisplayed()
+        compose.onNodeWithText(compose.string(R.string.garage_no_car_yet)).assertDoesNotExist()
+        assertEquals(preset, runBlocking { harness.vehicles.vehicle.first()?.displayName })
+
+        pressBack()
+        waitForTextGone(compose.string(R.string.garage_add))
+        openDrawer()
+        compose.onAllNodesWithText(preset).onFirst().assertIsDisplayed()
+    }
+
+    /** The corridor sites are hundreds of km out; "charge now" only looks a few km around the phone. */
+    @Test
+    fun `jetzt laden lists the chargers nearest first`() {
+        // Deliberately not in distance order.
+        val nearby = listOf(
+            Fixtures.site("n3", "Shell Recharge", harness.hamburg.copy(lat = harness.hamburg.lat + 0.027), "Hamburg"),
+            Fixtures.site("n1", "Fastned", harness.hamburg.copy(lat = harness.hamburg.lat + 0.009), "Hamburg"),
+            Fixtures.site("n2", "Allego", harness.hamburg.copy(lat = harness.hamburg.lat + 0.018), "Hamburg"),
+        )
+        harness.start(nearby = nearby)
+        compose.setThemedContent { PhoneApp(librariesRes = 0) }
+
+        compose.onNodeWithText(chargeNowPill()).performClick()
+
+        nearby.forEach { waitForText(it.operator!!) }
+        val nearestFirst = nearby.sortedBy { it.position.distanceKmTo(harness.hamburg) }
+        assertEquals(listOf("Fastned", "Allego", "Shell Recharge"), nearestFirst.map { it.operator })
+        val tops = nearestFirst.map { compose.onNodeWithText(it.operator!!).getBoundsInRoot().top }
+        assertEquals(tops.sorted(), tops)
+        harness.sites.forEach { compose.onNodeWithText(it.operator!!).assertDoesNotExist() }
+    }
+
+    /** The search ViewModels outlive the activity, so a rotation keeps the typed text and the open search. */
+    @Test
+    fun `recreating the activity keeps the search open with its text`() {
+        launch()
+        compose.onNodeWithText(searchHint()).performClick()
+        compose.onNodeWithText(searchHint()).performTextInput("Münch")
+        waitForText("München")
+
+        compose.activityRule.scenario.recreate()
+        compose.activityRule.scenario.onActivity { activity ->
+            activity.setContent {
+                CompositionLocalProvider(LocalNow provides { Fixtures.now }) {
+                    ChargeAheadTheme { PhoneApp(librariesRes = 0) }
+                }
+            }
+        }
+
+        waitForText("Münch")
+        waitForText("München")
+        compose.onNodeWithContentDescription(compose.string(R.string.home_search_back)).assertIsDisplayed()
     }
 
     private companion object {

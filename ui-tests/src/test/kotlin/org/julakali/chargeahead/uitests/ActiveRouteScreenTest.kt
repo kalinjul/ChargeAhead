@@ -15,7 +15,7 @@ import org.julakali.chargeahead.android.phone.ActiveRouteScreen
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
-import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -25,7 +25,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "w600dp-h1000dp")
+@Config(qualifiers = "+w600dp-h1000dp")
 class ActiveRouteScreenTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()

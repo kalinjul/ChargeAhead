@@ -29,9 +29,7 @@ class BackendGeocoderTest {
             )
         }
         return BackendGeocoder(
-            createHttpClient(engine),
-            baseUrl = "https://example.invalid/",
-            token = "test-token",
+            createHttpClient(engine, TestBackend),
         )
     }
 
@@ -104,7 +102,7 @@ class BackendGeocoderTest {
     @Test
     fun aServerErrorPropagates() {
         val engine = MockEngine { respondError(HttpStatusCode.TooManyRequests) }
-        val geocoder = BackendGeocoder(createHttpClient(engine), "https://example.invalid", "test-token")
+        val geocoder = BackendGeocoder(createHttpClient(engine, TestBackend))
 
         assertFailsWith<Exception> { runBlocking { geocoder.search("Kiel") } }
     }

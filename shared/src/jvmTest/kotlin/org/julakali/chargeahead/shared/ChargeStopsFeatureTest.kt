@@ -93,6 +93,7 @@ class ChargeStopsFeatureTest {
     @Test
     fun `a failing location stream is reported`() {
         val location = object : LocationSource {
+            override suspend fun currentFix(): Fix? = null
             override val updates: Flow<Fix> = flow { throw SecurityException("no permission") }
         }
         val feature = feature(location)

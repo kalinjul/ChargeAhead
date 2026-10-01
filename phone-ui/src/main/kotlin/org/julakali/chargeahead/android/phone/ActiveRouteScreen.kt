@@ -39,7 +39,7 @@ import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.ui.CommittedTripEvent
 import org.julakali.chargeahead.shared.ui.CommittedTripViewModel
-import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
@@ -150,7 +150,7 @@ fun ActiveRouteScreen(
                     maxLines = 1,
                 )
                 Text(
-                    stringResource(R.string.trip_arr, etaText(plan.totalMinutes, LocalNow.current()), plan.arrivalSocPercent.roundToInt()),
+                    stringResource(R.string.trip_arr, etaText(LocalContext.current, plan.totalMinutes, LocalNow.current()), plan.arrivalSocPercent.roundToInt()),
                     style = MaterialTheme.typography.bodyMedium.tabular,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

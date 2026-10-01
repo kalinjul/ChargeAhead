@@ -6,6 +6,7 @@ import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.OperatorKey
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.usecases.SelectableNetworksObserver
 import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
@@ -49,7 +50,12 @@ class NetworksViewModelTest {
         TrackingPreferences(DataStorePreferencesRepository(InMemoryPreferencesDataStore()))
 
     private fun networksViewModel(preferences: PreferencesRepository, listed: List<Network> = LISTED) =
-        NetworksViewModel(preferences, FixedNetworkRepository(listed), UpdateNetworksInteractor(preferences), testDispatchers)
+        NetworksViewModel(
+            preferences,
+            SelectableNetworksObserver(FixedNetworkRepository(listed), preferences, testDispatchers),
+            SelectableNetworksObserver(FixedNetworkRepository(listed), preferences, testDispatchers),
+            UpdateNetworksInteractor(preferences),
+        )
 
     @Test
     fun `networks that dropped off the list show only while selected`() = runBlocking<Unit> {

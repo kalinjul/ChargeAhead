@@ -19,6 +19,7 @@ below.
 ```bash
 D=.claude/skills/dhu/scripts/dhu.sh
 
+$D doctor                       # SDK, DHU, adb, phone, head unit server: what is missing, and the fix
 $D status                       # already running? phone attached?
 $D start                        # over USB — run in the background, see below
 $D send "keycode home"          # to the app launcher
@@ -42,7 +43,7 @@ and a foreground call never returns. Then wait until `$D status` reports
 ```bash
 # Bash tool, foreground: wait until it is up
 D=.claude/skills/dhu/scripts/dhu.sh
-for i in $(seq 1 20); do $D status | grep -q "DHU: running" && break; timeout 3 tail -f /dev/null; done
+for i in $(seq 1 20); do $D status | grep -q "DHU: running" && break; sleep 3; done
 $D status
 ```
 
@@ -52,6 +53,44 @@ The background task's output file shows whether the connection came up
 Take a `shot` after every `tap` and **actually look at the image**.
 Positions in the app launcher depend on how many apps are installed and which
 page you're on — guessed coordinates reliably hit the wrong thing.
+
+## Linux and macOS
+
+The script finds the SDK on its own: `ANDROID_HOME`, `ANDROID_SDK_ROOT`,
+`~/Library/Android/sdk` (macOS), `~/Android/Sdk` (Linux), or the `sdk.dir`
+in `local.properties`. It uses the SDK's own `adb`, so nothing has to be on
+PATH, and it needs neither `setsid` nor `stdbuf`: on macOS it detaches with
+`nohup` and gets unbuffered output through BSD `script`. `/bin/bash` 3.2 is
+enough. Override with `DHU_BIN`, `ADB` or `ANDROID_HOME` only if `doctor`
+says it looked in the wrong place.
+
+The DHU itself comes from Android Studio → SDK Manager → SDK Tools →
+"Android Auto Desktop Head Unit emulator"; `doctor` tells you when it is
+missing.
+
+## A virtual Pixel instead of a phone
+
+Google documents the DHU only against a physical phone, but what it needs
+is a real Android Auto with its head unit server on the other end of adb,
+and an emulator is on adb too. The catch: the Play images ship a
+placeholder (`versionName` ends in `-stub`), with no launcher and no
+server. `$D doctor` says so and names the device. To get a working virtual
+Pixel:
+
+1. Start a `google_apis_playstore` AVD (here `Pixel_10a`), sign in to the
+   Play Store on it, and install Android Auto. If Play calls it "not
+   compatible with your device", install the APK bundle by hand:
+   `adb -s emulator-5554 install-multiple base.apk split_*.apk` with the
+   files for the emulator's ABI (arm64-v8a on Apple silicon).
+2. In Android Auto on the emulator: Settings → version ten times →
+   three-dot menu → "Allow unknown sources" and "Start head unit server".
+3. `ANDROID_SERIAL=emulator-5554 $D doctor` until every line is `ok`, then
+   `ANDROID_SERIAL=emulator-5554 $D start --adb` (always `--adb`; there is
+   no USB accessory on an emulator).
+
+Everything after that is the same as with a phone, including the server
+stopping on every disconnect. Location in the emulator comes from
+`app.sh where`, which the car app then sees through Play services.
 
 ## Before the first attempt
 
@@ -71,9 +110,13 @@ launcher.
 **USB (`$D start`)** is the default and needs nothing but the cable.
 
 **ADB (`$D start --adb`)** additionally needs the head unit server, started
-from the same developer menu. It stops on every disconnect and must be
-restarted before every attempt. The script checks this beforehand and says
-so, instead of failing with a confusing abort.
+from the same developer menu. It stops when the connection drops and when
+the phone sleeps, and has to be started again then; an app reinstall
+leaves it running. The script checks this beforehand and says so, instead of failing
+with a confusing abort. On macOS this is the mode that works reliably; USB
+accessory mode depends on the cable and the Mac's USB stack. A phone on
+wireless debugging shows up on adb like a cabled one, with a serial like
+`adb-XXXX._adb-tls-connect._tcp`, and `--adb` works over it.
 
 With **several phones attached**, the DHU connects to whichever answers
 first — possibly not the one you mean. The script refuses to start then;

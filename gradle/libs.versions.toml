@@ -94,9 +94,12 @@ androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecy
 # --- Android Auto ---
 car-app = { module = "androidx.car.app:app", version.ref = "carApp" }
 car-app-projected = { module = "androidx.car.app:app-projected", version.ref = "carApp" }
+# TestCarContext & co. for the car screens' unit tests (:androidApp).
+car-app-testing = { module = "androidx.car.app:app-testing", version.ref = "carApp" }
 
 # --- Android phone UI ---
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version = "1.0.1" }
 androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }

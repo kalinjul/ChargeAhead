@@ -23,7 +23,7 @@ import org.julakali.chargeahead.android.phone.RoundIconButton
 import org.julakali.chargeahead.android.phone.components.StationCard
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HintChipPlain() {
     PreviewScaffold {
@@ -32,7 +32,7 @@ fun HintChipPlain() {
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HomePillsChargeNowAndActiveRoute() {
     PreviewScaffold {
@@ -58,7 +58,7 @@ fun HomePillsChargeNowAndActiveRoute() {
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun RoundIconButtonMenu() {
     PreviewScaffold {
@@ -71,7 +71,7 @@ fun RoundIconButtonMenu() {
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun StationCardChargeNow() {
     PreviewScaffold {
@@ -91,7 +91,7 @@ fun StationCardChargeNow() {
 
 /** Nothing committed yet: the pill is there, but dimmed and not clickable. */
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun HomePillActiveRouteDisabled() {
     PreviewScaffold {
@@ -111,22 +111,22 @@ fun HomePillActiveRouteDisabled() {
 
 // Dark theme: the same components under UI_MODE_NIGHT_YES.
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun HomePillsChargeNowAndActiveRouteDark() = HomePillsChargeNowAndActiveRoute()
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun StationCardChargeNowDark() = StationCardChargeNow()
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun HintChipPlainDark() = HintChipPlain()
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun CompassButtonRotated() {
     PreviewScaffold {

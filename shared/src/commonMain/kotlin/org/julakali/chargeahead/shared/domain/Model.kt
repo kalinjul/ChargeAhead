@@ -14,7 +14,7 @@ enum class Reachability { REACHABLE, MARGINAL, UNREACHABLE, UNKNOWN }
 
 /** [count] is `null` when the source doesn't state the quantity. */
 @Serializable
-data class Connector(val type: ConnectorType, val maxPowerKw: Double, val count: Int?)
+data class Connector(val type: ConnectorType = ConnectorType.UNKNOWN, val maxPowerKw: Double, val count: Int?)
 
 /** A site's postal address, to the extent the source knows one. */
 @Serializable
@@ -26,6 +26,7 @@ data class Address(
     val isEmpty: Boolean get() = street == null && postalCode == null && town == null
 }
 
+// Stored in Room and inside the saved trip: a new field needs a default.
 @Serializable
 data class ChargeSite(
     /** Source-qualified: "ocm:12345", "bnetza:1141226". For a merged site, the leading source's id. */

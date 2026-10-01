@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.android.phone
 
 import android.os.Bundle
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -13,6 +14,7 @@ import org.julakali.chargeahead.android.phone.theme.ChargeAheadTheme
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         // Bars follow the system theme, like the rest of the UI.
         enableEdgeToEdge()

@@ -15,7 +15,7 @@ import org.julakali.chargeahead.android.phone.SocEditing
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.TripSummary
 import org.julakali.chargeahead.android.phone.headerLine
-import org.julakali.chargeahead.shared.ui.SectionSelection
+import org.julakali.chargeahead.shared.domain.SectionSelection
 
 @Composable
 private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionSelection()) {
@@ -36,27 +36,27 @@ private fun Sheet(layout: TripListLayout, selection: SectionSelection = SectionS
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun TripSheetList() = Sheet(TripListLayout.LIST)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun TripSheetListSectionPicked() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2))
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun TripSheetTiles() = Sheet(TripListLayout.TILES)
 
 @PreviewTest
-@Preview(showBackground = true, fontScale = 1.5f)
+@Preview(locale = "de", showBackground = true, fontScale = 1.5f)
 @Composable
 fun TripSheetListLargeFont() = Sheet(TripListLayout.LIST)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun TripSummaryList() {
     PreviewScaffold {
@@ -67,7 +67,7 @@ fun TripSummaryList() {
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun TripSummaryTiles() {
     PreviewScaffold {
@@ -78,7 +78,7 @@ fun TripSummaryTiles() {
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun DestinationHeaderWithPlan() {
     PreviewScaffold {
@@ -90,28 +90,28 @@ fun DestinationHeaderWithPlan() {
 
 // Dark theme: the same components under UI_MODE_NIGHT_YES.
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun TripSheetListDark() = Sheet(TripListLayout.LIST)
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun TripSheetListSectionPickedDark() = Sheet(TripListLayout.LIST, SectionSelection(selecting = true, a = 1, b = 2))
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun TripSheetTilesDark() = Sheet(TripListLayout.TILES)
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun DestinationHeaderWithPlanDark() = DestinationHeaderWithPlan()
 
 /** A phone's header width with a long trip line: the subtitle steps down instead of being cut. */
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun DestinationHeaderNarrowLongTrip() {
     PreviewScaffold {

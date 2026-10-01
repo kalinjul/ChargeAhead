@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The host paints CarColor.PRIMARY / SECONDARY with these: markers, FABs, primary actions, text spans. -->
+    <style name="CarAppTheme">
+        <item name="carColorPrimary">#7F77DD</item>
+        <item name="carColorPrimaryDark">#AFA9EC</item>
+        <item name="carColorSecondary">#26215C</item>
+        <item name="carColorSecondaryDark">#3B3684</item>
+    </style>
+</resources>

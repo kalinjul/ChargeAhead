@@ -63,12 +63,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import org.koin.core.Koin
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.onClose
 import org.koin.core.module.dsl.withOptions
 import org.koin.dsl.module
+import org.julakali.chargeahead.shared.domain.usecases.StartAppInteractor
+import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
+import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
+import org.julakali.chargeahead.shared.domain.usecases.SelectableNetworksObserver
+import org.julakali.chargeahead.shared.domain.SiteCache
+import org.koin.core.qualifier.named
+import org.koin.core.parameter.parametersOf
 
 /**
  * The data graph behind both features, declared once for both platforms.
@@ -86,15 +91,14 @@ fun chargeStopsModule(): Module = module {
     } withOptions { onClose { it?.cancel() } }
     single<TimeProvider> { TimeProvider { currentTimeMillis() } }
 
-    single<HttpClient> { createHttpClient() } withOptions { onClose { it?.close() } }
+    single<HttpClient> { createHttpClient(backend = get()) } withOptions { onClose { it?.close() } }
     single<ChargeSiteDatabase> { createChargeSiteDatabase(get(), get<AppCoroutineDispatchers>().io) }
 
     single<SiteRepository> {
-        val backend = get<BackendConfig>()
         MergingSiteRepository(
             listOf(
                 TiledSiteRepository(
-                    source = BackendChargeSiteSource(get(), backend.baseUrl, backend.token),
+                    source = BackendChargeSiteSource(get()),
                     database = get(),
                     time = get(),
                     scope = get(AppScope),
@@ -103,27 +107,15 @@ fun chargeStopsModule(): Module = module {
         )
     }
 
-    single<RouteEngine> {
-        val backend = get<BackendConfig>()
-        BackendRouteEngine(get(), backend.baseUrl, backend.token)
-    }
+    single<RouteEngine> { BackendRouteEngine(get()) }
 
-    single<Geocoder> {
-        val backend = get<BackendConfig>()
-        BackendGeocoder(get(), backend.baseUrl, backend.token)
-    }
+    single<Geocoder> { BackendGeocoder(get()) }
 
     single<TripPlanning> { TripPlanner(get(), get()) }
     single { TripRepository(get()) }
     single<CorridorPlanning> { CorridorPlanner() }
-    single<ChargePointStatusRepository> {
-        val backend = get<BackendConfig>()
-        CachingChargePointStatusRepository(BackendChargePointStatusSource(get(), backend.baseUrl, backend.token), get())
-    }
-    single<DataSourceDirectory> {
-        val backend = get<BackendConfig>()
-        BackendDataSourceDirectory(get(), backend.baseUrl, backend.token)
-    }
+    single<ChargePointStatusRepository> { CachingChargePointStatusRepository(BackendChargePointStatusSource(get()), get()) }
+    single<DataSourceDirectory> { BackendDataSourceDirectory(get()) }
     factory { LoadDataSourcesInteractor(get()) }
     factory { MapChargersObserver(get(), get(), get(), get()) }
     factory { RefreshMapChargersInteractor(get(), get()) }
@@ -147,46 +139,28 @@ fun chargeStopsModule(): Module = module {
     factory { UpdateNetworksInteractor(get()) }
     factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
-    single<NetworkRepository> {
-        val backend = get<BackendConfig>()
-        RoomNetworkRepository(BackendNetworkListSource(get(), backend.baseUrl, backend.token), get())
-    }
+    factory { SelectableNetworksObserver(get(), get(), get()) }
+    factory { GarageObserver(get<VehicleRepository>()) }
+    factory { VehiclePresetsObserver(get<VehicleRepository>(), get()) }
+    single<NetworkRepository> { RoomNetworkRepository(BackendNetworkListSource(get()), get()) }
     factory { RefreshNetworksInteractor(get()) }
 
+    single<SiteCache> {
+        SiteCache { keys -> pruneCache(get(), keys, get<TimeProvider>().nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS) }
+    }
+    factory { StartAppInteractor(get(), get(), get(), get()) }
+
+    // A feature per session, on the graph's shared singletons; the caller owns and closes it.
+    factory<ChargeStopsFeature>(SessionFeature) { (location: LocationSource, hardware: SoCSource?) ->
+        ChargeStopsFeature(
+            locationSource = location,
+            socSource = CombinedSoCSource(manual = ManualSoCSource(get(), get()), hardware = hardware),
+            parentScope = get(AppScope),
+        )
+    }
     // The phone's feature. Never closed.
-    single<ChargeStopsFeature> { getKoin().newChargeStopsFeature(locationSource = get()) }
+    single<ChargeStopsFeature> { get(SessionFeature) { parametersOf(get<LocationSource>(), null) } }
 }
 
-/**
- * A feature on the graph's shared singletons, owned by the caller.
- *
- * @param hardwareSoCSource optional charge level from the vehicle; wins over
- *   the driver's manual entry.
- */
-fun Koin.newChargeStopsFeature(
-    locationSource: LocationSource,
-    hardwareSoCSource: SoCSource? = null,
-): ChargeStopsFeature {
-    val vehicles = get<VehicleRepository>()
-    val preferences = get<PreferencesRepository>()
-    val time = get<TimeProvider>()
-    val database = get<ChargeSiteDatabase>()
-    val refreshNetworks = get<RefreshNetworksInteractor>()
-    val trips = get<TripRepository>()
-    return ChargeStopsFeature(
-        locationSource = locationSource,
-        parentScope = get(AppScope),
-        socSource = CombinedSoCSource(
-            manual = ManualSoCSource(vehicles, time),
-            hardware = hardwareSoCSource,
-        ),
-        onStart = {
-            runCatching {
-                val keys = preferences.networks.first().preferredOperators
-                pruneCache(database, keys, time.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
-            }
-            runCatching { trips.restore() }
-            refreshNetworks(Unit)
-        },
-    )
-}
+/** A [ChargeStopsFeature] built for one session: `parametersOf(location, hardwareSoCSource)`. */
+val SessionFeature = named("session-feature")

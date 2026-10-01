@@ -26,47 +26,47 @@ private fun Pill(speed: ChargeSpeed, label: String?, availability: SiteAvailabil
 }
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun ChargerPillOneBoltNoLive() = Pill(ChargeSpeed.FAST, "EnBW", null)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun ChargerPillTwoBoltsNoLive() = Pill(ChargeSpeed.ULTRA, "Tesla", null)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun ChargerPillThreeBoltsNoLive() = Pill(ChargeSpeed.HYPER, "Ionity", null)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun ChargerPillLiveGood() = Pill(ChargeSpeed.HYPER, "Ionity", LiveGood)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun ChargerPillLiveLow() = Pill(ChargeSpeed.ULTRA, "Aral pulse", LiveLow)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun ChargerPillLiveNone() = Pill(ChargeSpeed.MEDIUM, "EnBW", LiveNone)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun ChargerPillOutOfOrder() = Pill(ChargeSpeed.FAST, "EWE Go", SiteAvailability.OutOfOrder)
 
 @PreviewTest
-@Preview(showBackground = true, fontScale = 1.5f)
+@Preview(locale = "de", showBackground = true, fontScale = 1.5f)
 @Composable
 fun ChargerPillLiveGoodLargeFont() = Pill(ChargeSpeed.HYPER, "Ionity", LiveGood)
 
 @PreviewTest
-@Preview(showBackground = true)
+@Preview(locale = "de", showBackground = true)
 @Composable
 fun ChargerDotStates() {
     PreviewScaffold {
@@ -84,31 +84,31 @@ fun ChargerDotStates() {
 
 // Dark theme: the same components under UI_MODE_NIGHT_YES.
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun ChargerPillLiveGoodDark() = Pill(ChargeSpeed.HYPER, "Ionity", LiveGood)
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun ChargerPillLiveLowDark() = Pill(ChargeSpeed.ULTRA, "Aral pulse", LiveLow)
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun ChargerPillLiveNoneDark() = Pill(ChargeSpeed.MEDIUM, "EnBW", LiveNone)
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun ChargerPillOutOfOrderDark() = Pill(ChargeSpeed.FAST, "EWE Go", SiteAvailability.OutOfOrder)
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun ChargerPillOneBoltNoLiveDark() = Pill(ChargeSpeed.FAST, "EnBW", null)
 
 @PreviewTest
-@Preview(showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun ChargerDotStatesDark() = ChargerDotStates()

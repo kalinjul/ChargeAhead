@@ -24,6 +24,7 @@ import org.julakali.chargeahead.shared.settings.settingsModule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import org.koin.core.Koin
+import org.koin.core.parameter.parametersOf
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
 import kotlin.test.Test
@@ -33,6 +34,7 @@ import kotlin.test.assertSame
 class ChargeStopsModuleTest {
 
     private val fakeLocationSource = object : LocationSource {
+        override suspend fun currentFix(): Fix? = null
         override val updates: Flow<Fix> = emptyFlow()
     }
 
@@ -81,7 +83,7 @@ class ChargeStopsModuleTest {
     fun aSessionFeature_isItsOwn_notThePhoneSingleton() {
         withGraph { koin ->
             val phone = koin.get<ChargeStopsFeature>()
-            val session = koin.newChargeStopsFeature(fakeLocationSource)
+            val session = koin.get<ChargeStopsFeature>(SessionFeature) { parametersOf(fakeLocationSource, null) }
             assertNotSame(phone, session)
             assertSame(phone, koin.get<ChargeStopsFeature>())
             session.close()

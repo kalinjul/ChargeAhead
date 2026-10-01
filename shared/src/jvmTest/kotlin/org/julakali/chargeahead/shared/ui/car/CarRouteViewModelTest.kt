@@ -92,6 +92,7 @@ class CarRouteViewModelTest {
 
     private val feature = ChargeStopsFeature(
         locationSource = object : LocationSource {
+            override suspend fun currentFix(): Fix? = null
             override val updates: Flow<Fix> = fixes
         },
         socSource = object : SoCSource {
@@ -108,6 +109,7 @@ class CarRouteViewModelTest {
             activeRoute,
             PlanTripInteractor(planner, vehicles, preferences, history, trips, testDispatchers),
             ReplanCommittedTripInteractor(planner, vehicles, preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers),
+            CommitTripInteractor(trips) { 9L },
             trips,
         )
 

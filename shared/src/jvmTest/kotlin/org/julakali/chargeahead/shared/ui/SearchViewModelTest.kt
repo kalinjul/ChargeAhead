@@ -139,7 +139,10 @@ class SearchViewModelTest {
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T = withTimeout(5_000) { first(matching) }
 
     private fun stubFeature() = ChargeStopsFeature(
-        locationSource = object : LocationSource { override val updates: Flow<Fix> = emptyFlow() },
+        locationSource = object : LocationSource {
+            override suspend fun currentFix(): Fix? = null
+            override val updates: Flow<Fix> = emptyFlow()
+        },
         parentScope = CoroutineScope(Dispatchers.Unconfined),
     )
 
@@ -148,6 +151,7 @@ class SearchViewModelTest {
     }
 
     private object NoLocation : LocationSource {
+        override suspend fun currentFix(): Fix? = null
         override val updates: Flow<Fix> = emptyFlow()
     }
 }

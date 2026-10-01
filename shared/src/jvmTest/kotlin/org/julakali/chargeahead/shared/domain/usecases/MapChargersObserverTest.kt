@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import kotlinx.coroutines.flow.flowOf
+
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeFilters
@@ -77,6 +79,8 @@ class ObserveMapChargersTest {
         runBlocking { preferences.configure() }
         val store = MutableStateFlow(stored)
         repository = object : SiteRepository {
+            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+            override suspend fun invalidate() {}
             override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
                 fetchedAreas += area
                 store.update { it + fetched }

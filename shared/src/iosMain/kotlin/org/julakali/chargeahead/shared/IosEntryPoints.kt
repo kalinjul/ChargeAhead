@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared
 
 import androidx.lifecycle.SavedStateHandle
+import org.koin.core.parameter.parametersOf
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.db.DatabaseFactory
@@ -30,6 +31,11 @@ import org.koin.core.Koin
 import org.koin.core.scope.Scope
 import org.koin.dsl.koinApplication
 import org.koin.dsl.module
+import org.koin.core.parameter.parametersOf
+import org.julakali.chargeahead.shared.ui.sharedUiModule
+import org.julakali.chargeahead.shared.ui.phoneSession
+import org.julakali.chargeahead.shared.domain.usecases.StartAppInteractor
+import org.julakali.chargeahead.shared.domain.invoke
 
 /**
  * The process-wide graph, built on the first [createChargeStopsFeature] call;
@@ -49,6 +55,7 @@ private fun graph(backend: BackendConfig): Koin =
                 single { backend }
             },
             chargeStopsModule(),
+            sharedUiModule(),
         )
     }.koin.also { graph = it }
 
@@ -64,8 +71,10 @@ fun createChargeStopsFeature(
     val backend = requireNotNull(BackendConfig.of(backendBaseUrl, backendToken)) {
         "ChargeAheadBaseUrl and ChargeAheadToken must be set in Info.plist"
     }
+    val koin = graph(backend)
+    koin.get<CoroutineScope>(AppScope).launch { koin.get<StartAppInteractor>()() }
     // Each caller owns its feature; the data graph beneath is shared.
-    return graph(backend).newChargeStopsFeature(locationSource = CoreLocationSource())
+    return koin.get(SessionFeature) { parametersOf(CoreLocationSource(), null) }
 }
 
 /** The corridor list for CarPlay: every state change, on the main thread, until [stop]. */
@@ -74,8 +83,9 @@ class ChargeStopsWatcher(feature: ChargeStopsFeature) {
     private val koin: Koin = requireNotNull(graph) {
         "No graph yet — call createChargeStopsFeature first"
     }
+    private val session = koin.phoneSession(feature)
     private val viewModels = ViewModelHost()
-    private val viewModel = viewModels.get { CorridorViewModel(feature, koin.get(), koin.get()) }
+    private val viewModel = viewModels.get { session.get<CorridorViewModel>() }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     /** Snapshot of the state, for callers without Flow support. */
@@ -92,6 +102,7 @@ class ChargeStopsWatcher(feature: ChargeStopsFeature) {
     fun stop() {
         scope.cancel()
         viewModels.clear()
+        session.close()
     }
 }
 
@@ -112,18 +123,18 @@ class PhoneViewModels(private val feature: ChargeStopsFeature) {
     private val koin: Koin = requireNotNull(graph) {
         "No graph yet — call createChargeStopsFeature first"
     }
+    private val session = koin.phoneSession(feature)
     private val host = ViewModelHost()
 
-    fun home(): HomeViewModel = host.get {
-        HomeViewModel(feature, koin.get(), koin.get(), koin.get(), koin.get(), koin.get(), koin.get())
-    }
+    fun home(): HomeViewModel = host.get { session.get<HomeViewModel>() }
 
-    fun chargeNow(): ChargeNowViewModel = host.get { ChargeNowViewModel(feature, koin.get(), koin.get()) }
+    fun chargeNow(): ChargeNowViewModel = host.get { session.get<ChargeNowViewModel>() }
 
-    fun search(): SearchViewModel = host.get { SearchViewModel(feature, koin.get(), koin.get(), koin.get(), SavedStateHandle()) }
+    fun search(): SearchViewModel = host.get { session.get<SearchViewModel> { parametersOf(SavedStateHandle()) } }
 
     fun clear() {
         host.clear()
+        session.close()
     }
 }
 

@@ -37,6 +37,9 @@ Dependency direction: `androidApp` → `phone-ui` → `shared`, `ui-tests` → `
 ## Language
 
 - **Identifiers, types, filenames: English.** `ChargeSite`, not `Ladesaeule`.
+- **Mobile vocabulary, not web or desktop jargon.** No "chrome" for the UI
+  around the content, in code or in prose. Name the actual thing: search bar,
+  controls, app shell, top bar.
 - **Comments and documentation: English.** Write a comment only when it's
   truly needed — not a blind comment on every function. A comment explains
   *why*, not *what*: a hidden constraint, a subtle invariant, a workaround, a
@@ -610,10 +613,11 @@ called in Swift.
 1. `./gradlew :androidApp:assembleDebug` completes — show the output, don't
    just claim it.
 2. `./gradlew :shared:jvmTest` completes.
-2b. `./gradlew :ui-tests:testDebugUnitTest :ui-tests:validateDebugScreenshotTest`
-   completes, if `phone-ui/` or `ui-tests/` was touched. A screenshot that
-   changed on purpose is re-recorded with `updateDebugScreenshotTest` and the
-   PNG committed — see docs/testing.md.
+2b. `./gradlew :ui-tests:testDebugUnitTest` and `tools/screenshots.sh validate`
+   complete, if `phone-ui/` or `ui-tests/` was touched. A screenshot that
+   changed on purpose is re-recorded with `tools/screenshots.sh update` and the
+   PNG committed — goldens only match where they were rendered, see
+   docs/testing.md.
 3. `./gradlew :shared:compileKotlinIosSimulatorArm64` completes, if
    `shared/` was touched. This is mandatory, not optional: otherwise
    `commonMain` is only checked against JVM and Android, and Kotlin/Native
