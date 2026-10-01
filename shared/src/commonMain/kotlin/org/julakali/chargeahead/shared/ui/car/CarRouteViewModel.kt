@@ -9,6 +9,7 @@ import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripState
+import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import org.julakali.chargeahead.shared.ui.WhileUiSubscribed
@@ -41,7 +42,7 @@ sealed interface CarRouteUiState {
  * phone keeps it.
  */
 class CarRouteViewModel(
-    private val feature: ChargeStopsFeature,
+    val feature: ChargeStopsFeature,
     private val destination: Destination,
     private val activeRoute: Boolean,
     private val planTrip: PlanTripInteractor,
@@ -87,17 +88,30 @@ class CarRouteViewModel(
     fun onRefresh() {
         val fix = feature.currentFix.value ?: return
         viewModelScope.launch {
-            if (activeRoute) replan(fix) else plan(fix)
+            if (activeRoute) replan(fix, socPercent = feature.currentEnergy.value?.socPercent, storeSoc = false) else plan(fix)
         }
     }
 
-    private suspend fun replan(fix: Fix) {
+    /**
+     * "Neu planen": with the car reporting its charge, plans right away and
+     * returns `true`; otherwise `false`, and the caller asks for the level,
+     * which comes back through [onReplanWith].
+     */
+    fun onReplanRequested(): Boolean {
+        if (!feature.currentEnergy.value.reportedByCar) return false
+        onRefresh()
+        return true
+    }
+
+    /** Re-plans from the level just picked, which is kept as the stored one. */
+    fun onReplanWith(socPercent: Int) {
+        val fix = feature.currentFix.value ?: return
+        viewModelScope.launch { replan(fix, socPercent.toDouble(), storeSoc = true) }
+    }
+
+    private suspend fun replan(fix: Fix, socPercent: Double?, storeSoc: Boolean) {
         val result = replanCommittedTrip(
-            ReplanCommittedTripInteractor.Params(
-                from = fix.position,
-                socPercent = feature.currentEnergy.value?.socPercent,
-                storeSoc = false,
-            ),
+            ReplanCommittedTripInteractor.Params(from = fix.position, socPercent = socPercent, storeSoc = storeSoc),
         ).getOrDefault(TripPlanResult.NoRoute)
         failure.value = result?.takeUnless { it is TripPlanResult.Planned }
     }

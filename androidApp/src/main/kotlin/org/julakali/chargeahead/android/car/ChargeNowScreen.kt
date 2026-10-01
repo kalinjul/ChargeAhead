@@ -5,10 +5,11 @@ import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.Action
+import androidx.car.app.model.ActionStrip
 import androidx.car.app.model.Header
 import androidx.car.app.model.ItemList
-import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.MessageTemplate
+import androidx.car.app.model.PlaceListMapTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
@@ -23,12 +24,12 @@ import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
 
 /**
- * The best fast chargers around the current position, cheap and near first.
- * Tapping one hands it straight to the navigation app.
+ * The best fast chargers around the current position on the host's map,
+ * numbered in ranking order, cheap and near first. A row opens the detail.
  */
 class ChargeNowScreen(
     carContext: CarContext,
-    session: Scope,
+    private val session: Scope,
 ) : Screen(carContext) {
 
     private val viewModel = screenViewModel { session.get<CarChargeNowViewModel>() }
@@ -48,41 +49,56 @@ class ChargeNowScreen(
         val candidates = current.candidates + current.more
         if (candidates.isEmpty()) {
             return MessageTemplate.Builder(carContext.getString(R.string.car_now_empty))
-                .setHeader(header(withRefresh = true))
+                .setHeader(
+                    Header.Builder()
+                        .setTitle(title())
+                        .setStartHeaderAction(Action.BACK)
+                        .addEndHeaderAction(refreshAction())
+                        .build(),
+                )
                 .build()
         }
 
         // The row count is dictated by the host.
         val contentLimit = carContext
             .getCarService(ConstraintManager::class.java)
-            .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
+            .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
 
         val itemList = ItemList.Builder()
         // The relax notice costs one of the rows.
         val relaxedRow = relaxedRow(current)
         val roomForCandidates = if (relaxedRow == null) contentLimit else contentLimit - 1
-        candidates.take(roomForCandidates).forEach { itemList.addItem(candidateRow(it)) }
+        candidates.take(roomForCandidates).forEachIndexed { index, candidate ->
+            itemList.addItem(candidateRow(index + 1, candidate))
+        }
         relaxedRow?.let { itemList.addItem(it) }
 
-        return ListTemplate.Builder()
-            .setSingleList(itemList.build())
-            .setHeader(header(withRefresh = true))
+        return PlaceListMapTemplate.Builder()
+            .setItemList(itemList.build())
+            .setTitle(title())
+            .setHeaderAction(Action.BACK)
+            .setCurrentLocationEnabled(true)
+            // The host's own refresh affordance, after the driver moved the map.
+            .setOnContentRefreshListener(viewModel::onRefresh)
+            .setActionStrip(ActionStrip.Builder().addAction(refreshAction()).build())
             .build()
     }
 
     private fun loadingTemplate(@StringRes waitingText: Int): Template =
-        ListTemplate.Builder()
+        PlaceListMapTemplate.Builder()
             .setLoading(true)
-            .setHeader(header(withRefresh = false, subtitle = carContext.getString(waitingText)))
+            .setTitle("${title()} · ${carContext.getString(waitingText)}")
+            .setHeaderAction(Action.BACK)
             .build()
 
-    private fun candidateRow(candidate: ChargeNowCandidate): Row = Row.Builder()
+    /** Distance and power first, the operator and its charge points below. */
+    private fun candidateRow(ordinal: Int, candidate: ChargeNowCandidate): Row = Row.Builder()
         .setTitle(candidate.site.name)
-        .addText(ChargeStopFormatter.chargeNowPrimaryLine(candidate))
+        .addText(distanceLine(candidate.distanceKm, ChargeStopFormatter.powerKwLabel(candidate.maxPowerKw)))
         .addText(ChargeStopFormatter.chargeNowSecondaryLine(candidate))
-        // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
-        .setImage(icon(R.drawable.ic_charge_pin), Row.IMAGE_TYPE_ICON)
-        .setOnClickListener { navigateTo(carContext, candidate.site.name, candidate.site.position) }
+        .setMetadata(placeMetadata(candidate.site.position, ordinal.toString()))
+        .setBrowsable(true)
+        .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, candidate.site)) }
         .build()
 
     private fun relaxedRow(result: ChargeNowResult): Row? {
@@ -102,24 +118,10 @@ class ChargeNowScreen(
             .build()
     }
 
-    private fun header(withRefresh: Boolean, subtitle: String? = null): Header {
-        val builder = Header.Builder()
-            .setTitle(titleText(subtitle))
-            .setStartHeaderAction(Action.BACK)
+    private fun refreshAction(): Action = Action.Builder()
+        .setIcon(icon(R.drawable.ic_refresh))
+        .setOnClickListener(viewModel::onRefresh)
+        .build()
 
-        if (withRefresh) {
-            builder.addEndHeaderAction(
-                Action.Builder()
-                    .setIcon(icon(R.drawable.ic_refresh))
-                    .setOnClickListener(viewModel::onRefresh)
-                    .build(),
-            )
-        }
-        return builder.build()
-    }
-
-    private fun titleText(subtitle: String?): String {
-        val base = carContext.getString(R.string.car_home_charge_now)
-        return subtitle?.let { "$base · $it" } ?: base
-    }
+    private fun title(): String = carContext.getString(R.string.car_home_charge_now)
 }

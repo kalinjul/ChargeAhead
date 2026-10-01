@@ -8,11 +8,15 @@ import androidx.car.app.CarToast
 import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.Action
+import androidx.car.app.model.ActionStrip
 import androidx.car.app.model.CarColor
+import androidx.car.app.model.CarLocation
 import androidx.car.app.model.Header
 import androidx.car.app.model.ItemList
-import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.MessageTemplate
+import androidx.car.app.model.Place
+import androidx.car.app.model.PlaceListMapTemplate
+import androidx.car.app.model.PlaceMarker
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.Lifecycle
@@ -20,22 +24,25 @@ import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.PhoneUiVisibility
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
-import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.Destination
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
+import org.julakali.chargeahead.shared.domain.distanceKmTo
 import org.julakali.chargeahead.shared.ui.car.CarRouteUiState
-import org.koin.core.parameter.parametersOf
 import org.julakali.chargeahead.shared.ui.car.CarRouteViewModel
+import org.koin.core.parameter.parametersOf
 import org.koin.core.scope.Scope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The committed route: its planned charging stops, numbered like an
- * itinerary. Tapping a stop hands it straight to the navigation app.
+ * The committed route on the host's map: its charging stops as numbered
+ * markers, the car's position, the destination as the anchor. A stop opens
+ * its detail; the header re-plans or jumps to charging now.
  */
 class RouteScreen(
     carContext: CarContext,
@@ -44,6 +51,7 @@ class RouteScreen(
     private val title: String = destination.name,
     /** Show the active route as the phone keeps it, instead of planning here; leaves when it ends. */
     activeRoute: Boolean = false,
+    private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
     private val viewModel = screenViewModel { session.get<CarRouteViewModel> { parametersOf(destination, activeRoute) } }
@@ -55,6 +63,8 @@ class RouteScreen(
                 if (state == CarRouteUiState.Ended) screenManager.pop() else invalidate()
             }
         }
+        // Distances are measured from the fix; a new one moves every row.
+        lifecycleScope.launch { viewModel.feature.currentFix.collect { invalidate() } }
     }
 
     override fun onGetTemplate(): Template = when (val state = viewModel.uiState.value) {
@@ -84,9 +94,10 @@ class RouteScreen(
         } else {
             R.string.car_route_planning
         }
-        return ListTemplate.Builder()
+        return PlaceListMapTemplate.Builder()
             .setLoading(true)
-            .setHeader(header(withRefresh = false, subtitle = carContext.getString(waitingText)))
+            .setTitle(titleText(carContext.getString(waitingText)))
+            .setHeaderAction(Action.BACK)
             .build()
     }
 
@@ -94,32 +105,72 @@ class RouteScreen(
         // The row count is dictated by the host.
         val contentLimit = carContext
             .getCarService(ConstraintManager::class.java)
-            .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_LIST)
+            .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
+        val here = viewModel.feature.currentFix.value?.position
 
         val itemList = ItemList.Builder()
         itemList.addItem(sendAllRow(plan))
         plan.stops.take(contentLimit - 1).forEachIndexed { index, stop ->
-            itemList.addItem(stopRow(index + 1, stop))
+            itemList.addItem(stopRow(index + 1, stop, here))
         }
 
-        return ListTemplate.Builder()
-            .setSingleList(itemList.build())
-            .setHeader(header(withRefresh = true))
-            .addAction(chargeNowFab())
+        return PlaceListMapTemplate.Builder()
+            .setItemList(itemList.build())
+            .setTitle(title)
+            .setHeaderAction(Action.BACK)
+            .setCurrentLocationEnabled(true)
+            .setAnchor(destinationAnchor())
+            .setActionStrip(
+                ActionStrip.Builder()
+                    .addAction(chargeNowAction())
+                    .addAction(replanAction())
+                    .build(),
+            )
             .build()
     }
 
-    private fun stopRow(ordinal: Int, stop: PlannedStop): Row = Row.Builder()
-        .setTitle(ChargeStopFormatter.plannedStopTitle(ordinal, stop))
-        .apply { ChargeStopFormatter.plannedStopAddressLine(stop)?.let(::addText) }
-        .addText(ChargeStopFormatter.plannedStopDetailLine(stop))
-        .setOnClickListener { navigateTo(carContext, stop.site.name, stop.site.position) }
-        .build()
+    /** The destination, flagged on the map so the stops read as a line towards it. */
+    private fun destinationAnchor(): Place =
+        Place.Builder(CarLocation.create(destination.position.lat, destination.position.lon))
+            .setMarker(PlaceMarker.Builder().setIcon(icon(R.drawable.ic_destination), PlaceMarker.TYPE_ICON).build())
+            .build()
+
+    /**
+     * "1. EnBW", then how far from here and what charge it is reached with,
+     * then the charging itself. The arrival level turns yellow under 20 and
+     * red under 10 percent.
+     */
+    private fun stopRow(ordinal: Int, stop: PlannedStop, here: LatLon?): Row {
+        val arrival = carContext.getString(R.string.car_route_arrival, stop.arrivalSocPercent.toInt())
+        val arrivalColor = when {
+            stop.arrivalSocPercent < 10 -> CarColor.RED
+            stop.arrivalSocPercent < 20 -> CarColor.YELLOW
+            else -> null
+        }
+        val builder = Row.Builder()
+            .setTitle(ChargeStopFormatter.plannedStopTitle(ordinal, stop))
+            .setMetadata(placeMetadata(stop.site.position, ordinal.toString()))
+            .setBrowsable(true)
+            .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, stop.site, stop)) }
+        if (here != null) {
+            builder.addText(distanceLine(here.distanceKmTo(stop.site.position), arrival, arrivalColor))
+        } else {
+            builder.addText(arrival)
+        }
+        builder.addText(
+            carContext.getString(
+                R.string.car_route_charge,
+                ChargeStopFormatter.powerKwLabel(stop.maxPowerKw),
+                ChargeStopFormatter.minutesLabel(stop.chargeMinutes),
+            ),
+        )
+        return builder.build()
+    }
 
     private fun sendAllRow(plan: TripPlan): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_route_send_all))
         // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
-        .setImage(icon(R.drawable.ic_destination), Row.IMAGE_TYPE_ICON)
+        .setImage(icon(R.drawable.ic_send, CarColor.PRIMARY), Row.IMAGE_TYPE_ICON)
         .setOnClickListener { sendRouteToMaps(plan) }
         .build()
 
@@ -188,20 +239,33 @@ class RouteScreen(
         false
     }
 
-    /** Floating "charge now" button; hosts render FABs icon-only. */
-    private fun chargeNowFab(): Action = Action.Builder()
+    /** Strip actions render icon-only on most hosts. */
+    private fun chargeNowAction(): Action = Action.Builder()
         .setIcon(icon(R.drawable.ic_bolt))
-        .setBackgroundColor(CarColor.PRIMARY)
         .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
+        .build()
+
+    /**
+     * "Neu planen": with the car's own reading right away, otherwise the
+     * percent picker first, and its pick re-plans.
+     */
+    private fun replanAction(): Action = Action.Builder()
+        .setIcon(icon(R.drawable.ic_refresh))
+        .setOnClickListener {
+            if (!viewModel.onReplanRequested()) {
+                screenManager.push(SoCScreen(carContext, session, permissions, onPicked = viewModel::onReplanWith))
+            }
+        }
         .build()
 
     /** Destination in reach without charging: no list to show, just the handoff. */
     private fun directTemplate(): Template =
         MessageTemplate.Builder(carContext.getString(R.string.car_route_direct))
-            .setHeader(header(withRefresh = true))
+            .setHeader(header())
             .addAction(
                 Action.Builder()
                     .setTitle(carContext.getString(R.string.car_route_navigate))
+                    .setBackgroundColor(CarColor.PRIMARY)
                     .setOnClickListener { navigateTo(carContext, destination.name, destination.position) }
                     .build(),
             )
@@ -210,32 +274,22 @@ class RouteScreen(
 
     private fun messageTemplate(message: String): Template =
         MessageTemplate.Builder(message)
-            .setHeader(header(withRefresh = true))
+            .setHeader(header())
             .addAction(chargeNowTitledAction())
             .build()
 
-    /** Body actions may carry titles — unlike the icon-only FAB. */
+    /** Body actions may carry titles — unlike the strip's icons. */
     private fun chargeNowTitledAction(): Action = Action.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
         .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
         .build()
 
-    private fun header(withRefresh: Boolean, subtitle: String? = null): Header {
-        val builder = Header.Builder()
-            .setTitle(titleText(subtitle))
-            .setStartHeaderAction(Action.BACK)
-
-        if (withRefresh) {
-            // Re-plans with the freshest position and charge state.
-            builder.addEndHeaderAction(
-                Action.Builder()
-                    .setIcon(icon(R.drawable.ic_refresh))
-                    .setOnClickListener(viewModel::onRefresh)
-                    .build(),
-            )
-        }
-        return builder.build()
-    }
+    private fun header(): Header = Header.Builder()
+        .setTitle(title)
+        .setStartHeaderAction(Action.BACK)
+        // Re-plans with the freshest position and charge state.
+        .addEndHeaderAction(replanAction())
+        .build()
 
     private fun titleText(subtitle: String?): String = subtitle?.let { "$title · $it" } ?: title
 }
