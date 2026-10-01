@@ -13,6 +13,8 @@ import org.julakali.chargeahead.shared.data.CombinedSoCSource
 import org.julakali.chargeahead.shared.data.ManualSoCSource
 import org.julakali.chargeahead.shared.data.MergingSiteRepository
 import org.julakali.chargeahead.shared.data.RoomNetworkRepository
+import org.julakali.chargeahead.shared.data.RoomVehicleCatalogRepository
+import org.julakali.chargeahead.shared.data.BackendVehicleCatalogSource
 import org.julakali.chargeahead.shared.data.TiledSiteRepository
 import org.julakali.chargeahead.shared.data.createHttpClient
 import org.julakali.chargeahead.shared.data.pruneCache
@@ -37,6 +39,7 @@ import org.julakali.chargeahead.shared.domain.usecases.LiveConnectorsObserver
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshNetworksInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshVehicleCatalogInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
@@ -53,6 +56,7 @@ import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.VehicleRepository
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
@@ -140,15 +144,17 @@ fun chargeStopsModule(): Module = module {
     factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     factory { SelectableNetworksObserver(get(), get(), get()) }
-    factory { GarageObserver(get<VehicleRepository>()) }
-    factory { VehiclePresetsObserver(get<VehicleRepository>(), get()) }
+    factory { GarageObserver(get<VehicleRepository>(), get()) }
+    factory { VehiclePresetsObserver(get(), get<VehicleRepository>(), get()) }
     single<NetworkRepository> { RoomNetworkRepository(BackendNetworkListSource(get()), get()) }
     factory { RefreshNetworksInteractor(get()) }
+    single<VehicleCatalogRepository> { RoomVehicleCatalogRepository(BackendVehicleCatalogSource(get()), get()) }
+    factory { RefreshVehicleCatalogInteractor(get()) }
 
     single<SiteCache> {
         SiteCache { keys -> pruneCache(get(), keys, get<TimeProvider>().nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS) }
     }
-    factory { StartAppInteractor(get(), get(), get(), get()) }
+    factory { StartAppInteractor(get(), get(), get(), get(), get()) }
 
     // A feature per session, on the graph's shared singletons; the caller owns and closes it.
     factory<ChargeStopsFeature>(SessionFeature) { (location: LocationSource, hardware: SoCSource?) ->

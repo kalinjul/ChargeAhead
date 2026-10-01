@@ -168,6 +168,19 @@ class TripPlannerTest {
     }
 
     @Test
+    fun `an AC inlet on the car does not make AC sites stops`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val acOnly = sitesAlong(route).map { site ->
+            site.copy(connectors = site.connectors.map { it.copy(type = ConnectorType.TYPE2) })
+        }
+        val withTypeTwo = id4.copy(acceptedConnectors = setOf(ConnectorType.CCS2, ConnectorType.TYPE2))
+
+        val result = planner(route, acOnly).plan(start, destination, withTypeTwo, startSocPercent = 90.0)
+
+        assertIs<TripPlanResult.NoChargerInReach>(result)
+    }
+
+    @Test
     fun `a nearly empty battery still gets a plan when a charger is close`() = runBlocking<Unit> {
         // 15 % is ~20 km of reach; a fixed 40 km minimum leg used to fail here.
         val route = straightRoute()

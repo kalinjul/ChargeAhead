@@ -31,6 +31,18 @@ class GarageSettingsTest {
     }
 
     @Test
+    fun `the model id survives a restart, in the garage and as the selected car`() = runBlocking<Unit> {
+        val storage = InMemoryPreferencesDataStore()
+        DataStoreVehicleRepository(storage).setVehicle(profile("ID.4").copy(modelId = "a-model-id"))
+        DataStoreVehicleRepository(storage).setVehicle(profile("Eigenbau"))
+
+        val reopened = DataStoreVehicleRepository(storage)
+        assertEquals(listOf("a-model-id", null), reopened.vehicles.first().map { it.modelId })
+        reopened.setVehicle(reopened.vehicles.first().first())
+        assertEquals("a-model-id", DataStoreVehicleRepository(storage).vehicle.first()?.modelId)
+    }
+
+    @Test
     fun `re-selecting a vehicle keeps its place in the garage`() = runBlocking<Unit> {
         val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         store.setVehicle(profile("ID.4"))

@@ -144,10 +144,11 @@ Still open:
 4. **Vehicle list.** Deliberately not built in M2: the driver enters usable
    capacity and consumption themselves. That's honest — the numbers are in
    the spec sheet — but inconvenient, because few people know their *usable*
-   capacity. A bundled list of common models as a preset, still
-   overridable, is the next convenience step. The price is maintenance:
-   every new model and every facelift is missing or wrong, and a wrong
-   preset value is worse than none, because nobody checks it.
+   capacity. The garage now offers presets, still overridable, from the
+   backend's vehicle catalog (`GET /v1/vehicles`, cached in Room). It is
+   maintained in the backend admin area, so a correction or a new model
+   needs no app release. The price is still maintenance: a wrong preset
+   value is worse than none, because nobody checks it.
 5. **Server: yes, planned.** Decided when route planning was moved up. A
    dedicated routing server (OSRM or Valhalla) will later also handle the
    API key proxy and, if needed, BNetzA preprocessing.

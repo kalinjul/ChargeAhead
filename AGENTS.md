@@ -273,6 +273,7 @@ data class VehicleProfile(
     val consumptionKwhPer100Km: Double,
     val acceptedConnectors: Set<ConnectorType>,   // empty = no filtering
     val dcPeakPowerKw: Double? = null,            // null = unknown; charge-time estimates use site power alone
+    val modelId: String? = null,                  // the catalog model it was added from; null when typed in by hand
 )
 
 enum class SoCSourceKind { MANUAL, CAR_HARDWARE, OEM_CLOUD }
@@ -342,6 +343,13 @@ interface PreferencesRepository {
     suspend fun setNetworks(preferences: NetworkPreferences)
     suspend fun setChargeFilters(filters: ChargeFilters)
 }
+// The backend's vehicle catalog (/v1/vehicles), kept in Room so the garage
+// works offline; empty until the first sync, which leaves manual entry only.
+// The planner stops only at DC connectors, even when a preset lists Type 2.
+interface VehicleCatalogRepository {
+    val presets: Flow<List<VehiclePreset>>
+    suspend fun refresh()
+}
 interface DestinationHistory {
     val recentDestinations: Flow<List<Destination>>
     suspend fun addRecentDestination(destination: Destination)
@@ -378,6 +386,8 @@ class ReplanCommittedTripInteractor : Interactor<Params, TripPlanResult?>     //
 class DismissPlannedTripInteractor : Interactor<Unit, Unit>
 class EndTripInteractor : Interactor<Unit, Unit>
 class RefreshNetworksInteractor : Interactor<Unit, Unit>
+class RefreshVehicleCatalogInteractor : Interactor<Unit, Unit>         // StartAppInteractor runs it with the networks
+class VehiclePresetsObserver : SubjectInteractor<Params, List<VehiclePreset>> // catalog minus the garage, filtered by name
 ```
 
 **The route is computed once per destination, not once per location

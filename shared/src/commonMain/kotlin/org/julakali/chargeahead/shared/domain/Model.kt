@@ -9,6 +9,9 @@ data class LatLon(val lat: Double, val lon: Double)
 
 enum class ConnectorType { CCS2, TYPE2, CHADEMO, TESLA_NACS, SCHUKO, UNKNOWN }
 
+val ConnectorType.isDc: Boolean
+    get() = this == ConnectorType.CCS2 || this == ConnectorType.CHADEMO || this == ConnectorType.TESLA_NACS
+
 /** [UNKNOWN] applies as long as neither a vehicle profile nor a charge level is available. */
 enum class Reachability { REACHABLE, MARGINAL, UNREACHABLE, UNKNOWN }
 

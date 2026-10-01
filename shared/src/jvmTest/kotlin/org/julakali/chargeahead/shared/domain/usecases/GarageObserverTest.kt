@@ -3,12 +3,12 @@ package org.julakali.chargeahead.shared.domain.usecases
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.ConnectorType
-import org.julakali.chargeahead.shared.domain.VehicleCatalog
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.testDispatchers
+import org.julakali.chargeahead.shared.testPresets
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -19,7 +19,7 @@ class GarageObserverTest {
 
     private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
 
-    private fun observer() = GarageObserver(vehicles).also { it(GarageObserver.Params()) }
+    private fun observer() = GarageObserver(vehicles, FakeVehicleCatalog()).also { it(GarageObserver.Params()) }
 
     @Test
     fun `no car, no numbers`() = runBlocking {
@@ -32,7 +32,7 @@ class GarageObserverTest {
 
     @Test
     fun `a preset car reports its full range and the catalog consumption`() = runBlocking {
-        val preset = VehicleCatalog.all.first()
+        val preset = testPresets.first()
         vehicles.setVehicle(preset.toProfile())
 
         val garage = withTimeout(5_000) { observer().flow.first { it.selected != null } }
@@ -40,6 +40,26 @@ class GarageObserverTest {
         assertEquals(preset.consumptionKwhPer100Km, garage.selectedPresetConsumption)
         val expected = preset.toProfile().usableBatteryKwh / preset.consumptionKwhPer100Km * 100.0
         assertEquals(expected, garage.selectedFullRangeKm!!, 0.5)
+    }
+
+    @Test
+    fun `a renamed preset car still finds its model by id`() = runBlocking {
+        val preset = testPresets.first()
+        vehicles.setVehicle(preset.toProfile().copy(displayName = "Unser Kleiner"))
+
+        val garage = withTimeout(5_000) { observer().flow.first { it.selected != null } }
+
+        assertEquals(preset.consumptionKwhPer100Km, garage.selectedPresetConsumption)
+    }
+
+    @Test
+    fun `a car without a model id is matched by name`() = runBlocking {
+        val preset = testPresets.first()
+        vehicles.setVehicle(preset.toProfile().copy(modelId = null))
+
+        val garage = withTimeout(5_000) { observer().flow.first { it.selected != null } }
+
+        assertEquals(preset.consumptionKwhPer100Km, garage.selectedPresetConsumption)
     }
 
     @Test

@@ -328,7 +328,7 @@ class PhoneAppFlowTest {
     @Test
     fun `auto in the drawer leads to the garage, where a preset becomes the car`() {
         launch()
-        val preset = "Tesla Model S 100D (2017)"
+        val preset = CATALOG_PRESET_NAME
         openDrawer()
 
         compose.onNodeWithText(compose.string(R.string.drawer_car)).performClick()

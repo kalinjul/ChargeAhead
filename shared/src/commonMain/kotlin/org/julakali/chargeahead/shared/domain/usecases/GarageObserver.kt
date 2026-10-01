@@ -5,24 +5,31 @@ import kotlinx.coroutines.flow.combine
 import org.julakali.chargeahead.shared.domain.Garage
 import org.julakali.chargeahead.shared.domain.RangeCalculator
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
-import org.julakali.chargeahead.shared.domain.VehicleCatalog
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
+import org.julakali.chargeahead.shared.domain.VehiclePreset
+import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 
 /** The garage: the cars, the selected one, and what the catalog and the range model say about it. */
 class GarageObserver(
     private val vehicles: VehicleRepository,
+    private val catalog: VehicleCatalogRepository,
 ) : SubjectInteractor<GarageObserver.Params, Garage>() {
 
     /** Nothing to ask for; the garage is what it is. */
     data class Params(val unused: Unit = Unit)
 
     override fun createObservable(params: Params): Flow<Garage> =
-        combine(vehicles.vehicles, vehicles.vehicle) { owned, selected ->
+        combine(vehicles.vehicles, vehicles.vehicle, catalog.presets) { owned, selected, presets ->
             Garage(
                 vehicles = owned,
                 selected = selected,
                 selectedFullRangeKm = selected?.let { RangeCalculator.rangeKm(it, socPercent = 100.0, reserveSocPercent = 0.0) },
-                selectedPresetConsumption = selected?.let { VehicleCatalog.presetFor(it.displayName)?.consumptionKwhPer100Km },
+                selectedPresetConsumption = selected?.let { presets.presetOf(it)?.consumptionKwhPer100Km },
             )
         }
+
+    // A car from before the catalog carried ids is matched by name.
+    private fun List<VehiclePreset>.presetOf(vehicle: VehicleProfile): VehiclePreset? =
+        if (vehicle.modelId != null) firstOrNull { it.id == vehicle.modelId } else firstOrNull { it.name == vehicle.displayName }
 }

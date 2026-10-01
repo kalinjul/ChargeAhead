@@ -8,11 +8,36 @@ data class VehicleProfile(
     val acceptedConnectors: Set<ConnectorType>,
     /** DC charging peak; `null` means unknown and the site's connector power is used alone. */
     val dcPeakPowerKw: Double? = null,
+    /** The catalog model the car was added from; `null` for one typed in by hand. */
+    val modelId: String? = null,
 ) {
     init {
         require(usableBatteryKwh > 0.0) { "usableBatteryKwh must be positive" }
         require(consumptionKwhPer100Km > 0.0) { "consumptionKwhPer100Km must be positive" }
     }
+}
+
+/**
+ * A model from the backend's vehicle catalog. Only a starting point: the
+ * values land in an editable [VehicleProfile].
+ */
+data class VehiclePreset(
+    val id: String,
+    val name: String,
+    val usableBatteryKwh: Double,
+    val consumptionKwhPer100Km: Double,
+    /** 0 for a vehicle without a DC inlet. */
+    val dcPeakPowerKw: Double,
+    val connectors: Set<ConnectorType>,
+) {
+    fun toProfile(): VehicleProfile = VehicleProfile(
+        displayName = name,
+        usableBatteryKwh = usableBatteryKwh,
+        consumptionKwhPer100Km = consumptionKwhPer100Km,
+        acceptedConnectors = connectors,
+        dcPeakPowerKw = dcPeakPowerKw.takeIf { it > 0.0 },
+        modelId = id,
+    )
 }
 
 /** Where the charge level comes from. Determines how much to trust it. */

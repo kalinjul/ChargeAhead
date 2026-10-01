@@ -27,6 +27,20 @@ interface NetworkRepository {
     suspend fun refresh()
 }
 
+/** The vehicle models the backend offers as garage presets. */
+fun interface VehicleCatalogSource {
+    suspend fun presets(): List<VehiclePreset>
+}
+
+/** The backend's vehicle catalog, kept so the garage works offline. */
+interface VehicleCatalogRepository {
+    /** In the backend's order; empty until the first sync. */
+    val presets: Flow<List<VehiclePreset>>
+
+    /** Keeps what is stored when the backend fails or answers with an empty list. */
+    suspend fun refresh()
+}
+
 /** A charging-site data source. */
 interface ChargeSiteSource {
     val id: String
