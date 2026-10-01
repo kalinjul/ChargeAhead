@@ -17,8 +17,8 @@ stops as rows with a numbered purple marker each; the driver's position on
 the map; the destination as the anchor marker. Row text: line 1 the
 straight-line distance from the current fix as a `DistanceSpan`, then
 "· Ankunft 15 %" where the percent is coloured red under 10, yellow under
-20; line 2 power and charge time. The first row stays "Ganze Route an Maps
-senden" without a marker. Action strip: "Jetzt laden" and "Neu planen".
+20; line 2 power and charge time. Action strip: "Ganze Route an Maps senden"
+and "Neu planen"; "Jetzt laden" is one step back on the grid.
 "Neu planen" re-plans with the car's own reading when there is one;
 otherwise it opens the percent picker first, and the pick re-plans.
 Loading, failure and direct-route states keep their message templates.

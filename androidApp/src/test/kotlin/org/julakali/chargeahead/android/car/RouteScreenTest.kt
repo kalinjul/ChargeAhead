@@ -22,7 +22,6 @@ import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -93,7 +92,7 @@ class RouteScreenTest {
     }
 
     @Test
-    fun `stops are numbered markers on the map after the send-all row, cut to the host's limit`() {
+    fun `every stop is a numbered marker in its operator colour, cut only by the host's limit`() {
         val graph = graph()
         graph.withVehicle()
         val limit = graph.carContext.getCarService(ConstraintManager::class.java).getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
@@ -103,13 +102,14 @@ class RouteScreenTest {
 
         val rows = template.itemList!!.items.map { it as Row }
         assertEquals(limit, rows.size)
-        assertEquals(string(R.string.car_route_send_all), rows.first().title.toString())
-        assertNull(rows.first().metadata?.place)
         assertEquals(
-            plan.stops.take(limit - 1).mapIndexed { index, stop -> ChargeStopFormatter.plannedStopTitle(index + 1, stop) },
-            rows.drop(1).map { it.title.toString() },
+            plan.stops.take(limit).mapIndexed { index, stop -> ChargeStopFormatter.plannedStopTitle(index + 1, stop) },
+            rows.map { it.title.toString() },
         )
-        assertEquals((1 until limit).map(Int::toString), rows.drop(1).map { it.metadata!!.place!!.marker!!.label.toString() })
+        val markers = rows.map { it.metadata!!.place!!.marker!! }
+        assertEquals((1..limit).map(Int::toString), markers.map { it.label.toString() })
+        assertEquals(operatorCarColor(plan.stops.first().site), markers.first().color)
+        assertEquals(2, template.actionStrip!!.actions.size)
         assertTrue(template.isCurrentLocationEnabled)
         assertEquals(munich.position.lat, template.anchor!!.location!!.latitude, 1e-9)
         assertTrue(template.isLoading.not())
@@ -122,7 +122,7 @@ class RouteScreenTest {
 
         val template = graph.templateFor(TripPlanResult.Planned(plan(stops = 1, arrivalSocPercent = 8.0))) as PlaceListMapTemplate
 
-        val stop = template.itemList!!.items[1] as Row
+        val stop = template.itemList!!.items.first() as Row
         val line = stop.texts.first()
         // Stop 1 sits 0.5° south and 0.1° east of the fix: a little under 56 km.
         assertEquals(56.0, distanceOf(line)!!, 1.0)
@@ -138,7 +138,7 @@ class RouteScreenTest {
         graph.withVehicle()
         val template = graph.templateFor(TripPlanResult.Planned(plan(stops = 1))) as PlaceListMapTemplate
 
-        click(template.itemList!!.items[1] as Row)
+        click(template.itemList!!.items.first() as Row)
 
         assertTrue(graph.screens.screensPushed.last() is SiteDetailScreen)
     }

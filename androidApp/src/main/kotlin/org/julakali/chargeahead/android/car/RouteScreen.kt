@@ -40,9 +40,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The committed route on the host's map: its charging stops as numbered
- * markers, the car's position, the destination as the anchor. A stop opens
- * its detail; the header re-plans or jumps to charging now.
+ * The committed route on the host's map: every charging stop as a numbered
+ * marker in its operator's colour, the car's position, the destination as
+ * the anchor. A stop opens its detail; the strip sends the route to Maps or
+ * re-plans.
  */
 class RouteScreen(
     carContext: CarContext,
@@ -108,9 +109,9 @@ class RouteScreen(
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
         val here = viewModel.feature.currentFix.value?.position
 
+        // Every row is a marker: the host's limit is the only cut.
         val itemList = ItemList.Builder()
-        itemList.addItem(sendAllRow(plan))
-        plan.stops.take(contentLimit - 1).forEachIndexed { index, stop ->
+        plan.stops.take(contentLimit).forEachIndexed { index, stop ->
             itemList.addItem(stopRow(index + 1, stop, here))
         }
 
@@ -122,7 +123,7 @@ class RouteScreen(
             .setAnchor(destinationAnchor())
             .setActionStrip(
                 ActionStrip.Builder()
-                    .addAction(chargeNowAction())
+                    .addAction(sendAllAction(plan))
                     .addAction(replanAction())
                     .build(),
             )
@@ -149,7 +150,7 @@ class RouteScreen(
         }
         val builder = Row.Builder()
             .setTitle(ChargeStopFormatter.plannedStopTitle(ordinal, stop))
-            .setMetadata(placeMetadata(stop.site.position, ordinal.toString()))
+            .setMetadata(placeMetadata(stop.site.position, ordinal.toString(), operatorCarColor(stop.site)))
             .setBrowsable(true)
             .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, stop.site, stop)) }
         if (here != null) {
@@ -167,10 +168,9 @@ class RouteScreen(
         return builder.build()
     }
 
-    private fun sendAllRow(plan: TripPlan): Row = Row.Builder()
-        .setTitle(carContext.getString(R.string.car_route_send_all))
-        // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
-        .setImage(icon(R.drawable.ic_send, CarColor.PRIMARY), Row.IMAGE_TYPE_ICON)
+    /** Strip actions render icon-only on most hosts. */
+    private fun sendAllAction(plan: TripPlan): Action = Action.Builder()
+        .setIcon(icon(R.drawable.ic_send))
         .setOnClickListener { sendRouteToMaps(plan) }
         .build()
 
@@ -238,12 +238,6 @@ class RouteScreen(
         // A blocked launch must not crash the car UI.
         false
     }
-
-    /** Strip actions render icon-only on most hosts. */
-    private fun chargeNowAction(): Action = Action.Builder()
-        .setIcon(icon(R.drawable.ic_bolt))
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
-        .build()
 
     /**
      * "Neu planen": with the car's own reading right away, otherwise the
