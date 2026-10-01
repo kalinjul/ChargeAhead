@@ -15,7 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.Destination
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.julakali.chargeahead.shared.ui.car.CarHomeViewModel
+import org.koin.core.scope.Scope
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -23,11 +24,11 @@ import kotlinx.coroutines.launch
 class CarHomeScreen(
     carContext: CarContext,
     private val feature: ChargeStopsFeature,
-    private val viewModels: CarViewModels,
+    private val session: Scope,
     private val permissions: CarPermissions,
 ) : Screen(carContext) {
 
-    private val viewModel = screenViewModel { viewModels.home() }
+    private val viewModel = screenViewModel { session.get<CarHomeViewModel>() }
     private val fineLocation = permissions.granted(Manifest.permission.ACCESS_FINE_LOCATION)
     private val coarseLocation = permissions.granted(Manifest.permission.ACCESS_COARSE_LOCATION)
 
@@ -71,7 +72,7 @@ class CarHomeScreen(
         .addEndHeaderAction(
             Action.Builder()
                 .setIcon(icon(R.drawable.ic_battery))
-                .setOnClickListener { screenManager.push(SoCScreen(carContext, viewModels, permissions)) }
+                .setOnClickListener { screenManager.push(SoCScreen(carContext, session, permissions)) }
                 .build(),
         )
         .build()
@@ -83,14 +84,14 @@ class CarHomeScreen(
         .setTitle(carContext.getString(R.string.car_home_enter_destination))
         .setImage(icon(R.drawable.ic_search), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, viewModels)) }
+        .setOnClickListener { screenManager.push(DestinationSearchScreen(carContext, session)) }
         .build()
 
     private fun chargeNowRow(): Row = Row.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
         .setImage(icon(R.drawable.ic_bolt), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, viewModels)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
         .build()
 
     private fun activeRouteRow(destination: Destination): Row = Row.Builder()
@@ -99,7 +100,7 @@ class CarHomeScreen(
         .setImage(icon(R.drawable.ic_route), Row.IMAGE_TYPE_ICON)
         .setBrowsable(true)
         .setOnClickListener {
-            screenManager.push(RouteScreen(carContext, viewModels, destination, activeRoute = true))
+            screenManager.push(RouteScreen(carContext, session, destination, activeRoute = true))
         }
         .build()
 

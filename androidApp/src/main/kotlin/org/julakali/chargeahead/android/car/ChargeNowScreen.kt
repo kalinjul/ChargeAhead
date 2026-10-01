@@ -18,7 +18,8 @@ import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.RelaxedFilter
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.julakali.chargeahead.shared.ui.car.CarChargeNowViewModel
+import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
 
 /**
@@ -27,10 +28,10 @@ import kotlinx.coroutines.launch
  */
 class ChargeNowScreen(
     carContext: CarContext,
-    viewModels: CarViewModels,
+    session: Scope,
 ) : Screen(carContext) {
 
-    private val viewModel = screenViewModel { viewModels.chargeNow() }
+    private val viewModel = screenViewModel { session.get<CarChargeNowViewModel>() }
 
     init {
         // onGetTemplate() is synchronous; changes are picked up via invalidate().

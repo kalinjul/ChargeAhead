@@ -26,7 +26,9 @@ import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.ui.car.CarRouteUiState
-import org.julakali.chargeahead.shared.ui.car.CarViewModels
+import org.koin.core.parameter.parametersOf
+import org.julakali.chargeahead.shared.ui.car.CarRouteViewModel
+import org.koin.core.scope.Scope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -37,14 +39,14 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 class RouteScreen(
     carContext: CarContext,
-    private val viewModels: CarViewModels,
+    private val session: Scope,
     private val destination: Destination,
     private val title: String = destination.name,
     /** Show the active route as the phone keeps it, instead of planning here; leaves when it ends. */
     activeRoute: Boolean = false,
 ) : Screen(carContext) {
 
-    private val viewModel = screenViewModel { viewModels.route(destination, activeRoute) }
+    private val viewModel = screenViewModel { session.get<CarRouteViewModel> { parametersOf(destination, activeRoute) } }
 
     init {
         // onGetTemplate() is synchronous; changes are picked up via invalidate().
@@ -190,7 +192,7 @@ class RouteScreen(
     private fun chargeNowFab(): Action = Action.Builder()
         .setIcon(icon(R.drawable.ic_bolt))
         .setBackgroundColor(CarColor.PRIMARY)
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, viewModels)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
         .build()
 
     /** Destination in reach without charging: no list to show, just the handoff. */
@@ -215,7 +217,7 @@ class RouteScreen(
     /** Body actions may carry titles — unlike the icon-only FAB. */
     private fun chargeNowTitledAction(): Action = Action.Builder()
         .setTitle(carContext.getString(R.string.car_home_charge_now))
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, viewModels)) }
+        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
         .build()
 
     private fun header(withRefresh: Boolean, subtitle: String? = null): Header {

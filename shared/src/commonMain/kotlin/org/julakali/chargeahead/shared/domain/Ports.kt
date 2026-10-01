@@ -78,6 +78,12 @@ interface SiteRepository {
     suspend fun invalidate()
 }
 
+/** Housekeeping on the stored sites, run once at app start. */
+fun interface SiteCache {
+    /** Drops stale coverage and sites of networks nobody asked for, keeping [preferredNetworkKeys]. */
+    suspend fun prune(preferredNetworkKeys: Set<String>)
+}
+
 /**
  * The charge level, as good as this platform can get it.
  *

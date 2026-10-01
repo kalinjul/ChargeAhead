@@ -63,12 +63,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.first
-import org.koin.core.Koin
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.onClose
 import org.koin.core.module.dsl.withOptions
 import org.koin.dsl.module
+import org.julakali.chargeahead.shared.domain.usecases.StartAppInteractor
+import org.julakali.chargeahead.shared.domain.SiteCache
+import org.koin.core.qualifier.named
+import org.koin.core.parameter.parametersOf
 
 /**
  * The data graph behind both features, declared once for both platforms.
@@ -137,40 +139,22 @@ fun chargeStopsModule(): Module = module {
     single<NetworkRepository> { RoomNetworkRepository(BackendNetworkListSource(get()), get()) }
     factory { RefreshNetworksInteractor(get()) }
 
+    single<SiteCache> {
+        SiteCache { keys -> pruneCache(get(), keys, get<TimeProvider>().nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS) }
+    }
+    factory { StartAppInteractor(get(), get(), get(), get()) }
+
+    // A feature per session, on the graph's shared singletons; the caller owns and closes it.
+    factory<ChargeStopsFeature>(SessionFeature) { (location: LocationSource, hardware: SoCSource?) ->
+        ChargeStopsFeature(
+            locationSource = location,
+            socSource = CombinedSoCSource(manual = ManualSoCSource(get(), get()), hardware = hardware),
+            parentScope = get(AppScope),
+        )
+    }
     // The phone's feature. Never closed.
-    single<ChargeStopsFeature> { getKoin().newChargeStopsFeature(locationSource = get()) }
+    single<ChargeStopsFeature> { get(SessionFeature) { parametersOf(get<LocationSource>(), null) } }
 }
 
-/**
- * A feature on the graph's shared singletons, owned by the caller.
- *
- * @param hardwareSoCSource optional charge level from the vehicle; wins over
- *   the driver's manual entry.
- */
-fun Koin.newChargeStopsFeature(
-    locationSource: LocationSource,
-    hardwareSoCSource: SoCSource? = null,
-): ChargeStopsFeature {
-    val vehicles = get<VehicleRepository>()
-    val preferences = get<PreferencesRepository>()
-    val time = get<TimeProvider>()
-    val database = get<ChargeSiteDatabase>()
-    val refreshNetworks = get<RefreshNetworksInteractor>()
-    val trips = get<TripRepository>()
-    return ChargeStopsFeature(
-        locationSource = locationSource,
-        parentScope = get(AppScope),
-        socSource = CombinedSoCSource(
-            manual = ManualSoCSource(vehicles, time),
-            hardware = hardwareSoCSource,
-        ),
-        onStart = {
-            runCatching {
-                val keys = preferences.networks.first().preferredOperators
-                pruneCache(database, keys, time.nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS)
-            }
-            runCatching { trips.restore() }
-            refreshNetworks(Unit)
-        },
-    )
-}
+/** A [ChargeStopsFeature] built for one session: `parametersOf(location, hardwareSoCSource)`. */
+val SessionFeature = named("session-feature")
