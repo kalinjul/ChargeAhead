@@ -141,18 +141,18 @@ class RouteScreen(
             .build()
 
     /**
-     * One line, title only: "1. EnBW · 73 km · laden bis 68 %". The host
+     * One line, title only: "73 km · laden bis 68 %". The host numbers the
+     * row after its marker and renders the title in its own size, and it
      * frames its map around the rows on screen, so the shorter the rows, the
-     * more of the route is on the map. The arrival level and the charge time
+     * more of the route is on the map. Name, arrival level and charge time
      * live in the detail.
      */
     private fun stopRow(ordinal: Int, stop: PlannedStop, here: LatLon?): Row {
-        val name = ChargeStopFormatter.plannedStopTitle(ordinal, stop)
         val charge = carContext.getString(R.string.car_route_charge, stop.departureSocPercent.toInt())
         val title = if (here != null) {
-            distanceLine(here.distanceKmTo(stop.site.position), suffix = charge, leading = name)
+            distanceLine(here.distanceKmTo(stop.site.position), suffix = charge)
         } else {
-            CarText.create("$name · $charge")
+            CarText.create("${ChargeStopFormatter.plannedStopTitle(ordinal, stop)} · $charge")
         }
         return Row.Builder()
             .setTitle(title)

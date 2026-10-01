@@ -108,9 +108,7 @@ class RouteScreenTest {
         assertEquals(string(R.string.car_route_send_all_hint), rows.last().texts.single().toString())
         assertNull(rows.last().metadata?.place)
         val stops = rows.dropLast(1)
-        plan.stops.take(limit - 1).forEachIndexed { index, stop ->
-            assertTrue(stops[index].title.toString().startsWith(ChargeStopFormatter.plannedStopTitle(index + 1, stop)))
-        }
+        stops.forEach { assertNotNull(distanceOf(it.title)) }
         val markers = stops.map { it.metadata!!.place!!.marker!! }
         assertEquals((1 until limit).map(Int::toString), markers.map { it.label.toString() })
         assertEquals(operatorCarColor(plan.stops.first().site), markers.first().color)
@@ -121,7 +119,7 @@ class RouteScreenTest {
     }
 
     @Test
-    fun `a stop row is one line with name, distance from here and the level it charges to`() {
+    fun `a stop row is one line with the distance from here and the level it charges to`() {
         val graph = graph()
         graph.withVehicle()
 
@@ -130,8 +128,8 @@ class RouteScreenTest {
         val stop = template.itemList!!.items.first() as Row
         // Stop 1 sits 0.5° south and 0.1° east of the fix: a little under 56 km.
         assertEquals(56.0, distanceOf(stop.title)!!, 1.0)
-        assertTrue(stop.title.toString().startsWith("1. Operator 1 · "))
         assertTrue(stop.title.toString().endsWith(" · ${string(R.string.car_route_charge, 80)}"))
+        assertTrue(stop.title.toString().contains("Operator").not())
         assertTrue(stop.texts.isEmpty())
     }
 
