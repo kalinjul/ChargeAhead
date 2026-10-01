@@ -68,6 +68,30 @@ The DHU itself comes from Android Studio → SDK Manager → SDK Tools →
 "Android Auto Desktop Head Unit emulator"; `doctor` tells you when it is
 missing.
 
+## A virtual Pixel instead of a phone
+
+Google documents the DHU only against a physical phone, but what it needs
+is a real Android Auto with its head unit server on the other end of adb,
+and an emulator is on adb too. The catch: the Play images ship a
+placeholder (`versionName` ends in `-stub`), with no launcher and no
+server. `$D doctor` says so and names the device. To get a working virtual
+Pixel:
+
+1. Start a `google_apis_playstore` AVD (here `Pixel_10a`), sign in to the
+   Play Store on it, and install Android Auto. If Play calls it "not
+   compatible with your device", install the APK bundle by hand:
+   `adb -s emulator-5554 install-multiple base.apk split_*.apk` with the
+   files for the emulator's ABI (arm64-v8a on Apple silicon).
+2. In Android Auto on the emulator: Settings → version ten times →
+   three-dot menu → "Allow unknown sources" and "Start head unit server".
+3. `ANDROID_SERIAL=emulator-5554 $D doctor` until every line is `ok`, then
+   `ANDROID_SERIAL=emulator-5554 $D start --adb` (always `--adb`; there is
+   no USB accessory on an emulator).
+
+Everything after that is the same as with a phone, including the server
+stopping on every disconnect. Location in the emulator comes from
+`app.sh where`, which the car app then sees through Play services.
+
 ## Before the first attempt
 
 The app must be installed on the **phone**, not the emulator:

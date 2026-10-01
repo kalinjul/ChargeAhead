@@ -21,6 +21,16 @@ SDK="$(sdk_root || true)"
 # The SDK's own copy first, then PATH: the sandbox shell has neither on PATH.
 ADB="${ADB:-$SDK/platform-tools/adb}"; [[ -x "$ADB" ]] || ADB=adb
 adb() { "$ADB" "$@"; }
+# adb commands aimed at the phone go to ANDROID_SERIAL when set, so a second
+# device (an emulator beside the phone, or the other way round) can't catch them.
+padb() { adb ${ANDROID_SERIAL:+-s "$ANDROID_SERIAL"} "$@"; }
+
+# Android Auto on the device: "stub" is the placeholder on emulator images, with
+# no head unit server and no launcher; the real app comes from Play or an APK.
+gearhead_version() {
+    padb shell dumpsys package com.google.android.projection.gearhead 2>/dev/null \
+        | sed -n 's/.*versionName=//p' | head -1 | tr -d '\r'
+}
 
 DHU_BIN="${DHU_BIN:-$SDK/extras/google/auto/desktop-head-unit}"
 RUN_DIR="${DHU_RUN_DIR:-${TMPDIR:-/tmp}/dhu-control}"
@@ -107,12 +117,18 @@ cmd_start() {
     sleep 1
 
     if [[ -z "$mode" ]]; then
-        adb forward tcp:5277 tcp:5277 >/dev/null
+        local version; version="$(gearhead_version)"
+        if [[ "$version" == *-stub ]]; then
+            echo "Android Auto on this device is the emulator stub ($version): no head unit server, nothing to connect to." >&2
+            echo "Install the real Android Auto on it first (Play Store, or its APK via 'adb install-multiple')." >&2
+            exit 1
+        fi
+        padb forward tcp:5277 tcp:5277 >/dev/null
         # Only the listener ON THE PHONE counts: adb forward accepts the
         # connection locally and closes it immediately if nothing is
         # listening on the other end. That looks like a port that's
         # answering, and isn't.
-        if ! adb shell netstat -lnt 2>/dev/null | grep -q 5277; then
+        if ! padb shell netstat -lnt 2>/dev/null | grep -q 5277; then
             echo "No head unit server running on the phone." >&2
             echo "In Android Auto: Settings -> tap the version number 10x" >&2
             echo "-> three-dot menu -> 'Start head unit server'." >&2
@@ -154,18 +170,24 @@ cmd_doctor() {
         || { say "FAIL" "DHU not installed: Android Studio -> SDK Manager -> SDK Tools -> 'Android Auto Desktop Head Unit emulator'"; ok=1; }
     "$ADB" version >/dev/null 2>&1 && say "ok  " "adb: $ADB" || { say "FAIL" "adb not found; platform-tools missing from $SDK"; ok=1; }
     [[ -n "$(unbuffered)" ]] && say "ok  " "unbuffered output via: $(unbuffered)" || say "warn" "no stdbuf/script: DHU output will lag"
-    local phones; phones=$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device" && $1 !~ /^emulator-/ {print $1}' | tr '\n' ' ')
-    if [[ -n "$phones" ]]; then say "ok  " "phone(s) on adb: $phones"; else say "FAIL" "no phone on adb (emulators don't count: their Android Auto is a stub)"; ok=1; fi
-    if [[ -n "$phones" ]]; then
-        local serial="${ANDROID_SERIAL:-${phones%% *}}"
-        if adb -s "$serial" shell netstat -lnt 2>/dev/null | grep -q 5277; then
-            say "ok  " "head unit server listening on $serial"
-        else
-            say "warn" "no head unit server on $serial: needed for 'start --adb' (Android Auto -> Settings -> version 10x -> menu -> Start head unit server; it stops on every disconnect)"
-        fi
-        adb -s "$serial" shell pm list packages 2>/dev/null | grep -q org.julakali.chargeahead \
-            && say "ok  " "app installed on $serial" || say "warn" "app not on $serial: ANDROID_SERIAL=$serial ./gradlew :androidApp:installDebug"
+    local devices; devices=$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device" {print $1}' | tr '\n' ' ')
+    if [[ -z "$devices" ]]; then say "FAIL" "nothing on adb: plug in a phone, or start an emulator with the real Android Auto on it"; return 1; fi
+    say "ok  " "on adb: $devices"
+    local serial="${ANDROID_SERIAL:-${devices%% *}}"
+    [[ "$devices" == *" "*" "* ]] && [[ -z "${ANDROID_SERIAL:-}" ]] && say "warn" "several devices; set ANDROID_SERIAL (checking $serial)"
+    local version; version="$(ANDROID_SERIAL=$serial gearhead_version)"
+    case "$version" in
+        "")      say "FAIL" "no Android Auto on $serial; install it (Play Store, or its APK via 'adb install-multiple')"; ok=1 ;;
+        *-stub)  say "FAIL" "Android Auto on $serial is the emulator stub ($version): no head unit server, no launcher. Install the real app over it: Play Store on the emulator, or the APK bundle via 'adb -s $serial install-multiple'"; ok=1 ;;
+        *)       say "ok  " "Android Auto $version on $serial" ;;
+    esac
+    if adb -s "$serial" shell netstat -lnt 2>/dev/null | grep -q 5277; then
+        say "ok  " "head unit server listening on $serial"
+    else
+        say "warn" "no head unit server on $serial: needed for 'start --adb' (Android Auto -> Settings -> version 10x -> menu -> Start head unit server; it stops on every disconnect)"
     fi
+    adb -s "$serial" shell pm list packages 2>/dev/null | grep -q org.julakali.chargeahead \
+        && say "ok  " "app installed on $serial" || say "warn" "app not on $serial: ANDROID_SERIAL=$serial ./gradlew :androidApp:installDebug"
     return $ok
 }
 
