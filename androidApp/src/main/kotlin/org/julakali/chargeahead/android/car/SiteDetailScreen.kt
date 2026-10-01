@@ -50,8 +50,9 @@ class SiteDetailScreen(
 
         val pane = Pane.Builder()
         rows(state.distanceKm, state.live).take(rowLimit).forEach(pane::addRow)
-        // The host fills the slot edge to edge: the stacked logo is near square, a wide lockup would be cut.
-        pane.setImage(icon(R.drawable.logo_powertrip_stacked_dark))
+        // A bitmap: the host mangles the stacked vector (nested scale, tinted white). Near square, so the
+        // host's edge-to-edge fill keeps it whole; a wide lockup would be cut.
+        pane.setImage(icon(R.drawable.logo_powertrip_stacked))
         pane.addAction(
             Action.Builder()
                 .setTitle(carContext.getString(R.string.car_detail_navigate))

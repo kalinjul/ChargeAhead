@@ -58,3 +58,27 @@ fun SplashBrand() {
         )
     }
 }
+
+/**
+ * The car's detail pane image, rendered from the stacked logo vector. The
+ * host mangles that vector (nested scale, tinted white), so the app ships a
+ * bitmap instead. The preview tool always paints a ground, so the logo is
+ * rendered on black and on white and `tools/pane-logo.py` derives the
+ * transparent PNG from the pair; run it whenever the logo changes.
+ */
+@PreviewTest
+@Preview(widthDp = 192, heightDp = 192, locale = "de")
+@Composable
+fun CarPaneLogoOnBlack() = CarPaneLogoOn(Color.Black)
+
+@PreviewTest
+@Preview(widthDp = 192, heightDp = 192, locale = "de")
+@Composable
+fun CarPaneLogoOnWhite() = CarPaneLogoOn(Color.White)
+
+@Composable
+private fun CarPaneLogoOn(ground: Color) {
+    Box(Modifier.fillMaxSize().background(ground).padding(8.dp), contentAlignment = Alignment.Center) {
+        Image(painterResource(R.drawable.logo_powertrip_stacked_dark), contentDescription = null, modifier = Modifier.fillMaxSize())
+    }
+}
