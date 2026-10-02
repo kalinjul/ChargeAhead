@@ -14,7 +14,7 @@ import org.julakali.chargeahead.shared.ChargeStopsFeature
 /** Every phone-screen ViewModel, declared once for both platforms. */
 fun sharedUiModule(): Module = module {
     // Not viewModelOf: it would try to inject the defaulted timeout parameter.
-    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get()) }
+    viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::PhoneAppViewModel)
     viewModelOf(::TripViewModel)
     viewModelOf(::CommittedTripViewModel)

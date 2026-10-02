@@ -1,7 +1,11 @@
 package org.julakali.chargeahead.shared.ui
 
+import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
+import org.julakali.chargeahead.shared.domain.usecases.SetChargeModeInteractor
+import org.julakali.chargeahead.shared.domain.ChargeMode
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
@@ -41,11 +45,36 @@ class DrawerViewModelTest {
                 preferredOperators = setOf("enbw", "stadtwerke-kiel"),
             ),
         )
-        val vm = DrawerViewModel(DataStoreVehicleRepository(InMemoryPreferencesDataStore()), preferences, UpdateChargeFiltersInteractor(preferences))
-
-        val state = vm.uiState.await { it.preferredNetworkCount > 0 }
+        val state = viewModel(preferences).uiState.await { it.preferredNetworkCount > 0 }
         assertEquals(2, state.preferredNetworkCount)
     }
+
+    @Test
+    fun `the state carries the mode that is on`() = runBlocking<Unit> {
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = false))
+
+        assertEquals(ChargeMode.BROWSE, viewModel(preferences).uiState.await { it.mode != ChargeMode.NORMAL }.mode)
+    }
+
+    @Test
+    fun `selecting a mode stores it, selecting normal takes it back`() = runBlocking<Unit> {
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+        val vm = viewModel(preferences)
+
+        vm.onModeSelected(ChargeMode.AC)
+        assertEquals(ChargeMode.AC, vm.uiState.await { it.mode == ChargeMode.AC }.mode)
+
+        vm.onModeSelected(ChargeMode.NORMAL)
+        assertEquals(ChargeMode.NORMAL, vm.uiState.await { it.mode == ChargeMode.NORMAL }.mode)
+    }
+
+    private fun viewModel(preferences: DataStorePreferencesRepository) = DrawerViewModel(
+        DataStoreVehicleRepository(InMemoryPreferencesDataStore()),
+        preferences,
+        UpdateChargeFiltersInteractor(preferences),
+        SetChargeModeInteractor(preferences, UpdateChargeFiltersInteractor(preferences), UpdateNetworksInteractor(preferences)),
+    )
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
         withTimeout(5_000L) { first(matching) }

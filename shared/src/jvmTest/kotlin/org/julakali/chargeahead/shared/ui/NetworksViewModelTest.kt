@@ -155,22 +155,6 @@ class NetworksViewModelTest {
     }
 
     @Test
-    fun `only preferred is on by default and survives a commit`() = runBlocking<Unit> {
-        val preferences = trackingPreferences()
-        val vm = networksViewModel(preferences)
-
-        assertTrue(vm.uiState.await { it.networks.isNotEmpty() }.onlyPreferred)
-
-        vm.onOnlyPreferredChanged(false)
-        val state = vm.uiState.await { !it.onlyPreferred }
-        assertTrue(preferences.saved.isEmpty(), "staged, like the ticks")
-        assertFalse(state.onlyPreferred)
-
-        vm.onLeave()
-        assertFalse(preferences.saved.single().onlyPreferred)
-    }
-
-    @Test
     fun `a second visit starts from what was stored`() = runBlocking<Unit> {
         val preferences = trackingPreferences()
         val vm = networksViewModel(preferences)
@@ -284,6 +268,23 @@ class NetworksViewModelTest {
         val names = vm.uiState.await { it.networks.isNotEmpty() }.networks
             .map { OperatorKey.folded(it.name) }
         assertEquals(names.sorted(), names, "nothing selected, so the whole list is alphabetical")
+    }
+
+    /** The screen edits the picked networks, nothing else; a mode switched elsewhere must survive its commit. */
+    @Test
+    fun `committing the ticks leaves stoebermodus alone`() = runBlocking<Unit> {
+        val preferences = trackingPreferences()
+        val vm = networksViewModel(preferences)
+        vm.uiState.await { it.networks.isNotEmpty() }
+
+        vm.onNetworkToggled("ionity")
+        // Meanwhile, from the drawer.
+        preferences.setNetworks(preferences.networks.first().copy(onlyPreferred = false))
+        vm.onLeave()
+
+        val stored = preferences.networks.first()
+        assertTrue("ionity" in stored.preferredOperators)
+        assertFalse(stored.onlyPreferred, "the drawer's switch, not the screen's business")
     }
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =
