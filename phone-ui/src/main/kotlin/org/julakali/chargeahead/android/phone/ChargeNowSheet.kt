@@ -169,7 +169,6 @@ private fun ChargeNowCard(
 private fun RelaxedFilter.labelRes(): Int = when (this) {
     RelaxedFilter.MIN_POWER -> R.string.cn_relax_min_power
     RelaxedFilter.NETWORKS -> R.string.cn_relax_networks
-    RelaxedFilter.MAX_DISTANCE -> R.string.cn_relax_max_distance
 }
 
 /** A placeholder card mirroring [StationCard]'s shape while the ranking runs. */

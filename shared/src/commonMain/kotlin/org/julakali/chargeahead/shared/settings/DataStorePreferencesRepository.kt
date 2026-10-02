@@ -32,7 +32,7 @@ class DataStorePreferencesRepository(
     override val chargeFilters: Flow<ChargeFilters> = combine(
         dataStore.read { preferences ->
             preferences.getJson<StoredFilters>(CHARGE_FILTERS)
-                ?.let { ChargeFilters(it.minPowerKw, it.maxDistanceKm) }
+                ?.let { ChargeFilters(it.minPowerKw) }
                 ?: ChargeFilters()
         },
         slowMode,
@@ -46,14 +46,15 @@ class DataStorePreferencesRepository(
     }
 
     override suspend fun setChargeFilters(filters: ChargeFilters) {
-        dataStore.edit { it.putJson(CHARGE_FILTERS, StoredFilters(filters.minPowerKw, filters.maxDistanceKm)) }
+        dataStore.edit { it.putJson(CHARGE_FILTERS, StoredFilters(filters.minPowerKw)) }
         slowMode.value = filters.slowMode
     }
 
     @Serializable
     private data class StoredFilters(
         val minPowerKw: Double,
-        val maxDistanceKm: Double,
+        // Older files still carry the slider's value; the parser rejects unknown keys.
+        val maxDistanceKm: Double? = null,
     )
 
     private companion object {

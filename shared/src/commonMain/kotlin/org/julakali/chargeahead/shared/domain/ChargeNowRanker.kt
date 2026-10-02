@@ -7,7 +7,7 @@ data class ChargeNowCandidate(
     val maxPowerKw: Double,
 )
 
-enum class RelaxedFilter { MIN_POWER, NETWORKS, MAX_DISTANCE }
+enum class RelaxedFilter { MIN_POWER, NETWORKS }
 
 data class ChargeNowResult(
     val candidates: List<ChargeNowCandidate>,
@@ -50,7 +50,6 @@ object ChargeNowRanker {
         val ladder = listOf(
             RelaxedFilter.MIN_POWER to { c: ChargeNowCandidate -> c.maxPowerKw >= filters.minPowerKw },
             RelaxedFilter.NETWORKS to { c: ChargeNowCandidate -> networks.allowsSite(c.site) },
-            RelaxedFilter.MAX_DISTANCE to { c: ChargeNowCandidate -> c.distanceKm <= filters.maxDistanceKm },
         )
 
         for (relaxCount in 0..ladder.size) {

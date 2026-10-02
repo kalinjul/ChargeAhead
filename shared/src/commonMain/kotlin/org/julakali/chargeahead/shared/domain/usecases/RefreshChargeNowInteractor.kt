@@ -19,8 +19,7 @@ class RefreshChargeNowInteractor(
     data class Params(val position: LatLon)
 
     override suspend fun doWork(params: Params) {
-        val filters = preferences.chargeFilters.first()
         val networks = preferences.networks.first()
-        repository.load(chargeNowArea(params.position, filters), networks.selectedKeys())
+        repository.load(chargeNowArea(params.position), networks.selectedKeys())
     }
 }

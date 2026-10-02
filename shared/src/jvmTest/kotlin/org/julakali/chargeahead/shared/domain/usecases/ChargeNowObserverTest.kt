@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.onEach
 
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
-import org.julakali.chargeahead.shared.domain.CHARGE_NOW_RELAX_FETCH_FACTOR
+import org.julakali.chargeahead.shared.domain.CHARGE_NOW_RADIUS_KM
 import org.julakali.chargeahead.shared.domain.CHARGE_NOW_SLICE
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
@@ -148,14 +148,13 @@ class ObserveChargeNowTest {
     }
 
     @Test
-    fun `the refill asks wider than the distance filter for the selected networks`() = runBlocking {
-        preferences.setChargeFilters(ChargeFilters(maxDistanceKm = 10.0))
+    fun `the refill asks the fixed radius for the selected networks`() = runBlocking {
         preferences.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
 
         refresh(RefreshChargeNowInteractor.Params(here)).getOrThrow()
 
         val (area, networks) = fetches.single()
-        assertEquals(10.0 * CHARGE_NOW_RELAX_FETCH_FACTOR, area.radiusKm)
+        assertEquals(CHARGE_NOW_RADIUS_KM, area.radiusKm)
         assertEquals(setOf("ionity"), networks)
     }
 }

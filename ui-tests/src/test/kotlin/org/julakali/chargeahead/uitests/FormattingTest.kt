@@ -38,18 +38,6 @@ class FormattingTest {
     }
 
     @Test
-    fun `the distance uses the German decimal separator`() {
-        drawer(ChargeFilters(maxDistanceKm = 3.5))
-        compose.onNodeWithText(compose.string(R.string.drawer_max_distance, "3,5"), ignoreCase = true).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun `whole kilometres drop the decimal`() {
-        drawer(ChargeFilters(maxDistanceKm = 5.0))
-        compose.onNodeWithText(compose.string(R.string.drawer_max_distance, "5"), ignoreCase = true).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
     fun `power steps and the AC badge come from resources`() {
         drawer(ChargeFilters())
         listOf(50, 150, 300).forEach {

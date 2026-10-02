@@ -73,24 +73,18 @@ class ChargeNowRankerTest {
     }
 
     @Test
-    fun `distance falls last`() {
-        // Everything usable is far away AND weak: the whole ladder must give
-        // way, in its fixed order.
+    fun `networks fall last`() {
+        // Everything usable is off-network AND weak: the whole ladder must give
+        // way, in its fixed order. Distance is never a reason to show nothing.
         val result = rank(
             listOf(
                 site("far-1", "Ionity", 60.0, 20.0),
                 site("far-2", "Ionity", 60.0, 22.0),
             ),
-            filters = ChargeFilters(minPowerKw = 300.0, maxDistanceKm = 5.0),
+            filters = ChargeFilters(minPowerKw = 300.0),
+            networks = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")),
         )
-        assertEquals(
-            listOf(
-                RelaxedFilter.MIN_POWER,
-                RelaxedFilter.NETWORKS,
-                RelaxedFilter.MAX_DISTANCE,
-            ),
-            result.relaxed,
-        )
+        assertEquals(listOf(RelaxedFilter.MIN_POWER, RelaxedFilter.NETWORKS), result.relaxed)
         assertEquals(2, result.candidates.size)
     }
 
@@ -120,15 +114,13 @@ class ChargeNowRankerTest {
                 site("far-2", "Ionity", 350.0, 4.0),
                 site("wallbox", "Stadtwerke", 22.0, 0.2), // AC — never appears anywhere
             ),
-            filters = ChargeFilters(maxDistanceKm = 10.0),
         )
         assertEquals(listOf("demo:fastned", "demo:vattenfall", "demo:tesla"), result.candidates.map { it.site.id })
         assertEquals(listOf("demo:far-2", "demo:far-1"), result.more.map { it.site.id })
     }
 
     @Test
-    fun `a generous distance filter must not crowd out the station next door`() {
-        // With a wide max distance, the near station matching every filter must stay on top.
+    fun `the station next door stays on top of the far ones`() {
         val result = rank(
             listOf(
                 site("next-door", "Vattenfall", 150.0, 1.4),
@@ -136,7 +128,6 @@ class ChargeNowRankerTest {
                 site("far-2", "Tesla", 250.0, 28.0),
                 site("far-3", "Tesla", 250.0, 30.0),
             ),
-            filters = ChargeFilters(maxDistanceKm = 35.0),
         )
         assertTrue(result.relaxed.isEmpty())
         assertEquals("demo:next-door", result.candidates.first().site.id)

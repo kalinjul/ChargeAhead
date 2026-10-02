@@ -110,11 +110,10 @@ class GarageSettingsTest {
     fun `filters round-trip`() = runBlocking<Unit> {
         val storage = InMemoryPreferencesDataStore()
         DataStorePreferencesRepository(storage).apply {
-            setChargeFilters(ChargeFilters(minPowerKw = 300.0, maxDistanceKm = 2.5))
+            setChargeFilters(ChargeFilters(minPowerKw = 300.0))
         }
 
         val reloaded = DataStorePreferencesRepository(storage)
         assertEquals(300.0, reloaded.chargeFilters.first().minPowerKw)
-        assertEquals(2.5, reloaded.chargeFilters.first().maxDistanceKm)
     }
 }

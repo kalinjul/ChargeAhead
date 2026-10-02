@@ -42,7 +42,7 @@ class ChargeNowObserver(
         return combine(preferences.chargeFilters, preferences.networks, ::Pair)
             .distinctUntilChanged()
             .flatMapLatest { (filters, networks) ->
-                val area = chargeNowArea(position, filters)
+                val area = chargeNowArea(position)
                 // Every DC site, so the ranker can relax the power and network filters.
                 repository.storedSitesNearest(position, area.boundingBox, EVERY_DC_SITE, CHARGE_NOW_SLICE).map { sites ->
                     ChargeNowRanker.rank(
