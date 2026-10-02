@@ -24,7 +24,7 @@ class FormattingTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun drawer(filters: ChargeFilters) =
-        compose.setThemedContent { DrawerContent(DrawerUiState(filters = filters), onOpen = {}, onFilters = {}) }
+        compose.setThemedContent { DrawerContent(DrawerUiState(filters = filters), onOpen = {}, onFilters = {}, onModeSelected = {}) }
 
     @Test
     fun `clock times are 24h in German`() {
@@ -38,11 +38,10 @@ class FormattingTest {
     }
 
     @Test
-    fun `power steps and the AC badge come from resources`() {
+    fun `power steps come from resources`() {
         drawer(ChargeFilters())
         listOf(50, 150, 300).forEach {
             compose.onNodeWithText(compose.string(R.string.drawer_power_step, it)).assertIsDisplayed()
         }
-        compose.onNodeWithText(compose.string(R.string.drawer_ac)).assertIsDisplayed()
     }
 }

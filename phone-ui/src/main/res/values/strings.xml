@@ -163,6 +163,7 @@
     <string name="map_zoom_hint">Zum Anzeigen der Ladesäulen reinzoomen</string>
     <string name="mode_ac">AC</string>
     <string name="mode_browse">Stöbern</string>
+    <string name="drawer_mode_ac">AC-Modus</string>
     <string name="home_mode_off">Modus beenden</string>
 
     <!-- Phone: car data debug view -->
@@ -187,11 +188,11 @@
     <string name="drawer_preferences">Einstellungen</string>
     <string name="drawer_car">Auto</string>
     <string name="drawer_networks">Netzwerke</string>
+    <string name="drawer_mode">Modus</string>
+    <string name="drawer_mode_info">Was bedeuten die Modi?</string>
+    <string name="drawer_mode_tooltip">Im Stöbermodus werden alle Ladenetze auf der Karte angezeigt und für die Routenplanung verwendet.\n\nDer AC-Modus ignoriert alle Filter und zeigt Lader unter 50 kW.\n\nBeide Modi verändern die Vorschläge im Jetzt Laden Menü.</string>
     <string name="drawer_min_power">Mindestleistung</string>
     <string name="drawer_power_step">%1$d kW</string>
-    <string name="drawer_ac">AC</string>
-    <string name="drawer_slow_mode">AC-Modus</string>
-    <string name="drawer_slow_mode_hint">ignoriert alle Filter und zeigt Lader unter 50 kW</string>
     <string name="drawer_about">Über PowerTrip</string>
     <string name="drawer_legal">Impressum &amp; Datenschutz</string>
     <string name="drawer_licenses">Lizenzen</string>

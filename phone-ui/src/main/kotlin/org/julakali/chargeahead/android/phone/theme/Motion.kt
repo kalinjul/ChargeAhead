@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.android.phone.theme
 
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 
 /**
@@ -29,6 +30,9 @@ object ChargeAheadMotion {
 
     /** A whole page sliding in or out: Material's medium4. */
     fun <T> page(): FiniteAnimationSpec<T> = tween(LONG_MILLIS)
+
+    /** A shape giving way under a finger and springing back: Expressive's fast spatial spring. */
+    fun <T> morph(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.9f, stiffness = 1400f)
 
     /** A larger surface settling, like the trip sheet's peek. */
     fun <T> surface(): FiniteAnimationSpec<T> = tween(MEDIUM_MILLIS)
