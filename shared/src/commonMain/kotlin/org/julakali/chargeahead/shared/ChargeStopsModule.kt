@@ -104,6 +104,7 @@ fun chargeStopsModule(): Module = module {
                     scope = get(AppScope),
                 ),
             ),
+            computation = get<AppCoroutineDispatchers>().computation,
         )
     }
 
@@ -122,8 +123,8 @@ fun chargeStopsModule(): Module = module {
     factory { RefreshChargerAvailabilityInteractor(get(), get(), get(), get()) }
     factory { LiveConnectorsObserver(get()) }
     factory { RefreshLiveConnectorsInteractor(get()) }
-    factory { ChargeNowObserver(get(), get(), get()) }
-    factory { RefreshChargeNowInteractor(get(), get()) }
+    factory { ChargeNowObserver(get(), get(), get(), get()) }
+    factory { RefreshChargeNowInteractor(get(), get(), get()) }
     factory { DestinationSearchObserver(get(), get()) }
     factory { PlanTripInteractor(get(), get(), get(), get(), get(), get()) }
     factory { UpdateArrivalSocInteractor(get()) }

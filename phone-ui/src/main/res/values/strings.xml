@@ -45,9 +45,7 @@
     <string name="car_now_loading">Ladesäulen werden gesucht …</string>
     <string name="car_now_empty">Kein Schnelllader in der Nähe gefunden.</string>
     <string name="car_now_relaxed">Ohne Filter: %1$s</string>
-    <string name="car_relax_power">Leistung</string>
     <string name="car_relax_networks">Netzwerke</string>
-    <string name="car_relax_distance">Entfernung</string>
 
     <string name="car_no_navigation_app">Keine Navigations-App gefunden</string>
 
@@ -193,7 +191,6 @@
     <string name="drawer_ac">AC</string>
     <string name="drawer_slow_mode">AC-Modus</string>
     <string name="drawer_slow_mode_hint">ignoriert alle Filter und zeigt Lader unter 50 kW</string>
-    <string name="drawer_max_distance">Max. Entfernung (Jetzt laden): %1$s km</string>
     <string name="drawer_about">Über PowerTrip</string>
     <string name="drawer_legal">Impressum &amp; Datenschutz</string>
     <string name="drawer_licenses">Lizenzen</string>
@@ -260,11 +257,8 @@
 
     <!-- Phone: charge now -->
     <string name="cn_title">Jetzt laden</string>
-    <string name="cn_subtitle">Beste Ladesäulen in der Nähe – nächste zuerst</string>
-    <string name="cn_relaxed">Filter zu streng — gelockert: %1$s</string>
-    <string name="cn_relax_min_power">Mindestleistung</string>
-    <string name="cn_relax_networks">Netzwerke</string>
-    <string name="cn_relax_max_distance">Entfernung</string>
+    <string name="cn_subtitle">Beste Ladesäulen nach Entfernung und Filterkriterien</string>
+    <string name="cn_relaxed">Wenig passende Ladesäulen gefunden. Filterkriterien gelockert.</string>
     <string name="cn_empty">Keine Schnelllader in der Nähe gefunden.</string>
     <string name="cn_loading">Ladesäulen werden gesucht …</string>
     <string name="cn_distance_power">%1$s km · %2$d kW</string>

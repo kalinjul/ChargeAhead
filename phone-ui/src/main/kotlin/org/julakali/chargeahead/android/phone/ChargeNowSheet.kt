@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -32,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,7 +43,6 @@ import org.julakali.chargeahead.android.phone.components.StationCard
 import org.julakali.chargeahead.android.phone.components.sheetListPadding
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
-import org.julakali.chargeahead.shared.domain.RelaxedFilter
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -52,13 +51,14 @@ import kotlin.math.roundToInt
 @Composable
 fun ChargeNowRoute(
     onNavigate: (ChargeNowCandidate) -> Unit,
+    onOpen: (ChargeNowCandidate) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChargeNowViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // The sheet exists only while open: rank from wherever the driver is now.
     LaunchedEffect(viewModel) { viewModel.onSheetOpened() }
-    ChargeNowSheetContent(uiState = uiState, onNavigate = onNavigate, modifier = modifier)
+    ChargeNowSheetContent(uiState = uiState, onNavigate = onNavigate, onOpen = onOpen, modifier = modifier)
 }
 
 /** The best chargers nearby. States: no position, loading, empty, list — plus the relax notice. */
@@ -66,9 +66,13 @@ fun ChargeNowRoute(
 fun ChargeNowSheetContent(
     uiState: ChargeNowUiState,
     onNavigate: (ChargeNowCandidate) -> Unit,
+    onOpen: (ChargeNowCandidate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // One height in every state: the modal sheet anchors at half only when the content is taller
+    // than half the screen, and it measures that on the first frame. A list that is sometimes
+    // shorter would open the sheet expanded at content height instead.
+    Column(modifier = modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.cn_title), style = MaterialTheme.typography.titleMedium)
 
         when (uiState) {
@@ -104,22 +108,11 @@ fun ChargeNowSheetContent(
                     )
                     return@Column
                 }
-                val context = LocalContext.current
+                // Relaxed filters are context, not an error: same line, same tone.
                 Text(
-                    if (result.relaxed.isEmpty()) {
-                        stringResource(R.string.cn_subtitle)
-                    } else {
-                        stringResource(
-                            R.string.cn_relaxed,
-                            result.relaxed.joinToString { context.getString(it.labelRes()) },
-                        )
-                    },
+                    stringResource(if (result.relaxed.isEmpty()) R.string.cn_subtitle else R.string.cn_relaxed),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (result.relaxed.isEmpty()) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -127,7 +120,7 @@ fun ChargeNowSheetContent(
                     modifier = Modifier.weight(1f, fill = false),
                 ) {
                     itemsIndexed(result.candidates, key = { _, c -> c.site.id }) { index, candidate ->
-                        ChargeNowCard(rank = index + 1, candidate = candidate, onNavigate = onNavigate)
+                        ChargeNowCard(rank = index + 1, candidate = candidate, onNavigate = onNavigate, onOpen = onOpen)
                     }
                     if (result.more.isNotEmpty()) {
                         item { SectionLabel(stringResource(R.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
@@ -136,6 +129,7 @@ fun ChargeNowSheetContent(
                                 rank = result.candidates.size + index + 1,
                                 candidate = candidate,
                                 onNavigate = onNavigate,
+                                onOpen = onOpen,
                             )
                         }
                     }
@@ -150,6 +144,7 @@ private fun ChargeNowCard(
     rank: Int,
     candidate: ChargeNowCandidate,
     onNavigate: (ChargeNowCandidate) -> Unit,
+    onOpen: (ChargeNowCandidate) -> Unit,
 ) {
     StationCard(
         rank = rank,
@@ -159,14 +154,10 @@ private fun ChargeNowCard(
         address = ChargeStopFormatter.addressLine(candidate.site),
         onSend = { onNavigate(candidate) },
         sendContentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
+        onClick = { onOpen(candidate) },
     )
 }
 
-private fun RelaxedFilter.labelRes(): Int = when (this) {
-    RelaxedFilter.MIN_POWER -> R.string.cn_relax_min_power
-    RelaxedFilter.NETWORKS -> R.string.cn_relax_networks
-    RelaxedFilter.MAX_DISTANCE -> R.string.cn_relax_max_distance
-}
 
 /** A placeholder card mirroring [StationCard]'s shape while the ranking runs. */
 @Composable

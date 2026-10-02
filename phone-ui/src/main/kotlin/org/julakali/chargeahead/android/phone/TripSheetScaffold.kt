@@ -79,7 +79,7 @@ fun TripSheetScaffold(
             sheetSwipeEnabled = trip != null && expandable,
             // The handle lives inside the content so the content's height is the whole visible sheet.
             sheetDragHandle = null,
-            sheetContainerColor = MaterialTheme.colorScheme.surface,
+            sheetContainerColor = MaterialTheme.colorScheme.background,
             snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
             sheetContent = {
                 if (trip == null) return@BottomSheetScaffold

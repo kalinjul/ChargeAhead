@@ -20,8 +20,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -33,6 +31,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.julakali.chargeahead.android.phone.components.AppCard
 import org.julakali.chargeahead.android.phone.components.SocEditDialog
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.CommittedTrip
@@ -133,12 +132,7 @@ fun ActiveRouteScreen(
     }
     Column(modifier) {
         // The trip on one card: totals, arrival, and what one does to the trip itself.
-        ElevatedCard(
-            shape = MaterialTheme.shapes.large,
-            // White in light; in dark the default low container sinks into the page.
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-        ) {
+        AppCard(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
             Column(Modifier.padding(16.dp)) {
                 Text(
                     listOf(

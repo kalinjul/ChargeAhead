@@ -30,7 +30,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
-import org.julakali.chargeahead.android.phone.components.AppSlider
 import org.julakali.chargeahead.android.phone.components.PrefRow
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.material3.Switch
@@ -88,15 +87,6 @@ fun DrawerContent(
                 active = filters.slowMode,
                 onToggle = { onFilters(filters.copy(slowMode = it)) },
                 modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-
-        Column {
-            SectionLabel(stringResource(R.string.drawer_max_distance, filters.maxDistanceKm.oneDecimal()))
-            AppSlider(
-                value = filters.maxDistanceKm.toFloat(),
-                onValueChange = { onFilters(filters.copy(maxDistanceKm = (it * 2).roundToInt() / 2.0)) },
-                valueRange = 1f..10f,
             )
         }
 

@@ -1,24 +1,25 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
 import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
+import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeNowRanker
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
+import org.julakali.chargeahead.shared.domain.ChargePointStatus
+import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
+import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
-import org.julakali.chargeahead.shared.domain.MapFilter
-import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
-import org.julakali.chargeahead.shared.domain.chargeNowArea
+import org.julakali.chargeahead.shared.domain.chargeNowSlice
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.flowOn
 
 /**
  * The best fast chargers around a position among the stored sites, ranked
@@ -29,6 +30,7 @@ import kotlinx.coroutines.withContext
 @OptIn(ExperimentalCoroutinesApi::class)
 class ChargeNowObserver(
     private val repository: SiteRepository,
+    private val statusRepository: ChargePointStatusRepository,
     private val preferences: PreferencesRepository,
     private val dispatchers: AppCoroutineDispatchers,
 ) : SubjectInteractor<ChargeNowObserver.Params, ChargeNowResult?>() {
@@ -41,22 +43,27 @@ class ChargeNowObserver(
         return combine(preferences.chargeFilters, preferences.networks, ::Pair)
             .distinctUntilChanged()
             .flatMapLatest { (filters, networks) ->
-                val area = chargeNowArea(position, filters)
-                // Every DC site, so the ranker can relax the power and network filters.
-                repository.storedSitesIn(area.boundingBox, EVERY_DC_SITE).map { sites ->
-                    withContext(dispatchers.computation) {
-                        ChargeNowRanker.rank(
-                            sites = sites.filter { it.position in area },
-                            position = position,
-                            filters = filters,
-                            networks = networks,
-                        )
-                    }
+                combine(repository.chargeNowSlice(position, filters, networks), statusRepository.statuses) { sites, statuses ->
+                    ChargeNowRanker.rank(
+                        // A full or broken site is no recommendation; one without live data can't be ruled out.
+                        sites = sites.filter { it.isWorthSuggesting(statuses, filters) },
+                        position = position,
+                        filters = filters,
+                        networks = networks,
+                    )
                 }
             }
+            // Upstream too: the store maps and merges every row per emission, and it emits per tile
+            // the refill writes, all while the sheet is animating on main.
+            .flowOn(dispatchers.computation)
     }
 
-    companion object {
-        private val EVERY_DC_SITE = MapFilter(NetworkPreferences(), minPowerKw = MIN_DC_POWER_KW, slowMode = false)
+    private fun ChargeSite.isWorthSuggesting(statuses: Map<String, List<ChargePointStatus>>, filters: ChargeFilters): Boolean {
+        val points = liveStatusId?.let(statuses::get) ?: return true
+        return when (val availability = SiteAvailability.of(points, filters.slowMode, filters.minPowerKw)) {
+            null -> true
+            SiteAvailability.OutOfOrder -> false
+            is SiteAvailability.Live -> availability.free > 0
+        }
     }
 }

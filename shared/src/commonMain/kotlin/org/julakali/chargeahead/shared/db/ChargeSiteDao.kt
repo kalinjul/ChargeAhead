@@ -41,6 +41,34 @@ interface ChargeSiteDao {
         networkKeys: List<String>,
     ): Flow<List<ChargeSiteEntity>>
 
+    /**
+     * The same filter, the [limit] rows nearest to ([lat], [lon]) first. Squared degree
+     * deltas are order-preserving within a small box; [lonScale] is cos² of the latitude.
+     */
+    @Query(
+        "SELECT * FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east " +
+            "AND ((:slowMode AND maxPowerKw < :slowBelowKw) " +
+            "OR (NOT :slowMode AND maxDcPowerKw >= :minPowerKw " +
+            "AND (NOT :filterNetworks OR networkKey IN (:networkKeys)))) " +
+            "ORDER BY (lat - :lat) * (lat - :lat) + (lon - :lon) * (lon - :lon) * :lonScale " +
+            "LIMIT :limit",
+    )
+    fun observeNearestFilteredSitesInBox(
+        south: Double,
+        north: Double,
+        west: Double,
+        east: Double,
+        slowMode: Boolean,
+        slowBelowKw: Double,
+        minPowerKw: Double,
+        filterNetworks: Boolean,
+        networkKeys: List<String>,
+        lat: Double,
+        lon: Double,
+        lonScale: Double,
+        limit: Int,
+    ): Flow<List<ChargeSiteEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertSites(sites: List<ChargeSiteEntity>)
 

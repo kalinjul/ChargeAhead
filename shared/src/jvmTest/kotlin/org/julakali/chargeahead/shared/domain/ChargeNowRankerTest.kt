@@ -59,8 +59,8 @@ class ChargeNowRankerTest {
     }
 
     @Test
-    fun `starving min power relaxes exactly that filter`() {
-        // Only one site passes 150 kW; two 60 kW ones exist nearby.
+    fun `starving min power never relaxes it`() {
+        // Only one site passes 150 kW; two 60 kW ones exist nearby and stay out.
         val result = rank(
             listOf(
                 site("strong", "Fastned", 300.0, 1.0),
@@ -68,30 +68,40 @@ class ChargeNowRankerTest {
                 site("weak-2", "EnBW", 60.0, 2.0),
             ),
         )
-        assertEquals(listOf(RelaxedFilter.MIN_POWER), result.relaxed)
-        assertEquals(3, result.candidates.size)
+        assertTrue(result.relaxed.isEmpty())
+        assertEquals(listOf("demo:strong"), result.candidates.map { it.site.id })
+        assertTrue(result.more.isEmpty())
     }
 
     @Test
-    fun `distance falls last`() {
-        // Everything usable is far away AND weak: the whole ladder must give
-        // way, in its fixed order.
+    fun `networks give way when they starve the top spots`() {
+        // Everything strong enough is off-network: the networks give way, the power stays.
         val result = rank(
             listOf(
-                site("far-1", "Ionity", 60.0, 20.0),
-                site("far-2", "Ionity", 60.0, 22.0),
+                site("far-1", "Ionity", 350.0, 20.0),
+                site("far-2", "Ionity", 350.0, 22.0),
+                site("weak", "Fastned", 60.0, 1.0),
             ),
-            filters = ChargeFilters(minPowerKw = 300.0, maxDistanceKm = 5.0),
+            filters = ChargeFilters(minPowerKw = 300.0),
+            networks = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")),
         )
-        assertEquals(
+        assertEquals(listOf(RelaxedFilter.NETWORKS), result.relaxed)
+        assertEquals(listOf("demo:far-1", "demo:far-2"), result.candidates.map { it.site.id })
+    }
+
+    @Test
+    fun `ac mode ranks the slow posts nearest first and ignores the rest`() {
+        val result = rank(
             listOf(
-                RelaxedFilter.MIN_POWER,
-                RelaxedFilter.NETWORKS,
-                RelaxedFilter.MAX_DISTANCE,
+                site("fast", "Ionity", 350.0, 0.5),
+                site("wallbox-2", "Stadtwerke", 11.0, 2.0, connector = ConnectorType.TYPE2),
+                site("wallbox-1", "Stadtwerke", 22.0, 1.0, connector = ConnectorType.TYPE2),
             ),
-            result.relaxed,
+            filters = ChargeFilters(minPowerKw = 300.0, slowMode = true),
+            networks = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")),
         )
-        assertEquals(2, result.candidates.size)
+        assertTrue(result.relaxed.isEmpty())
+        assertEquals(listOf("demo:wallbox-1", "demo:wallbox-2"), result.candidates.map { it.site.id })
     }
 
     @Test
@@ -120,15 +130,13 @@ class ChargeNowRankerTest {
                 site("far-2", "Ionity", 350.0, 4.0),
                 site("wallbox", "Stadtwerke", 22.0, 0.2), // AC — never appears anywhere
             ),
-            filters = ChargeFilters(maxDistanceKm = 10.0),
         )
         assertEquals(listOf("demo:fastned", "demo:vattenfall", "demo:tesla"), result.candidates.map { it.site.id })
         assertEquals(listOf("demo:far-2", "demo:far-1"), result.more.map { it.site.id })
     }
 
     @Test
-    fun `a generous distance filter must not crowd out the station next door`() {
-        // With a wide max distance, the near station matching every filter must stay on top.
+    fun `the station next door stays on top of the far ones`() {
         val result = rank(
             listOf(
                 site("next-door", "Vattenfall", 150.0, 1.4),
@@ -136,7 +144,6 @@ class ChargeNowRankerTest {
                 site("far-2", "Tesla", 250.0, 28.0),
                 site("far-3", "Tesla", 250.0, 30.0),
             ),
-            filters = ChargeFilters(maxDistanceKm = 35.0),
         )
         assertTrue(result.relaxed.isEmpty())
         assertEquals("demo:next-door", result.candidates.first().site.id)
