@@ -46,7 +46,10 @@ class ChargeNowViewModelTest {
     private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
     private val fixes = MutableSharedFlow<Fix>(replay = 1)
     private val feature = ChargeStopsFeature(
-        locationSource = object : LocationSource { override val updates: Flow<Fix> = fixes },
+        locationSource = object : LocationSource {
+            override val updates: Flow<Fix> = fixes
+            override suspend fun currentFix(): Fix? = fixes.replayCache.firstOrNull()
+        },
         parentScope = CoroutineScope(Dispatchers.Unconfined),
     ).apply { start() }
     private val nearby = ChargeSite(
@@ -64,6 +67,10 @@ class ChargeNowViewModelTest {
         }
 
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = store
+
+        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = store
+
+        override suspend fun invalidate() = Unit
     }
 
     private fun viewModel() = ChargeNowViewModel(

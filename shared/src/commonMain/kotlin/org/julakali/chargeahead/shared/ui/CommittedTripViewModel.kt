@@ -69,7 +69,13 @@ class CommittedTripViewModel(
         socEditor,
     ) { trip, sectionSelection, isPlanning, fix, socInput ->
         CommittedTripUiState(trip, sectionSelection, isPlanning, fix?.position, socInput)
-    }.stateIn(viewModelScope, WhileUiSubscribed, CommittedTripUiState(trip = null))
+        // Seeded from the stores: the page's own ViewModel is born on the tap, an empty
+        // first value would slide in an empty page.
+    }.stateIn(
+        viewModelScope,
+        WhileUiSubscribed,
+        CommittedTripUiState(trip = trips.state.value.committed, startPosition = feature.currentFix.value?.position),
+    )
 
     /**
      * "Neu planen": with the car reporting its charge, plan right away;

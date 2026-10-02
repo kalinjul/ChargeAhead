@@ -126,6 +126,13 @@ class CommittedTripViewModelTest {
         trips.update { it.committed(CommittedTrip(plan(hamburg), startSocPercent = 60.0, committedAtEpochMillis = 1L)) }
     }
 
+    /** The page is its own ViewModel scope: an empty first value would slide in an empty page. */
+    @Test
+    fun `the stored trip is there from the first value`() {
+        commitFromHamburg()
+        assertEquals(plan(hamburg), viewModel().uiState.value.trip?.plan)
+    }
+
     @Test
     fun `the stored trip is what the view shows`() = runBlocking {
         commitFromHamburg()
