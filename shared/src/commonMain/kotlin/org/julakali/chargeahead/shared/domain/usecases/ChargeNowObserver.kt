@@ -5,7 +5,6 @@ import org.julakali.chargeahead.shared.domain.CHARGE_NOW_SLICE
 import org.julakali.chargeahead.shared.domain.ChargeNowRanker
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.LatLon
-import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
 import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
@@ -43,14 +42,21 @@ class ChargeNowObserver(
             .distinctUntilChanged()
             .flatMapLatest { (filters, networks) ->
                 val area = chargeNowArea(position)
-                val wanted = MapFilter(networks, minPowerKw = filters.minPowerKw, slowMode = false)
-                // Two slices: the nearest that pass the filters, and the nearest DC sites regardless,
-                // which the ranker relaxes into. One slice of everything would be a city block of
-                // 50 kW posts, with nothing strong in it to pick.
-                combine(
-                    repository.storedSitesNearest(position, area.boundingBox, wanted, CHARGE_NOW_SLICE),
-                    repository.storedSitesNearest(position, area.boundingBox, EVERY_DC_SITE, CHARGE_NOW_SLICE),
-                ) { matching, any -> (matching + any).distinctBy { it.id } }.map { sites ->
+                // AC mode: the slow posts from any network, as on the map. Otherwise two slices: the
+                // nearest that pass the filters, and the nearest strong enough from any network, which
+                // the ranker relaxes into. One slice of everything would be a city block of 50 kW
+                // posts, with nothing to pick.
+                val anyNetwork = MapFilter(NetworkPreferences(), minPowerKw = filters.minPowerKw, slowMode = filters.slowMode)
+                val slices = if (filters.slowMode) {
+                    repository.storedSitesNearest(position, area.boundingBox, anyNetwork, CHARGE_NOW_SLICE)
+                } else {
+                    val wanted = MapFilter(networks, minPowerKw = filters.minPowerKw, slowMode = false)
+                    combine(
+                        repository.storedSitesNearest(position, area.boundingBox, wanted, CHARGE_NOW_SLICE),
+                        repository.storedSitesNearest(position, area.boundingBox, anyNetwork, CHARGE_NOW_SLICE),
+                    ) { matching, any -> (matching + any).distinctBy { it.id } }
+                }
+                slices.map { sites ->
                     ChargeNowRanker.rank(
                         sites = sites.filter { it.position in area },
                         position = position,
@@ -62,9 +68,5 @@ class ChargeNowObserver(
             // Upstream too: the store maps and merges every row per emission, and it emits per tile
             // the refill writes, all while the sheet is animating on main.
             .flowOn(dispatchers.computation)
-    }
-
-    companion object {
-        private val EVERY_DC_SITE = MapFilter(NetworkPreferences(), minPowerKw = MIN_DC_POWER_KW, slowMode = false)
     }
 }

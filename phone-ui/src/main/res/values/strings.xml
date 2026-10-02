@@ -45,7 +45,6 @@
     <string name="car_now_loading">Ladesäulen werden gesucht …</string>
     <string name="car_now_empty">Kein Schnelllader in der Nähe gefunden.</string>
     <string name="car_now_relaxed">Ohne Filter: %1$s</string>
-    <string name="car_relax_power">Leistung</string>
     <string name="car_relax_networks">Netzwerke</string>
 
     <string name="car_no_navigation_app">Keine Navigations-App gefunden</string>

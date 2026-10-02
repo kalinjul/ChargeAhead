@@ -19,7 +19,8 @@ class RefreshChargeNowInteractor(
     data class Params(val position: LatLon)
 
     override suspend fun doWork(params: Params) {
-        val networks = preferences.networks.first()
-        repository.load(chargeNowArea(params.position), networks.selectedKeys())
+        // AC mode browses every network, so it fetches unfiltered.
+        val networks = if (preferences.chargeFilters.first().slowMode) emptySet() else preferences.networks.first().selectedKeys()
+        repository.load(chargeNowArea(params.position), networks)
     }
 }

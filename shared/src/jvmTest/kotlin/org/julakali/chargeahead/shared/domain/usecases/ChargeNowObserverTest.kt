@@ -127,12 +127,12 @@ class ObserveChargeNowTest {
     fun `a filter change re-ranks without a refill`() = runBlocking {
         store.value = listOf(site("hpc", 300.0, 1.0), site("mid", 100.0, 2.0), site("mid2", 100.0, 3.0))
         observe(ChargeNowObserver.Params(here))
-        // Only one site reaches the default minimum power, so the ranking relaxes it.
-        assertEquals(listOf(RelaxedFilter.MIN_POWER), await { it != null }?.relaxed)
+        // Only one site reaches the default minimum power; the weaker two stay out, the power never gives way.
+        assertEquals(listOf("hpc"), await { it != null }?.candidates?.map { it.site.id })
 
         preferences.setChargeFilters(ChargeFilters(minPowerKw = 50.0))
 
-        assertEquals(3, await { it?.relaxed?.isEmpty() == true }?.candidates?.size)
+        assertEquals(3, await { it?.candidates?.size == 3 }?.candidates?.size)
         assertTrue(fetches.isEmpty())
     }
 
@@ -145,6 +145,16 @@ class ObserveChargeNowTest {
         refresh(RefreshChargeNowInteractor.Params(here)).getOrThrow()
 
         assertEquals(listOf("new"), await { it?.isEmpty == false }?.candidates?.map { it.site.id })
+    }
+
+    @Test
+    fun `in ac mode the refill asks for every network`() = runBlocking {
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")))
+        preferences.setChargeFilters(ChargeFilters(slowMode = true))
+
+        refresh(RefreshChargeNowInteractor.Params(here)).getOrThrow()
+
+        assertEquals(emptySet(), fetches.single().second)
     }
 
     @Test

@@ -59,8 +59,8 @@ class ChargeNowRankerTest {
     }
 
     @Test
-    fun `starving min power relaxes exactly that filter`() {
-        // Only one site passes 150 kW; two 60 kW ones exist nearby.
+    fun `starving min power never relaxes it`() {
+        // Only one site passes 150 kW; two 60 kW ones exist nearby and stay out.
         val result = rank(
             listOf(
                 site("strong", "Fastned", 300.0, 1.0),
@@ -68,24 +68,40 @@ class ChargeNowRankerTest {
                 site("weak-2", "EnBW", 60.0, 2.0),
             ),
         )
-        assertEquals(listOf(RelaxedFilter.MIN_POWER), result.relaxed)
-        assertEquals(3, result.candidates.size)
+        assertTrue(result.relaxed.isEmpty())
+        assertEquals(listOf("demo:strong"), result.candidates.map { it.site.id })
+        assertTrue(result.more.isEmpty())
     }
 
     @Test
-    fun `networks fall last`() {
-        // Everything usable is off-network AND weak: the whole ladder must give
-        // way, in its fixed order. Distance is never a reason to show nothing.
+    fun `networks give way when they starve the top spots`() {
+        // Everything strong enough is off-network: the networks give way, the power stays.
         val result = rank(
             listOf(
-                site("far-1", "Ionity", 60.0, 20.0),
-                site("far-2", "Ionity", 60.0, 22.0),
+                site("far-1", "Ionity", 350.0, 20.0),
+                site("far-2", "Ionity", 350.0, 22.0),
+                site("weak", "Fastned", 60.0, 1.0),
             ),
             filters = ChargeFilters(minPowerKw = 300.0),
             networks = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("fastned")),
         )
-        assertEquals(listOf(RelaxedFilter.MIN_POWER, RelaxedFilter.NETWORKS), result.relaxed)
-        assertEquals(2, result.candidates.size)
+        assertEquals(listOf(RelaxedFilter.NETWORKS), result.relaxed)
+        assertEquals(listOf("demo:far-1", "demo:far-2"), result.candidates.map { it.site.id })
+    }
+
+    @Test
+    fun `ac mode ranks the slow posts nearest first and ignores the rest`() {
+        val result = rank(
+            listOf(
+                site("fast", "Ionity", 350.0, 0.5),
+                site("wallbox-2", "Stadtwerke", 11.0, 2.0, connector = ConnectorType.TYPE2),
+                site("wallbox-1", "Stadtwerke", 22.0, 1.0, connector = ConnectorType.TYPE2),
+            ),
+            filters = ChargeFilters(minPowerKw = 300.0, slowMode = true),
+            networks = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity")),
+        )
+        assertTrue(result.relaxed.isEmpty())
+        assertEquals(listOf("demo:wallbox-1", "demo:wallbox-2"), result.candidates.map { it.site.id })
     }
 
     @Test
