@@ -373,6 +373,19 @@ class PhoneAppFlowTest {
         harness.sites.forEach { compose.onNodeWithText(it.operator!!).assertDoesNotExist() }
     }
 
+    @Test
+    fun `a jetzt laden card opens the stop's detail sheet`() {
+        val nearby = listOf(Fixtures.site("n1", "Fastned", harness.hamburg.copy(lat = harness.hamburg.lat + 0.009), "Hamburg"))
+        harness.start(nearby = nearby)
+        compose.setThemedContent { PhoneApp(librariesRes = 0) }
+        compose.onNodeWithText(chargeNowPill()).performClick()
+        waitForText("Fastned")
+
+        compose.onNodeWithText("Fastned").performClick()
+
+        waitForText(compose.string(R.string.phone_detail_navigate))
+    }
+
     /** Closing and reopening right away must not swallow the tap. */
     @Test
     fun `jetzt laden reopens right after it was closed`() {

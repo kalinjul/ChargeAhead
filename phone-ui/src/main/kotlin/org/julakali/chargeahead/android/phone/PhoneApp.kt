@@ -167,6 +167,7 @@ fun PhoneApp(librariesRes: Int) {
         onCarAdded = { preset -> snackbar.show(scope, context.getString(R.string.garage_added, preset.name)) },
         onNavigateTo = { position -> sendToMaps(MapsHandoff.navigateUrl(position)) },
         onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
+        onOpenSite = homeViewModel::onSiteSelected,
         onSendToMaps = ::sendToMaps,
         onTripEnded = { snackbar.show(scope, context.getString(R.string.active_route_ended)) },
         activeRouteTitle = activeRouteTitle,

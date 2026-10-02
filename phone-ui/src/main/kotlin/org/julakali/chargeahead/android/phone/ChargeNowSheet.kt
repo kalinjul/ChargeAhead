@@ -51,13 +51,14 @@ import kotlin.math.roundToInt
 @Composable
 fun ChargeNowRoute(
     onNavigate: (ChargeNowCandidate) -> Unit,
+    onOpen: (ChargeNowCandidate) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: ChargeNowViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // The sheet exists only while open: rank from wherever the driver is now.
     LaunchedEffect(viewModel) { viewModel.onSheetOpened() }
-    ChargeNowSheetContent(uiState = uiState, onNavigate = onNavigate, modifier = modifier)
+    ChargeNowSheetContent(uiState = uiState, onNavigate = onNavigate, onOpen = onOpen, modifier = modifier)
 }
 
 /** The best chargers nearby. States: no position, loading, empty, list — plus the relax notice. */
@@ -65,6 +66,7 @@ fun ChargeNowRoute(
 fun ChargeNowSheetContent(
     uiState: ChargeNowUiState,
     onNavigate: (ChargeNowCandidate) -> Unit,
+    onOpen: (ChargeNowCandidate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // One height in every state: the modal sheet anchors at half only when the content is taller
@@ -118,7 +120,7 @@ fun ChargeNowSheetContent(
                     modifier = Modifier.weight(1f, fill = false),
                 ) {
                     itemsIndexed(result.candidates, key = { _, c -> c.site.id }) { index, candidate ->
-                        ChargeNowCard(rank = index + 1, candidate = candidate, onNavigate = onNavigate)
+                        ChargeNowCard(rank = index + 1, candidate = candidate, onNavigate = onNavigate, onOpen = onOpen)
                     }
                     if (result.more.isNotEmpty()) {
                         item { SectionLabel(stringResource(R.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
@@ -127,6 +129,7 @@ fun ChargeNowSheetContent(
                                 rank = result.candidates.size + index + 1,
                                 candidate = candidate,
                                 onNavigate = onNavigate,
+                                onOpen = onOpen,
                             )
                         }
                     }
@@ -141,6 +144,7 @@ private fun ChargeNowCard(
     rank: Int,
     candidate: ChargeNowCandidate,
     onNavigate: (ChargeNowCandidate) -> Unit,
+    onOpen: (ChargeNowCandidate) -> Unit,
 ) {
     StationCard(
         rank = rank,
@@ -150,6 +154,7 @@ private fun ChargeNowCard(
         address = ChargeStopFormatter.addressLine(candidate.site),
         onSend = { onNavigate(candidate) },
         sendContentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
+        onClick = { onOpen(candidate) },
     )
 }
 

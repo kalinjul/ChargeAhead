@@ -48,7 +48,7 @@ class ChargeNowSheetLazinessTest {
     fun `inside the modal sheet too`() {
         compose.setThemedContent {
             AppSheet(onDismissRequest = {}) {
-                ChargeNowSheetContent(uiState = ChargeNowUiState.Ready(result()), onNavigate = {})
+                ChargeNowSheetContent(uiState = ChargeNowUiState.Ready(result()), onNavigate = {}, onOpen = {})
             }
         }
         compose.waitForIdle()
@@ -66,7 +66,7 @@ class ChargeNowSheetLazinessTest {
         )
         compose.setThemedContent {
             Box(Modifier.height(600.dp)) {
-                ChargeNowSheetContent(uiState = ChargeNowUiState.Ready(result), onNavigate = {})
+                ChargeNowSheetContent(uiState = ChargeNowUiState.Ready(result), onNavigate = {}, onOpen = {})
             }
         }
         compose.waitForIdle()
