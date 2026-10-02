@@ -30,7 +30,7 @@ composeCache = "3.0.1"
 aboutLibraries = "15.2.0"
 skie = "0.10.15"
 
-chargeaheadApi = "0.12.0-6-gb27331d-SNAPSHOT"
+chargeaheadApi = "0.13.0"
 
 # UI tests (:ui-tests)
 screenshot = "0.0.1-alpha15"
