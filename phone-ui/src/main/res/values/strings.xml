@@ -257,10 +257,8 @@
 
     <!-- Phone: charge now -->
     <string name="cn_title">Jetzt laden</string>
-    <string name="cn_subtitle">Beste Ladesäulen in der Nähe – nächste zuerst</string>
-    <string name="cn_relaxed">Filter zu streng — gelockert: %1$s</string>
-    <string name="cn_relax_min_power">Mindestleistung</string>
-    <string name="cn_relax_networks">Netzwerke</string>
+    <string name="cn_subtitle">Beste Ladesäulen nach Entfernung und Filterkriterien</string>
+    <string name="cn_relaxed">Wenig passende Ladesäulen gefunden. Filterkriterien gelockert.</string>
     <string name="cn_empty">Keine Schnelllader in der Nähe gefunden.</string>
     <string name="cn_loading">Ladesäulen werden gesucht …</string>
     <string name="cn_distance_power">%1$s km · %2$d kW</string>

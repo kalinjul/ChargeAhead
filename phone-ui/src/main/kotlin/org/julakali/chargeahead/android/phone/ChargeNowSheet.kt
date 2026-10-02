@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -44,7 +43,6 @@ import org.julakali.chargeahead.android.phone.components.StationCard
 import org.julakali.chargeahead.android.phone.components.sheetListPadding
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
-import org.julakali.chargeahead.shared.domain.RelaxedFilter
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -108,22 +106,11 @@ fun ChargeNowSheetContent(
                     )
                     return@Column
                 }
-                val context = LocalContext.current
+                // Relaxed filters are context, not an error: same line, same tone.
                 Text(
-                    if (result.relaxed.isEmpty()) {
-                        stringResource(R.string.cn_subtitle)
-                    } else {
-                        stringResource(
-                            R.string.cn_relaxed,
-                            result.relaxed.joinToString { context.getString(it.labelRes()) },
-                        )
-                    },
+                    stringResource(if (result.relaxed.isEmpty()) R.string.cn_subtitle else R.string.cn_relaxed),
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (result.relaxed.isEmpty()) {
-                        MaterialTheme.colorScheme.onSurfaceVariant
-                    } else {
-                        MaterialTheme.colorScheme.error
-                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -166,10 +153,6 @@ private fun ChargeNowCard(
     )
 }
 
-private fun RelaxedFilter.labelRes(): Int = when (this) {
-    RelaxedFilter.MIN_POWER -> R.string.cn_relax_min_power
-    RelaxedFilter.NETWORKS -> R.string.cn_relax_networks
-}
 
 /** A placeholder card mirroring [StationCard]'s shape while the ranking runs. */
 @Composable
