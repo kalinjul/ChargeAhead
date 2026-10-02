@@ -9,6 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
@@ -94,5 +96,17 @@ class ChargeNowViewModelTest {
 
         val ready = withTimeout(5_000) { viewModel.uiState.first { it is ChargeNowUiState.Ready && !it.result.isEmpty } }
         assertEquals(listOf("near"), (ready as ChargeNowUiState.Ready).result.candidates.map { it.site.id })
+    }
+
+    /** Until the sheet reports where it is, nothing may replace the skeleton — not even "no position". */
+    @Test
+    fun `the state stays on the skeleton until the sheet reports in`() = runBlocking<Unit> {
+        val viewModel = viewModel()
+        val states = mutableListOf<ChargeNowUiState>()
+        val job = launch { viewModel.uiState.collect { states += it } }
+        delay(200)
+        job.cancel()
+
+        assertEquals(listOf<ChargeNowUiState>(ChargeNowUiState.Loading), states)
     }
 }

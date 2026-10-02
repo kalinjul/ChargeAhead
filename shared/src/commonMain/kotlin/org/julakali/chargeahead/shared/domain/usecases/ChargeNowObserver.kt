@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
 import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
+import org.julakali.chargeahead.shared.domain.CHARGE_NOW_SLICE
 import org.julakali.chargeahead.shared.domain.ChargeNowRanker
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.LatLon
@@ -43,7 +44,7 @@ class ChargeNowObserver(
             .flatMapLatest { (filters, networks) ->
                 val area = chargeNowArea(position, filters)
                 // Every DC site, so the ranker can relax the power and network filters.
-                repository.storedSitesIn(area.boundingBox, EVERY_DC_SITE).map { sites ->
+                repository.storedSitesNearest(position, area.boundingBox, EVERY_DC_SITE, CHARGE_NOW_SLICE).map { sites ->
                     ChargeNowRanker.rank(
                         sites = sites.filter { it.position in area },
                         position = position,

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.onEach
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.CHARGE_NOW_RELAX_FETCH_FACTOR
+import org.julakali.chargeahead.shared.domain.CHARGE_NOW_SLICE
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.ChargeSite
@@ -96,6 +97,19 @@ class ObserveChargeNowTest {
         observe(ChargeNowObserver.Params(here))
 
         assertEquals(listOf("near", "far"), await { it != null }?.candidates?.map { it.site.id })
+    }
+
+    /** A sheet shows a handful; the ranking never looks past the nearest slice of the store. */
+    @Test
+    fun `the ranking takes the nearest slice of the store, not the region`() = runBlocking {
+        store.value = (1..CHARGE_NOW_SLICE + 5).map { site("s$it", 300.0, it * 0.1) }
+
+        observe(ChargeNowObserver.Params(here))
+
+        val result = await { it != null }!!
+        val all = result.candidates + result.more
+        assertEquals(CHARGE_NOW_SLICE, all.size)
+        assertEquals((1..CHARGE_NOW_SLICE).map { "s$it" }, all.map { it.site.id })
     }
 
     @Test

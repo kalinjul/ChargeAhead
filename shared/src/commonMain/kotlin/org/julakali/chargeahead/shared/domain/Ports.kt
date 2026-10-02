@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared.domain
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /** Ongoing stream of location fixes. */
 interface LocationSource {
@@ -71,6 +72,13 @@ interface SiteRepository {
 
     /** Every stored site in [area], unfiltered, and again whenever the store changes. */
     fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>>
+
+    /**
+     * The [limit] stored sites in [box] nearest to [position] that pass [filter],
+     * nearest first. A store does the cut in SQL so the rest never become objects.
+     */
+    fun storedSitesNearest(position: LatLon, box: BoundingBox, filter: MapFilter, limit: Int): Flow<List<ChargeSite>> =
+        storedSitesIn(box, filter).map { sites -> sites.sortedBy { position.distanceKmTo(it.position) }.take(limit) }
 
     /**
      * Discards the stock so the next access actually queries.

@@ -185,4 +185,28 @@ class MergingSiteRepositoryTest {
 
         assertTrue(collectedOn.orEmpty().startsWith("DefaultDispatcher-worker"), "collected on $collectedOn")
     }
+
+    /** Each stock hands over its nearest; the merge of those is capped again, nearest first. */
+    @Test
+    fun `nearest sites are merged across stocks and capped`() = runBlocking {
+        val here = LatLon(48.0, 11.0)
+        fun stock(vararg sites: ChargeSite) = object : SiteRepository {
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>) = emptyList<ChargeSite>()
+            override suspend fun invalidate() {}
+            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(sites.toList())
+            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(sites.toList())
+        }
+        fun site(id: String, northKm: Double) = ChargeSite(
+            id = id, name = id, operator = "Ionity", position = LatLon(here.lat + northKm / 111.19, here.lon),
+            connectors = listOf(Connector(ConnectorType.CCS2, 300.0, 4)),
+        )
+        val repository = MergingSiteRepository(
+            listOf(stock(site("a3", 3.0), site("a1", 1.0)), stock(site("b2", 2.0), site("b4", 4.0))),
+            computation = Dispatchers.Default,
+        )
+
+        val nearest = repository.storedSitesNearest(here, BoundingBox(47.0, 10.0, 49.0, 12.0), FILTER, limit = 3).first()
+
+        assertEquals(listOf("a1", "b2", "a3"), nearest.map { it.id })
+    }
 }

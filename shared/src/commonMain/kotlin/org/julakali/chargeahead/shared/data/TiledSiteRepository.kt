@@ -28,6 +28,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
+import kotlin.math.cos
+import kotlin.math.PI
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -212,6 +214,25 @@ class TiledSiteRepository(
             filterNetworks = filter.networks.isActive,
             networkKeys = filter.networks.preferredOperators.toList(),
         ).map { entities -> entities.map(ChargeSiteEntity::toDomain) }
+
+    override fun storedSitesNearest(position: LatLon, box: BoundingBox, filter: MapFilter, limit: Int): Flow<List<ChargeSite>> {
+        val cosLat = cos(position.lat * PI / 180.0)
+        return dao.observeNearestFilteredSitesInBox(
+            south = box.south,
+            north = box.north,
+            west = box.west,
+            east = box.east,
+            slowMode = filter.slowMode,
+            slowBelowKw = MIN_DC_POWER_KW,
+            minPowerKw = filter.minPowerKw,
+            filterNetworks = filter.networks.isActive,
+            networkKeys = filter.networks.preferredOperators.toList(),
+            lat = position.lat,
+            lon = position.lon,
+            lonScale = cosLat * cosLat,
+            limit = limit,
+        ).map { entities -> entities.map(ChargeSiteEntity::toDomain) }
+    }
 
     override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> {
         val box = area.boundingBox

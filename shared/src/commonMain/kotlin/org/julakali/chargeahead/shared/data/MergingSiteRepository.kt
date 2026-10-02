@@ -3,6 +3,8 @@ package org.julakali.chargeahead.shared.data
 import org.julakali.chargeahead.shared.core.SiteMerger
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.distanceKmTo
 import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
@@ -69,6 +71,20 @@ class MergingSiteRepository(
                 }
             },
         ) { stocks -> SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters) }.flowOn(computation)
+
+    override fun storedSitesNearest(position: LatLon, box: BoundingBox, filter: MapFilter, limit: Int): Flow<List<ChargeSite>> =
+        combine(
+            repositories.map { repository ->
+                repository.storedSitesNearest(position, box, filter, limit).catch { failure ->
+                    logWarning("A store failed", failure)
+                    emit(emptyList())
+                }
+            },
+        ) { stocks ->
+            SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters)
+                .sortedBy { position.distanceKmTo(it.position) }
+                .take(limit)
+        }.flowOn(computation)
 
     override suspend fun invalidate() {
         repositories.forEach { it.invalidate() }

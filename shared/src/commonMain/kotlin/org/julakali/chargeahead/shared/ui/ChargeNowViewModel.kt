@@ -47,10 +47,6 @@ class ChargeNowViewModel(
         // whole screen the moment the results arrive.
     }.stateIn(viewModelScope, WhileUiSubscribed, ChargeNowUiState.Loading)
 
-    init {
-        observeChargeNow(ChargeNowObserver.Params(position = null))
-    }
-
     /** The sheet was opened: rank from the current position. */
     fun onSheetOpened() {
         val position = feature.currentFix.value?.position
