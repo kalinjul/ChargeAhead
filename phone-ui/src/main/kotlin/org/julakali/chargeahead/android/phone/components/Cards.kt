@@ -1,6 +1,5 @@
 package org.julakali.chargeahead.android.phone.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -8,9 +7,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -19,20 +19,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.julakali.chargeahead.android.phone.theme.tabular
 
-/** White card with hairline border, 14dp corners and a slight shadow. */
+/**
+ * The one card: elevated, no border, the route window's look everywhere.
+ * [selected] swaps the container for the primary tint instead of drawing a frame.
+ */
 @Composable
-fun AppCard(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
-    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-    val shape = MaterialTheme.shapes.medium
-    val color = MaterialTheme.colorScheme.surface
+fun AppCard(
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+    selected: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = MaterialTheme.shapes.large
+    // White in light; in dark the default low container sinks into the page.
+    val colors = CardDefaults.elevatedCardColors(
+        containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
     if (onClick != null) {
-        Surface(onClick = onClick, shape = shape, color = color, border = border, shadowElevation = 1.dp, modifier = modifier) {
-            Column(content = content)
-        }
+        ElevatedCard(onClick = onClick, shape = shape, colors = colors, modifier = modifier, content = content)
     } else {
-        Surface(shape = shape, color = color, border = border, shadowElevation = 1.dp, modifier = modifier) {
-            Column(content = content)
-        }
+        ElevatedCard(shape = shape, colors = colors, modifier = modifier, content = content)
     }
 }
 

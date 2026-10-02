@@ -1,6 +1,5 @@
 package org.julakali.chargeahead.android.phone.components
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,14 +31,7 @@ fun StationCard(
     selected: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
-    AppCard(
-        onClick = onClick,
-        modifier = if (selected) {
-            modifier.border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium)
-        } else {
-            modifier
-        },
-    ) {
+    AppCard(onClick = onClick, selected = selected, modifier = modifier) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(11.dp),
