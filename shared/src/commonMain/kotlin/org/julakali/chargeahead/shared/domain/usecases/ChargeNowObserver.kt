@@ -43,8 +43,14 @@ class ChargeNowObserver(
             .distinctUntilChanged()
             .flatMapLatest { (filters, networks) ->
                 val area = chargeNowArea(position)
-                // Every DC site, so the ranker can relax the power and network filters.
-                repository.storedSitesNearest(position, area.boundingBox, EVERY_DC_SITE, CHARGE_NOW_SLICE).map { sites ->
+                val wanted = MapFilter(networks, minPowerKw = filters.minPowerKw, slowMode = false)
+                // Two slices: the nearest that pass the filters, and the nearest DC sites regardless,
+                // which the ranker relaxes into. One slice of everything would be a city block of
+                // 50 kW posts, with nothing strong in it to pick.
+                combine(
+                    repository.storedSitesNearest(position, area.boundingBox, wanted, CHARGE_NOW_SLICE),
+                    repository.storedSitesNearest(position, area.boundingBox, EVERY_DC_SITE, CHARGE_NOW_SLICE),
+                ) { matching, any -> (matching + any).distinctBy { it.id } }.map { sites ->
                     ChargeNowRanker.rank(
                         sites = sites.filter { it.position in area },
                         position = position,
