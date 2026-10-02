@@ -13,6 +13,9 @@ import org.julakali.chargeahead.shared.domain.CHARGE_NOW_SLICE
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
+import org.julakali.chargeahead.shared.domain.ChargePointStatus
+import org.julakali.chargeahead.shared.domain.ChargePointState
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
@@ -57,17 +60,58 @@ class ObserveChargeNowTest {
             store.onEach { storeCollectedOn = coroutineContext[kotlinx.coroutines.CoroutineDispatcher.Key] }
     }
 
-    private val observe = ChargeNowObserver(repository, preferences, testDispatchers)
-    private val refresh = RefreshChargeNowInteractor(repository, preferences)
+
+    private val statusStore = MutableStateFlow<Map<String, List<ChargePointStatus>>>(emptyMap())
+    private val refreshedIds = mutableListOf<String>()
+    private val statusRepository = object : ChargePointStatusRepository {
+        override val statuses: Flow<Map<String, List<ChargePointStatus>>> = statusStore
+        override suspend fun refresh(ids: Collection<String>) { refreshedIds += ids }
+    }
+
+    private val observe = ChargeNowObserver(repository, statusRepository, preferences, testDispatchers)
+    private val refresh = RefreshChargeNowInteractor(repository, statusRepository, preferences)
 
     /** [northKm] north of [here]. */
-    private fun site(id: String, powerKw: Double, northKm: Double) = ChargeSite(
+    private fun site(id: String, powerKw: Double, northKm: Double, liveStatusId: String? = null) = ChargeSite(
         id = id,
         name = id,
         operator = "Ionity",
         position = LatLon(here.lat + northKm / 111.19, here.lon),
         connectors = listOf(Connector(ConnectorType.CCS2, powerKw, 4)),
+        liveStatusId = liveStatusId,
     )
+
+    /** A site that is full or broken is no recommendation; one the live source doesn't know stays. */
+    @Test
+    fun `full and broken sites are never suggested`() = runBlocking {
+        store.value = listOf(
+            site("full", 300.0, 1.0, liveStatusId = "live-full"),
+            site("broken", 300.0, 1.5, liveStatusId = "live-broken"),
+            site("unknown", 300.0, 2.0, liveStatusId = "live-unknown"),
+            site("free", 300.0, 2.5, liveStatusId = "live-free"),
+            site("silent", 300.0, 3.0),
+        )
+        statusStore.value = mapOf(
+            "live-full" to listOf(ChargePointStatus(ChargePointState.OCCUPIED), ChargePointStatus(ChargePointState.RESERVED)),
+            "live-broken" to listOf(ChargePointStatus(ChargePointState.OUT_OF_ORDER)),
+            "live-unknown" to emptyList(),
+            "live-free" to listOf(ChargePointStatus(ChargePointState.OCCUPIED), ChargePointStatus(ChargePointState.AVAILABLE)),
+        )
+
+        observe(ChargeNowObserver.Params(here))
+
+        val result = await { it != null }!!
+        assertEquals(listOf("unknown", "free", "silent"), (result.candidates + result.more).map { it.site.id })
+    }
+
+    @Test
+    fun `the refill asks for the live state of the slice`() = runBlocking {
+        store.value = listOf(site("a", 300.0, 1.0, liveStatusId = "live-a"), site("b", 300.0, 2.0))
+
+        refresh(RefreshChargeNowInteractor.Params(here)).getOrThrow()
+
+        assertEquals(listOf("live-a"), refreshedIds)
+    }
 
     private suspend fun await(matching: (ChargeNowResult?) -> Boolean): ChargeNowResult? =
         withTimeout(5_000) { observe.flow.first(matching) }

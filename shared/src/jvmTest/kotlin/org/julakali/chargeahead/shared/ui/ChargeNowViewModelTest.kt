@@ -17,6 +17,8 @@ import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
+import org.julakali.chargeahead.shared.domain.ChargePointStatus
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Fix
@@ -75,10 +77,18 @@ class ChargeNowViewModelTest {
         override suspend fun invalidate() = Unit
     }
 
+
+    private val statusStore = MutableStateFlow<Map<String, List<ChargePointStatus>>>(emptyMap())
+    private val refreshedIds = mutableListOf<String>()
+    private val statusRepository = object : ChargePointStatusRepository {
+        override val statuses: Flow<Map<String, List<ChargePointStatus>>> = statusStore
+        override suspend fun refresh(ids: Collection<String>) { refreshedIds += ids }
+    }
+
     private fun viewModel() = ChargeNowViewModel(
         feature,
-        ChargeNowObserver(repository, preferences, testDispatchers),
-        RefreshChargeNowInteractor(repository, preferences),
+        ChargeNowObserver(repository, statusRepository, preferences, testDispatchers),
+        RefreshChargeNowInteractor(repository, statusRepository, preferences),
     )
 
     /** The modal sheet takes its height from the first frame: a tall skeleton, never a one-liner. */

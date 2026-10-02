@@ -5,6 +5,8 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.chargeNowArea
+import org.julakali.chargeahead.shared.domain.chargeNowSlice
+import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import kotlinx.coroutines.flow.first
 
 /**
@@ -13,14 +15,19 @@ import kotlinx.coroutines.flow.first
  */
 class RefreshChargeNowInteractor(
     private val repository: SiteRepository,
+    private val statusRepository: ChargePointStatusRepository,
     private val preferences: PreferencesRepository,
 ) : Interactor<RefreshChargeNowInteractor.Params, Unit>() {
 
     data class Params(val position: LatLon)
 
     override suspend fun doWork(params: Params) {
+        val filters = preferences.chargeFilters.first()
+        val networks = preferences.networks.first()
         // AC mode browses every network, so it fetches unfiltered.
-        val networks = if (preferences.chargeFilters.first().slowMode) emptySet() else preferences.networks.first().selectedKeys()
-        repository.load(chargeNowArea(params.position), networks)
+        repository.load(chargeNowArea(params.position), if (filters.slowMode) emptySet() else networks.selectedKeys())
+        // Then the live state of what the ranking will look at; the observer picks it up from the status store.
+        val ids = repository.chargeNowSlice(params.position, filters, networks).first().mapNotNull { it.liveStatusId }
+        if (ids.isNotEmpty()) statusRepository.refresh(ids)
     }
 }

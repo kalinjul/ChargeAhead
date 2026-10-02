@@ -11,6 +11,8 @@ import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
 import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
+import org.julakali.chargeahead.shared.domain.ChargePointStatus
 import org.julakali.chargeahead.shared.domain.ChargeSiteSource
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
@@ -24,6 +26,8 @@ import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.testAppScope
 import org.julakali.chargeahead.shared.testDispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -57,12 +61,19 @@ class ChargeNowOverStoreTest {
 
     private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
 
+    private val statusStore = MutableStateFlow<Map<String, List<ChargePointStatus>>>(emptyMap())
+    private val refreshedIds = mutableListOf<String>()
+    private val statusRepository = object : ChargePointStatusRepository {
+        override val statuses: Flow<Map<String, List<ChargePointStatus>>> = statusStore
+        override suspend fun refresh(ids: Collection<String>) { refreshedIds += ids }
+    }
+
     private suspend fun rankOverStore(): ChargeNowResult {
         val database = createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO)
         val tiled = TiledSiteRepository(source = source, database = database, time = TimeProvider { 1_000L }, scope = testAppScope)
         val repository = MergingSiteRepository(listOf(tiled), computation = Dispatchers.Default)
         repository.load(SectorArea.circle(here, 200.0))
-        val observe = ChargeNowObserver(repository, preferences, testDispatchers)
+        val observe = ChargeNowObserver(repository, statusRepository, preferences, testDispatchers)
         observe(ChargeNowObserver.Params(here))
         return withTimeout(5_000) { observe.flow.first { it != null } }!!
     }
