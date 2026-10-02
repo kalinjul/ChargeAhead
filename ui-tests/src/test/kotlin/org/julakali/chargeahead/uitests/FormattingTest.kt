@@ -24,7 +24,7 @@ class FormattingTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun drawer(filters: ChargeFilters) =
-        compose.setThemedContent { DrawerContent(DrawerUiState(filters = filters), onOpen = {}, onFilters = {}) }
+        compose.setThemedContent { DrawerContent(DrawerUiState(filters = filters), onOpen = {}, onFilters = {}, onModeSelected = {}) }
 
     @Test
     fun `clock times are 24h in German`() {
@@ -38,23 +38,10 @@ class FormattingTest {
     }
 
     @Test
-    fun `the distance uses the German decimal separator`() {
-        drawer(ChargeFilters(maxDistanceKm = 3.5))
-        compose.onNodeWithText(compose.string(R.string.drawer_max_distance, "3,5"), ignoreCase = true).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun `whole kilometres drop the decimal`() {
-        drawer(ChargeFilters(maxDistanceKm = 5.0))
-        compose.onNodeWithText(compose.string(R.string.drawer_max_distance, "5"), ignoreCase = true).performScrollTo().assertIsDisplayed()
-    }
-
-    @Test
-    fun `power steps and the AC badge come from resources`() {
+    fun `power steps come from resources`() {
         drawer(ChargeFilters())
         listOf(50, 150, 300).forEach {
             compose.onNodeWithText(compose.string(R.string.drawer_power_step, it)).assertIsDisplayed()
         }
-        compose.onNodeWithText(compose.string(R.string.drawer_ac)).assertIsDisplayed()
     }
 }

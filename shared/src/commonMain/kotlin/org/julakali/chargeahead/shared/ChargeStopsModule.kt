@@ -60,6 +60,7 @@ import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.SetChargeModeInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
 import io.ktor.client.HttpClient
 import kotlinx.coroutines.CoroutineScope
@@ -108,6 +109,7 @@ fun chargeStopsModule(): Module = module {
                     scope = get(AppScope),
                 ),
             ),
+            computation = get<AppCoroutineDispatchers>().computation,
         )
     }
 
@@ -126,8 +128,8 @@ fun chargeStopsModule(): Module = module {
     factory { RefreshChargerAvailabilityInteractor(get(), get(), get(), get()) }
     factory { LiveConnectorsObserver(get()) }
     factory { RefreshLiveConnectorsInteractor(get()) }
-    factory { ChargeNowObserver(get(), get(), get()) }
-    factory { RefreshChargeNowInteractor(get(), get()) }
+    factory { ChargeNowObserver(get(), get(), get(), get()) }
+    factory { RefreshChargeNowInteractor(get(), get(), get()) }
     factory { DestinationSearchObserver(get(), get()) }
     factory { PlanTripInteractor(get(), get(), get(), get(), get(), get(), get()) }
     factory { UpdateArrivalSocInteractor(get()) }
@@ -141,6 +143,7 @@ fun chargeStopsModule(): Module = module {
     factory { UpdateManualSocInteractor(get()) }
     factory { UpdateChargeFiltersInteractor(get()) }
     factory { UpdateNetworksInteractor(get()) }
+    factory { SetChargeModeInteractor(get(), get(), get()) }
     factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     factory { SelectableNetworksObserver(get(), get(), get()) }

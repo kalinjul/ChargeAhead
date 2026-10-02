@@ -19,6 +19,8 @@ import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.BoundingBox
+import org.julakali.chargeahead.shared.domain.ChargePointStatus
+import org.julakali.chargeahead.shared.domain.ChargePointStatusRepository
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
@@ -94,10 +96,14 @@ class CarScreenViewModelsTest {
 
             override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = store
         }
+        val statusRepository = object : ChargePointStatusRepository {
+            override val statuses: Flow<Map<String, List<ChargePointStatus>>> = flowOf(emptyMap())
+            override suspend fun refresh(ids: Collection<String>) {}
+        }
         val viewModel = CarChargeNowViewModel(
             feature,
-            ChargeNowObserver(repository, preferences, testDispatchers),
-            RefreshChargeNowInteractor(repository, preferences),
+            ChargeNowObserver(repository, statusRepository, preferences, testDispatchers),
+            RefreshChargeNowInteractor(repository, statusRepository, preferences),
         )
         assertEquals(ChargeNowUiState.NoPosition, viewModel.uiState.await { true })
 

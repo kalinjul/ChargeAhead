@@ -22,6 +22,7 @@ import androidx.navigation3.ui.NavDisplay
 import org.julakali.chargeahead.android.phone.components.AppTopBar
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 
@@ -37,6 +38,8 @@ fun PhoneNavDisplay(
     onCarAdded: (VehiclePreset) -> Unit,
     onNavigateTo: (LatLon) -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
+    /** A charger tapped in "charge now": the same detail sheet a trip stop gets. */
+    onOpenSite: (ChargeSite) -> Unit,
     onSendToMaps: (String) -> Unit,
     onTripEnded: () -> Unit,
     /** The committed destination's name, the active route page's title. */
@@ -136,7 +139,10 @@ fun PhoneNavDisplay(
             }
 
             entry<ChargeNow>(metadata = SheetSceneStrategy.sheet()) {
-                ChargeNowRoute(onNavigate = { candidate -> onNavigateTo(candidate.site.position) })
+                ChargeNowRoute(
+                    onNavigate = { candidate -> onNavigateTo(candidate.site.position) },
+                    onOpen = { candidate -> onOpenSite(candidate.site) },
+                )
             }
         },
         modifier = modifier,

@@ -32,8 +32,6 @@ data class NetworksUiState(
     val networks: List<Network> = emptyList(),
     /** The ticked networks (catalog keys), edits included. */
     val selected: Set<String> = emptySet(),
-    /** [NetworkPreferences.onlyPreferred]: whether the selection filters at all. */
-    val onlyPreferred: Boolean = NetworkPreferences().onlyPreferred,
     val search: String = "",
 )
 
@@ -79,7 +77,6 @@ class NetworksViewModel(
         NetworksUiState(
             networks = order.orderFor(matches) ?: matches.committedFirst(stored),
             selected = edited.preferredOperators,
-            onlyPreferred = edited.onlyPreferred,
             search = search,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, NetworksUiState())
@@ -98,8 +95,6 @@ class NetworksViewModel(
             preferredOperators = if (key in selected) selected - key else selected + key,
         )
     }
-
-    fun onOnlyPreferredChanged(enabled: Boolean) = edit { it.copy(onlyPreferred = enabled) }
 
     /** The screen was opened: snapshot the order from what is committed. */
     fun onEnter() {
@@ -141,7 +136,9 @@ class NetworksViewModel(
     private suspend fun commit() {
         // Read inside the coroutine, so the last queued edit is in.
         val edited = staged.value ?: return
-        updateNetworks(UpdateNetworksInteractor.Params(edited))
+        // Only the ticks: the modes own onlyPreferred, and one may have been switched meanwhile.
+        val stored = preferences.networks.first()
+        updateNetworks(UpdateNetworksInteractor.Params(stored.copy(preferredOperators = edited.preferredOperators)))
         staged.value = null
     }
 

@@ -35,7 +35,6 @@ import org.julakali.chargeahead.android.phone.components.Fineprint
 import org.julakali.chargeahead.android.phone.components.LazyFlowRow
 import org.julakali.chargeahead.android.phone.components.SearchField
 import org.julakali.chargeahead.android.phone.components.SectionLabel
-import org.julakali.chargeahead.android.phone.components.SwitchRow
 import org.julakali.chargeahead.shared.ui.NetworksUiState
 import org.julakali.chargeahead.shared.ui.NetworksViewModel
 import org.koin.androidx.compose.koinViewModel
@@ -61,7 +60,6 @@ fun NetworksRoute(
         uiState = uiState,
         onSearchChange = viewModel::onSearchChanged,
         onNetworkToggled = viewModel::onNetworkToggled,
-        onOnlyPreferredChange = viewModel::onOnlyPreferredChanged,
         modifier = modifier,
     )
 }
@@ -71,23 +69,12 @@ fun NetworkSettingsScreen(
     uiState: NetworksUiState,
     onSearchChange: (String) -> Unit,
     onNetworkToggled: (String) -> Unit,
-    onOnlyPreferredChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier = modifier.padding(horizontal = 18.dp)) {
-        AppCard(modifier = Modifier.padding(top = 16.dp)) {
-            // On exactly when onlyPreferred is off.
-            SwitchRow(
-                label = stringResource(R.string.phone_networks_browse),
-                sublabel = stringResource(R.string.phone_networks_browse_hint),
-                checked = !uiState.onlyPreferred,
-                onCheckedChange = { browsing -> onOnlyPreferredChange(!browsing) },
-            )
-        }
-
         SectionLabel(
             text = stringResource(R.string.phone_networks_mine),
-            modifier = Modifier.padding(top = 20.dp),
+            modifier = Modifier.padding(top = 16.dp),
         )
         Fineprint(text = stringResource(R.string.phone_networks_intro))
 

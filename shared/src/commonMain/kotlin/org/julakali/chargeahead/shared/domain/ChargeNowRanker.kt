@@ -7,7 +7,7 @@ data class ChargeNowCandidate(
     val maxPowerKw: Double,
 )
 
-enum class RelaxedFilter { MIN_POWER, NETWORKS, MAX_DISTANCE }
+enum class RelaxedFilter { NETWORKS }
 
 data class ChargeNowResult(
     val candidates: List<ChargeNowCandidate>,
@@ -33,13 +33,14 @@ object ChargeNowRanker {
         networks: NetworkPreferences,
     ): ChargeNowResult {
         val candidates = sites.mapNotNull { site ->
-            val maxPower = site.connectors
-                .filter { it.type == ConnectorType.CCS2 || it.type == ConnectorType.TESLA_NACS }
-                .maxOfOrNull { it.maxPowerKw }
-                ?: return@mapNotNull null
-            // A route planner's "charge now" means fast charging; AC posts
-            // are for parking, not for getting back on the road.
-            if (maxPower < MIN_DC_POWER_KW) return@mapNotNull null
+            // AC mode browses the slow posts, any connector; otherwise "charge now" means fast
+            // charging on CCS2 or NACS, and the driver's minimum is a hard line: a weaker post
+            // is never a recommendation.
+            val maxPower = if (filters.slowMode) {
+                site.maxPowerKw?.takeIf { it < MIN_DC_POWER_KW }
+            } else {
+                site.maxDcPowerKw?.takeIf { it >= maxOf(MIN_DC_POWER_KW, filters.minPowerKw) }
+            } ?: return@mapNotNull null
             ChargeNowCandidate(
                 site = site,
                 distanceKm = position.distanceKmTo(site.position),
@@ -47,11 +48,12 @@ object ChargeNowRanker {
             )
         }
 
-        val ladder = listOf(
-            RelaxedFilter.MIN_POWER to { c: ChargeNowCandidate -> c.maxPowerKw >= filters.minPowerKw },
-            RelaxedFilter.NETWORKS to { c: ChargeNowCandidate -> networks.allowsSite(c.site) },
-            RelaxedFilter.MAX_DISTANCE to { c: ChargeNowCandidate -> c.distanceKm <= filters.maxDistanceKm },
-        )
+        // Only the networks give way, and only when they were asked for; AC mode ignores them.
+        val ladder = if (networks.isActive && !filters.slowMode) {
+            listOf(RelaxedFilter.NETWORKS to { c: ChargeNowCandidate -> networks.allowsSite(c.site) })
+        } else {
+            emptyList()
+        }
 
         for (relaxCount in 0..ladder.size) {
             val enforced = ladder.drop(relaxCount)

@@ -12,6 +12,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import org.julakali.chargeahead.shared.domain.ChargeMode
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -29,6 +30,14 @@ data class ChargeAheadExtras(
     // Reserved for the trip summary's delay badge once traffic data exists.
     val trafficBg: Color,
     val trafficText: Color,
+    /** AC mode's signal colour: the glow, the flag, the drawer's chip. */
+    val acMode: Color,
+    /** Stöbermodus' signal colour. */
+    val browseMode: Color,
+    /** What reads on [acMode]. */
+    val onAcMode: Color,
+    /** What reads on [browseMode]. */
+    val onBrowseMode: Color,
 )
 
 private val LightExtras = ChargeAheadExtras(
@@ -37,6 +46,11 @@ private val LightExtras = ChargeAheadExtras(
     deleteOutline = Color(0xFFF2B8B2),
     trafficBg = Color(0xFFFEF7E0),
     trafficText = Color(0xFFB06000),
+    // The primary's weight and chroma at their own hues, a step darker so white text clears 4.5:1.
+    acMode = Color(0xFFBD5A03),
+    browseMode = Color(0xFF068475),
+    onAcMode = Color(0xFFFFFFFF),
+    onBrowseMode = Color(0xFFFFFFFF),
 )
 
 private val DarkExtras = ChargeAheadExtras(
@@ -45,6 +59,11 @@ private val DarkExtras = ChargeAheadExtras(
     deleteOutline = Color(0xFF8C4A45),
     trafficBg = Color(0xFF3D2F0A),
     trafficText = Color(0xFFFDD663),
+    // The dark primary's pastel weight; like it, both take ink rather than white.
+    acMode = Color(0xFFD7A96C),
+    browseMode = Color(0xFF62C6BC),
+    onAcMode = Color(0xFF2E1C05),
+    onBrowseMode = Color(0xFF05201C),
 )
 
 val LocalChargeAheadExtras = staticCompositionLocalOf { LightExtras }
@@ -56,7 +75,29 @@ object ChargeAheadColors {
     val deleteOutline: Color @Composable get() = LocalChargeAheadExtras.current.deleteOutline
     val trafficBg: Color @Composable get() = LocalChargeAheadExtras.current.trafficBg
     val trafficText: Color @Composable get() = LocalChargeAheadExtras.current.trafficText
+
+    /**
+     * The signal colour of an active [ChargeMode]. Callers guard on [ChargeMode.NORMAL] before
+     * asking; the transparent branch only keeps the `when` exhaustive.
+     */
+    @Composable
+    fun forMode(mode: ChargeMode): Color = when (mode) {
+        ChargeMode.NORMAL -> Color.Transparent
+        ChargeMode.AC -> LocalChargeAheadExtras.current.acMode
+        ChargeMode.BROWSE -> LocalChargeAheadExtras.current.browseMode
+    }
+
+    /** What to paint on top of [forMode]. */
+    @Composable
+    fun onMode(mode: ChargeMode): Color = when (mode) {
+        ChargeMode.NORMAL -> Color.Transparent
+        ChargeMode.AC -> LocalChargeAheadExtras.current.onAcMode
+        ChargeMode.BROWSE -> LocalChargeAheadExtras.current.onBrowseMode
+    }
 }
+
+/** Material's content alpha for a disabled control. */
+const val DISABLED_ALPHA = 0.38f
 
 /** Tabular figures for times and distances. */
 val TextStyle.tabular: TextStyle get() = copy(fontFeatureSettings = "tnum")

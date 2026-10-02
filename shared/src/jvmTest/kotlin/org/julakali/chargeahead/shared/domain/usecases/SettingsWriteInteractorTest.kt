@@ -73,7 +73,7 @@ class SettingsWriteInteractorTest {
 
     @Test
     fun `charge filters are stored`() = runBlocking {
-        val filters = ChargeFilters(minPowerKw = 100.0, maxDistanceKm = 25.0)
+        val filters = ChargeFilters(minPowerKw = 100.0)
 
         UpdateChargeFiltersInteractor(preferences)(UpdateChargeFiltersInteractor.Params(filters)).getOrThrow()
 

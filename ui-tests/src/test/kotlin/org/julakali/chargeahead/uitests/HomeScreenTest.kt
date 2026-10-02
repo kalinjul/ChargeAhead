@@ -17,6 +17,8 @@ import org.julakali.chargeahead.shared.ui.HomeUiState
 import org.julakali.chargeahead.shared.ui.SearchUiState
 import org.junit.Assert.assertTrue
 import org.junit.Rule
+import androidx.compose.ui.test.onNodeWithTag
+import org.julakali.chargeahead.shared.domain.ChargeMode
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -32,6 +34,7 @@ class HomeScreenTest {
         onSettings: () -> Unit = {},
         activeRouteEnabled: Boolean = false,
         onActiveRoute: () -> Unit = {},
+        onModeDismiss: () -> Unit = {},
     ) = compose.setThemedContent {
         HomeScreen(
             uiState = uiState,
@@ -48,12 +51,42 @@ class HomeScreenTest {
             onChargeNow = {},
             activeRouteEnabled = activeRouteEnabled,
             onActiveRoute = onActiveRoute,
+            onModeDismiss = onModeDismiss,
             onStopTapped = {},
             onSearchExpandedChange = {},
             onQueryChange = {},
             onPick = {},
             onClearTrip = {},
         )
+    }
+
+    @Test
+    fun `an active mode shows its pill and the edge glow`() {
+        home(uiState = HomeUiState(mode = ChargeMode.AC))
+        compose.onNodeWithText(compose.string(R.string.mode_ac)).assertIsDisplayed()
+        compose.onNodeWithTag("modeGlow").assertExists()
+    }
+
+    @Test
+    fun `stoebermodus has its own pill`() {
+        home(uiState = HomeUiState(mode = ChargeMode.BROWSE))
+        compose.onNodeWithText(compose.string(R.string.mode_browse)).assertIsDisplayed()
+    }
+
+    @Test
+    fun `no mode means no pill and no glow`() {
+        home()
+        compose.onNodeWithText(compose.string(R.string.mode_ac)).assertDoesNotExist()
+        compose.onNodeWithText(compose.string(R.string.mode_browse)).assertDoesNotExist()
+        compose.onNodeWithTag("modeGlow").assertDoesNotExist()
+    }
+
+    @Test
+    fun `the mode pill switches the mode off`() {
+        var dismissed = false
+        home(uiState = HomeUiState(mode = ChargeMode.AC), onModeDismiss = { dismissed = true })
+        compose.onNodeWithText(compose.string(R.string.mode_ac)).performClick()
+        assertTrue(dismissed)
     }
 
     @Test

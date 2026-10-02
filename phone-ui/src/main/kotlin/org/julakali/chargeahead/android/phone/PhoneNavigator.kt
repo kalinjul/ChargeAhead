@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
@@ -57,6 +58,15 @@ class PhoneNavigator(val backStack: NavBackStack<NavKey>) {
             screenStep = step
             onDispose { screenStep = null }
         }
+    }
+
+    /**
+     * Back on the root screen. Its own composable: [ownsBack] reads the back
+     * stack, and read from the app's scope every push recomposed the map and all.
+     */
+    @Composable
+    fun RootBackHandler() {
+        BackHandler(enabled = ownsBack) { back() }
     }
 
     private fun popToRoot() {

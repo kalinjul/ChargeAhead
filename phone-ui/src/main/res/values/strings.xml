@@ -45,9 +45,7 @@
     <string name="car_now_loading">Ladesäulen werden gesucht …</string>
     <string name="car_now_empty">Kein Schnelllader in der Nähe gefunden.</string>
     <string name="car_now_relaxed">Ohne Filter: %1$s</string>
-    <string name="car_relax_power">Leistung</string>
     <string name="car_relax_networks">Netzwerke</string>
-    <string name="car_relax_distance">Entfernung</string>
 
     <string name="car_no_navigation_app">Keine Navigations-App gefunden</string>
 
@@ -120,8 +118,6 @@
     <string name="phone_action_networks">Ladenetze</string>
     <string name="phone_networks_title">Ladenetze</string>
     <string name="phone_networks_intro">Ohne Auswahl werden alle Ladesäulen gezeigt. Tippe die Netze an, bei denen du lädst — dann werden nur deren Säulen geladen.</string>
-    <string name="phone_networks_browse">Stöbermodus</string>
-    <string name="phone_networks_browse_hint">Im Stöbermodus werden alle Ladenetze auf der Karte angezeigt und für die Routenplanung verwendet</string>
     <string name="phone_networks_mine">Meine Ladenetze</string>
     <string name="phone_networks_search">Ladenetz suchen</string>
     <string name="phone_search_clear">Suche löschen</string>
@@ -165,6 +161,10 @@
     <string name="map_loading_sites">Ladestationen werden geladen</string>
     <string name="map_out_of_order">Außer Betrieb</string>
     <string name="map_zoom_hint">Zum Anzeigen der Ladesäulen reinzoomen</string>
+    <string name="mode_ac">AC</string>
+    <string name="mode_browse">Stöbern</string>
+    <string name="drawer_mode_ac">AC-Modus</string>
+    <string name="home_mode_off">Modus beenden</string>
 
     <!-- Phone: car data debug view -->
     <string name="drawer_debug">Debug</string>
@@ -188,12 +188,11 @@
     <string name="drawer_preferences">Einstellungen</string>
     <string name="drawer_car">Auto</string>
     <string name="drawer_networks">Netzwerke</string>
+    <string name="drawer_mode">Modus</string>
+    <string name="drawer_mode_info">Was bedeuten die Modi?</string>
+    <string name="drawer_mode_tooltip">Im Stöbermodus werden alle Ladenetze auf der Karte angezeigt und für die Routenplanung verwendet.\n\nDer AC-Modus ignoriert alle Filter und zeigt Lader unter 50 kW.\n\nBeide Modi verändern die Vorschläge im Jetzt Laden Menü.</string>
     <string name="drawer_min_power">Mindestleistung</string>
     <string name="drawer_power_step">%1$d kW</string>
-    <string name="drawer_ac">AC</string>
-    <string name="drawer_slow_mode">AC-Modus</string>
-    <string name="drawer_slow_mode_hint">ignoriert alle Filter und zeigt Lader unter 50 kW</string>
-    <string name="drawer_max_distance">Max. Entfernung (Jetzt laden): %1$s km</string>
     <string name="drawer_about">Über PowerTrip</string>
     <string name="drawer_legal">Impressum &amp; Datenschutz</string>
     <string name="drawer_licenses">Lizenzen</string>
@@ -260,11 +259,8 @@
 
     <!-- Phone: charge now -->
     <string name="cn_title">Jetzt laden</string>
-    <string name="cn_subtitle">Beste Ladesäulen in der Nähe – nächste zuerst</string>
-    <string name="cn_relaxed">Filter zu streng — gelockert: %1$s</string>
-    <string name="cn_relax_min_power">Mindestleistung</string>
-    <string name="cn_relax_networks">Netzwerke</string>
-    <string name="cn_relax_max_distance">Entfernung</string>
+    <string name="cn_subtitle">Beste Ladesäulen nach Entfernung und Filterkriterien</string>
+    <string name="cn_relaxed">Wenig passende Ladesäulen gefunden. Filterkriterien gelockert.</string>
     <string name="cn_empty">Keine Schnelllader in der Nähe gefunden.</string>
     <string name="cn_loading">Ladesäulen werden gesucht …</string>
     <string name="cn_distance_power">%1$s km · %2$d kW</string>
