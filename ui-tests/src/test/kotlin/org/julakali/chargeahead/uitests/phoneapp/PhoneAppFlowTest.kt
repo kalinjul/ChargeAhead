@@ -373,6 +373,24 @@ class PhoneAppFlowTest {
         harness.sites.forEach { compose.onNodeWithText(it.operator!!).assertDoesNotExist() }
     }
 
+    /** Closing and reopening right away must not swallow the tap. */
+    @Test
+    fun `jetzt laden reopens right after it was closed`() {
+        val nearby = listOf(Fixtures.site("n1", "Fastned", harness.hamburg.copy(lat = harness.hamburg.lat + 0.009), "Hamburg"))
+        harness.start(nearby = nearby)
+        compose.setThemedContent { PhoneApp(librariesRes = 0) }
+
+        // The pill and the sheet share their label; the card is the sheet's tell.
+        compose.onNodeWithText(chargeNowPill()).performClick()
+        waitForText("Fastned")
+        pressBack()
+        waitForTextGone("Fastned")
+
+        compose.onNodeWithText(chargeNowPill()).performClick()
+
+        waitForText("Fastned")
+    }
+
     /** The search ViewModels outlive the activity, so a rotation keeps the typed text and the open search. */
     @Test
     fun `recreating the activity keeps the search open with its text`() {

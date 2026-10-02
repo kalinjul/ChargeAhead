@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
 import android.content.Context
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.DrawerState
@@ -186,7 +185,7 @@ fun PhoneApp(librariesRes: Int) {
             else -> null
         },
     )
-    BackHandler(enabled = navigator.ownsBack) { navigator.back() }
+    navigator.RootBackHandler()
 }
 
 /** The settings drawer, from the right edge. */
