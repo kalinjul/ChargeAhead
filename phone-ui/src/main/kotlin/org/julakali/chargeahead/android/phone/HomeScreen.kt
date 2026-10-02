@@ -2,6 +2,7 @@ package org.julakali.chargeahead.android.phone
 
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -26,6 +27,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material.icons.outlined.Menu
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.platform.testTag
+import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
+import org.julakali.chargeahead.shared.domain.ChargeMode
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -42,6 +55,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.draw.innerShadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalDensity
@@ -123,6 +139,7 @@ fun HomeRoute(
         onChargeNow = onChargeNow,
         activeRouteEnabled = activeRouteEnabled,
         onActiveRoute = onActiveRoute,
+        onModeDismiss = viewModel::onModeDismissed,
         onStopTapped = onStopTapped,
         onSearchExpandedChange = { open -> if (open) searchViewModel.onOpened() else searchViewModel.onClosed() },
         onQueryChange = searchViewModel::onQueryChanged,
@@ -160,6 +177,8 @@ fun HomeScreen(
     onChargeNow: () -> Unit,
     activeRouteEnabled: Boolean,
     onActiveRoute: () -> Unit,
+    /** The mode pill was tapped: AC mode or Stöbermodus goes off. */
+    onModeDismiss: () -> Unit,
     onStopTapped: (Int) -> Unit,
     onSearchExpandedChange: (Boolean) -> Unit,
     onQueryChange: (String) -> Unit,
@@ -167,7 +186,7 @@ fun HomeScreen(
     onClearTrip: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val mode = when {
+    val homeMode = when {
         search.expanded -> HomeMode.SEARCHING
         trip != null -> HomeMode.TRIP
         else -> HomeMode.BROWSING
@@ -184,7 +203,7 @@ fun HomeScreen(
             HomeGoogleMap(
                 position = uiState.position,
                 // The route replaces the browsing markers.
-                chargers = if (mode == HomeMode.TRIP) emptyList() else uiState.chargers,
+                chargers = if (homeMode == HomeMode.TRIP) emptyList() else uiState.chargers,
                 route = route,
                 bottomInset = mapBottomInset,
                 hasLocationPermission = hasPermission == true,
@@ -198,8 +217,14 @@ fun HomeScreen(
             MissingMapsKeyNotice(Modifier.fillMaxSize())
         }
 
+        // A mode that is on tints the screen's edges, so it can't stay on unnoticed.
+        ModeGlow(uiState.mode)
+        if (homeMode != HomeMode.SEARCHING) {
+            ModeFlag(uiState.mode, onDismiss = onModeDismiss, modifier = Modifier.align(Alignment.CenterEnd))
+        }
+
         // While the panel is open the map only takes a dismissing tap.
-        if (mode == HomeMode.SEARCHING) {
+        if (homeMode == HomeMode.SEARCHING) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -210,7 +235,7 @@ fun HomeScreen(
         // Burger, bar, locate on one line. While searching the sides fold away and
         // Material's docked bar takes the whole width; compass and spinner hang on the right.
         // The opened bar grows downward, so nothing here may be placed relative to its height.
-        val searching = mode == HomeMode.SEARCHING
+        val searching = homeMode == HomeMode.SEARCHING
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -355,7 +380,7 @@ fun HomeScreen(
             }
         }
 
-        if (mode == HomeMode.BROWSING) {
+        if (homeMode == HomeMode.BROWSING) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -390,6 +415,73 @@ fun HomeScreen(
         }
     }
 }
+
+/**
+ * The mode's colour bleeding in from the screen's edges, breathing slowly; nothing for
+ * [ChargeMode.NORMAL]. Compose's own inner shadow does the blur. Takes no touches.
+ */
+@Composable
+private fun ModeGlow(mode: ChargeMode) {
+    // Crossfade, so the fading-out glow keeps the colour of the mode that just went off,
+    // and nothing animates the size: AnimatedContent would clip the exit to a shrinking corner.
+    Crossfade(targetState = mode, label = "modeGlow") { shown ->
+        // Inside the branch: with no mode on there is nothing to breathe, and an infinite
+        // transition out here would keep asking for frames while the app sits idle on the map.
+        if (shown != ChargeMode.NORMAL) {
+            val breath by rememberInfiniteTransition(label = "modeBreath").animateFloat(
+                initialValue = GLOW_BREATH_FLOOR,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(tween(GLOW_BREATH_MILLIS, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "modeBreathAlpha",
+            )
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .testTag("modeGlow")
+                    .graphicsLayer { alpha = breath }
+                    .innerShadow(
+                        RectangleShape,
+                        Shadow(radius = GLOW_REACH, color = ChargeAheadColors.forMode(shown), alpha = GLOW_ALPHA),
+                    ),
+            )
+        }
+    }
+}
+
+/** A small flag on the right edge, mid-height, naming the mode that is on; tapping it switches the mode off. */
+@Composable
+private fun ModeFlag(mode: ChargeMode, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    if (mode == ChargeMode.NORMAL) return
+    val color = ChargeAheadColors.forMode(mode)
+    Surface(
+        onClick = onDismiss,
+        shape = MaterialTheme.shapes.small.copy(topEnd = CornerSize(0.dp), bottomEnd = CornerSize(0.dp)),
+        color = color,
+        contentColor = ChargeAheadColors.onMode(mode),
+        shadowElevation = 3.dp,
+        modifier = modifier,
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
+            Text(
+                stringResource(if (mode == ChargeMode.AC) R.string.mode_ac else R.string.mode_browse),
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Icon(
+                Icons.Default.Close,
+                contentDescription = stringResource(R.string.home_mode_off),
+                modifier = Modifier.padding(start = 4.dp).size(14.dp),
+            )
+        }
+    }
+}
+
+/** The inner shadow's blur radius and opacity, and how slowly the glow breathes. */
+private val GLOW_REACH = 48.dp
+private const val GLOW_ALPHA = 0.75f
+private const val GLOW_BREATH_MILLIS = 3600
+
+/** How dim the glow gets at the bottom of a breath. */
+private const val GLOW_BREATH_FLOOR = 0.75f
 
 private fun TripPlan.toRouteOverlay() = RouteOverlay(
     points = route.points,
@@ -453,6 +545,7 @@ private fun HomePreview(
             onChargeNow = {},
             activeRouteEnabled = activeRouteEnabled,
             onActiveRoute = {},
+            onModeDismiss = {},
             onStopTapped = {},
             onSearchExpandedChange = {},
             onQueryChange = {},

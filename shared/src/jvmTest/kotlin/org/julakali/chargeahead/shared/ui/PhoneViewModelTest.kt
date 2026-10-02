@@ -32,6 +32,10 @@ import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.usecases.LiveConnectorsObserver
+import org.julakali.chargeahead.shared.domain.ChargeMode
+import org.julakali.chargeahead.shared.domain.usecases.UpdateNetworksInteractor
+import org.julakali.chargeahead.shared.domain.usecases.SetChargeModeInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateChargeFiltersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.MapChargersObserver
 import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeStopsInteractor
@@ -288,8 +292,27 @@ class PhoneViewModelTest {
             LiveConnectorsObserver(statuses),
             RefreshLiveConnectorsInteractor(statuses),
             preferences,
+            SetChargeModeInteractor(preferences, UpdateChargeFiltersInteractor(preferences), UpdateNetworksInteractor(preferences)),
             locationTimeoutMillis,
         )
+    }
+
+    /** The map says which mode is on, and its pill switches that mode off again. */
+    @Test
+    fun `the map shows the mode and dismisses it`() = runBlocking<Unit> {
+        val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
+        val viewModel = homeViewModel(mapSites, preferences)
+        assertEquals(ChargeMode.NORMAL, viewModel.uiState.await { true }.mode)
+
+        preferences.setChargeFilters(ChargeFilters(slowMode = true))
+        assertEquals(ChargeMode.AC, viewModel.uiState.await { it.mode == ChargeMode.AC }.mode)
+        viewModel.onModeDismissed()
+        assertEquals(ChargeMode.NORMAL, viewModel.uiState.await { it.mode == ChargeMode.NORMAL }.mode)
+
+        preferences.setNetworks(NetworkPreferences(onlyPreferred = false))
+        assertEquals(ChargeMode.BROWSE, viewModel.uiState.await { it.mode == ChargeMode.BROWSE }.mode)
+        viewModel.onModeDismissed()
+        assertEquals(true, preferences.networks.first().onlyPreferred)
     }
 
     @Test

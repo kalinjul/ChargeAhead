@@ -29,6 +29,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeFilters
+import org.julakali.chargeahead.shared.domain.ChargeMode
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.DrawerUiState
@@ -111,6 +112,7 @@ fun PhoneApp(librariesRes: Int) {
         // The drawer stays open underneath the page.
         onOpen = { target -> navigator.openFromRoot(target.destination) },
         onFilters = drawerViewModel::onFiltersChanged,
+        onModeSelected = drawerViewModel::onModeSelected,
     ) {
         TripSheetScaffold(
             trip = planned,
@@ -196,6 +198,7 @@ private fun PhoneAppDrawer(
     uiState: DrawerUiState,
     onOpen: (DrawerTarget) -> Unit,
     onFilters: (ChargeFilters) -> Unit,
+    onModeSelected: (ChargeMode) -> Unit,
     content: @Composable () -> Unit,
 ) {
     ModalNavigationDrawer(
@@ -205,7 +208,7 @@ private fun PhoneAppDrawer(
         drawerContent = {
             // The overload with the state is the one that handles back itself.
             ModalDrawerSheet(drawerState, drawerContainerColor = MaterialTheme.colorScheme.surface) {
-                DrawerContent(uiState = uiState, onOpen = onOpen, onFilters = onFilters)
+                DrawerContent(uiState = uiState, onOpen = onOpen, onFilters = onFilters, onModeSelected = onModeSelected)
             }
         },
         content = content,

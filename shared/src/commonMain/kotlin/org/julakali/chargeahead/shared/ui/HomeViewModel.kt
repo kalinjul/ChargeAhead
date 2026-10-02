@@ -11,7 +11,9 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.usecases.LiveConnectorsObserver
+import org.julakali.chargeahead.shared.domain.usecases.SetChargeModeInteractor
 import org.julakali.chargeahead.shared.domain.usecases.MapChargersObserver
+import org.julakali.chargeahead.shared.domain.ChargeMode
 import org.julakali.chargeahead.shared.domain.Reachability
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInteractor
@@ -38,6 +40,8 @@ data class HomeUiState(
     /** The selected site's live charge points; `null` without live data. */
     val selectedStopLive: List<LiveConnectorGroup>? = null,
     val filtersCustomized: Boolean = false,
+    /** AC mode or Stöbermodus, shown on the map so neither stays on by accident. */
+    val mode: ChargeMode = ChargeMode.NORMAL,
     /** Location is running but has not delivered a position yet. */
     val searchingLocation: Boolean = false,
     /** Long enough without a fix to tell the driver; stays alongside [searchingLocation]. */
@@ -58,6 +62,7 @@ class HomeViewModel(
     private val observeLiveConnectors: LiveConnectorsObserver,
     private val refreshLiveConnectors: RefreshLiveConnectorsInteractor,
     preferences: PreferencesRepository,
+    private val setChargeMode: SetChargeModeInteractor,
     /** How long the button may spin before the map says something. */
     private val locationTimeoutMillis: Long = DEFAULT_LOCATION_TIMEOUT_MILLIS,
 ) : ViewModel() {
@@ -86,6 +91,7 @@ class HomeViewModel(
             selectedStop = mapState.selectedStop,
             selectedStopLive = selectedStopLive.takeIf { mapState.selectedStop?.site?.liveStatusId != null },
             filtersCustomized = !filters.isDefault || networks.isActive,
+            mode = ChargeMode.of(filters, networks),
             // Gated on the position, so a late fix clears both.
             searchingLocation = attempt.running && position == null,
             locationUnavailable = attempt.timedOut && position == null,
@@ -96,6 +102,11 @@ class HomeViewModel(
     init {
         observeMapChargers(MapChargersObserver.Params(viewport = null))
         observeLiveConnectors(LiveConnectorsObserver.Params(liveStatusId = null))
+    }
+
+    /** The mode pill was tapped: whichever mode is on goes off. */
+    fun onModeDismissed() {
+        viewModelScope.launch { setChargeMode(SetChargeModeInteractor.Params(ChargeMode.NORMAL)) }
     }
 
     /** Location permission granted: the pipeline may run. Calling it twice is harmless. */

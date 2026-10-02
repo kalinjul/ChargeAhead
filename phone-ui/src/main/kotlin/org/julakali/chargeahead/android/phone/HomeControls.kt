@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
+import org.julakali.chargeahead.android.phone.theme.DISABLED_ALPHA
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -119,6 +120,3 @@ fun CompassButton(bearing: () -> Float, onClick: () -> Unit) {
 }
 
 private val CompassRed = Color(0xFFD93025)
-
-/** Material's disabled content emphasis. */
-private const val DISABLED_ALPHA = 0.38f
