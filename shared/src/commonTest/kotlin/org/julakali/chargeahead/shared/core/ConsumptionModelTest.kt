@@ -31,13 +31,24 @@ class ConsumptionModelTest {
         RouteSegment(fromKm, distanceKm, distanceKm / speedKmh * 60.0)
 
     @Test
-    fun `the WLTC reproduces the WLTP figure a catalog curve was fitted to`() {
-        assertEquals(15.3, wltpKwhPer100Km(mg4Curve), 0.01)
+    fun `without the backend's figure the WLTC is simulated as the backend fits it`() {
+        assertEquals(15.3, mg4Curve.wltpAtPlugKwhPer100Km(), 0.01)
     }
 
     @Test
     fun `a car without a curve gets a generic one that reproduces its consumption on the WLTC`() {
-        assertEquals(16.0, wltpKwhPer100Km(genericRoadLoad(16.0)), 1e-6)
+        val generic = genericRoadLoad(16.0)
+
+        assertEquals(16.0, generic.wltpAtPlugKwhPer100Km(), 1e-9)
+        assertEquals(16.0, generic.copy(wltpKwhPer100Km = null).wltpAtPlugKwhPer100Km(), 1e-6)
+    }
+
+    @Test
+    fun `the backend's WLTP figure for the curve is what the driver's figure is measured against`() {
+        val served = RoadLoadConsumption(mg4.copy(roadLoad = mg4Curve.copy(wltpKwhPer100Km = 17.0)))
+        val simulated = RoadLoadConsumption(mg4)
+
+        assertEquals(mg4Curve.wltpAtPlugKwhPer100Km() / 17.0, served.kwhPer100KmAt(100.0) / simulated.kwhPer100KmAt(100.0), 1e-9)
     }
 
     @Test

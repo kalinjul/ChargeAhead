@@ -99,6 +99,8 @@ data class RoadLoad(
     val auxiliaryPowerKw: Double,
     /** Share of the braking energy that goes back into the battery, 0..1. */
     val recuperationShare: Double,
+    /** What the backend says this curve consumes over the WLTC, at the plug; `null` from older backends. */
+    val wltpKwhPer100Km: Double? = null,
 ) {
     fun forceN(speedKmh: Double): Double = f0 + f1 * speedKmh + f2 * speedKmh * speedKmh
 }

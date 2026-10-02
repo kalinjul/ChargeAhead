@@ -326,11 +326,13 @@ kinetic energy put in per metre (J/kg) at a given average speed, taken from
 the WLTC phases up to 92 km/h and assumed to fall towards steady motorway
 driving above.
 
-The driver's figure is read as a WLTP value at the plug. `k` scales the curve
-so that the WLTC, simulated second by second exactly as the backend does it
-(`core/Wltp.kt`), reproduces that figure: 1 when the driver keeps the catalog
-value, a personal correction factor otherwise. Without segments the route's
-own average speed applies.
+The driver's figure is read as a WLTP value at the plug. `k` is the driver's
+figure over what the curve gives on the WLTC: 1 when the driver keeps the
+catalog value, a personal correction factor otherwise. The backend serves that
+WLTC figure with each curve (`RoadLoadDto.wltpKwhPer100Km`); for older
+backends and for the generic curve the app runs the same simulation from the
+backend's `vehicle-model` artifact, which also holds the constants and the
+generic curve fit. Without segments the route's own average speed applies.
 
 ### 5.1a Charging time
 

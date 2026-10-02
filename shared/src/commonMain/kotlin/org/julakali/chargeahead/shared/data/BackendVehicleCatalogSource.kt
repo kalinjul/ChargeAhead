@@ -23,7 +23,7 @@ class BackendVehicleCatalogSource(
                 dcPeakPowerKw = model.dcPeakPowerKw,
                 connectors = model.connectors.mapTo(LinkedHashSet()) { it.toDomain() },
                 roadLoad = with(model.roadLoad) {
-                    RoadLoad(f0, f1, f2, massKg, drivetrainEfficiency, auxiliaryPowerKw, recuperationShare)
+                    RoadLoad(f0, f1, f2, massKg, drivetrainEfficiency, auxiliaryPowerKw, recuperationShare, wltpKwhPer100Km)
                 },
             )
         }

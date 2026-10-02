@@ -28,7 +28,7 @@ class BackendVehicleCatalogSourceTest {
                        "usableBatteryKwh":37.3,"consumptionKwhPer100Km":13.8,"dcPeakPowerKw":85.0,
                        "connectors":["ccs2","type2"],
                        "roadLoad":{"f0":120.0,"f1":0.5,"f2":0.03,"massKg":1400.0,"drivetrainEfficiency":0.88,
-                                   "auxiliaryPowerKw":0.6,"recuperationShare":0.6,"source":"generic"}},
+                                   "auxiliaryPowerKw":0.6,"recuperationShare":0.6,"source":"generic","wltpKwhPer100Km":13.8}},
                       {"id":"7d0e7c3a-0000-4000-8000-000000000001","name":"Stadtflitzer",
                        "usableBatteryKwh":20.0,"consumptionKwhPer100Km":12.0,"dcPeakPowerKw":0.0,
                        "connectors":["type2"],
@@ -51,7 +51,7 @@ class BackendVehicleCatalogSourceTest {
                 VehiclePreset(
                     "48d30005-4e77-446c-bfcf-3152d1884a65", "Fiat 500e 42 kWh", 37.3, 13.8, 85.0,
                     setOf(ConnectorType.CCS2, ConnectorType.TYPE2),
-                    RoadLoad(120.0, 0.5, 0.03, 1400.0, 0.88, 0.6, 0.6),
+                    RoadLoad(120.0, 0.5, 0.03, 1400.0, 0.88, 0.6, 0.6, wltpKwhPer100Km = 13.8),
                 ),
                 VehiclePreset(
                     "7d0e7c3a-0000-4000-8000-000000000001", "Stadtflitzer", 20.0, 12.0, 0.0, setOf(ConnectorType.TYPE2),

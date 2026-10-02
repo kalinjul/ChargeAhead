@@ -1,7 +1,10 @@
 package org.julakali.chargeahead.shared.core
 
+import org.julakali.chargeahead.shared.domain.RoadLoad
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.vehicle.ConsumptionModel as VehiclePhysics
+import org.julakali.chargeahead.vehicle.RoadLoad as ForceCurve
 
 /**
  * How much energy a stretch of a route costs.
@@ -36,7 +39,7 @@ class ConstantConsumption(private val kwhPer100Km: Double) : ConsumptionModel {
 class RoadLoadConsumption(vehicle: VehicleProfile) : ConsumptionModel {
 
     private val roadLoad = vehicle.roadLoad ?: genericRoadLoad(vehicle.consumptionKwhPer100Km)
-    private val correction = vehicle.consumptionKwhPer100Km / wltpKwhPer100Km(roadLoad)
+    private val correction = vehicle.consumptionKwhPer100Km / roadLoad.wltpAtPlugKwhPer100Km()
 
     /** Battery energy per 100 km at a stretch averaging [speedKmh]. */
     fun kwhPer100KmAt(speedKmh: Double): Double {
@@ -45,7 +48,7 @@ class RoadLoadConsumption(vehicle: VehicleProfile) : ConsumptionModel {
         val efficiency = roadLoad.drivetrainEfficiency
         val rolling = roadLoad.forceN(speed) / (36.0 * efficiency)
         val auxiliary = roadLoad.auxiliaryPowerKw * 100.0 / speed
-        val acceleration = ROTATING_MASS_FACTOR * roadLoad.massKg * kineticJoulesPerKgAndMetre(speed) *
+        val acceleration = VehiclePhysics.ROTATING_MASS_FACTOR * roadLoad.massKg * kineticJoulesPerKgAndMetre(speed) *
             (1.0 / efficiency - roadLoad.recuperationShare) / 36.0
         return correction * (rolling + auxiliary + acceleration)
     }
@@ -127,6 +130,25 @@ class RoadLoadConsumption(vehicle: VehicleProfile) : ConsumptionModel {
         const val MAX_SPEED_KMH = 200.0
         const val FALLBACK_SPEED_KMH = 100.0
     }
+}
+
+/** The backend's WLTP figure for the curve, or the same simulation run here when an older backend sent none. */
+internal fun RoadLoad.wltpAtPlugKwhPer100Km(): Double =
+    wltpKwhPer100Km ?: VehiclePhysics.wltpKwhPer100Km(ForceCurve(f0, f1, f2), massKg)
+
+/** The backend's typical curve for a car without one, scaled until the WLTC reproduces [wltpKwhPer100Km]. */
+internal fun genericRoadLoad(wltpKwhPer100Km: Double): RoadLoad {
+    val curve = VehiclePhysics.generic(wltpKwhPer100Km, VehiclePhysics.TYPICAL_TEST_MASS_KG)
+    return RoadLoad(
+        f0 = curve.f0,
+        f1 = curve.f1,
+        f2 = curve.f2,
+        massKg = VehiclePhysics.TYPICAL_TEST_MASS_KG,
+        drivetrainEfficiency = VehiclePhysics.DRIVETRAIN_EFFICIENCY,
+        auxiliaryPowerKw = VehiclePhysics.DRIVING_AUXILIARY_KW,
+        recuperationShare = VehiclePhysics.RECUPERATION_SHARE,
+        wltpKwhPer100Km = wltpKwhPer100Km,
+    )
 }
 
 /**

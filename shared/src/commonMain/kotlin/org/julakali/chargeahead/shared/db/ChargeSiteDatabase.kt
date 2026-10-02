@@ -77,7 +77,7 @@ data class CorridorCoverageEntity(
         NetworkEntity::class,
         VehicleModelEntity::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = false,
 )
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)
