@@ -104,6 +104,7 @@ fun chargeStopsModule(): Module = module {
                     scope = get(AppScope),
                 ),
             ),
+            computation = get<AppCoroutineDispatchers>().computation,
         )
     }
 

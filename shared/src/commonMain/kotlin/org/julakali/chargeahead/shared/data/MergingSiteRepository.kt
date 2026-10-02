@@ -12,7 +12,10 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 
 /**
  * Layers several stocks on top of each other and merges them.
@@ -23,6 +26,8 @@ import kotlinx.coroutines.flow.combine
 class MergingSiteRepository(
     private val repositories: List<SiteRepository>,
     private val maxDistanceMeters: Double = SiteMerger.DEFAULT_MAX_DISTANCE_METERS,
+    /** Where the stores are read and merged; the collector is usually a ViewModel on main. */
+    private val computation: CoroutineDispatcher = Dispatchers.Default,
 ) : SiteRepository {
 
     init {
@@ -53,7 +58,7 @@ class MergingSiteRepository(
                     emit(emptyList())
                 }
             },
-        ) { stocks -> SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters) }
+        ) { stocks -> SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters) }.flowOn(computation)
 
     override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> =
         combine(
@@ -63,7 +68,7 @@ class MergingSiteRepository(
                     emit(emptyList())
                 }
             },
-        ) { stocks -> SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters) }
+        ) { stocks -> SiteMerger.merge(stocks.toList().flatten(), maxDistanceMeters) }.flowOn(computation)
 
     override suspend fun invalidate() {
         repositories.forEach { it.invalidate() }

@@ -17,8 +17,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.withContext
 
 /**
  * The best fast chargers around a position among the stored sites, ranked
@@ -44,16 +44,17 @@ class ChargeNowObserver(
                 val area = chargeNowArea(position, filters)
                 // Every DC site, so the ranker can relax the power and network filters.
                 repository.storedSitesIn(area.boundingBox, EVERY_DC_SITE).map { sites ->
-                    withContext(dispatchers.computation) {
-                        ChargeNowRanker.rank(
-                            sites = sites.filter { it.position in area },
-                            position = position,
-                            filters = filters,
-                            networks = networks,
-                        )
-                    }
+                    ChargeNowRanker.rank(
+                        sites = sites.filter { it.position in area },
+                        position = position,
+                        filters = filters,
+                        networks = networks,
+                    )
                 }
             }
+            // Upstream too: the store maps and merges every row per emission, and it emits per tile
+            // the refill writes, all while the sheet is animating on main.
+            .flowOn(dispatchers.computation)
     }
 
     companion object {

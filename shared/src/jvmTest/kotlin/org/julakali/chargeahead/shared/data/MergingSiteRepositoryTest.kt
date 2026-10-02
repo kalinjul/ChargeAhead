@@ -1,10 +1,14 @@
 package org.julakali.chargeahead.shared.data
 
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.Dispatchers
 
 import kotlinx.coroutines.flow.Flow
 
 import org.julakali.chargeahead.shared.domain.MapFilter
+import org.julakali.chargeahead.shared.domain.NetworkPreferences
 
 import org.julakali.chargeahead.shared.domain.BoundingBox
 
@@ -160,5 +164,25 @@ class MergingSiteRepositoryTest {
 
         assertEquals(networks, source1.recordedNetworks)
         assertEquals(networks, source2.recordedNetworks)
+    }
+
+    private val FILTER = MapFilter(NetworkPreferences(), minPowerKw = 50.0, slowMode = false)
+
+    /** The merge is the expensive step and the stores re-emit per tile written; none of that belongs on main. */
+    @Test
+    fun `stored sites are merged on the computation dispatcher`() = runBlocking<Unit> {
+        var collectedOn: String? = null
+        val source = object : SiteRepository {
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>) = emptyList<ChargeSite>()
+            override suspend fun invalidate() {}
+            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> =
+                flowOf(emptyList<ChargeSite>()).onEach { collectedOn = Thread.currentThread().name }
+            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = storedSitesIn(area.boundingBox, FILTER)
+        }
+        val repository = MergingSiteRepository(listOf(source), computation = Dispatchers.Default)
+
+        repository.storedSitesIn(BoundingBox(0.0, 0.0, 1.0, 1.0), FILTER).first()
+
+        assertTrue(collectedOn.orEmpty().startsWith("DefaultDispatcher-worker"), "collected on $collectedOn")
     }
 }

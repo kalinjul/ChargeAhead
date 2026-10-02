@@ -1,6 +1,10 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.flow.onEach
 
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.domain.BoundingBox
@@ -29,6 +33,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 
+@OptIn(kotlin.ExperimentalStdlibApi::class)
 class ObserveChargeNowTest {
 
     private val here = LatLon(48.0, 11.0)
@@ -36,6 +41,7 @@ class ObserveChargeNowTest {
     private val store = MutableStateFlow<List<ChargeSite>>(emptyList())
     private var fetched: List<ChargeSite> = emptyList()
     private val fetches = mutableListOf<Pair<SearchArea, Set<String>>>()
+    private var storeCollectedOn: CoroutineDispatcher? = null
 
     private val repository = object : SiteRepository {
         override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
@@ -46,7 +52,8 @@ class ObserveChargeNowTest {
             return fetched
         }
 
-        override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = store
+        override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> =
+            store.onEach { storeCollectedOn = coroutineContext[kotlinx.coroutines.CoroutineDispatcher.Key] }
     }
 
     private val observe = ChargeNowObserver(repository, preferences, testDispatchers)
@@ -69,6 +76,17 @@ class ObserveChargeNowTest {
         observe(ChargeNowObserver.Params(position = null))
 
         assertNull(await { true })
+    }
+
+    /** Merging the store's rows is the expensive part; the sheet is animating on main meanwhile. */
+    @Test
+    fun `the store is read and merged on the computation dispatcher`() = runBlocking {
+        store.value = listOf(site("near", 300.0, 1.0))
+
+        observe(ChargeNowObserver.Params(here))
+        await { it != null }
+
+        assertEquals(testDispatchers.computation, storeCollectedOn)
     }
 
     @Test
