@@ -6,6 +6,8 @@ import org.julakali.chargeahead.shared.domain.RoadLoad
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteSegment
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.vehicle.ConsumptionModel as VehiclePhysics
+import org.julakali.chargeahead.vehicle.RoadLoad as ForceCurve
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -15,7 +17,7 @@ class ConsumptionModelTest {
     private val handTyped = VehicleProfile("Eigenbau", 60.0, 16.0, setOf(ConnectorType.CCS2))
 
     // The backend's generic curve for a 15.3 kWh/100 km WLTP figure.
-    private val mg4Curve = RoadLoad(132.344, 0.547632, 0.0269253, 2000.0, 0.94, 1.0, 0.65)
+    private val mg4Curve = RoadLoad(132.344, 0.547632, 0.0269253, 2000.0, 0.94, 1.0, 0.65, wltpKwhPer100Km = 15.3)
     private val mg4 = VehicleProfile("MG4", 52.8, 15.3, setOf(ConnectorType.CCS2), modelId = "mg4", roadLoad = mg4Curve)
 
     private val model = RoadLoadConsumption(handTyped)
@@ -31,16 +33,11 @@ class ConsumptionModelTest {
         RouteSegment(fromKm, distanceKm, distanceKm / speedKmh * 60.0)
 
     @Test
-    fun `without the backend's figure the WLTC is simulated as the backend fits it`() {
-        assertEquals(15.3, mg4Curve.wltpAtPlugKwhPer100Km(), 0.01)
-    }
-
-    @Test
-    fun `a car without a curve gets a generic one that reproduces its consumption on the WLTC`() {
+    fun `a car without a curve gets a generic one fitted to its consumption`() {
         val generic = genericRoadLoad(16.0)
 
-        assertEquals(16.0, generic.wltpAtPlugKwhPer100Km(), 1e-9)
-        assertEquals(16.0, generic.copy(wltpKwhPer100Km = null).wltpAtPlugKwhPer100Km(), 1e-6)
+        assertEquals(16.0, generic.wltpKwhPer100Km, 1e-9)
+        assertEquals(16.0, VehiclePhysics.wltpKwhPer100Km(ForceCurve(generic.f0, generic.f1, generic.f2), generic.massKg), 1e-6)
     }
 
     @Test
@@ -48,7 +45,7 @@ class ConsumptionModelTest {
         val served = RoadLoadConsumption(mg4.copy(roadLoad = mg4Curve.copy(wltpKwhPer100Km = 17.0)))
         val simulated = RoadLoadConsumption(mg4)
 
-        assertEquals(mg4Curve.wltpAtPlugKwhPer100Km() / 17.0, served.kwhPer100KmAt(100.0) / simulated.kwhPer100KmAt(100.0), 1e-9)
+        assertEquals(15.3 / 17.0, served.kwhPer100KmAt(100.0) / simulated.kwhPer100KmAt(100.0), 1e-9)
     }
 
     @Test

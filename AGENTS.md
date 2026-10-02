@@ -493,6 +493,11 @@ Address and token do **not** go into the repository.
 - iOS: build settings `CHARGEAHEAD_BASE_URL` and `CHARGEAHEAD_TOKEN` in a
   local `iosApp/Secrets.xcconfig` -> `Info.plist`
 
+**No compatibility with older backends.** The app always runs against the
+current backend. A field the backend sends is required in the app, even when
+`api-model` declares it optional; there is no fallback path for a backend
+that doesn't send it yet.
+
 The backend also assigns each site its network (`ChargeSite.networkKey`) and
 lists the networks worth offering (`/v1/networks`), which the app keeps in
 Room. `NetworkCatalog` is the old shipped list and is no longer used.

@@ -329,10 +329,10 @@ driving above.
 The driver's figure is read as a WLTP value at the plug. `k` is the driver's
 figure over what the curve gives on the WLTC: 1 when the driver keeps the
 catalog value, a personal correction factor otherwise. The backend serves that
-WLTC figure with each curve (`RoadLoadDto.wltpKwhPer100Km`); for older
-backends and for the generic curve the app runs the same simulation from the
-backend's `vehicle-model` artifact, which also holds the constants and the
-generic curve fit. Without segments the route's own average speed applies.
+WLTC figure with each curve (`RoadLoadDto.wltpKwhPer100Km`). The generic curve
+for a car typed in by hand is fitted with the backend's `vehicle-model`
+artifact, which holds the WLTC simulation and its constants, so it reproduces
+the driver's figure by construction. Without segments the route's own average speed applies.
 
 ### 5.1a Charging time
 

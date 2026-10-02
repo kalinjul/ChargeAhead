@@ -24,7 +24,7 @@ val testPresets = listOf(
         consumptionKwhPer100Km = 15.3,
         dcPeakPowerKw = 87.0,
         connectors = setOf(ConnectorType.CCS2, ConnectorType.TYPE2),
-        roadLoad = RoadLoad(132.344, 0.547632, 0.0269253, 2000.0, 0.94, 1.0, 0.65),
+        roadLoad = RoadLoad(132.344, 0.547632, 0.0269253, 2000.0, 0.94, 1.0, 0.65, wltpKwhPer100Km = 15.3),
     ),
 )
 

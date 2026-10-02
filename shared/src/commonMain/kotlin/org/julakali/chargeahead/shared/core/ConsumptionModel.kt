@@ -4,7 +4,6 @@ import org.julakali.chargeahead.shared.domain.RoadLoad
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.vehicle.ConsumptionModel as VehiclePhysics
-import org.julakali.chargeahead.vehicle.RoadLoad as ForceCurve
 
 /**
  * How much energy a stretch of a route costs.
@@ -39,7 +38,7 @@ class ConstantConsumption(private val kwhPer100Km: Double) : ConsumptionModel {
 class RoadLoadConsumption(vehicle: VehicleProfile) : ConsumptionModel {
 
     private val roadLoad = vehicle.roadLoad ?: genericRoadLoad(vehicle.consumptionKwhPer100Km)
-    private val correction = vehicle.consumptionKwhPer100Km / roadLoad.wltpAtPlugKwhPer100Km()
+    private val correction = vehicle.consumptionKwhPer100Km / roadLoad.wltpKwhPer100Km
 
     /** Battery energy per 100 km at a stretch averaging [speedKmh]. */
     fun kwhPer100KmAt(speedKmh: Double): Double {
@@ -131,10 +130,6 @@ class RoadLoadConsumption(vehicle: VehicleProfile) : ConsumptionModel {
         const val FALLBACK_SPEED_KMH = 100.0
     }
 }
-
-/** The backend's WLTP figure for the curve, or the same simulation run here when an older backend sent none. */
-internal fun RoadLoad.wltpAtPlugKwhPer100Km(): Double =
-    wltpKwhPer100Km ?: VehiclePhysics.wltpKwhPer100Km(ForceCurve(f0, f1, f2), massKg)
 
 /** The backend's typical curve for a car without one, scaled until the WLTC reproduces [wltpKwhPer100Km]. */
 internal fun genericRoadLoad(wltpKwhPer100Km: Double): RoadLoad {
