@@ -17,6 +17,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ZoomIn
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,11 +56,10 @@ fun RoundIcon(icon: Painter, contentDescription: String, tint: Color = MaterialT
     Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(20.dp))
 }
 
+/** A status line floating over the map; not tappable, an action gets a chip. */
 @Composable
-fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface, onClick: (() -> Unit)? = null) {
-    val shape = MaterialTheme.shapes.small
-    val surface = MaterialTheme.colorScheme.surface
-    val content: @Composable () -> Unit = {
+fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface) {
+    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface, shadowElevation = 2.dp) {
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
@@ -66,11 +68,16 @@ fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface, o
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
         )
     }
-    if (onClick != null) {
-        Surface(onClick = onClick, shape = shape, color = surface, shadowElevation = 2.dp) { content() }
-    } else {
-        Surface(shape = shape, color = surface, shadowElevation = 2.dp) { content() }
-    }
+}
+
+/** Too far out for the chargers to load; tapping zooms in to where they show. */
+@Composable
+fun ZoomHintChip(onClick: () -> Unit) {
+    ElevatedAssistChip(
+        onClick = onClick,
+        label = { Text(stringResource(R.string.map_zoom_hint)) },
+        leadingIcon = { Icon(Icons.Outlined.ZoomIn, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
+    )
 }
 
 /** Fully round, floating pill. */

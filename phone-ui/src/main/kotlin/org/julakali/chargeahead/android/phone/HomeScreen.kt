@@ -388,9 +388,7 @@ fun HomeScreen(
             ) {
                 if (uiState.belowMinZoom) {
                     // Tapping the hint lands on full markers, not on the dot tier.
-                    HintChip(stringResource(R.string.map_zoom_hint)) {
-                        scope.launch { camera.animate(CameraUpdateFactory.zoomTo(PILL_ZOOM)) }
-                    }
+                    ZoomHintChip { scope.launch { camera.animate(CameraUpdateFactory.zoomTo(PILL_ZOOM)) } }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     HomePill(
