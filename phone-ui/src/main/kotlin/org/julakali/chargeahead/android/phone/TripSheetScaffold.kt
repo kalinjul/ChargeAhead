@@ -10,13 +10,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SheetState
-import androidx.compose.material3.SnackbarHost
+import org.julakali.chargeahead.android.phone.components.AppSnackbarHost
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.Composable
@@ -80,7 +81,6 @@ fun TripSheetScaffold(
             // The handle lives inside the content so the content's height is the whole visible sheet.
             sheetDragHandle = null,
             sheetContainerColor = MaterialTheme.colorScheme.background,
-            snackbarHost = { SnackbarHost(snackbar, Modifier.navigationBarsPadding()) },
             sheetContent = {
                 if (trip == null) return@BottomSheetScaffold
                 // The sheet's expanded position comes from this content's height, so the
@@ -145,6 +145,14 @@ fun TripSheetScaffold(
         ) { _ ->
             content(peek)
         }
+        // Up under the search bar, where nothing else lives: at the bottom it would land on the pills or the sheet.
+        AppSnackbarHost(
+            snackbar,
+            Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(top = SCREEN_MARGIN + SEARCH_BAR_HEIGHT + 8.dp),
+        )
     }
 }
 

@@ -520,7 +520,7 @@ private fun SideButton(
     }
 }
 
-private val SCREEN_MARGIN = 16.dp
+internal val SCREEN_MARGIN = 16.dp
 
 @Composable
 private fun HomePreview(
