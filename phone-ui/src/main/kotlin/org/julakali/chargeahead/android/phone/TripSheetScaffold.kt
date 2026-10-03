@@ -145,13 +145,14 @@ fun TripSheetScaffold(
         ) { _ ->
             content(peek)
         }
-        // Up under the search bar, where nothing else lives: at the bottom it would land on the pills or the sheet.
+        // Under the search bar and no wider, so it covers neither the pills and sheet below nor the compass beside it.
         AppSnackbarHost(
             snackbar,
             Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
-                .padding(top = SCREEN_MARGIN + SEARCH_BAR_HEIGHT + 8.dp),
+                .padding(top = SCREEN_MARGIN + SEARCH_BAR_HEIGHT + 8.dp - SNACKBAR_OWN_MARGIN)
+                .padding(horizontal = SEARCH_BAR_INSET - SNACKBAR_OWN_MARGIN),
         )
     }
 }
@@ -175,3 +176,6 @@ private fun Modifier.visibleSheetHeight(sheetState: SheetState, layoutHeightPx: 
         val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
         layout(placeable.width, placeable.height) { placeable.place(0, 0) }
     }
+
+/** What Material's snackbar pads around itself. */
+private val SNACKBAR_OWN_MARGIN = 12.dp

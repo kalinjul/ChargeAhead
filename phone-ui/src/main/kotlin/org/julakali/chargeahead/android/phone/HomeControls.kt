@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.sp
 /** The bar's height: Material's search field is 56dp; the destination header matches it. */
 val SEARCH_BAR_HEIGHT = 56.dp
 
+val ROUND_BUTTON_SIZE = 46.dp
+
 /** 46dp floating circle: the bar may be taller, the buttons stay light. */
 @Composable
 fun RoundIconButton(
@@ -40,7 +42,7 @@ fun RoundIconButton(
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 6.dp,
-        modifier = modifier.size(46.dp),
+        modifier = modifier.size(ROUND_BUTTON_SIZE),
     ) {
         Box(contentAlignment = Alignment.Center) { content() }
     }
