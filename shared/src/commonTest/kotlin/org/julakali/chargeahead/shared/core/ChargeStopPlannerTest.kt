@@ -291,7 +291,7 @@ class ChargeStopPlannerTest {
         val slowStop = planOnRoute(slow, sites).single()
         val fastStop = planOnRoute(fast, sites).single()
 
-        val expected = 80.0 - SpeedAwareConsumption(vehicle.consumptionKwhPer100Km).energyKwh(fast, 0.0, 55.0) /
+        val expected = 80.0 - RoadLoadConsumption(vehicle).energyKwh(fast, 0.0, 55.0) /
             vehicle.usableBatteryKwh * 100.0
         assertEquals(expected, fastStop.socOnArrivalPercent!!, 1e-6)
         assertTrue(

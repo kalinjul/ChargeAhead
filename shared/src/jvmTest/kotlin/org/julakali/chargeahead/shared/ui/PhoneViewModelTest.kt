@@ -1,5 +1,7 @@
 package org.julakali.chargeahead.shared.ui
 
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
+import org.julakali.chargeahead.shared.testPresets
 import org.julakali.chargeahead.shared.testAppScope
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.ChargeStopsFeature
@@ -125,6 +127,26 @@ class PhoneViewModelTest {
         )
     }
 
+    @Test
+    fun `adjusting a preset car keeps its model id and DC peak`() = runBlocking<Unit> {
+        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val preset = testPresets.first()
+        vehicles.setVehicle(preset.toProfile())
+        val viewModel = VehicleSettingsViewModel(
+            vehicles,
+            DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore()),
+            stubFeature(),
+            SelectVehicleInteractor(vehicles),
+        )
+        viewModel.uiState.await { it.name == preset.name }
+
+        viewModel.onConsumptionChanged("16")
+
+        val stored = vehicles.vehicle.awaitValue { it?.consumptionKwhPer100Km == 16.0 }
+        assertEquals(preset.id, stored?.modelId)
+        assertEquals(preset.dcPeakPowerKw, stored?.dcPeakPowerKw)
+    }
+
     /** Without a usable capacity, no profile is stored at all. */
     @Test
     fun `an unparseable capacity stores no profile`() = runBlocking<Unit> {
@@ -147,10 +169,11 @@ class PhoneViewModelTest {
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
         val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val addCar = AddCarViewModel(VehiclePresetsObserver(vehicles, testDispatchers), SelectVehicleInteractor(vehicles))
+        val catalog = FakeVehicleCatalog()
+        val addCar = AddCarViewModel(VehiclePresetsObserver(catalog, vehicles, testDispatchers), SelectVehicleInteractor(vehicles))
         val garage = GarageViewModel(
             vehicles,
-            GarageObserver(vehicles),
+            GarageObserver(vehicles, catalog),
             SelectVehicleInteractor(vehicles),
             RemoveVehicleInteractor(vehicles),
             UpdateArrivalSocInteractor(vehicles),
@@ -328,7 +351,7 @@ class PhoneViewModelTest {
         val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
         val viewModel = CorridorViewModel(
             feature,
-            ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
+            ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), FakeVehicleCatalog(), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
             RefreshChargeStopsInteractor(repository, DataStorePreferencesRepository(InMemoryPreferencesDataStore())),
         )
 

@@ -42,6 +42,8 @@ import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.NetworkRepository
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
+import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.SearchArea
@@ -115,6 +117,7 @@ class CarTestGraph(
         single<TripStorage> { TripStorage.None }
         single<SiteRepository> { sites }
         single<NetworkRepository> { NoNetworks }
+        single<VehicleCatalogRepository> { NoCatalog }
         single { BackendConfig("http://localhost", "token") }
         single { DatabaseFactory(androidContext()) }
     }
@@ -187,6 +190,11 @@ class CarTestGraph(
 
     private object NoNetworks : NetworkRepository {
         override val networks: Flow<List<Network>> = flowOf(emptyList())
+        override suspend fun refresh() = Unit
+    }
+
+    private object NoCatalog : VehicleCatalogRepository {
+        override val presets: Flow<List<VehiclePreset>> = flowOf(emptyList())
         override suspend fun refresh() = Unit
     }
 

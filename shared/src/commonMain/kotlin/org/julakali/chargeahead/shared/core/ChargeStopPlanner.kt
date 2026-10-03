@@ -28,7 +28,7 @@ object ChargeStopPlanner {
         networks: NetworkPreferences = NetworkPreferences(),
         routeAhead: RouteProgress? = null,
     ): List<ChargeStop> {
-        val estimate = if (routeAhead != null) AlongRoute(routeAhead) else Corridor(area)
+        val estimate = if (routeAhead != null) AlongRoute(routeAhead, vehicle) else Corridor(area)
 
         val rangeKm = if (vehicle != null && energy != null) {
             estimate.rangeKm(vehicle, energy.socPercent, reserveSocPercent)
@@ -111,9 +111,10 @@ object ChargeStopPlanner {
     }
 
     /** The site's offset beside the route is ignored, as in TripPlanner. */
-    private class AlongRoute(private val progress: RouteProgress) : DistanceEstimate {
+    private class AlongRoute(private val progress: RouteProgress, vehicle: VehicleProfile?) : DistanceEstimate {
         private val route = progress.measure.route
         private val fromKm = progress.kmFromStart
+        private val consumption = vehicle?.let(::RoadLoadConsumption)
 
         override fun distanceKm(site: ChargeSite): Double {
             val siteKm = progress.measure.project(site.position, fromIndex = progress.segmentIndex).kmFromStart
@@ -122,13 +123,14 @@ object ChargeStopPlanner {
 
         override fun rangeKm(vehicle: VehicleProfile, socPercent: Double, reserveSocPercent: Double): Double {
             val availableKwh = vehicle.usableBatteryKwh * (socPercent - reserveSocPercent).coerceAtLeast(0.0) / 100.0
-            return SpeedAwareConsumption(vehicle.consumptionKwhPer100Km).reachKm(route, fromKm, availableKwh) - fromKm
+            return consumptionFor(vehicle).reachKm(route, fromKm, availableKwh) - fromKm
         }
 
         override fun socOnArrivalPercent(vehicle: VehicleProfile, socPercent: Double, distanceKm: Double): Double {
-            val neededKwh = SpeedAwareConsumption(vehicle.consumptionKwhPer100Km)
-                .energyKwh(route, fromKm, fromKm + distanceKm)
+            val neededKwh = consumptionFor(vehicle).energyKwh(route, fromKm, fromKm + distanceKm)
             return (socPercent - neededKwh / vehicle.usableBatteryKwh * 100.0).coerceAtLeast(0.0)
         }
+
+        private fun consumptionFor(vehicle: VehicleProfile): ConsumptionModel = consumption ?: RoadLoadConsumption(vehicle)
     }
 }

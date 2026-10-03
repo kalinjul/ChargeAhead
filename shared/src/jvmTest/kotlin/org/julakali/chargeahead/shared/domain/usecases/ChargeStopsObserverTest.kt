@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.domain.usecases
 
+import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import kotlinx.coroutines.flow.flowOf
 
 import org.julakali.chargeahead.shared.domain.MapFilter
@@ -128,7 +129,7 @@ class ObserveChargeStopsTest {
     private fun observer(
         repository: SiteRepository,
         router: RouteEngine = FixedRoute(Route(a9, 170.0, 108.0)),
-    ) = ChargeStopsObserver(repository, vehicles, preferences, trips, router, CorridorPlanner(), testDispatchers).also {
+    ) = ChargeStopsObserver(repository, vehicles, FakeVehicleCatalog(), preferences, trips, router, CorridorPlanner(), testDispatchers).also {
         it(ChargeStopsObserver.Params(fixes, energy))
     }
 

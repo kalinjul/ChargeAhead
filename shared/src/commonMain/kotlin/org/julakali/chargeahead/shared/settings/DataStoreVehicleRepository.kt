@@ -18,6 +18,7 @@ import org.julakali.chargeahead.shared.settings.SettingsKeys.CONSUMPTION
 import org.julakali.chargeahead.shared.settings.SettingsKeys.DC_PEAK
 import org.julakali.chargeahead.shared.settings.SettingsKeys.GARAGE
 import org.julakali.chargeahead.shared.settings.SettingsKeys.MANUAL_SOC
+import org.julakali.chargeahead.shared.settings.SettingsKeys.MODEL_ID
 import org.julakali.chargeahead.shared.settings.SettingsKeys.NAME
 
 /** A corrupt profile is treated as "no profile". */
@@ -77,6 +78,7 @@ class DataStoreVehicleRepository(
         putString(CONSUMPTION, profile?.consumptionKwhPer100Km?.toString())
         putString(CONNECTORS, profile?.acceptedConnectors?.joinToString(",") { it.name })
         putString(DC_PEAK, profile?.dcPeakPowerKw?.toString())
+        putString(MODEL_ID, profile?.modelId)
     }
 
     private fun MutablePreferences.writeGarage(vehicles: List<VehicleProfile>) {
@@ -89,6 +91,7 @@ class DataStoreVehicleRepository(
                     consumption = it.consumptionKwhPer100Km,
                     connectors = it.acceptedConnectors.map(ConnectorType::name),
                     dcPeakKw = it.dcPeakPowerKw,
+                    modelId = it.modelId,
                 )
             },
         )
@@ -116,6 +119,7 @@ class DataStoreVehicleRepository(
                 ?.toSet()
                 .orEmpty(),
             dcPeakPowerKw = getStringOrNull(DC_PEAK)?.toDoubleOrNull(),
+            modelId = getStringOrNull(MODEL_ID),
         )
     }
 
@@ -126,6 +130,7 @@ class DataStoreVehicleRepository(
         val consumption: Double,
         val connectors: List<String> = emptyList(),
         val dcPeakKw: Double? = null,
+        val modelId: String? = null,
     ) {
         /** Broken numbers cost the entry, not the garage. */
         fun toProfileOrNull(): VehicleProfile? {
@@ -138,6 +143,7 @@ class DataStoreVehicleRepository(
                     .mapNotNull { stored -> ConnectorType.entries.firstOrNull { it.name == stored } }
                     .toSet(),
                 dcPeakPowerKw = dcPeakKw,
+                modelId = modelId,
             )
         }
     }

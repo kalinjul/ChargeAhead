@@ -87,6 +87,7 @@ kotlin {
             api(libs.androidx.datastore.preferences)
 
             api(libs.chargeahead.api.model)
+            implementation(libs.chargeahead.vehicle.model)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

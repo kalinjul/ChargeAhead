@@ -12,7 +12,9 @@ import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteStatus
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.VehicleRepository
+import org.julakali.chargeahead.shared.domain.withRoadLoadFrom
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SubjectInteractor
 import org.julakali.chargeahead.shared.domain.TripRepository
@@ -46,6 +48,7 @@ import kotlinx.coroutines.withContext
 class ChargeStopsObserver(
     private val repository: SiteRepository,
     private val vehicles: VehicleRepository,
+    private val catalog: VehicleCatalogRepository,
     private val preferences: PreferencesRepository,
     private val trips: TripRepository,
     private val routeEngine: RouteEngine,
@@ -71,7 +74,7 @@ class ChargeStopsObserver(
         val routes = trips.state.map { it.destination }.distinctUntilChanged().flatMapLatest { routeTo(it, params.fixes) }
         return combine(
             params.fixes,
-            vehicles.vehicle,
+            combine(vehicles.vehicle, catalog.presets) { vehicle, presets -> vehicle?.withRoadLoadFrom(presets) },
             params.energy,
             preferences.networks,
             routes,

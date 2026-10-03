@@ -27,6 +27,9 @@ data class VehicleSettingsUiState(
     val battery: String = "",
     val consumption: String = "",
     val connectors: Set<ConnectorType> = emptySet(),
+    // Not editable here, but kept across edits.
+    val dcPeakPowerKw: Double? = null,
+    val modelId: String? = null,
     /** The stored level, shown only; the car or the planning dialogs set it. */
     val socInput: String = "",
     val socFromCar: Boolean = false,
@@ -62,12 +65,16 @@ class VehicleSettingsViewModel(
             battery = vehicle?.usableBatteryKwh?.asInput().orEmpty(),
             consumption = vehicle?.consumptionKwhPer100Km?.asInput().orEmpty(),
             connectors = vehicle?.acceptedConnectors ?: emptySet(),
+            dcPeakPowerKw = vehicle?.dcPeakPowerKw,
+            modelId = vehicle?.modelId,
         )
         VehicleSettingsUiState(
             name = edited.name,
             battery = edited.battery,
             consumption = edited.consumption,
             connectors = edited.connectors,
+            dcPeakPowerKw = edited.dcPeakPowerKw,
+            modelId = edited.modelId,
             socInput = socPercent?.asInput().orEmpty(),
             socFromCar = energy.reportedByCar,
             diagnostics = diagnostics,
@@ -98,7 +105,14 @@ class VehicleSettingsViewModel(
         val profile = if (battery == null || consumption == null) {
             null
         } else {
-            VehicleProfile(updated.name.trim(), battery, consumption, updated.connectors)
+            VehicleProfile(
+                displayName = updated.name.trim(),
+                usableBatteryKwh = battery,
+                consumptionKwhPer100Km = consumption,
+                acceptedConnectors = updated.connectors,
+                dcPeakPowerKw = updated.dcPeakPowerKw,
+                modelId = updated.modelId,
+            )
         }
         viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(profile)) }
     }
@@ -110,7 +124,7 @@ class VehicleSettingsViewModel(
     }
 
     private fun currentFromStore(): Form = uiState.value.let {
-        Form(it.name, it.battery, it.consumption, it.connectors)
+        Form(it.name, it.battery, it.consumption, it.connectors, it.dcPeakPowerKw, it.modelId)
     }
 
     private data class Form(
@@ -118,6 +132,8 @@ class VehicleSettingsViewModel(
         val battery: String = "",
         val consumption: String = "",
         val connectors: Set<ConnectorType> = emptySet(),
+        val dcPeakPowerKw: Double? = null,
+        val modelId: String? = null,
     )
 }
 

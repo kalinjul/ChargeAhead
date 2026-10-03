@@ -6,6 +6,7 @@ import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.DestinationHistory
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
@@ -20,6 +21,7 @@ import org.julakali.chargeahead.shared.domain.planWithSettings
 class PlanTripInteractor(
     private val planner: TripPlanning,
     private val vehicles: VehicleRepository,
+    private val catalog: VehicleCatalogRepository,
     private val preferences: PreferencesRepository,
     private val history: DestinationHistory,
     private val trips: TripRepository,
@@ -37,7 +39,7 @@ class PlanTripInteractor(
     )
 
     override suspend fun doWork(params: Params): TripPlanResult {
-        val result = planner.planWithSettings(vehicles, preferences, params.from, params.destination, params.startSocPercent, dispatchers.computation)
+        val result = planner.planWithSettings(vehicles, catalog, preferences, params.from, params.destination, params.startSocPercent, dispatchers.computation)
         trips.update { it.planned(params.destination, (result as? TripPlanResult.Planned)?.plan) }
         history.addRecentDestination(params.destination)
         return result

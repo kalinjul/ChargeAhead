@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared.core
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.ConnectorType
+import org.julakali.chargeahead.shared.domain.isDc
 import org.julakali.chargeahead.shared.domain.DEFAULT_RESERVE_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
@@ -48,7 +49,7 @@ class TripPlanner(
         } ?: return TripPlanResult.NoRoute
 
         val candidates = candidatesAlong(route, vehicle, networks)
-        val consumption = SpeedAwareConsumption(vehicle.consumptionKwhPer100Km)
+        val consumption = RoadLoadConsumption(vehicle)
         val totalKm = route.distanceKm
 
         // What has to be left at the destination, never below the reserve.
@@ -149,7 +150,8 @@ class TripPlanner(
     private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
         val measure = RouteMeasure(route)
         val cumulative = measure.cumulativeKm
-        val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }
+        // Stops are planned at DC sites only, whatever AC inlets the car also has.
+        val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }.filterTo(HashSet()) { it.isDc }
         val seen = LinkedHashMap<String, Candidate>()
 
         var startIndex = 0

@@ -8,11 +8,39 @@ data class VehicleProfile(
     val acceptedConnectors: Set<ConnectorType>,
     /** DC charging peak; `null` means unknown and the site's connector power is used alone. */
     val dcPeakPowerKw: Double? = null,
+    /** The catalog model the car was added from; `null` for one typed in by hand. */
+    val modelId: String? = null,
+    /** The catalog's curve for [modelId], attached for planning; not stored with the garage. */
+    val roadLoad: RoadLoad? = null,
 ) {
     init {
         require(usableBatteryKwh > 0.0) { "usableBatteryKwh must be positive" }
         require(consumptionKwhPer100Km > 0.0) { "consumptionKwhPer100Km must be positive" }
     }
+}
+
+/**
+ * A model from the backend's vehicle catalog. Only a starting point: the
+ * values land in an editable [VehicleProfile].
+ */
+data class VehiclePreset(
+    val id: String,
+    val name: String,
+    val usableBatteryKwh: Double,
+    val consumptionKwhPer100Km: Double,
+    /** 0 for a vehicle without a DC inlet. */
+    val dcPeakPowerKw: Double,
+    val connectors: Set<ConnectorType>,
+    val roadLoad: RoadLoad? = null,
+) {
+    fun toProfile(): VehicleProfile = VehicleProfile(
+        displayName = name,
+        usableBatteryKwh = usableBatteryKwh,
+        consumptionKwhPer100Km = consumptionKwhPer100Km,
+        acceptedConnectors = connectors,
+        dcPeakPowerKw = dcPeakPowerKw.takeIf { it > 0.0 },
+        modelId = id,
+    )
 }
 
 /** Where the charge level comes from. Determines how much to trust it. */
@@ -55,3 +83,32 @@ data class Garage(
     /** The catalog consumption, when the selected car was added from a preset. */
     val selectedPresetConsumption: Double? = null,
 )
+
+/**
+ * How the car's consumption depends on speed: `F(v) = f0 + f1·v + f2·v²` in N
+ * with v in km/h, plus what it takes to run the car and to speed it up.
+ */
+data class RoadLoad(
+    val f0: Double,
+    val f1: Double,
+    val f2: Double,
+    val massKg: Double,
+    /** Battery to wheel, 0..1. */
+    val drivetrainEfficiency: Double,
+    /** Heating, air conditioning and electronics while driving. */
+    val auxiliaryPowerKw: Double,
+    /** Share of the braking energy that goes back into the battery, 0..1. */
+    val recuperationShare: Double,
+    /** What this curve consumes over the WLTC, at the plug. */
+    val wltpKwhPer100Km: Double,
+) {
+    fun forceN(speedKmh: Double): Double = f0 + f1 * speedKmh + f2 * speedKmh * speedKmh
+}
+
+/** The preset [vehicle] was added from; a car from before presets carried ids is matched by name. */
+fun List<VehiclePreset>.presetOf(vehicle: VehicleProfile): VehiclePreset? =
+    if (vehicle.modelId != null) firstOrNull { it.id == vehicle.modelId } else firstOrNull { it.name == vehicle.displayName }
+
+/** The car with its catalog curve; `null` curve for one typed in by hand. */
+fun VehicleProfile.withRoadLoadFrom(presets: List<VehiclePreset>): VehicleProfile =
+    copy(roadLoad = presets.presetOf(this)?.roadLoad)

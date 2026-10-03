@@ -69,7 +69,7 @@ fun AddCarScreen(
         }
         AppCard(modifier = Modifier.weight(1f, fill = false).padding(bottom = 12.dp)) {
             LazyColumn {
-                itemsIndexed(hits, key = { _, preset -> preset.name }) { index, preset ->
+                itemsIndexed(hits, key = { _, preset -> preset.id }) { index, preset ->
                     if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                     TickRow(
                         label = preset.name,

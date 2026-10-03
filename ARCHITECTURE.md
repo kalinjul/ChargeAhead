@@ -309,20 +309,30 @@ speed-aware model as trip planning, so phone and car show the same arrival level
 for the same site (issue #55).
 
 **Trip planning uses a route-aware model instead** (`core/ConsumptionModel.kt`).
-`SpeedAwareConsumption` walks `Route.segments` — the per-stretch distance and
-time the route service supplies — and scales the driver's figure per segment:
+`RoadLoadConsumption` walks `Route.segments` — the per-stretch distance and
+time the route service supplies — and prices each stretch from the car's
+road-load curve at that stretch's average speed, in battery energy:
 
 ```
-factor(v) = 0.45 + 0.45 × (v / vRef)² + 0.10 × (vRef / v)
+kWh/100 km = k × ( F(v) / (36·η) + P_aux · 100 / v + 1.03 · m · e(v) · (1/η − r) / 36 )
+F(v)       = f0 + f1·v + f2·v²      [N, v in km/h]
 ```
 
-Energy per kilometre is roughly `rolling + drag·v² + auxiliary/v`. Absolute
-coefficients would need drag area and mass the app cannot ask for, so the
-*shares* those terms hold at the reference speed are fixed instead, and the
-whole thing is normalised to return the configured value unchanged at
-`vRef = 100 km/h`. That makes the reference speed a claim about what the
-driver's number means, which is why the garage says so next to the slider.
-Without segments the route's own average speed applies.
+The curve (f0–f2, mass, drivetrain efficiency η, auxiliary power, recuperation
+share r) comes with the vehicle model from the backend catalog and is looked
+up by `VehicleProfile.modelId` when planning. A car typed in by hand gets the
+backend's typical curve shape, scaled to its consumption. `e(v)` is the
+kinetic energy put in per metre (J/kg) at a given average speed, taken from
+the WLTC phases up to 92 km/h and assumed to fall towards steady motorway
+driving above.
+
+The driver's figure is read as a WLTP value at the plug. `k` is the driver's
+figure over what the curve gives on the WLTC: 1 when the driver keeps the
+catalog value, a personal correction factor otherwise. The backend serves that
+WLTC figure with each curve (`RoadLoadDto.wltpKwhPer100Km`). The generic curve
+for a car typed in by hand is fitted with the backend's `vehicle-model`
+artifact, which holds the WLTC simulation and its constants, so it reproduces
+the driver's figure by construction. Without segments the route's own average speed applies.
 
 ### 5.1a Charging time
 

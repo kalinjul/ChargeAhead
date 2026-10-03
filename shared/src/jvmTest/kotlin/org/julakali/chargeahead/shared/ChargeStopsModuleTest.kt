@@ -4,11 +4,14 @@ import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.NetworkRepository
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.usecases.ChargeNowObserver
 import org.julakali.chargeahead.shared.domain.usecases.ChargeStopsObserver
 import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshNetworksInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshVehicleCatalogInteractor
+import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
@@ -76,6 +79,9 @@ class ChargeStopsModuleTest {
             koin.get<DestinationSearchObserver>()
             koin.get<RefreshNetworksInteractor>()
             koin.get<NetworkRepository>()
+            koin.get<RefreshVehicleCatalogInteractor>()
+            koin.get<VehicleCatalogRepository>()
+            koin.get<VehiclePresetsObserver>()
         }
     }
 

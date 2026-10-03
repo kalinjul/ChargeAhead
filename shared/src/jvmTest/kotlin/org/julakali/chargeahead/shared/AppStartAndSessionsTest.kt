@@ -14,6 +14,8 @@ import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripState
 import org.julakali.chargeahead.shared.domain.TripStorage
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
+import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.usecases.StartAppInteractor
 import org.julakali.chargeahead.shared.domain.invoke
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
@@ -50,6 +52,14 @@ class AppStartAndSessionsTest {
         }
     }
 
+    private class CountingCatalog : VehicleCatalogRepository {
+        var refreshes = 0
+        override val presets: Flow<List<VehiclePreset>> = MutableStateFlow(emptyList())
+        override suspend fun refresh() {
+            refreshes++
+        }
+    }
+
     private class MemoryTripStorage(var state: TripState?) : TripStorage {
         override suspend fun read(): TripState? = state
         override suspend fun write(state: TripState) {
@@ -57,7 +67,12 @@ class AppStartAndSessionsTest {
         }
     }
 
-    private fun <T> withGraph(networks: NetworkRepository, storage: TripStorage, block: (Koin) -> T): T {
+    private fun <T> withGraph(
+        networks: NetworkRepository,
+        storage: TripStorage,
+        catalog: VehicleCatalogRepository = CountingCatalog(),
+        block: (Koin) -> T,
+    ): T {
         val app = koinApplication {
             allowOverride(true)
             modules(
@@ -71,7 +86,10 @@ class AppStartAndSessionsTest {
                 chargeStopsModule(),
                 sharedUiModule(),
                 carUiModule(),
-                module { single<NetworkRepository> { networks } },
+                module {
+                    single<NetworkRepository> { networks }
+                    single<VehicleCatalogRepository> { catalog }
+                },
             )
         }
         return try {
@@ -82,15 +100,17 @@ class AppStartAndSessionsTest {
     }
 
     @Test
-    fun `starting the app brings the stored trip back and refreshes the networks`() {
+    fun `starting the app brings the stored trip back and refreshes the networks and the vehicle catalog`() {
         val networks = CountingNetworks()
+        val catalog = CountingCatalog()
         val stored = TripState(destination = Destination("München", LatLon(48.137, 11.575)))
 
-        withGraph(networks, MemoryTripStorage(stored)) { koin ->
+        withGraph(networks, MemoryTripStorage(stored), catalog) { koin ->
             runBlocking { koin.get<StartAppInteractor>()().getOrThrow() }
 
             assertEquals(stored, koin.get<TripRepository>().state.value)
             assertEquals(1, networks.refreshes)
+            assertEquals(1, catalog.refreshes)
         }
     }
 

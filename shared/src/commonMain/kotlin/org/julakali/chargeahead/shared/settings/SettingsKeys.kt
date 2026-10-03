@@ -20,6 +20,7 @@ internal object SettingsKeys {
     const val CONSUMPTION = "vehicle.consumptionKwhPer100Km"
     const val CONNECTORS = "vehicle.acceptedConnectors"
     const val DC_PEAK = "vehicle.dcPeakPowerKw"
+    const val MODEL_ID = "vehicle.modelId"
     const val GARAGE = "vehicle.garage"
     const val MANUAL_SOC = "energy.manualSocPercent"
     const val ARRIVAL_SOC = "energy.arrivalSocPercent"

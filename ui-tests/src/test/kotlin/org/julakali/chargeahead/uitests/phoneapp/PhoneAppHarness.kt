@@ -29,6 +29,8 @@ import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkRepository
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
+import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripStorage
@@ -110,6 +112,7 @@ class PhoneAppHarness {
         single<ChargePointStatusRepository> { NoStatuses }
         single<DataSourceDirectory> { NoDataSources }
         single<NetworkRepository> { NoNetworks }
+        single<VehicleCatalogRepository> { OnePresetCatalog }
         single<TripStorage> { TripStorage.None }
         single { BackendConfig("http://localhost", "token") }
         single { DatabaseFactory(androidContext()) }
@@ -174,5 +177,14 @@ private object NoDataSources : DataSourceDirectory {
 
 private object NoNetworks : NetworkRepository {
     override val networks: Flow<List<Network>> = flowOf(emptyList())
+    override suspend fun refresh() = Unit
+}
+
+const val CATALOG_PRESET_NAME = "MG4 Urban 54 kWh"
+
+private object OnePresetCatalog : VehicleCatalogRepository {
+    override val presets: Flow<List<VehiclePreset>> = flowOf(
+        listOf(VehiclePreset("408b5c7a-4982-49d6-ab22-f8336ef4b49e", CATALOG_PRESET_NAME, 52.8, 15.3, 87.0, setOf(ConnectorType.CCS2, ConnectorType.TYPE2))),
+    )
     override suspend fun refresh() = Unit
 }

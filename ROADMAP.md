@@ -104,7 +104,8 @@ Still open:
 3. **Consumption model** — **speed is in** (2026-09-14). `Route` carries a
    speed profile (`segments`, per-stretch distance and time), the backend
    supplies it from the routing provider's own steps, and
-   `SpeedAwareConsumption` prices each stretch at the speed it implies. The
+   `RoadLoadConsumption` prices each stretch from the car's road-load curve
+   (backend catalog, or a generic one) at the speed it implies. The
    charging curve went the same way: `GenericChargeCurve` replaced the flat
    `AVERAGE_CURVE_FACTOR = 0.65`, and charge time is integrated over the SoC
    band. Both are described in ARCHITECTURE.md §5.1.
@@ -144,10 +145,11 @@ Still open:
 4. **Vehicle list.** Deliberately not built in M2: the driver enters usable
    capacity and consumption themselves. That's honest — the numbers are in
    the spec sheet — but inconvenient, because few people know their *usable*
-   capacity. A bundled list of common models as a preset, still
-   overridable, is the next convenience step. The price is maintenance:
-   every new model and every facelift is missing or wrong, and a wrong
-   preset value is worse than none, because nobody checks it.
+   capacity. The garage now offers presets, still overridable, from the
+   backend's vehicle catalog (`GET /v1/vehicles`, cached in Room). It is
+   maintained in the backend admin area, so a correction or a new model
+   needs no app release. The price is still maintenance: a wrong preset
+   value is worse than none, because nobody checks it.
 5. **Server: yes, planned.** Decided when route planning was moved up. A
    dedicated routing server (OSRM or Valhalla) will later also handle the
    API key proxy and, if needed, BNetzA preprocessing.
