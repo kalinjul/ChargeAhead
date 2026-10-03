@@ -20,6 +20,7 @@ import org.julakali.chargeahead.android.phone.HomePill
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.RoundIcon
 import org.julakali.chargeahead.android.phone.RoundIconButton
+import org.julakali.chargeahead.android.phone.ZoomHintChip
 import org.julakali.chargeahead.android.phone.components.StationCard
 
 @PreviewTest
@@ -28,6 +29,15 @@ import org.julakali.chargeahead.android.phone.components.StationCard
 fun HintChipPlain() {
     PreviewScaffold {
         Box(Modifier.padding(12.dp)) { HintChip("Auf der Karte wird nach Ladesäulen gesucht") }
+    }
+}
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true)
+@Composable
+fun ZoomHintChip() {
+    PreviewScaffold {
+        Box(Modifier.padding(12.dp)) { ZoomHintChip {} }
     }
 }
 

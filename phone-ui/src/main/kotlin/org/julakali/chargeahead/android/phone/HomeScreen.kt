@@ -263,7 +263,7 @@ fun HomeScreen(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(46.dp),
+                        modifier = Modifier.width(ROUND_BUTTON_SIZE),
                     ) {
                         val bearing = camera.position.bearing
                         if (bearing != 0f) {
@@ -388,9 +388,7 @@ fun HomeScreen(
             ) {
                 if (uiState.belowMinZoom) {
                     // Tapping the hint lands on full markers, not on the dot tier.
-                    HintChip(stringResource(R.string.map_zoom_hint)) {
-                        scope.launch { camera.animate(CameraUpdateFactory.zoomTo(PILL_ZOOM)) }
-                    }
+                    ZoomHintChip { scope.launch { camera.animate(CameraUpdateFactory.zoomTo(PILL_ZOOM)) } }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     HomePill(
@@ -513,14 +511,19 @@ private fun SideButton(
             shrinkHorizontally(ChargeAheadMotion.spatial(), shrinkTowards = towards, clip = false),
     ) {
         Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-            if (edge == ScreenEdge.END) Spacer(Modifier.width(10.dp))
+            if (edge == ScreenEdge.END) Spacer(Modifier.width(SIDE_BUTTON_GAP))
             content()
-            if (edge == ScreenEdge.START) Spacer(Modifier.width(10.dp))
+            if (edge == ScreenEdge.START) Spacer(Modifier.width(SIDE_BUTTON_GAP))
         }
     }
 }
 
-private val SCREEN_MARGIN = 16.dp
+internal val SCREEN_MARGIN = 16.dp
+
+private val SIDE_BUTTON_GAP = 10.dp
+
+/** From the screen edge to the closed search bar, past the round button beside it. */
+internal val SEARCH_BAR_INSET = SCREEN_MARGIN + ROUND_BUTTON_SIZE + SIDE_BUTTON_GAP
 
 @Composable
 private fun HomePreview(
