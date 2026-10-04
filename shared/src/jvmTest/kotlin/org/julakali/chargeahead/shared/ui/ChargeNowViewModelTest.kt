@@ -2,7 +2,6 @@ package org.julakali.chargeahead.shared.ui
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,8 +10,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.BoundingBox
@@ -37,14 +34,15 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class ChargeNowViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() = Dispatchers.resetMain()
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private val here = LatLon(48.0, 11.0)
     private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
@@ -85,10 +83,12 @@ class ChargeNowViewModelTest {
         override suspend fun refresh(ids: Collection<String>) { refreshedIds += ids }
     }
 
-    private fun viewModel() = ChargeNowViewModel(
-        feature,
-        ChargeNowObserver(repository, statusRepository, preferences, testDispatchers),
-        RefreshChargeNowInteractor(repository, statusRepository, preferences),
+    private fun viewModel() = main.track(
+        ChargeNowViewModel(
+            feature,
+            ChargeNowObserver(repository, statusRepository, preferences, testDispatchers),
+            RefreshChargeNowInteractor(repository, statusRepository, preferences),
+        ),
     )
 
     /** The modal sheet takes its height from the first frame: a tall skeleton, never a one-liner. */

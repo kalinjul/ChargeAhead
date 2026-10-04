@@ -1,11 +1,11 @@
 package org.julakali.chargeahead.shared.ui.car
 
+import org.julakali.chargeahead.shared.ui.TestMain
 import kotlinx.coroutines.flow.flowOf
 
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,8 +14,6 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.BoundingBox
@@ -51,14 +49,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CarScreenViewModelsTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() = Dispatchers.resetMain()
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private val here = LatLon(48.0, 11.0)
     private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
@@ -100,11 +99,11 @@ class CarScreenViewModelsTest {
             override val statuses: Flow<Map<String, List<ChargePointStatus>>> = flowOf(emptyMap())
             override suspend fun refresh(ids: Collection<String>) {}
         }
-        val viewModel = CarChargeNowViewModel(
+        val viewModel = main.track(CarChargeNowViewModel(
             feature,
             ChargeNowObserver(repository, statusRepository, preferences, testDispatchers),
             RefreshChargeNowInteractor(repository, statusRepository, preferences),
-        )
+        ))
         assertEquals(ChargeNowUiState.NoPosition, viewModel.uiState.await { true })
 
         fixes.emit(Fix(here, null, null, 0L))
@@ -129,7 +128,7 @@ class CarScreenViewModelsTest {
             override val updates: Flow<Fix> = emptyFlow()
         }
         history.addRecentDestination(hamburg)
-        val viewModel = CarDestinationSearchViewModel(history, DestinationSearchObserver(geocoder, noLocation))
+        val viewModel = main.track(CarDestinationSearchViewModel(history, DestinationSearchObserver(geocoder, noLocation)))
         assertEquals(listOf(hamburg), viewModel.uiState.await { it.recents.isNotEmpty() }.recents)
 
         viewModel.onSearchTextChanged("Berlin")
@@ -146,7 +145,7 @@ class CarScreenViewModelsTest {
 
     @Test
     fun `picking a charge level stores it and ends the screen`() = runBlocking<Unit> {
-        val viewModel = CarSoCViewModel(vehicles, diagnostics, UpdateManualSocInteractor(vehicles))
+        val viewModel = main.track(CarSoCViewModel(vehicles, diagnostics, UpdateManualSocInteractor(vehicles)))
         assertNull(viewModel.uiState.await { true }.currentPercent)
 
         viewModel.onStepPicked(60)
@@ -157,7 +156,7 @@ class CarScreenViewModelsTest {
 
     @Test
     fun `the car reading shows only when the car delivered one`() = runBlocking<Unit> {
-        val viewModel = CarSoCViewModel(vehicles, diagnostics, UpdateManualSocInteractor(vehicles))
+        val viewModel = main.track(CarSoCViewModel(vehicles, diagnostics, UpdateManualSocInteractor(vehicles)))
         diagnostics.recordSoCDiagnostics(SoCDiagnostics(0L, SoCDiagnostics.Outcome.NO_DATA, detail = "status 2"))
         assertNull(viewModel.uiState.await { true }.carReading)
 

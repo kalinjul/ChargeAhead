@@ -1,18 +1,16 @@
 package org.julakali.chargeahead.shared.ui.car
 
+import org.julakali.chargeahead.shared.ui.TestMain
 import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ChargeFilters
@@ -47,14 +45,15 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CarRouteViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() = Dispatchers.resetMain()
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private val hamburg = LatLon(53.55, 9.99)
     private val muenchen = Destination("München", LatLon(48.137, 11.575))
@@ -104,7 +103,7 @@ class CarRouteViewModelTest {
     ).apply { start() }
 
     private fun viewModel(activeRoute: Boolean = false) =
-        CarRouteViewModel(
+        main.track(CarRouteViewModel(
             feature,
             muenchen,
             activeRoute,
@@ -112,7 +111,7 @@ class CarRouteViewModelTest {
             ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers),
             CommitTripInteractor(trips) { 9L },
             trips,
-        )
+        ))
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T = withTimeout(5_000) { first(matching) }
 

@@ -4,14 +4,11 @@ import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ChargeFilters
@@ -46,14 +43,15 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class TripViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() = Dispatchers.resetMain()
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private val hamburg = LatLon(53.55, 9.99)
     private val muenchen = Destination("München", LatLon(48.137, 11.575))
@@ -105,15 +103,17 @@ class TripViewModelTest {
 
     private fun viewModel(feature: ChargeStopsFeature): TripViewModel {
         val planTrip = PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, history, trips, testDispatchers)
-        return TripViewModel(
-            feature = feature,
-            planTrip = planTrip,
-            replanWithArrivalSoc = ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(vehicles), trips, planTrip),
-            commitTrip = CommitTripInteractor(trips) { 0L },
-            updateManualSoc = UpdateManualSocInteractor(vehicles),
-            dismissPlannedTrip = DismissPlannedTripInteractor(trips),
-            trips = trips,
-            vehicles = vehicles,
+        return main.track(
+            TripViewModel(
+                feature = feature,
+                planTrip = planTrip,
+                replanWithArrivalSoc = ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(vehicles), trips, planTrip),
+                commitTrip = CommitTripInteractor(trips) { 0L },
+                updateManualSoc = UpdateManualSocInteractor(vehicles),
+                dismissPlannedTrip = DismissPlannedTripInteractor(trips),
+                trips = trips,
+                vehicles = vehicles,
+            ),
         )
     }
 

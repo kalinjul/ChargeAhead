@@ -4,13 +4,10 @@ import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ChargeFilters
@@ -46,14 +43,15 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CommittedTripViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() = Dispatchers.resetMain()
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private val hamburg = LatLon(53.55, 9.99)
     private val hannover = LatLon(52.37, 9.73)
@@ -104,7 +102,7 @@ class CommittedTripViewModelTest {
 
     private val feature = feature()
 
-    private fun viewModel(feature: ChargeStopsFeature = this.feature) = CommittedTripViewModel(
+    private fun viewModel(feature: ChargeStopsFeature = this.feature) = main.track(CommittedTripViewModel(
         vehicles = vehicles,
         feature = feature,
         replanCommittedTrip = ReplanCommittedTripInteractor(
@@ -119,7 +117,7 @@ class CommittedTripViewModelTest {
         ),
         endTrip = EndTripInteractor(trips),
         trips = trips,
-    )
+    ))
 
     private fun commitFromHamburg() = runBlocking {
         vehicles.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))

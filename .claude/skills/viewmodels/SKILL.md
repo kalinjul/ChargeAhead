@@ -221,10 +221,14 @@ mid-message.
 ViewModel tests live in `shared/src/jvmTest/.../ui/` and need no Android and
 no Compose — see `PhoneViewModelTest`:
 
-- `Dispatchers.setMain(Dispatchers.Unconfined)` in `@BeforeTest`,
-  `Dispatchers.resetMain()` in `@AfterTest`. `viewModelScope` runs on the
-  main dispatcher and a plain test JVM has none; `Unconfined` also keeps
-  writes in the order they were issued.
+- `private val main = TestMain()`, with `main.setUp()` in `@BeforeTest` and
+  `main.tearDown()` in `@AfterTest`. It sets `Dispatchers.Main` to
+  `Unconfined` — `viewModelScope` runs on the main dispatcher, a plain test
+  JVM has none, and `Unconfined` keeps writes in the order they were issued.
+- Create every ViewModel through `main.track(...)`. `tearDown()` clears them
+  and waits for their scopes before resetting Main; an untracked one keeps
+  `uiState`'s 5 s stop timeout running, which later touches Main from another
+  thread and fails whichever test is setting it at that moment.
 - `DataStoreVehicleRepository(InMemoryPreferencesDataStore())` (and the other
   `DataStore…Repository` classes) is the real repository on in-memory
   storage — no fake needed.

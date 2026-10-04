@@ -16,14 +16,11 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
@@ -33,29 +30,31 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class NetworksViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() {
-        Dispatchers.setMain(Dispatchers.Unconfined)
-    }
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() {
-        Dispatchers.resetMain()
-    }
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private fun trackingPreferences() =
         TrackingPreferences(DataStorePreferencesRepository(InMemoryPreferencesDataStore()))
 
-    private fun networksViewModel(preferences: PreferencesRepository, listed: List<Network> = LISTED) =
+    private fun networksViewModel(
+        preferences: PreferencesRepository,
+        listed: List<Network> = LISTED,
+        updateNetworks: UpdateNetworksInteractor = UpdateNetworksInteractor(preferences),
+    ) = main.track(
         NetworksViewModel(
             preferences,
             SelectableNetworksObserver(FixedNetworkRepository(listed), preferences, testDispatchers),
             SelectableNetworksObserver(FixedNetworkRepository(listed), preferences, testDispatchers),
-            UpdateNetworksInteractor(preferences),
-        )
+            updateNetworks,
+        ),
+    )
 
     @Test
     fun `networks that dropped off the list show only while selected`() = runBlocking<Unit> {
@@ -115,9 +114,10 @@ class NetworksViewModelTest {
     fun `leaving commits even though the ViewModel is cleared right after`() = runBlocking<Unit> {
         // Like DataStore, the write suspends while it hops to its own thread.
         val preferences = SlowPreferences(DataStorePreferencesRepository(InMemoryPreferencesDataStore()))
+        val updateNetworks = UpdateNetworksInteractor(preferences)
         val store = ViewModelStore()
         val vm = ViewModelProvider.create(store, viewModelFactory {
-            initializer { networksViewModel(preferences) }
+            initializer { networksViewModel(preferences, updateNetworks = updateNetworks) }
         })[NetworksViewModel::class]
 
         vm.onNetworkToggled("enbw")
@@ -128,6 +128,8 @@ class NetworksViewModelTest {
 
         val stored = withTimeout(5_000L) { preferences.networks.first { it.preferredOperators.isNotEmpty() } }
         assertEquals(setOf("enbw"), stored.preferredOperators)
+        // The commit outlives viewModelScope and resumes through Main after the write.
+        withTimeout(5_000L) { updateNetworks.inProgress.first { !it } }
     }
 
     @Test
