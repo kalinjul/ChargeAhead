@@ -86,6 +86,8 @@
     <string name="phone_error_positive_number">Bitte eine Zahl größer als null eintragen.</string>
     <string name="phone_settings_missing">Ohne Fahrzeug und Ladestand wird die Erreichbarkeit nicht berechnet — die Liste zeigt dann nur Entfernungen.</string>
     <string name="phone_action_delete_vehicle">Fahrzeug löschen</string>
+    <string name="phone_action_restore_catalog_values">Katalogwerte übernehmen</string>
+    <string name="phone_settings_customized">Eigene Werte: Aktualisierungen aus dem Fahrzeugkatalog werden für dieses Auto nicht übernommen.</string>
     <string name="phone_soc_source_car">Ladestand kommt aus dem Fahrzeug</string>
     <string name="phone_soc_source_stored">Kein Ladestand vom Fahrzeug. Der Wert stammt aus der letzten Eingabe beim Planen.</string>
 

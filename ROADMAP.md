@@ -73,8 +73,8 @@ Still open:
   as a fact, and in an app for the car that is the same class of mistake as
   passing off demo charging stations as real. Prices come back when a real
   source does: Chargeprice vs. Eco-Movement is the same kind of decision as
-  OCM was — keyed API, contract test, replaceable source behind a port.
-  The subscriptions screen and the `TariffSource` port go with it; they
+  OCM was — keyed API, contract test, replaceable data source.
+  The subscriptions screen and the `TariffSource` data source go with it; they
   existed only to feed the comparison.
 - **Charge-now availability.** "Only free right now" is deliberately not a
   filter yet: no connected source has live occupancy. The relax ladder's
@@ -157,7 +157,7 @@ Still open:
    **Until then the app runs against `router.project-osrm.org`** — the
    OSRM project's public demo server. That's explicitly not meant for
    production use and comes with no guarantee. It sits behind the
-   `RouteEngine` port and is swappable for a dedicated instance without
+   `RouteEngine` interface and is swappable for a dedicated instance without
    changing anything else. **It must be replaced before any release.**
    It carries no speed profile: turning steps into segments lives in the
    backend only (#56), so without a backend, planning uses the average speed.

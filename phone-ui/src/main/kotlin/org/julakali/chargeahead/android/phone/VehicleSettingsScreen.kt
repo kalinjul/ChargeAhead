@@ -46,6 +46,7 @@ fun VehicleSettingsRoute(
         onConsumptionChange = viewModel::onConsumptionChanged,
         onConnectorToggle = viewModel::onConnectorToggled,
         onClear = viewModel::onVehicleCleared,
+        onRestoreCatalogValues = viewModel::onCatalogValuesRestored,
         modifier = modifier,
     )
 }
@@ -58,6 +59,7 @@ fun VehicleSettingsScreen(
     onConsumptionChange: (String) -> Unit,
     onConnectorToggle: (ConnectorType, Boolean) -> Unit,
     onClear: () -> Unit,
+    onRestoreCatalogValues: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -67,6 +69,16 @@ fun VehicleSettingsScreen(
             text = stringResource(R.string.phone_settings_intro),
             modifier = Modifier.padding(bottom = 16.dp),
         )
+
+        if (uiState.canRestoreCatalogValues) {
+            Fineprint(text = stringResource(R.string.phone_settings_customized))
+            OutlinedButton(
+                onClick = onRestoreCatalogValues,
+                modifier = Modifier.padding(top = 8.dp, bottom = 16.dp),
+            ) {
+                Text(stringResource(R.string.phone_action_restore_catalog_values))
+            }
+        }
 
         OutlinedTextField(
             value = uiState.name,

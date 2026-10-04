@@ -78,11 +78,11 @@ class SettingsDataStoreTest {
             it.vehicle.first() to it.manualSocPercent.first()
         }
 
-        assertEquals(vehicle, migratedVehicle)
+        assertEquals(vehicle.copy(id = "name:Testwagen"), migratedVehicle)
         assertEquals(64.0, migratedSoc)
         assertEquals(mapOf("unrelated" to "stays"), old)
         // Without the old entries, the next start reads DataStore alone.
-        assertEquals(vehicle, withStore(listOf(migration)) { it.vehicle.first() })
+        assertEquals(vehicle.copy(id = "name:Testwagen"), withStore(listOf(migration)) { it.vehicle.first() })
     }
 
     @Test

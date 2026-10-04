@@ -47,7 +47,7 @@ class SettingsWriteInteractorTest {
     fun `removing a vehicle takes it out of the garage`() = runBlocking {
         SelectVehicleInteractor(vehicles)(SelectVehicleInteractor.Params(vehicle)).getOrThrow()
 
-        RemoveVehicleInteractor(vehicles)(RemoveVehicleInteractor.Params(vehicle.displayName)).getOrThrow()
+        RemoveVehicleInteractor(vehicles)(RemoveVehicleInteractor.Params(vehicle.id)).getOrThrow()
 
         assertEquals(emptyList(), vehicles.vehicles.first())
         assertNull(vehicles.vehicle.first())

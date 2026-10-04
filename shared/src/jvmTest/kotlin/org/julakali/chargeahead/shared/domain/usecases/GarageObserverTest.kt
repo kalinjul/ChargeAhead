@@ -53,13 +53,13 @@ class GarageObserverTest {
     }
 
     @Test
-    fun `a car without a model id is matched by name`() = runBlocking {
+    fun `a hand-typed car is not linked to a model of the same name`() = runBlocking {
         val preset = testPresets.first()
         vehicles.setVehicle(preset.toProfile().copy(modelId = null))
 
         val garage = withTimeout(5_000) { observer().flow.first { it.selected != null } }
 
-        assertEquals(preset.consumptionKwhPer100Km, garage.selectedPresetConsumption)
+        assertNull(garage.selectedPresetConsumption)
     }
 
     @Test

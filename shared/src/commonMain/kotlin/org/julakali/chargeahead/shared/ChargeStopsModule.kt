@@ -47,6 +47,7 @@ import org.julakali.chargeahead.shared.domain.usecases.DismissPlannedTripInterac
 import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
@@ -152,7 +153,8 @@ fun chargeStopsModule(): Module = module {
     single<NetworkRepository> { RoomNetworkRepository(BackendNetworkListSource(get()), get()) }
     factory { RefreshNetworksInteractor(get()) }
     single<VehicleCatalogRepository> { RoomVehicleCatalogRepository(BackendVehicleCatalogSource(get()), get()) }
-    factory { RefreshVehicleCatalogInteractor(get()) }
+    factory { RefreshVehicleCatalogInteractor(get(), get<VehicleRepository>()) }
+    factory { RestoreCatalogValuesInteractor(get<VehicleRepository>(), get()) }
 
     single<SiteCache> {
         SiteCache { keys -> pruneCache(get(), keys, get<TimeProvider>().nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS) }

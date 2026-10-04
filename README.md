@@ -109,7 +109,7 @@ key it says so in place of the map. For iOS, the same values go into
 ```
 
 That runs the shared unit tests, the Robolectric UI tests and the screenshot
-comparison. The screenshot step needs Docker: goldens only match where they
+comparison. The screenshot step needs Docker or Podman: goldens only match where they
 were rendered, so `tools/screenshots.sh` validates and records them in the
 Linux container CI uses (`update` to re-record, then look at the PNGs; details
 in [docs/testing.md](docs/testing.md)). The backend mapping can additionally
@@ -129,7 +129,8 @@ testable from a desk. Swift can only be syntax-checked on Linux
 |---|---|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Design, platform constraints, data sources |
 | [ROADMAP.md](ROADMAP.md) | Milestones, planned UI, open points |
-| [AGENTS.md](AGENTS.md) | Conventions and the shared contract |
+| [AGENTS.md](AGENTS.md) | Working rules for agents and humans |
+| [docs/shared/](docs/shared/domain-model.md) | The shared code: model, data layer, use cases, assembly |
 | [docs/testing.md](docs/testing.md) | Test layers, screenshot goldens |
 | [docs/android-auto-testen.md](docs/android-auto-testen.md) | The app in the Desktop Head Unit |
 | [docs/ci-cd.md](docs/ci-cd.md) | CI, Play Store releases, secrets |

@@ -33,8 +33,8 @@ pinned through `LocalNow` so trip times don't drift.
 
 ./gradlew :shared:jvmTest                          # unit tests
 ./gradlew :ui-tests:testDebugUnitTest              # behaviour tests
-tools/screenshots.sh validate                      # screenshots vs. goldens, in docker
-tools/screenshots.sh update                        # re-record goldens, in docker
+tools/screenshots.sh validate                      # screenshots vs. goldens, in a container
+tools/screenshots.sh update                        # re-record goldens, in a container
 ```
 
 The two gradle screenshot tasks also run natively, but only the container
@@ -43,7 +43,8 @@ a golden recorded on a Mac fails on CI (and the other way round). The
 script runs them on `linux/amd64` with the JDK CI uses, the host SDK
 mounted read-only and its own Gradle home under `~/.chargeahead-linux`.
 The first run pulls everything and takes a few minutes; later ones are
-quicker. `docker` has to be running.
+quicker. It runs with `docker` or rootless `podman`, whichever is
+installed (`CHARGEAHEAD_CONTAINER_ENGINE` picks one when both are).
 
 Goldens live in `ui-tests/src/screenshotTestDebug/reference/`, one PNG per
 `@PreviewTest` function. The validate task writes an HTML report with
@@ -87,7 +88,7 @@ diff, commit the PNG.
 ## PhoneApp flow tests
 
 `PhoneAppFlowTest` composes the real `PhoneApp` on the real Koin graph
-(`chargeStopsModule`, `sharedUiModule`) with every world-facing port replaced
+(`chargeStopsModule`, `sharedUiModule`) with every world-facing data source replaced
 in `PhoneAppHarness`: in-memory settings with a test vehicle, one fixed
 location in Hamburg, a geocoder that knows München, a straight-line route
 engine, three charge sites along that line, empty live status and network

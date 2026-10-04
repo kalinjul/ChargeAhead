@@ -28,7 +28,7 @@ other way. Two approaches:
 | **Corridor** (M1) | Current position + heading → search sector ahead | low, no backend |
 | **Real route** (moved up) | Own destination entry + routing engine → buffer along polyline | medium |
 
-Both sit behind the same port, `RouteProvider`. The UI and the reachability
+Both sit behind the same interface, `RouteProvider`. The UI and the reachability
 logic don't see the difference.
 
 **The real route was moved up**, because the corridor misses reality —
@@ -73,7 +73,7 @@ existed in the first place.
   the normal case, not the exception.
 - **Android Automotive OS:** there the `CarPropertyManager` delivers real
   values. A different target platform, not part of this project (but the
-  `SoCSource` port is open for it).
+  `SoCSource` data source is open for it).
 - **CarPlay / iOS:** there is **no** API for vehicle data. Period.
 
 **Made verifiable:** whether the head unit exposes the data can only be
@@ -146,7 +146,7 @@ disappears exactly where the app fulfills its purpose.
 | Domain model, range, corridor | Kotlin | Kotlin | **yes** |
 | Data sources, HTTP, cache | Ktor + Room (KMP) | Ktor + Room (KMP) | **yes** |
 | Settings, vehicle profile | Kotlin | Kotlin | **yes** |
-| Location | FusedLocationProvider | CLLocationManager | no (port) |
+| Location | FusedLocationProvider | CLLocationManager | no (`LocationSource`) |
 | Car UI | Car App Library | CarPlay Framework | no |
 | Phone UI | Compose | SwiftUI | optional¹ |
 
@@ -165,7 +165,7 @@ location.
 ChargeAhead/
 ├── shared/                        Kotlin Multiplatform
 │   ├── commonMain/
-│   │   ├── domain/                Model + ports (plain Kotlin types, no frameworks)
+│   │   ├── domain/                Model, data source and repository interfaces (plain Kotlin, no frameworks)
 │   │   │   └── usecases/          Interactors (*Interactor) + observers (*Observer)
 │   │   ├── core/                  Geo math, range, corridor, dedup
 │   │   ├── data/                  Source adapters, cache, merge
@@ -185,7 +185,7 @@ ChargeAhead/
 ```
 
 **Dependency direction:** `androidApp` → `phone-ui` → `shared`; `ui-tests` → `phone-ui`;
-within `shared`: `data` → `core` → `domain`. `domain` knows no one. All ports are defined there as interfaces,
+within `shared`: `data` → `core` → `domain`. `domain` knows no one. Data sources and repositories are defined there as interfaces;
 all implementations live outside.
 
 ```mermaid
@@ -198,7 +198,7 @@ flowchart TD
     subgraph shared["shared (Kotlin Multiplatform)"]
         VM["ChargeStopsFeature · use cases<br/>location, charge, trips, chargers"]
         CORE["core: range · corridor · dedup"]
-        DOM["domain: model + ports"]
+        DOM["domain: model + interfaces"]
         DATA["data: sources + cache"]
     end
     subgraph ext["External"]
@@ -266,7 +266,7 @@ data class ChargeStop(
 )
 ```
 
-### Ports (in `domain`, implemented in `data`/platform)
+### Data sources and repositories (interfaces in `domain`, implemented in `data`/platform)
 
 ```kotlin
 interface ChargeSiteSource {
@@ -540,7 +540,7 @@ loaded on every query.
 
 **API keys** don't belong in the repository. Stored via `local.properties`
 → `BuildConfig` (Android) or `xcconfig` (iOS), and in the shared module
-behind an `ApiKeyProvider` port. For production, a dedicated proxy is
+behind an `ApiKeyProvider` interface. For production, a dedicated proxy is
 preferable, because a key in a distributed app is fundamentally
 extractable.
 

@@ -77,3 +77,8 @@ data class SectorArea(
         const val ARC_SAMPLE_STEP_DEG = 5.0
     }
 }
+
+/** Builds the search area from a fix. */
+interface RouteProvider {
+    fun searchArea(fix: Fix, rangeKm: Double): SearchArea
+}

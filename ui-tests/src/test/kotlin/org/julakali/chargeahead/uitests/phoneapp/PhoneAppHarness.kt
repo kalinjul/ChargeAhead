@@ -55,7 +55,7 @@ import org.robolectric.Shadows
 import java.lang.reflect.Proxy
 
 /**
- * The production Koin graph with every world-facing port faked: the phone sits
+ * The production Koin graph with every world-facing data source faked: the phone sits
  * in Hamburg, the geocoder knows München, roads are straight lines and three
  * chargers wait along the way. Call [start] before composing, [stop] in @After.
  */

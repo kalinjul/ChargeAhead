@@ -61,9 +61,9 @@ for a second opinion. If it's too big for one pass, do passes and say so.
 - Open/closed: a `when` over a type that every new case will have to extend
   where a polymorphic call or a map would do; a flag parameter switching
   behaviour inside one function.
-- Liskov: an implementation of a port or interface that throws, no-ops or
+- Liskov: an implementation of an interface that throws, no-ops or
   narrows where its siblings don't.
-- Interface segregation: a port grown by a method only one caller needs; a
+- Interface segregation: an interface grown by a method only one caller needs; a
   fake in tests that has to stub things it never uses.
 - Dependency inversion: a use case or ViewModel constructing or reaching for a
   concrete repository, a dispatcher, a clock or a platform API directly

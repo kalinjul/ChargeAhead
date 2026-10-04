@@ -28,7 +28,14 @@ val testPresets = listOf(
     ),
 )
 
-class FakeVehicleCatalog(presets: List<VehiclePreset> = testPresets) : VehicleCatalogRepository {
-    override val presets: Flow<List<VehiclePreset>> = MutableStateFlow(presets)
-    override suspend fun refresh() = Unit
+/** [refreshed], when given, is what the backend answers on the next refresh. */
+class FakeVehicleCatalog(
+    presets: List<VehiclePreset> = testPresets,
+    private val refreshed: List<VehiclePreset>? = null,
+) : VehicleCatalogRepository {
+    private val stored = MutableStateFlow(presets)
+    override val presets: Flow<List<VehiclePreset>> = stored
+    override suspend fun refresh() {
+        refreshed?.let { stored.value = it }
+    }
 }
