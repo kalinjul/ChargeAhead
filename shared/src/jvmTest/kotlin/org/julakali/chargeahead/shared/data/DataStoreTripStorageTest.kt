@@ -130,7 +130,7 @@ class DataStoreTripStorageTest {
                 points = listOf(LatLon(53.55, 9.99), kassel.position, munich.position),
                 distanceKm = 776.0,
                 durationMinutes = 470.0,
-                segments = listOf(RouteSegment(fromKm = 0.0, distanceKm = 320.0, durationMinutes = 200.0)),
+                segments = listOf(RouteSegment(fromKm = 0.0, distanceKm = 320.0, durationMinutes = 200.0, ascentM = 0.0, descentM = 0.0)),
             ),
             destination = munich,
             stops = listOf(

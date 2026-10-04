@@ -29,8 +29,11 @@ class ConsumptionModelTest {
         segments = segments,
     )
 
-    private fun segment(fromKm: Double, distanceKm: Double, speedKmh: Double) =
-        RouteSegment(fromKm, distanceKm, distanceKm / speedKmh * 60.0)
+    private fun segment(fromKm: Double, distanceKm: Double, speedKmh: Double, ascentM: Double = 0.0, descentM: Double = 0.0) =
+        RouteSegment(fromKm, distanceKm, distanceKm / speedKmh * 60.0, ascentM, descentM)
+
+    /** Battery energy to lift [model]'s generic 2000 kg by [metres]. */
+    private fun liftKwh(metres: Double) = 2000.0 * 9.81 * metres / 3_600_000.0 / 0.94
 
     @Test
     fun `a car without a curve gets a generic one fitted to its consumption`() {
@@ -161,5 +164,92 @@ class ConsumptionModelTest {
 
         assertEquals(0.0, model.energyKwh(plain, 40.0, 40.0), 1e-9)
         assertEquals(0.0, model.energyKwh(plain, 60.0, 40.0), 1e-9)
+    }
+
+    @Test
+    fun `climbing costs the lift on top of the level road`() {
+        val level = route(50.0, 100.0, listOf(segment(0.0, 50.0, 100.0)))
+        val uphill = route(50.0, 100.0, listOf(segment(0.0, 50.0, 100.0, ascentM = 600.0)))
+
+        assertEquals(liftKwh(600.0), model.energyKwh(uphill, 0.0, 50.0) - model.energyKwh(level, 0.0, 50.0), 1e-9)
+    }
+
+    @Test
+    fun `a gentle descent saves what the motor would have spent`() {
+        val level = route(50.0, 100.0, listOf(segment(0.0, 50.0, 100.0)))
+        val downhill = route(50.0, 100.0, listOf(segment(0.0, 50.0, 100.0, descentM = 100.0)))
+
+        assertEquals(liftKwh(100.0), model.energyKwh(level, 0.0, 50.0) - model.energyKwh(downhill, 0.0, 50.0), 1e-9)
+    }
+
+    @Test
+    fun `a steep descent charges the battery, but only by the recuperated share`() {
+        val pass = route(20.0, 60.0, listOf(segment(0.0, 20.0, 60.0, descentM = 1200.0)))
+
+        val energy = model.energyKwh(pass, 0.0, 20.0)
+
+        assertTrue(energy < 0.0, "a long way down recharges: $energy")
+        assertTrue(-energy < liftKwh(1200.0) * 0.94 * 0.65, "never more than the recuperated share: $energy")
+    }
+
+    @Test
+    fun `going over a mountain costs more than going around it`() {
+        val level = route(40.0, 60.0, listOf(segment(0.0, 40.0, 60.0)))
+        val overThePass = route(40.0, 60.0, listOf(segment(0.0, 20.0, 60.0, ascentM = 1000.0), segment(20.0, 20.0, 60.0, descentM = 1000.0)))
+
+        assertTrue(model.energyKwh(overThePass, 0.0, 40.0) > model.energyKwh(level, 0.0, 40.0))
+    }
+
+    @Test
+    fun `the peak is at the summit and not at the end`() {
+        val overThePass = route(40.0, 60.0, listOf(segment(0.0, 20.0, 60.0, ascentM = 1000.0), segment(20.0, 20.0, 60.0, descentM = 1000.0)))
+
+        val toSummit = model.energyKwh(overThePass, 0.0, 20.0)
+
+        assertEquals(toSummit, model.peakEnergyKwh(overThePass, 0.0, 40.0), 1e-9)
+        assertTrue(model.energyKwh(overThePass, 0.0, 40.0) < toSummit)
+    }
+
+    @Test
+    fun `a segment that climbs and drops is assumed to climb first`() {
+        val rolling = route(20.0, 60.0, listOf(segment(0.0, 20.0, 60.0, ascentM = 600.0, descentM = 300.0)))
+
+        val peak = model.peakEnergyKwh(rolling, 0.0, 20.0)
+
+        // Two thirds of the height is climbing, so the first two thirds of the distance climb.
+        assertEquals(model.energyKwh(rolling, 0.0, 20.0 * 2.0 / 3.0), peak, 1e-9)
+        assertTrue(peak > model.energyKwh(rolling, 0.0, 20.0))
+    }
+
+    @Test
+    fun `the peak of a level road is its energy`() {
+        val plain = route(100.0, 100.0)
+
+        assertEquals(model.energyKwh(plain, 10.0, 70.0), model.peakEnergyKwh(plain, 10.0, 70.0), 1e-9)
+    }
+
+    @Test
+    fun `reach ends below the summit when the battery runs out on the climb`() {
+        val overThePass = route(40.0, 60.0, listOf(segment(0.0, 20.0, 60.0, ascentM = 1000.0), segment(20.0, 20.0, 60.0, descentM = 1000.0)))
+        val enoughForTheTotal = model.energyKwh(overThePass, 0.0, 40.0) + 0.1
+
+        assertTrue(model.reachKm(overThePass, 0.0, enoughForTheTotal) < 20.0)
+    }
+
+    @Test
+    fun `reach is the inverse of energy over hills`() {
+        val hilly = route(
+            distanceKm = 300.0,
+            averageSpeedKmh = 100.0,
+            segments = listOf(
+                segment(0.0, 100.0, 90.0, ascentM = 800.0, descentM = 200.0),
+                segment(100.0, 100.0, 120.0, ascentM = 50.0, descentM = 400.0),
+                segment(200.0, 100.0, 110.0, ascentM = 300.0, descentM = 300.0),
+            ),
+        )
+
+        val budget = model.energyKwh(hilly, 10.0, 250.0)
+
+        assertEquals(250.0, model.reachKm(hilly, 10.0, budget), 1e-6)
     }
 }

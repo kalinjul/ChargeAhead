@@ -2,12 +2,14 @@ package org.julakali.chargeahead.shared.domain
 
 import kotlinx.serialization.Serializable
 
-/** A stretch of a route, addressed by distance from the start. */
+/** A stretch of a route, addressed by distance from the start, with the metres it climbs and drops. */
 @Serializable
 data class RouteSegment(
     val fromKm: Double,
     val distanceKm: Double,
     val durationMinutes: Double,
+    val ascentM: Double,
+    val descentM: Double,
 ) {
     val averageSpeedKmh: Double
         get() = if (durationMinutes <= 0.0) 0.0 else distanceKm / durationMinutes * 60.0

@@ -10,7 +10,9 @@ package org.julakali.chargeahead.shared.core
  * never accumulate rounding and the reserve is never silently undercut.
  *
  * Everything is in percent of the usable battery. Driving time is left out:
- * on a fixed route every plan drives the same total.
+ * on a fixed route every plan drives the same total. Energy along the route
+ * can fall on a descent, so the reserve is held at the highest point of each
+ * leg, not only where it ends.
  */
 internal class ChargeStopOptimizer(
     private val maxDepartureSoc: Double = 100.0,
@@ -20,8 +22,10 @@ internal class ChargeStopOptimizer(
 
     class Node(
         val km: Double,
-        /** Energy from the route start to this stop. Non-decreasing along the node list. */
+        /** Energy from the route start to this stop. */
         val energyFromStartSoc: Double,
+        /** The highest energy from the start on the way from the previous node, or the start, to this one. */
+        val summitFromStartSoc: Double = energyFromStartSoc,
         /** Everything a stop costs besides charging: overhead, detour, penalties. */
         val fixedMinutes: Double,
         val chargeTime: ChargeTimeTable,
@@ -43,10 +47,16 @@ internal class ChargeStopOptimizer(
         reserveSoc: Double,
         arrivalSoc: Double,
         excluded: Int? = null,
+        /** The highest energy from the start between the last node and the destination. */
+        finalSummitSoc: Double = totalEnergySoc,
     ): Result {
         val n = nodes.size
         // Slot 0 is the start, slot t is nodes[t - 1].
         val energy = DoubleArray(n + 1) { if (it == 0) 0.0 else nodes[it - 1].energyFromStartSoc }
+        // summitAfter[t]: the highest energy between slot t and the destination.
+        val summitAfter = DoubleArray(n + 1)
+        summitAfter[n] = maxOf(finalSummitSoc, totalEnergySoc)
+        for (t in n - 1 downTo 0) summitAfter[t] = maxOf(summitAfter[t + 1], nodes[t].summitFromStartSoc)
         val levels = Array(n + 1) { slot ->
             if (slot == 0) doubleArrayOf(startSoc) else departureLevels(totalEnergySoc - energy[slot] + arrivalSoc)
         }
@@ -68,19 +78,21 @@ internal class ChargeStopOptimizer(
             val minutesAtLevel = DoubleArray(levelsJ.size) { chargeJ.minutesTo(levelsJ[it]) }
 
             // Later predecessors first: on a full tie the first one found stays.
+            var summit = maxOf(node.summitFromStartSoc, energy[j])
             var i = j - 1
             while (i >= 0) {
                 val leg = energy[j] - energy[i]
-                if (leg > maxLegSoc) break
-                if (i == 0 || excluded != i - 1) {
+                val drawdown = summit - energy[i]
+                if (drawdown <= maxLegSoc && (i == 0 || excluded != i - 1)) {
                     relax(
                         levelsI = levels[i], costI = cost[i], stopsI = stops[i],
-                        leg = leg, reserveSoc = reserveSoc, chargeJ = chargeJ,
+                        leg = leg, drawdown = drawdown, reserveSoc = reserveSoc, chargeJ = chargeJ,
                         levelsJ = levelsJ, minutesAtLevel = minutesAtLevel, fixedMinutes = node.fixedMinutes,
                         costJ = cost[j], stopsJ = stops[j], prevSlotJ = prevSlot[j], prevLevelJ = prevLevel[j],
                         arrivalJ = arrival[j], fromSlot = i,
                     )
                 }
+                if (i > 0) summit = maxOf(summit, nodes[i - 1].summitFromStartSoc)
                 i--
             }
             if (cost[j].any { it.isFinite() }) furthestKm = maxOf(furthestKm, node.km)
@@ -91,10 +103,12 @@ internal class ChargeStopOptimizer(
         for (slot in n downTo 0) {
             if (slot > 0 && excluded == slot - 1) continue
             val finalLeg = totalEnergySoc - energy[slot]
+            val finalDrawdown = summitAfter[slot] - energy[slot]
             val levelsS = levels[slot]
             for (k in levelsS.indices) {
                 val c = cost[slot][k]
                 if (!c.isFinite() || levelsS[k] - finalLeg < arrivalSoc - SOC_TOLERANCE) continue
+                if (levelsS[k] - finalDrawdown < reserveSoc - SOC_TOLERANCE) continue
                 if (bestSlot < 0 || isBetter(c, stops[slot][k], cost[bestSlot][bestLevel], stops[bestSlot][bestLevel])) {
                     bestSlot = slot
                     bestLevel = k
@@ -124,13 +138,13 @@ internal class ChargeStopOptimizer(
      */
     private fun relax(
         levelsI: DoubleArray, costI: DoubleArray, stopsI: IntArray,
-        leg: Double, reserveSoc: Double, chargeJ: ChargeTimeTable,
+        leg: Double, drawdown: Double, reserveSoc: Double, chargeJ: ChargeTimeTable,
         levelsJ: DoubleArray, minutesAtLevel: DoubleArray, fixedMinutes: Double,
         costJ: DoubleArray, stopsJ: IntArray, prevSlotJ: IntArray, prevLevelJ: IntArray,
         arrivalJ: DoubleArray, fromSlot: Int,
     ) {
         var p = 0
-        while (p < levelsI.size && levelsI[p] - leg < reserveSoc - SOC_TOLERANCE) p++
+        while (p < levelsI.size && levelsI[p] - drawdown < reserveSoc - SOC_TOLERANCE) p++
         if (p == levelsI.size) return
 
         var runValue = Double.POSITIVE_INFINITY

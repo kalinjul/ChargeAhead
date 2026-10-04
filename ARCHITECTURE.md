@@ -334,6 +334,25 @@ for a car typed in by hand is fitted with the backend's `vehicle-model`
 artifact, which holds the WLTC simulation and its constants, so it reproduces
 the driver's figure by construction. Without segments the route's own average speed applies.
 
+Each segment also carries the metres it climbs and drops (`ascentM`,
+`descentM`, from the backend's elevation data). A segment that does both is
+split into a climbing piece followed by a dropping one, in proportion to the
+metres, so the summit is never underestimated. Per piece, height enters at the
+wheel and only then goes through the drivetrain:
+
+```
+W       = k · F(v) · d + m · g · Δh                 [wheel energy]
+battery = W / η            if W ≥ 0
+        = W · r            if W < 0                  [only the excess descent is recuperated]
+        + k · (P_aux / v + 1.03 · m · e(v) · (1/η − r)) · d
+```
+
+A gentle descent therefore saves at the full motor rate, a steep one charges
+the battery at the recuperation share. Energy along the route can fall, so
+`ConsumptionModel.peakEnergyKwh` reports the highest draw on a stretch, and
+`ChargeStopOptimizer` holds the reserve at the summit of every leg rather than
+only where the leg ends.
+
 ### 5.1a Charging time
 
 `core/ChargeCurve.kt`. A DC session holds close to its peak while the battery

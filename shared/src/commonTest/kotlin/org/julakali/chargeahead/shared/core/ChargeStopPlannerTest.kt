@@ -259,7 +259,7 @@ class ChargeStopPlannerTest {
             points = points,
             distanceKm = 110.0,
             durationMinutes = 110.0 / speedKmh * 60.0,
-            segments = listOf(RouteSegment(fromKm = 0.0, distanceKm = 110.0, durationMinutes = 110.0 / speedKmh * 60.0)),
+            segments = listOf(RouteSegment(fromKm = 0.0, distanceKm = 110.0, durationMinutes = 110.0 / speedKmh * 60.0, ascentM = 0.0, descentM = 0.0)),
         )
     }
 

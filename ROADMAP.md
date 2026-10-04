@@ -113,12 +113,9 @@ Still open:
    The blocker named below is therefore gone: `ConsumptionModel` knows the
    route. What is still open, in order of expected benefit:
 
-   - **Elevation profile.** The biggest systematic error on routes with
-     grade. Over the Alps, the same car uses a multiple of the flat-ground
-     consumption, and regeneration downhill gives some of it back — an
-     estimate with constant consumption isn't just off there, it's off by
-     an order of magnitude. Needs elevation data along the route, i.e.
-     another data source.
+   - **Elevation profile.** Done: the backend sends ascent and descent per
+     route segment, `RoadLoadConsumption` prices climbing and recuperation,
+     and the planner keeps the reserve at each summit (ARCHITECTURE.md §5.1).
    - **Headwind.** At highway speed, drag is by far the largest factor;
      30 km/h of headwind acts like driving noticeably faster. Needs a
      weather source and the direction of travel — the latter is already
@@ -133,9 +130,8 @@ Still open:
      source as the headwind.
    - From M4, the rolling average from actual SoC drop over distance.
 
-   Elevation lands on `RouteSegment` (an ascent and a descent per stretch, the
-   same km-indexed shape, additive to the wire contract); temperature and wind
-   land on `ConsumptionModel`. Neither needs another structural change.
+   Temperature and wind land on `ConsumptionModel`; neither needs another
+   structural change.
 
    Since #72 the planner is no longer greedy: stops are an exact shortest
    path priced in minutes, so there is no 80 % target left to tune. What is
