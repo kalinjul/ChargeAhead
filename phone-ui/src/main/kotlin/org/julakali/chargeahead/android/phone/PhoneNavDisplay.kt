@@ -1,8 +1,8 @@
 package org.julakali.chargeahead.android.phone
 
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -60,7 +60,8 @@ fun PhoneNavDisplay(
         // the list changes, and strategies compare by identity.
         sceneStrategies = remember { listOf(SheetSceneStrategy()) },
         transitionSpec = {
-            slideInHorizontally(ChargeAheadMotion.page()) { it } togetherWith fadeOut(ChargeAheadMotion.page())
+            // The page underneath stays opaque; below it the map and drawer would show through.
+            slideInHorizontally(ChargeAheadMotion.page()) { it } togetherWith ExitTransition.KeepUntilTransitionsFinished
         },
         popTransitionSpec = { pageSlideOut() },
         // Navigation 3 scales and fades on a back gesture by default; the page should just slide, as on a tap.
@@ -169,6 +170,6 @@ private fun Page(
     )
 }
 
-/** The page slides off to the right while what was under it shows again. */
+/** The page slides off to the right, uncovering the one under it. */
 private fun pageSlideOut(): ContentTransform =
-    fadeIn(ChargeAheadMotion.page()) togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }
+    EnterTransition.None togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }
