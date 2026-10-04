@@ -56,10 +56,16 @@ class TripPlanner(
         val arrivalReserve = maxOf(arrivalSocPercent, DEFAULT_RESERVE_SOC_PERCENT)
 
         val tables = HashMap<Double, ChargeTimeTable>()
+        var previousKm = 0.0
+        var previousSoc = 0.0
         val nodes = candidates.map { candidate ->
+            val summitSoc = previousSoc + peakSocNeeded(consumption, route, vehicle, previousKm, candidate.kmFromStart)
+            previousKm = candidate.kmFromStart
+            previousSoc = socNeeded(consumption, route, vehicle, 0.0, candidate.kmFromStart)
             ChargeStopOptimizer.Node(
                 km = candidate.kmFromStart,
-                energyFromStartSoc = socNeeded(consumption, route, vehicle, 0.0, candidate.kmFromStart),
+                energyFromStartSoc = previousSoc,
+                summitFromStartSoc = summitSoc,
                 fixedMinutes = fixedMinutes(candidate, filters, networks),
                 chargeTime = tables.getOrPut(acceptedPeakKw(vehicle, candidate.maxPowerKw)) {
                     chargeTimeTable(vehicle, candidate.maxPowerKw)
@@ -67,6 +73,7 @@ class TripPlanner(
             )
         }
         val totalEnergySoc = socNeeded(consumption, route, vehicle, 0.0, totalKm)
+        val finalSummitSoc = previousSoc + peakSocNeeded(consumption, route, vehicle, previousKm, totalKm)
 
         val optimizer = ChargeStopOptimizer(MAX_DEPARTURE_SOC)
         fun optimize(excluded: Int? = null) = optimizer.optimize(
@@ -76,6 +83,7 @@ class TripPlanner(
             reserveSoc = DEFAULT_RESERVE_SOC_PERCENT,
             arrivalSoc = arrivalReserve,
             excluded = excluded,
+            finalSummitSoc = finalSummitSoc,
         )
 
         val found = when (val result = optimize()) {
@@ -197,6 +205,14 @@ class TripPlanner(
         toKm: Double,
     ): Double = consumption.energyKwh(route, fromKm, toKm) / vehicle.usableBatteryKwh * 100.0
 
+    private fun peakSocNeeded(
+        consumption: ConsumptionModel,
+        route: Route,
+        vehicle: VehicleProfile,
+        fromKm: Double,
+        toKm: Double,
+    ): Double = consumption.peakEnergyKwh(route, fromKm, toKm) / vehicle.usableBatteryKwh * 100.0
+
     /**
      * Driving time from the start to [km], on the same speed profile the energy
      * is priced on. Whatever the segments don't cover — all of it, on a route
@@ -217,7 +233,7 @@ class TripPlanner(
         return minutes + (to - coveredKm).coerceAtLeast(0.0) * averageMinutesPerKm
     }
 
-    /** Relative to the full battery, like the car's own display; never below zero. */
+    /** Relative to the full battery, like the car's own display; never below empty or above full. */
     private fun socAfter(
         consumption: ConsumptionModel,
         route: Route,
@@ -226,7 +242,7 @@ class TripPlanner(
         fromKm: Double,
         toKm: Double,
     ): Double {
-        return (socPercent - socNeeded(consumption, route, vehicle, fromKm, toKm)).coerceAtLeast(0.0)
+        return (socPercent - socNeeded(consumption, route, vehicle, fromKm, toKm)).coerceIn(0.0, 100.0)
     }
 
     private companion object {

@@ -50,8 +50,8 @@ class RoutedListAgreementTest {
         distanceKm = 660.0,
         durationMinutes = 330.0 + 110.0,
         segments = listOf(
-            RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0),
-            RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 110.0),
+            RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0, ascentM = 0.0, descentM = 0.0),
+            RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 110.0, ascentM = 0.0, descentM = 0.0),
         ),
     )
 

@@ -52,8 +52,8 @@ class BackendRouteEngineTest {
               "provider": "osm",
               "attribution": "OpenStreetMap",
               "segments": [
-                {"fromKm": 0.0, "distanceKm": 8.2, "durationMinutes": 12.0},
-                {"fromKm": 8.2, "distanceKm": 86.0, "durationMinutes": 51.0}
+                {"fromKm": 0.0, "distanceKm": 8.2, "durationMinutes": 12.0, "ascentM": 41.0, "descentM": 3.5},
+                {"fromKm": 8.2, "distanceKm": 86.0, "durationMinutes": 51.0, "ascentM": 120.0, "descentM": 210.0}
               ]
             }
             """.trimIndent(),
@@ -65,8 +65,29 @@ class BackendRouteEngineTest {
         assertEquals(0.0, route.segments[0].fromKm)
         assertEquals(8.2, route.segments[0].distanceKm)
         assertEquals(12.0, route.segments[0].durationMinutes)
+        assertEquals(41.0, route.segments[0].ascentM)
+        assertEquals(3.5, route.segments[0].descentM)
+        assertEquals(210.0, route.segments[1].descentM)
         assertEquals(8.2, route.segments[1].fromKm)
         assertTrue(route.segments[1].averageSpeedKmh > route.segments[0].averageSpeedKmh)
+    }
+
+    @Test
+    fun aSegmentWithoutElevationIsRejected() {
+        val engine = engineRespondingWith(
+            """
+            {
+              "points": [{"lat": 48.9, "lon": 11.4}, {"lat": 49.1, "lon": 11.6}],
+              "distanceKm": 94.2,
+              "durationMinutes": 63.0,
+              "provider": "osm",
+              "attribution": "OpenStreetMap",
+              "segments": [{"fromKm": 0.0, "distanceKm": 94.2, "durationMinutes": 63.0}]
+            }
+            """.trimIndent(),
+        )
+
+        assertFailsWith<IllegalArgumentException> { runBlocking { engine.route(from, to) } }
     }
 
     /** An older server sends no profile at all, and the field must stay optional. */

@@ -235,8 +235,8 @@ class TripPlannerTest {
         // Same distance and same total time, but driven in two very different halves.
         val mixed = flat.copy(
             segments = listOf(
-                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0 / 75.0 * 60.0),
-                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 330.0 / 205.0 * 60.0),
+                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0 / 75.0 * 60.0, ascentM = 0.0, descentM = 0.0),
+                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 330.0 / 205.0 * 60.0, ascentM = 0.0, descentM = 0.0),
             ),
         )
 
@@ -253,6 +253,36 @@ class TripPlannerTest {
         )
     }
 
+    /** A destination below a pass is planned to the summit, not just to the destination. */
+    @Test
+    fun `the battery is planned to crest the pass and not only to reach the destination`() = runBlocking<Unit> {
+        val pass = straightRoute(km = 145.0).copy(
+            durationMinutes = 60.0 + 18.0 + 15.0,
+            segments = listOf(
+                RouteSegment(fromKm = 0.0, distanceKm = 100.0, durationMinutes = 60.0, ascentM = 0.0, descentM = 0.0),
+                RouteSegment(fromKm = 100.0, distanceKm = 30.0, durationMinutes = 18.0, ascentM = 1500.0, descentM = 0.0),
+                RouteSegment(fromKm = 130.0, distanceKm = 15.0, durationMinutes = 15.0, ascentM = 0.0, descentM = 1500.0),
+            ),
+        )
+        val consumption = RoadLoadConsumption(id4)
+        val toSummit = consumption.energyKwh(pass, 0.0, 130.0) / id4.usableBatteryKwh * 100.0
+        val toDestination = consumption.energyKwh(pass, 0.0, 145.0) / id4.usableBatteryKwh * 100.0
+        assertTrue(toSummit > toDestination + 4.0, "the descent gives back energy: $toSummit vs $toDestination")
+        // Enough for the destination with the reserve to spare, not enough to get over the top.
+        val startSoc = 10.0 + (toSummit + toDestination) / 2.0
+
+        val plan = assertIs<TripPlanResult.Planned>(
+            planner(pass, sitesAlong(pass, everyKm = 40.0))
+                .plan(start, destination, id4, startSocPercent = startSoc, arrivalSocPercent = 10.0),
+        ).plan
+
+        val stop = plan.stops.single()
+        assertTrue(stop.kmFromStart < 130.0, "charged before the summit: ${stop.kmFromStart}")
+        val summitSoc = stop.departureSocPercent -
+            consumption.energyKwh(pass, stop.kmFromStart, 130.0) / id4.usableBatteryKwh * 100.0
+        assertTrue(summitSoc >= 10.0 - 1e-6, "crests with the reserve: $summitSoc")
+    }
+
     /** Issue #54: clock time runs on the same speed profile as the energy. */
     @Test
     fun `stop ETAs follow the segments and not the route average`() = runBlocking<Unit> {
@@ -260,8 +290,8 @@ class TripPlannerTest {
         val mixed = straightRoute().copy(
             durationMinutes = 330.0 + 110.0,
             segments = listOf(
-                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0),
-                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 110.0),
+                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0, ascentM = 0.0, descentM = 0.0),
+                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 110.0, ascentM = 0.0, descentM = 0.0),
             ),
         )
         fun driveMinutes(fromKm: Double, toKm: Double): Double {
@@ -532,8 +562,8 @@ class TripPlannerTest {
         val flat = straightRoute()
         val mixed = flat.copy(
             segments = listOf(
-                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0 / 75.0 * 60.0),
-                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 330.0 / 205.0 * 60.0),
+                RouteSegment(fromKm = 0.0, distanceKm = 330.0, durationMinutes = 330.0 / 75.0 * 60.0, ascentM = 0.0, descentM = 0.0),
+                RouteSegment(fromKm = 330.0, distanceKm = 330.0, durationMinutes = 330.0 / 205.0 * 60.0, ascentM = 0.0, descentM = 0.0),
             ),
         )
         fun reference(km: Double) = straightRoute(averageSpeedKmh = neutralSpeedKmh, km = km)

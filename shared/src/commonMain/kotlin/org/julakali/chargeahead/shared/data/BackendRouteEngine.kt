@@ -48,6 +48,8 @@ class BackendRouteEngine(
                     fromKm = it.fromKm,
                     distanceKm = it.distanceKm,
                     durationMinutes = it.durationMinutes,
+                    ascentM = requireNotNull(it.ascentM) { "Route segment at ${it.fromKm} km without its ascent" },
+                    descentM = requireNotNull(it.descentM) { "Route segment at ${it.fromKm} km without its descent" },
                 )
             },
         )

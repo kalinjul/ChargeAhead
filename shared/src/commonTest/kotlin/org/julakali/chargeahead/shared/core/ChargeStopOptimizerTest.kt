@@ -12,8 +12,14 @@ class ChargeStopOptimizerTest {
     private val fast = ChargeTimeTable(usableBatteryKwh = battery, peakKw = 150.0)
     private val slow = ChargeTimeTable(usableBatteryKwh = battery, peakKw = 50.0)
 
-    private fun node(energy: Double, table: ChargeTimeTable = fast, fixed: Double = 10.0) =
-        ChargeStopOptimizer.Node(km = energy * 4.0, energyFromStartSoc = energy, fixedMinutes = fixed, chargeTime = table)
+    private fun node(energy: Double, table: ChargeTimeTable = fast, fixed: Double = 10.0, summit: Double = energy) =
+        ChargeStopOptimizer.Node(
+            km = energy * 4.0,
+            energyFromStartSoc = energy,
+            summitFromStartSoc = summit,
+            fixedMinutes = fixed,
+            chargeTime = table,
+        )
 
     private fun ChargeStopOptimizer.Result.found() = assertIs<ChargeStopOptimizer.Result.Found>(this)
 
@@ -156,5 +162,39 @@ class ChargeStopOptimizerTest {
             .optimize(nodes, 110.0, startSoc = 60.0, reserveSoc = 10.0, arrivalSoc = 10.0, excluded = 1)
             .found()
         assertEquals(listOf(0), result.stops.map { it.nodeIndex })
+    }
+
+    @Test
+    fun `the reserve holds at a summit before the destination`() {
+        val result = ChargeStopOptimizer()
+            .optimize(
+                listOf(node(10.0)), totalEnergySoc = 50.0, startSoc = 80.0, reserveSoc = 10.0, arrivalSoc = 10.0,
+                finalSummitSoc = 95.0,
+            )
+            .found()
+
+        val stop = result.stops.single()
+        assertTrue(stop.departureSoc >= 10.0 + 95.0 - 10.0 - 1e-9, "enough to crest the summit: $stop")
+    }
+
+    @Test
+    fun `the reserve holds at a summit between two stops`() {
+        val nodes = listOf(node(20.0), node(30.0, summit = 90.0))
+        val result = ChargeStopOptimizer()
+            .optimize(nodes, totalEnergySoc = 60.0, startSoc = 50.0, reserveSoc = 10.0, arrivalSoc = 10.0)
+            .found()
+
+        val first = result.stops.first()
+        assertEquals(0, first.nodeIndex)
+        assertTrue(first.departureSoc >= 10.0 + 90.0 - 20.0 - 1e-9, "enough to crest the summit: $first")
+    }
+
+    @Test
+    fun `a route that falls after its high point needs no more than the high point`() {
+        val result = ChargeStopOptimizer()
+            .optimize(listOf(node(40.0)), totalEnergySoc = 20.0, startSoc = 50.0, reserveSoc = 10.0, arrivalSoc = 10.0)
+            .found()
+
+        assertTrue(result.stops.isEmpty())
     }
 }

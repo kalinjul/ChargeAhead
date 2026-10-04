@@ -50,6 +50,21 @@ class BackendRouteLiveContractTest {
         assertTrue(route.durationMinutes in 30.0..150.0, "${route.durationMinutes} minutes")
     }
 
+    /** Ingolstadt lies about 60 m above Nürnberg; the A9 between them rolls over the Jura. */
+    @Test
+    fun everySegmentCarriesAPlausibleElevation() {
+        if (skip()) return
+
+        val route = runBlocking { engine().route(from, to) }!!
+
+        assertTrue(route.segments.isNotEmpty(), "A route without segments")
+        val ascent = route.segments.sumOf { it.ascentM }
+        val descent = route.segments.sumOf { it.descentM }
+        assertTrue(route.segments.all { it.ascentM >= 0.0 && it.descentM >= 0.0 }, "Negative elevation in ${route.segments}")
+        assertTrue(ascent in 50.0..1500.0, "$ascent m up")
+        assertTrue(descent - ascent in -100.0..250.0, "$ascent m up, $descent m down")
+    }
+
     /** The polyline is what the charge-site corridor is built from. */
     @Test
     fun theRouteStartsAndEndsWhereItWasAsked() {

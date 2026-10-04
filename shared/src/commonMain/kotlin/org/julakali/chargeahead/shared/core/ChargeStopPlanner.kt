@@ -128,7 +128,7 @@ object ChargeStopPlanner {
 
         override fun socOnArrivalPercent(vehicle: VehicleProfile, socPercent: Double, distanceKm: Double): Double {
             val neededKwh = consumptionFor(vehicle).energyKwh(route, fromKm, fromKm + distanceKm)
-            return (socPercent - neededKwh / vehicle.usableBatteryKwh * 100.0).coerceAtLeast(0.0)
+            return (socPercent - neededKwh / vehicle.usableBatteryKwh * 100.0).coerceIn(0.0, 100.0)
         }
 
         private fun consumptionFor(vehicle: VehicleProfile): ConsumptionModel = consumption ?: RoadLoadConsumption(vehicle)
