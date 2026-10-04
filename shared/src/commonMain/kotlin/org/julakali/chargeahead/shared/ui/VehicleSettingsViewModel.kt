@@ -27,6 +27,8 @@ import kotlin.math.round
  * intermediate input like "17," survives.
  */
 data class VehicleSettingsUiState(
+    /** Until the stored car arrives; the empty fields would otherwise read as "no car". */
+    val isLoading: Boolean = true,
     val name: String = "",
     val battery: String = "",
     val consumption: String = "",
@@ -81,6 +83,7 @@ class VehicleSettingsViewModel(
             id = vehicle?.id ?: newVehicleId(),
         )
         VehicleSettingsUiState(
+            isLoading = false,
             name = edited.name,
             battery = edited.battery,
             consumption = edited.consumption,

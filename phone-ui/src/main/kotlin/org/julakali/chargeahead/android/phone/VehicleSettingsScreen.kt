@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.android.phone
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -62,6 +63,11 @@ fun VehicleSettingsScreen(
     onRestoreCatalogValues: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Empty fields would float their labels up once the values arrive.
+    if (uiState.isLoading) {
+        Box(modifier)
+        return
+    }
     Column(
         modifier = modifier.verticalScroll(rememberScrollState()).padding(16.dp),
     ) {

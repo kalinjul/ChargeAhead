@@ -144,6 +144,21 @@ class PhoneViewModelTest {
         assertEquals(preset.consumptionKwhPer100Km.asInput(), viewModel.uiState.await { !it.canRestoreCatalogValues }.consumption)
     }
 
+    /** The empty form is never shown in place of a stored car. */
+    @Test
+    fun `the vehicle form is loading until the stored car arrives`() = runBlocking<Unit> {
+        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val preset = testPresets.first()
+        vehicles.setVehicle(preset.toProfile())
+        val viewModel = vehicleSettingsViewModel(vehicles)
+
+        assertTrue(viewModel.uiState.value.isLoading)
+
+        val loaded = viewModel.uiState.await { !it.isLoading }
+        assertEquals(preset.name, loaded.name)
+        assertEquals(preset.usableBatteryKwh.asInput(), loaded.battery)
+    }
+
     private fun vehicleSettingsViewModel(vehicles: DataStoreVehicleRepository): VehicleSettingsViewModel {
         val catalog = FakeVehicleCatalog()
         return VehicleSettingsViewModel(
