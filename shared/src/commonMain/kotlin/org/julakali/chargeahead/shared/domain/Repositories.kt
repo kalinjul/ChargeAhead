@@ -3,72 +3,6 @@ package org.julakali.chargeahead.shared.domain
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-/** Ongoing stream of location fixes. */
-interface LocationSource {
-    val updates: Flow<Fix>
-
-    /**
-     * The best fix obtainable right now — the platform's last known one, or a
-     * freshly computed one. `null` when none can be had.
-     */
-    suspend fun currentFix(): Fix?
-}
-
-/** The charging networks worth offering, largest first. */
-fun interface NetworkListSource {
-    suspend fun networks(): List<Network>
-}
-
-/** The networks the backend has listed, kept so a selection outlives the list it came from. */
-interface NetworkRepository {
-    /** Every network ever listed; [Network.rank] marks those on the current list. */
-    val networks: Flow<List<Network>>
-
-    /** Keeps what is stored when the backend fails or has no list yet. */
-    suspend fun refresh()
-}
-
-/** The vehicle models the backend offers as garage presets. */
-fun interface VehicleCatalogSource {
-    suspend fun presets(): List<VehiclePreset>
-}
-
-/** The backend's vehicle catalog, kept so the garage works offline. */
-interface VehicleCatalogRepository {
-    /** In the backend's order; empty until the first sync. */
-    val presets: Flow<List<VehiclePreset>>
-
-    /** Keeps what is stored when the backend fails or answers with an empty list. */
-    suspend fun refresh()
-}
-
-/** A charging-site data source. */
-interface ChargeSiteSource {
-    val id: String
-
-    /**
-     * Queries all sites in the area.
-     *
-     * Takes the whole [SearchArea], not just its bounding rectangle, so
-     * sources with radial search can respond sorted by distance.
-     *
-     * Empty [networkKeys] means every network.
-     *
-     * Throws on network or server errors.
-     */
-    suspend fun query(area: SearchArea, networkKeys: Set<String> = emptySet()): List<ChargeSite>
-}
-
-/** Builds the search area from a fix. */
-interface RouteProvider {
-    fun searchArea(fix: Fix, rangeKm: Double): SearchArea
-}
-
-/** Clock as a port, for testability. */
-fun interface TimeProvider {
-    fun nowMillis(): Long
-}
-
 /**
  * The stock of charging sites the list is built from. The app always reads
  * from this stock and replenishes it in the background.
@@ -106,14 +40,22 @@ fun interface SiteCache {
     suspend fun prune(preferredNetworkKeys: Set<String>)
 }
 
-/**
- * The charge level, as good as this platform can get it.
- *
- * `null` in the stream means "this source currently knows nothing".
- */
-interface SoCSource {
-    val kind: SoCSourceKind
-    val energy: Flow<EnergyState?>
+/** The networks the backend has listed, kept so a selection outlives the list it came from. */
+interface NetworkRepository {
+    /** Every network ever listed; [Network.rank] marks those on the current list. */
+    val networks: Flow<List<Network>>
+
+    /** Keeps what is stored when the backend fails or has no list yet. */
+    suspend fun refresh()
+}
+
+/** The backend's vehicle catalog, kept so the garage works offline. */
+interface VehicleCatalogRepository {
+    /** In the backend's order; empty until the first sync. */
+    val presets: Flow<List<VehiclePreset>>
+
+    /** Keeps what is stored when the backend fails or answers with an empty list. */
+    suspend fun refresh()
 }
 
 /** The driver's vehicles and charge levels. Outlives the process. */
@@ -130,11 +72,14 @@ interface VehicleRepository {
     /** How full the battery should still be at the destination. */
     val arrivalSocPercent: Flow<Double>
 
-    /** Selects [profile] and adds it to the garage, or updates it there. */
+    /** Selects [profile] and adds it to the garage, or updates the car with its id there. */
     suspend fun setVehicle(profile: VehicleProfile?)
 
+    /** Applies [transform] to every car in the garage, the selected one included, in one write. */
+    suspend fun updateVehicles(transform: (VehicleProfile) -> VehicleProfile)
+
     /** Removes from the garage; if it was the selected vehicle, the first remaining one takes over. */
-    suspend fun removeVehicle(displayName: String)
+    suspend fun removeVehicle(id: String)
 
     suspend fun setManualSocPercent(socPercent: Double?)
 

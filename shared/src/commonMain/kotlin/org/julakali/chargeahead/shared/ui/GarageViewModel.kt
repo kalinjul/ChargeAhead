@@ -68,8 +68,8 @@ class GarageViewModel(
         viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(profile)) }
     }
 
-    fun onVehicleRemoved(displayName: String) {
-        viewModelScope.launch { removeVehicle(RemoveVehicleInteractor.Params(displayName)) }
+    fun onVehicleRemoved(id: String) {
+        viewModelScope.launch { removeVehicle(RemoveVehicleInteractor.Params(id)) }
     }
 
     /** Opens the arrival-level dialog on the level currently in force. */

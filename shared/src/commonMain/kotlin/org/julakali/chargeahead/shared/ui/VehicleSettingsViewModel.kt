@@ -4,11 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.ConnectorType
+import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.CarDiagnosticsRepository
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
+import org.julakali.chargeahead.shared.domain.presetOf
 import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.newVehicleId
+import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +34,9 @@ data class VehicleSettingsUiState(
     // Not editable here, but kept across edits.
     val dcPeakPowerKw: Double? = null,
     val modelId: String? = null,
+    val id: String = "",
+    /** A catalog car the driver changed, whose catalog values can be restored. */
+    val canRestoreCatalogValues: Boolean = false,
     /** The stored level, shown only; the car or the planning dialogs set it. */
     val socInput: String = "",
     val socFromCar: Boolean = false,
@@ -45,9 +52,11 @@ data class VehicleSettingsUiState(
  */
 class VehicleSettingsViewModel(
     vehicles: VehicleRepository,
+    catalog: VehicleCatalogRepository,
     diagnostics: CarDiagnosticsRepository,
     feature: ChargeStopsFeature,
     private val selectVehicle: SelectVehicleInteractor,
+    private val restoreCatalogValues: RestoreCatalogValuesInteractor,
 ) : ViewModel() {
 
     // null = untouched, the form mirrors what is stored.
@@ -55,11 +64,13 @@ class VehicleSettingsViewModel(
 
     val uiState: StateFlow<VehicleSettingsUiState> = combine(
         form,
-        vehicles.vehicle,
+        combine(vehicles.vehicle, catalog.presets) { vehicle, presets ->
+            vehicle to (vehicle?.customized == true && presets.presetOf(vehicle) != null)
+        },
         vehicles.manualSocPercent,
         diagnostics.socDiagnostics,
         feature.currentEnergy,
-    ) { form, vehicle, socPercent, diagnostics, energy ->
+    ) { form, (vehicle, canRestore), socPercent, diagnostics, energy ->
         val edited = form ?: Form(
             name = vehicle?.displayName.orEmpty(),
             battery = vehicle?.usableBatteryKwh?.asInput().orEmpty(),
@@ -67,6 +78,7 @@ class VehicleSettingsViewModel(
             connectors = vehicle?.acceptedConnectors ?: emptySet(),
             dcPeakPowerKw = vehicle?.dcPeakPowerKw,
             modelId = vehicle?.modelId,
+            id = vehicle?.id ?: newVehicleId(),
         )
         VehicleSettingsUiState(
             name = edited.name,
@@ -75,6 +87,8 @@ class VehicleSettingsViewModel(
             connectors = edited.connectors,
             dcPeakPowerKw = edited.dcPeakPowerKw,
             modelId = edited.modelId,
+            id = edited.id,
+            canRestoreCatalogValues = canRestore,
             socInput = socPercent?.asInput().orEmpty(),
             socFromCar = energy.reportedByCar,
             diagnostics = diagnostics,
@@ -97,6 +111,12 @@ class VehicleSettingsViewModel(
         viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(null)) }
     }
 
+    /** Drops the driver's changes; the car follows the catalog again. */
+    fun onCatalogValuesRestored() {
+        form.value = null
+        viewModelScope.launch { restoreCatalogValues(Unit) }
+    }
+
     private fun edit(change: (Form) -> Form) {
         val updated = editForm(change)
         // Incomplete input stores no profile.
@@ -112,6 +132,8 @@ class VehicleSettingsViewModel(
                 acceptedConnectors = updated.connectors,
                 dcPeakPowerKw = updated.dcPeakPowerKw,
                 modelId = updated.modelId,
+                customized = updated.modelId != null,
+                id = updated.id,
             )
         }
         viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(profile)) }
@@ -124,7 +146,7 @@ class VehicleSettingsViewModel(
     }
 
     private fun currentFromStore(): Form = uiState.value.let {
-        Form(it.name, it.battery, it.consumption, it.connectors, it.dcPeakPowerKw, it.modelId)
+        Form(it.name, it.battery, it.consumption, it.connectors, it.dcPeakPowerKw, it.modelId, it.id)
     }
 
     private data class Form(
@@ -134,6 +156,7 @@ class VehicleSettingsViewModel(
         val connectors: Set<ConnectorType> = emptySet(),
         val dcPeakPowerKw: Double? = null,
         val modelId: String? = null,
+        val id: String = newVehicleId(),
     )
 }
 

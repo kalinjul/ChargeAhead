@@ -44,6 +44,7 @@ import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeStopsInterac
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
 import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
@@ -102,12 +103,7 @@ class PhoneViewModelTest {
     @Test
     fun `the form keeps what was typed while the store takes what parses`() = runBlocking<Unit> {
         val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val viewModel = VehicleSettingsViewModel(
-            vehicles,
-            DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore()),
-            stubFeature(),
-            SelectVehicleInteractor(vehicles),
-        )
+        val viewModel = vehicleSettingsViewModel(vehicles)
 
         viewModel.onNameChanged("Testwagen")
         viewModel.onBatteryChanged("77")
@@ -132,12 +128,7 @@ class PhoneViewModelTest {
         val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         val preset = testPresets.first()
         vehicles.setVehicle(preset.toProfile())
-        val viewModel = VehicleSettingsViewModel(
-            vehicles,
-            DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore()),
-            stubFeature(),
-            SelectVehicleInteractor(vehicles),
-        )
+        val viewModel = vehicleSettingsViewModel(vehicles)
         viewModel.uiState.await { it.name == preset.name }
 
         viewModel.onConsumptionChanged("16")
@@ -145,18 +136,46 @@ class PhoneViewModelTest {
         val stored = vehicles.vehicle.awaitValue { it?.consumptionKwhPer100Km == 16.0 }
         assertEquals(preset.id, stored?.modelId)
         assertEquals(preset.dcPeakPowerKw, stored?.dcPeakPowerKw)
+        assertTrue(viewModel.uiState.await { it.canRestoreCatalogValues }.canRestoreCatalogValues)
+
+        viewModel.onCatalogValuesRestored()
+
+        assertEquals(preset.toProfile().copy(id = stored!!.id), vehicles.vehicle.awaitValue { it?.customized == false })
+        assertEquals(preset.consumptionKwhPer100Km.asInput(), viewModel.uiState.await { !it.canRestoreCatalogValues }.consumption)
+    }
+
+    private fun vehicleSettingsViewModel(vehicles: DataStoreVehicleRepository): VehicleSettingsViewModel {
+        val catalog = FakeVehicleCatalog()
+        return VehicleSettingsViewModel(
+            vehicles,
+            catalog,
+            DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore()),
+            stubFeature(),
+            SelectVehicleInteractor(vehicles),
+            RestoreCatalogValuesInteractor(vehicles, catalog),
+        )
+    }
+
+    @Test
+    fun `typing a new car's name keeps it one car in the garage`() = runBlocking<Unit> {
+        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val viewModel = vehicleSettingsViewModel(vehicles)
+        viewModel.onBatteryChanged("77")
+        viewModel.onConsumptionChanged("18")
+
+        viewModel.onNameChanged("E")
+        viewModel.onNameChanged("Ei")
+        viewModel.onNameChanged("Eigenbau")
+
+        vehicles.vehicle.awaitValue { it?.displayName == "Eigenbau" }
+        assertEquals(listOf("Eigenbau"), vehicles.vehicles.first().map { it.displayName })
     }
 
     /** Without a usable capacity, no profile is stored at all. */
     @Test
     fun `an unparseable capacity stores no profile`() = runBlocking<Unit> {
         val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val viewModel = VehicleSettingsViewModel(
-            vehicles,
-            DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore()),
-            stubFeature(),
-            SelectVehicleInteractor(vehicles),
-        )
+        val viewModel = vehicleSettingsViewModel(vehicles)
 
         viewModel.onNameChanged("Testwagen")
         viewModel.onConsumptionChanged("17,8")

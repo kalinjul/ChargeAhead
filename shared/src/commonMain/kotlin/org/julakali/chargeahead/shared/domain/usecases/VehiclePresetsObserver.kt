@@ -8,6 +8,7 @@ import org.julakali.chargeahead.shared.domain.SubjectInteractor
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.VehicleRepository
+import org.julakali.chargeahead.shared.domain.presetOf
 
 /** The catalog cars one can still add: not in the garage yet, matching the query. */
 class VehiclePresetsObserver(
@@ -21,8 +22,8 @@ class VehiclePresetsObserver(
     override fun createObservable(params: Params): Flow<List<VehiclePreset>> {
         val needle = params.query.trim()
         return combine(catalog.presets, vehicles.vehicles) { presets, owned ->
-            val ownedNames = owned.mapTo(HashSet()) { it.displayName }
-            presets.filter { it.name !in ownedNames && it.name.contains(needle, ignoreCase = true) }
+            val ownedIds = owned.mapNotNullTo(HashSet()) { presets.presetOf(it)?.id }
+            presets.filter { it.id !in ownedIds && it.name.contains(needle, ignoreCase = true) }
         }.flowOn(dispatchers.computation)
     }
 }

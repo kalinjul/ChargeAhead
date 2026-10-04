@@ -106,9 +106,9 @@ fun GarageScreen(
                         if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
                         TickRow(
                             label = vehicle.displayName,
-                            checked = vehicle.displayName == selected?.displayName,
+                            checked = vehicle.id == selected?.id,
                             tick = if (deleteMode) TickStyle.DELETE else TickStyle.CHECK,
-                            onClick = { if (deleteMode) onRemove(vehicle.displayName) else onSelect(vehicle) },
+                            onClick = { if (deleteMode) onRemove(vehicle.id) else onSelect(vehicle) },
                             contentDescription = if (deleteMode) stringResource(R.string.garage_remove_one, vehicle.displayName) else null,
                         )
                     }
@@ -187,7 +187,7 @@ private fun SelectedVehiclePanel(
 @Composable
 private fun ConsumptionCard(vehicle: VehicleProfile, presetConsumption: Double?, onSelect: (VehicleProfile) -> Unit) {
     // Slider commits on release.
-    var consumption by remember(vehicle.displayName) {
+    var consumption by remember(vehicle.id, vehicle.consumptionKwhPer100Km) {
         mutableStateOf(vehicle.consumptionKwhPer100Km.toFloat())
     }
     AppCard {
@@ -201,7 +201,7 @@ private fun ConsumptionCard(vehicle: VehicleProfile, presetConsumption: Double?,
                 value = consumption,
                 onValueChange = { consumption = (it * 2).roundToInt() / 2f },
                 onValueChangeFinished = {
-                    onSelect(vehicle.copy(consumptionKwhPer100Km = consumption.toDouble()))
+                    onSelect(vehicle.copy(consumptionKwhPer100Km = consumption.toDouble(), ownConsumption = true))
                 },
                 valueRange = 12f..30f,
             )

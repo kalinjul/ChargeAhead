@@ -1,5 +1,8 @@
 package org.julakali.chargeahead.shared.domain
 
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+
 /** The vehicle calculations are done for. */
 data class VehicleProfile(
     val displayName: String,
@@ -8,10 +11,16 @@ data class VehicleProfile(
     val acceptedConnectors: Set<ConnectorType>,
     /** DC charging peak; `null` means unknown and the site's connector power is used alone. */
     val dcPeakPowerKw: Double? = null,
-    /** The catalog model the car was added from; `null` for one typed in by hand. */
+    /** The catalog model the car is linked to; `null` for one typed in by hand. */
     val modelId: String? = null,
     /** The catalog's curve for [modelId], attached for planning; not stored with the garage. */
     val roadLoad: RoadLoad? = null,
+    /** The driver changed the catalog values; the car no longer follows the catalog. */
+    val customized: Boolean = false,
+    /** The driver set the consumption to their own driving; the catalog keeps it. */
+    val ownConsumption: Boolean = false,
+    /** The car's place in the garage; stays the same through every edit. */
+    val id: String = newVehicleId(),
 ) {
     init {
         require(usableBatteryKwh > 0.0) { "usableBatteryKwh must be positive" }
@@ -105,9 +114,19 @@ data class RoadLoad(
     fun forceN(speedKmh: Double): Double = f0 + f1 * speedKmh + f2 * speedKmh * speedKmh
 }
 
-/** The preset [vehicle] was added from; a car from before presets carried ids is matched by name. */
+@OptIn(ExperimentalUuidApi::class)
+fun newVehicleId(): String = Uuid.random().toString()
+
+/** The car as the catalog describes it now; a customized car, or one typed in by hand, stays as it is. */
+fun VehicleProfile.followingCatalog(presets: List<VehiclePreset>): VehicleProfile {
+    if (customized) return this
+    val current = presets.presetOf(this)?.toProfile()?.copy(id = id) ?: return this
+    return if (ownConsumption) current.copy(consumptionKwhPer100Km = consumptionKwhPer100Km, ownConsumption = true) else current
+}
+
+/** The catalog model [vehicle] is linked to. */
 fun List<VehiclePreset>.presetOf(vehicle: VehicleProfile): VehiclePreset? =
-    if (vehicle.modelId != null) firstOrNull { it.id == vehicle.modelId } else firstOrNull { it.name == vehicle.displayName }
+    vehicle.modelId?.let { modelId -> firstOrNull { it.id == modelId } }
 
 /** The car with its catalog curve; `null` curve for one typed in by hand. */
 fun VehicleProfile.withRoadLoadFrom(presets: List<VehiclePreset>): VehicleProfile =

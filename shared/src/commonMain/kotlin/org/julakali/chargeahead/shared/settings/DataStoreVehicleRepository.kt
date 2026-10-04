@@ -15,11 +15,14 @@ import org.julakali.chargeahead.shared.settings.SettingsKeys.ARRIVAL_SOC
 import org.julakali.chargeahead.shared.settings.SettingsKeys.BATTERY_KWH
 import org.julakali.chargeahead.shared.settings.SettingsKeys.CONNECTORS
 import org.julakali.chargeahead.shared.settings.SettingsKeys.CONSUMPTION
+import org.julakali.chargeahead.shared.settings.SettingsKeys.CUSTOMIZED
 import org.julakali.chargeahead.shared.settings.SettingsKeys.DC_PEAK
 import org.julakali.chargeahead.shared.settings.SettingsKeys.GARAGE
+import org.julakali.chargeahead.shared.settings.SettingsKeys.ID
 import org.julakali.chargeahead.shared.settings.SettingsKeys.MANUAL_SOC
 import org.julakali.chargeahead.shared.settings.SettingsKeys.MODEL_ID
 import org.julakali.chargeahead.shared.settings.SettingsKeys.NAME
+import org.julakali.chargeahead.shared.settings.SettingsKeys.OWN_CONSUMPTION
 
 /** A corrupt profile is treated as "no profile". */
 class DataStoreVehicleRepository(
@@ -43,10 +46,21 @@ class DataStoreVehicleRepository(
         dataStore.edit { it.writeVehicle(profile) }
     }
 
-    override suspend fun removeVehicle(displayName: String) {
+    override suspend fun updateVehicles(transform: (VehicleProfile) -> VehicleProfile) {
         dataStore.edit { preferences ->
-            val remaining = preferences.garage().filterNot { it.displayName == displayName }
-            if (preferences.selectedVehicle()?.displayName == displayName) {
+            val selected = preferences.selectedVehicle()
+            val updated = preferences.garage().map(transform)
+            preferences.writeGarage(updated)
+            if (selected != null) {
+                preferences.writeVehicle(updated.firstOrNull { it.id == selected.id } ?: transform(selected))
+            }
+        }
+    }
+
+    override suspend fun removeVehicle(id: String) {
+        dataStore.edit { preferences ->
+            val remaining = preferences.garage().filterNot { it.id == id }
+            if (preferences.selectedVehicle()?.id == id) {
                 preferences.writeVehicle(remaining.firstOrNull())
             }
             preferences.writeGarage(remaining)
@@ -65,20 +79,23 @@ class DataStoreVehicleRepository(
         if (profile != null) {
             val current = garage()
             // A known car is updated in its slot; only a new one is appended.
-            val updated = if (current.any { it.displayName == profile.displayName }) {
-                current.map { if (it.displayName == profile.displayName) profile else it }
+            val updated = if (current.any { it.id == profile.id }) {
+                current.map { if (it.id == profile.id) profile else it }
             } else {
                 current + profile
             }
             writeGarage(updated)
         }
         // The selected vehicle stays on the legacy keys.
+        putString(ID, profile?.id)
         putString(NAME, profile?.displayName)
         putString(BATTERY_KWH, profile?.usableBatteryKwh?.toString())
         putString(CONSUMPTION, profile?.consumptionKwhPer100Km?.toString())
         putString(CONNECTORS, profile?.acceptedConnectors?.joinToString(",") { it.name })
         putString(DC_PEAK, profile?.dcPeakPowerKw?.toString())
         putString(MODEL_ID, profile?.modelId)
+        putString(CUSTOMIZED, profile?.customized?.takeIf { it }?.toString())
+        putString(OWN_CONSUMPTION, profile?.ownConsumption?.takeIf { it }?.toString())
     }
 
     private fun MutablePreferences.writeGarage(vehicles: List<VehicleProfile>) {
@@ -91,7 +108,10 @@ class DataStoreVehicleRepository(
                     consumption = it.consumptionKwhPer100Km,
                     connectors = it.acceptedConnectors.map(ConnectorType::name),
                     dcPeakKw = it.dcPeakPowerKw,
+                    id = it.id,
                     modelId = it.modelId,
+                    customized = it.customized,
+                    ownConsumption = it.ownConsumption,
                 )
             },
         )
@@ -107,9 +127,12 @@ class DataStoreVehicleRepository(
         val battery = getStringOrNull(BATTERY_KWH)?.toDoubleOrNull() ?: return null
         val consumption = getStringOrNull(CONSUMPTION)?.toDoubleOrNull() ?: return null
         if (battery <= 0.0 || consumption <= 0.0) return null
+        val name = getStringOrNull(NAME).orEmpty()
+        val modelId = getStringOrNull(MODEL_ID)
 
         return VehicleProfile(
-            displayName = getStringOrNull(NAME).orEmpty(),
+            id = getStringOrNull(ID) ?: legacyId(modelId, name),
+            displayName = name,
             usableBatteryKwh = battery,
             consumptionKwhPer100Km = consumption,
             // Unknown connector names are skipped rather than thrown on.
@@ -119,7 +142,9 @@ class DataStoreVehicleRepository(
                 ?.toSet()
                 .orEmpty(),
             dcPeakPowerKw = getStringOrNull(DC_PEAK)?.toDoubleOrNull(),
-            modelId = getStringOrNull(MODEL_ID),
+            modelId = modelId,
+            customized = getStringOrNull(CUSTOMIZED) == "true",
+            ownConsumption = getStringOrNull(OWN_CONSUMPTION) == "true",
         )
     }
 
@@ -130,12 +155,16 @@ class DataStoreVehicleRepository(
         val consumption: Double,
         val connectors: List<String> = emptyList(),
         val dcPeakKw: Double? = null,
+        val id: String? = null,
         val modelId: String? = null,
+        val customized: Boolean = false,
+        val ownConsumption: Boolean = false,
     ) {
         /** Broken numbers cost the entry, not the garage. */
         fun toProfileOrNull(): VehicleProfile? {
             if (batteryKwh <= 0.0 || consumption <= 0.0) return null
             return VehicleProfile(
+                id = id ?: legacyId(modelId, name),
                 displayName = name,
                 usableBatteryKwh = batteryKwh,
                 consumptionKwhPer100Km = consumption,
@@ -144,7 +173,12 @@ class DataStoreVehicleRepository(
                     .toSet(),
                 dcPeakPowerKw = dcPeakKw,
                 modelId = modelId,
+                customized = customized,
+                ownConsumption = ownConsumption,
             )
         }
     }
 }
+
+/** Cars stored before they had an id get one that is the same on every read, in the garage and as the selection. */
+private fun legacyId(modelId: String?, name: String): String = modelId ?: "name:$name"
