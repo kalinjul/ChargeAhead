@@ -19,7 +19,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-IMAGE="eclipse-temurin:25"        # CI: setup-java temurin 25
+# Fully qualified: podman has no implicit default registry.
+IMAGE="docker.io/library/eclipse-temurin:25"   # CI: setup-java temurin 25
 PLATFORM="linux/amd64"            # CI: ubuntu-latest, x64
 LINUX_HOME="${CHARGEAHEAD_LINUX_HOME:-$HOME/.chargeahead-linux}"
 
@@ -30,8 +31,23 @@ case "${1:-validate}" in
 esac
 shift || true
 
-command -v docker >/dev/null || { echo "docker is not installed; screenshot tests only render faithfully in the Linux container" >&2; exit 127; }
-docker info >/dev/null 2>&1 || { echo "docker is installed but not running" >&2; exit 1; }
+# CHARGEAHEAD_CONTAINER_ENGINE picks one when both are installed.
+ENGINE="${CHARGEAHEAD_CONTAINER_ENGINE:-}"
+if [ -z "$ENGINE" ]; then
+  for candidate in docker podman; do
+    command -v "$candidate" >/dev/null && { ENGINE="$candidate"; break; }
+  done
+fi
+[ -n "$ENGINE" ] || { echo "neither docker nor podman is installed; screenshot tests only render faithfully in the Linux container" >&2; exit 127; }
+"$ENGINE" info >/dev/null 2>&1 || { echo "$ENGINE is installed but not running" >&2; exit 1; }
+
+# Rootless podman maps the host user to root in the container; keep-id maps
+# it back, so files written into the checkout belong to the developer.
+if [ "$ENGINE" = podman ]; then
+  USER_ARGS=(--userns=keep-id)
+else
+  USER_ARGS=(--user "$(id -u):$(id -g)")
+fi
 
 sdk_dir() {
   for candidate in "${ANDROID_HOME:-}" "${ANDROID_SDK_ROOT:-}" "$HOME/Library/Android/sdk" "$HOME/Android/Sdk"; do
@@ -55,8 +71,8 @@ mkdir -p "$LINUX_HOME/gradle" "$LINUX_HOME/project-dot-gradle"
 # needs neither, just an sdk.dir that exists inside it.
 echo "sdk.dir=/sdk" > "$LINUX_HOME/local.properties"
 
-exec docker run --rm --platform "$PLATFORM" \
-  --user "$(id -u):$(id -g)" \
+exec "$ENGINE" run --rm --platform "$PLATFORM" \
+  "${USER_ARGS[@]}" \
   -e HOME=/gradle-home -e GRADLE_USER_HOME=/gradle-home -e ANDROID_HOME=/sdk \
   -v "$REPO_ROOT":/work \
   -v "$LINUX_HOME/project-dot-gradle":/work/.gradle \

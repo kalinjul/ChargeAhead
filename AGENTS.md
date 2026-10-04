@@ -11,23 +11,24 @@ Charging-stop assistant for **Android Auto** and **Apple CarPlay**. Shows the
 next reachable charging stations ahead while driving. Shared logic in Kotlin
 Multiplatform, car UI native twice.
 
-Current state: **search along the route.** The app determines the
-location, spans a sector in the direction of travel, queries the ChargeAhead
-backend, and classifies the results against the remaining range. The driver enters
-the vehicle profile and charge level themselves — deliberately without a
-vehicle list (ROADMAP.md, open point 4). Without both, reachability
-stays `UNKNOWN` and the list shows only distances; that's a valid state, not
-an error.
+The app determines the location, searches ahead (a sector in the direction
+of travel, or the strip along a planned route), queries the ChargeAhead
+backend, and classifies the results against the remaining range. The driver
+picks the car from the backend's catalog or types it in, and enters the
+charge level unless the car reports it. Without a car or a charge level,
+reachability stays `UNKNOWN` and the list shows only distances; that's a
+valid state, not an error.
 
 ## Layout
 
 ```
-shared/      Kotlin Multiplatform — domain, formatting, later data layer
+shared/      Kotlin Multiplatform — domain, data layer, use cases, ViewModels
 phone-ui/    Compose phone UI as an Android library (+ its resources)
 androidApp/  Android app: CarAppService (Android Auto) + MainActivity hosting the phone UI
 ui-tests/    Phone UI tests: Robolectric behaviour tests + screenshot goldens (docs/testing.md)
 iosApp/      Swift: CarPlay scene + SwiftUI phone UI
-tools/       Helper scripts (Swift syntax check)
+tools/       Helper scripts (Swift syntax check, screenshot goldens)
+docs/        Code documentation (docs/shared/), testing, CI
 ```
 
 Dependency direction: `androidApp` → `phone-ui` → `shared`, `ui-tests` → `phone-ui`,
@@ -226,286 +227,41 @@ building here, not an optional extra.
 Per-user overrides belong in `.claude/settings.local.json`, which is
 git-ignored. Don't put personal preferences into `.claude/settings.json`.
 
-## The shared contract (as of M1)
+## Shared code
 
-`shared` provides exactly the following. Android and iOS build on top of it
-and duplicate none of it.
+`shared` holds the model, the data sources and repositories, the use cases
+and the ViewModels. Android and iOS build on it and duplicate none of it.
+What it contains is documented next to the code it describes:
 
-### Model
+- [docs/shared/domain-model.md](docs/shared/domain-model.md) — sites, stops,
+  vehicles and the garage, search areas and routes
+- [docs/shared/data-layer.md](docs/shared/data-layer.md) — data sources,
+  repositories, the ChargeAhead backend, verifying a data source
+- [docs/shared/use-cases.md](docs/shared/use-cases.md) — interactors and
+  observers
+- [docs/shared/assembly.md](docs/shared/assembly.md) — `ChargeStopsFeature`,
+  the Koin graph, `ChargeStopFormatter`, the iOS bridge
 
-```kotlin
-package org.julakali.chargeahead.shared.domain
+Whoever changes one of those signatures updates its page in the same change.
 
-data class LatLon(val lat: Double, val lon: Double)
+The rules that hold everywhere:
 
-enum class ConnectorType { CCS2, TYPE2, CHADEMO, TESLA_NACS, SCHUKO, UNKNOWN }
-
-// UNKNOWN applies as long as no vehicle profile exists — so throughout M1.
-enum class Reachability  { REACHABLE, MARGINAL, UNREACHABLE, UNKNOWN }
-
-// count is nullable: OCM omits the unit count in about half the cases.
-data class Connector(val type: ConnectorType, val maxPowerKw: Double, val count: Int?)
-
-data class ChargeSite(
-    val id: String,                  // source-qualified: "ocm:12345", "datex:enbw:…"
-    val name: String,
-    val operator: String?,
-    val position: LatLon,
-    val connectors: List<Connector>,
-)
-
-data class ChargeStop(
-    val site: ChargeSite,
-    val distanceKm: Double,          // on a route: road km along it; in the corridor: straight line x ROUTE_DETOUR_FACTOR
-    val reachability: Reachability,
-    val socOnArrivalPercent: Double?,
-    // The connector shown on the first line: the strongest one THIS vehicle
-    // can use. Chosen by the planner, not the formatter — it depends on the
-    // profile and is thus a decision, not formatting.
-    val primaryConnector: Connector? = null,
-)
-
-// From M2. Throws in the constructor for capacity or consumption <= 0 —
-// otherwise the range formula divides by zero.
-data class VehicleProfile(
-    val displayName: String,
-    val usableBatteryKwh: Double,
-    val consumptionKwhPer100Km: Double,
-    val acceptedConnectors: Set<ConnectorType>,   // empty = no filtering
-    val dcPeakPowerKw: Double? = null,            // null = unknown; charge-time estimates use site power alone
-    val modelId: String? = null,                  // the catalog model it was added from; null when typed in by hand
-    val roadLoad: RoadLoad? = null,               // the catalog's curve, attached when planning; not stored with the garage
-)
-
-enum class SoCSourceKind { MANUAL, CAR_HARDWARE, OEM_CLOUD }
-
-data class EnergyState(val socPercent: Double, val source: SoCSourceKind, val observedAtMillis: Long)
-
-data class Fix(
-    val position: LatLon,
-    val bearingDeg: Double?,         // null when stationary — not guessed
-    val speedMps: Double?,
-    val timestampMillis: Long,
-)
-
-data class BoundingBox(val south: Double, val west: Double, val north: Double, val east: Double)
-
-sealed interface SearchArea { val origin: LatLon; val radiusKm: Double; val boundingBox: BoundingBox }
-// SectorArea  = fan in the direction of travel, when no destination is set.
-// PolylineArea = strip along the route, once one is set.
-
-data class Destination(val name: String, val position: LatLon)
-data class Route(val points: List<LatLon>, val distanceKm: Double, val durationMinutes: Double)
-data class SectorArea(...) : SearchArea   // halfAngleDeg = 180.0 is the full circle
-```
-
-### Ports
-
-They live in `domain` and know no one; every implementation lives outside.
-
-```kotlin
-interface LocationSource   { val updates: Flow<Fix> }
-// query() gets the whole area, not just its rectangle: sources with a
-// result cap must be able to query radially, or exactly the nearest
-// charging stations go missing. Empty networkKeys means every network.
-interface ChargeSiteSource { val id: String; suspend fun query(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> }
-// Implemented as TiledSiteRepository (Room). load() refills the stock;
-// the storedSitesIn flows are what the UI observes, and emit again whenever
-// the stock changes.
-interface SiteRepository {
-    suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite>
-    fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>>
-    fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>>
-    suspend fun invalidate()
-}
-interface RouteProvider    { fun searchArea(fix: Fix, rangeKm: Double): SearchArea }
-interface RouteEngine      { suspend fun route(from: LatLon, to: LatLon): Route? }
-interface Geocoder         { suspend fun search(query: String, near: LatLon?, limit: Int): List<Place> }
-fun interface TimeProvider { fun nowMillis(): Long }
-
-// From M2. null in the stream means "this source currently knows nothing" —
-// for CAR_HARDWARE that's the normal case, not the exception.
-interface SoCSource     { val kind: SoCSourceKind; val energy: Flow<EnergyState?> }
-// The driver's settings, one repository per kind of data, all over one
-// DataStore file (settingsModule). Depend only on the one you use.
-interface VehicleRepository {
-    val vehicle: Flow<VehicleProfile?>
-    val vehicles: Flow<List<VehicleProfile>>      // the garage; setVehicle selects AND adds
-    val manualSocPercent: Flow<Double?>
-    val arrivalSocPercent: Flow<Double>
-    suspend fun setVehicle(profile: VehicleProfile?)
-    suspend fun removeVehicle(displayName: String)
-    suspend fun setManualSocPercent(socPercent: Double?)
-    suspend fun setArrivalSocPercent(socPercent: Double)
-}
-interface PreferencesRepository {
-    val networks: Flow<NetworkPreferences>
-    val chargeFilters: Flow<ChargeFilters>        // phone flows: min power, max distance; slowMode is not persisted
-    suspend fun setNetworks(preferences: NetworkPreferences)
-    suspend fun setChargeFilters(filters: ChargeFilters)
-}
-// The backend's vehicle catalog (/v1/vehicles), kept in Room so the garage
-// works offline; empty until the first sync, which leaves manual entry only.
-// The planner stops only at DC connectors, even when a preset lists Type 2.
-interface VehicleCatalogRepository {
-    val presets: Flow<List<VehiclePreset>>
-    suspend fun refresh()
-}
-interface DestinationHistory {
-    val recentDestinations: Flow<List<Destination>>
-    suspend fun addRecentDestination(destination: Destination)
-}
-interface CarDiagnosticsRepository {              // what the car last reported, for the debug views
-    val socDiagnostics: Flow<SoCDiagnostics?>
-    val carDebugData: Flow<List<CarDataPoint>>
-    suspend fun recordSoCDiagnostics(diagnostics: SoCDiagnostics)
-    suspend fun recordCarDataPoint(point: CarDataPoint)
-}
-
-// Destination, planned trip (on the map) and committed trip (sent to Maps),
-// one per process. Every transition is one write of the whole state, own
-// DataStore file; only the trip interactors call update().
-data class TripState(val destination: Destination?, val planned: TripPlan?, val committed: CommittedTrip?)
-class TripRepository(storage: TripStorage) { val state: StateFlow<TripState>; suspend fun restore() }
-
-// Business logic lives in domain.usecases, Koin factories in
-// chargeStopsModule; ViewModels only wire them up. Swift
-// goes through the bridges in iosMain. Observers read from a store; a
-// Refresh…Interactor only refills that store.
-class ChargeStopsObserver : SubjectInteractor<Params, ChargeStops?>   // the corridor list: iOS only, being phased out (#152, #153)
-class RefreshChargeStopsInteractor : Interactor<Params, Unit>
-class MapChargersObserver : SubjectInteractor<Params, List<MapCharger>> // phone map, with live availability
-class RefreshMapChargersInteractor : Interactor<Params, Unit>
-class RefreshChargerAvailabilityInteractor : Interactor<Params, Unit>
-class ChargeNowObserver : SubjectInteractor<Params, ChargeNowResult?> // best 3, nearest first; relax ladder: power → networks → distance
-class RefreshChargeNowInteractor : Interactor<Params, Unit>
-class DestinationSearchObserver : SubjectInteractor<Params, DestinationSearch>
-class PlanTripInteractor : Interactor<PlanTripInteractor.Params, TripPlanResult>        // sets destination and planned trip
-class ReplanWithArrivalSocInteractor : Interactor<Params, TripPlanResult?>    // stores the level, re-plans the planned trip
-class CommitTripInteractor : Interactor<Params, CommittedTrip>      // "An Maps senden" makes the plan the active route
-class ReplanCommittedTripInteractor : Interactor<Params, TripPlanResult?>     // plans the active route anew and commits it
-class DismissPlannedTripInteractor : Interactor<Unit, Unit>
-class EndTripInteractor : Interactor<Unit, Unit>
-class RefreshNetworksInteractor : Interactor<Unit, Unit>
-class RefreshVehicleCatalogInteractor : Interactor<Unit, Unit>         // StartAppInteractor runs it with the networks
-class VehiclePresetsObserver : SubjectInteractor<Params, List<VehiclePreset>> // catalog minus the garage, filtered by name
-```
-
-**The route is computed once per destination, not once per location
-update.** A planned or committed trip brings its route along (`TripRepository`), so
-`ChargeStopsObserver` only asks the `RouteEngine` itself when there is no
-plan to the destination. `PolylineArea.aheadOf()` trims it at the front as the drive
-progresses — the route itself doesn't change during the drive, only the
-section still ahead does. `RoutedRouteProvider` falls back to the corridor
-when the driver leaves the route or reaches the destination; without that
-fallback the list would sit empty at the end of every drive.
-
-**One settings file per process.** The settings repositories all read and
-write the same DataStore file, and DataStore refuses a second active
-instance on it. `settingsModule { … }` (shared) opens it once and declares
-each repository as a singleton; the platform module passes in how to open
-the file. In Android Auto, the phone and car UI run in the same process and
-share them.
-
-### State and assembly
-
-```kotlin
-package org.julakali.chargeahead.shared
-
-// Location and charge state, one per location source (phone, car session).
-class ChargeStopsFeature(locationSource, socSource, ...) {
-    val currentFix: StateFlow<Fix?>
-    val currentEnergy: StateFlow<EnergyState?>
-    val locationFailed: StateFlow<Boolean>
-    fun start(); fun locate(); fun close()
-}
-
-// The corridor list is ChargeStopsObserver (domain) over the feature's flows;
-// CorridorViewModel turns it into this state for iOS. List AND status. Flat
-// instead of sealed, so the type crosses to Swift losslessly. Being phased
-// out: CarPlay follows Android Auto's screens (#152), the iOS map moves to
-// MapChargersObserver (#153); don't build new features on it.
-data class ChargeStopsState(
-    val stops: List<ChargeStop>,
-    val phase: Phase,          // WAITING_FOR_LOCATION | LOADING | READY | FAILED
-    val failure: FailureReason?,   // LOCATION_UNAVAILABLE | SITES_UNAVAILABLE
-)
-
-// The data graph (Koin), declared once for both platforms. Platform modules
-// supply LocationSource, DatabaseFactory, settingsModule, TripStorage and
-// BackendConfig; one HttpClient, database and repository per process, shared
-// by phone and car.
-fun chargeStopsModule(): Module
-// Koin singles in chargeStopsModule: inject these instead of calling
-// CoroutineScope(...) or Dispatchers.* anywhere else. AppScope is cancelled
-// when the graph closes; a class with its own lifecycle takes childScope() of it.
-data class AppCoroutineDispatchers(io, computation, main)
-val AppScope: Qualifier   // get<CoroutineScope>(AppScope)
-data class BackendConfig(baseUrl: String, token: String)
-// A feature the caller owns and closes — the car session's, with the car's battery.
-fun Koin.newChargeStopsFeature(locationSource, hardwareSoCSource = null): ChargeStopsFeature
-
-// So Android and iOS are guaranteed to show the same lines.
-object ChargeStopFormatter {
-    fun primaryLine(stop: ChargeStop): String    // "12 km · CCS 150 kW"
-    fun secondaryLine(stop: ChargeStop): String  // "Arrival ~34%" | "6 charging points"
-}
-
-expect fun platformName(): String
-expect fun currentTimeMillis(): Long
-```
-
-The iOS framework is called **`Shared`** (`import Shared`) and is built with
-SKIE: a `StateFlow` arrives in Swift as an `AsyncSequence`, `suspend` as
-`async`, Kotlin enums and sealed types as Swift enums. Swift creates the
-feature through `IosEntryPointsKt.createChargeStopsFeature(backendBaseUrl:backendToken:)`
-and the phone screens' ViewModels through `PhoneViewModels` (both in
-`iosMain`). A SwiftUI view holds them in a `ViewModelOwner` (`@StateObject`,
-clears them on `deinit`) and reads `uiState` with SKIE's `Observing`. CarPlay
-still goes through `ChargeStopsWatcher` until #152.
-
-### Verifying data sources
-
-Each source's mapping is checked twice, and both are necessary:
-
-- `BackendChargeSiteSourceTest` (always runs) checks against **fabricated**
-  responses. Fast and network-free, but doesn't notice when the backend
-  changes.
-- `BackendChargeSiteLiveContractTest` checks against the **real** backend.
-  Runs only on explicit request, because a test that goes red on a dead spot
-  says nothing about the code:
-
-  ```bash
-  CHARGEAHEAD_LIVE=1 ./gradlew :shared:jvmTest --tests '*BackendChargeSiteLiveContractTest'
-  ```
-
-Whoever changes a source's mapping runs both.
-
-### The ChargeAhead backend
-
-Charging sites, live status, charging networks, the destination search and
-route calculation all come from the ChargeAhead backend. There is no
-operation without it: the app stops at startup when it is not configured.
-Address and token do **not** go into the repository.
-
-- Android: `chargeAheadBaseUrl` and `chargeAheadToken` in `local.properties`
-  -> `BuildConfig`
-- iOS: build settings `CHARGEAHEAD_BASE_URL` and `CHARGEAHEAD_TOKEN` in a
-  local `iosApp/Secrets.xcconfig` -> `Info.plist`
-
-**No compatibility with older backends.** The app always runs against the
-current backend. A field the backend sends is required in the app, even when
-`api-model` declares it optional; there is no fallback path for a backend
-that doesn't send it yet.
-
-The backend also assigns each site its network (`ChargeSite.networkKey`) and
-lists the networks worth offering (`/v1/networks`), which the app keeps in
-Room. `NetworkCatalog` is the old shipped list and is no longer used.
-
-The contract module `org.julakali.chargeahead:api-model` comes from the
-backend's own Maven repository, which needs `chargeahead.maven.user` and
-`chargeahead.maven.password` in `~/.gradle/gradle.properties` — never in the
-repository.
+- **Domain knows no one.** `domain` declares the data source and repository
+  interfaces; every implementation lives in `data`, `settings` or the
+  platform.
+- **Business logic is a use case** in `domain.usecases`, a Koin factory in
+  `chargeStopsModule()`. ViewModels only wire use cases up.
+- **No hand-made coroutine scopes or dispatchers.** Inject
+  `AppCoroutineDispatchers` and `get<CoroutineScope>(AppScope)`; never
+  `CoroutineScope(...)` or `Dispatchers.*` outside the Koin module.
+- **One settings file per process**, opened once by `settingsModule { … }`.
+- **The ChargeAhead backend is required.** The app stops at startup without
+  it, and always runs against the current backend: a field the backend sends
+  is required in the app, even when `api-model` declares it optional. Base
+  URL and token never go into the repository (`local.properties`,
+  `iosApp/Secrets.xcconfig`).
+- **Whoever changes a data source's mapping runs both its tests**, the
+  fabricated one and the live contract test (docs/shared/data-layer.md).
 
 ## Rules for the phone UI
 

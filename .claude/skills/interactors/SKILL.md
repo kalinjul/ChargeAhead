@@ -24,12 +24,12 @@ The worked example is `MapChargersObserver`, used by `HomeViewModel`.
 ## The rules
 
 1. **Domain only.** A use case lives in `org.julakali.chargeahead.shared.domain.usecases`
-   and depends on ports (`SiteRepository`, `PreferencesRepository`,
+   and depends on repositories and data sources (`SiteRepository`, `PreferencesRepository`,
    `ChargePointStatusSource`, …) and domain types. Never on
    `ChargeStopsFeature`, `core`, `data` or `ui`. Constants, models and
    shared helpers it needs live in `domain`, not next to the use case (as
    `MapCharger`, `DestinationSearch` and `mapChargersIn` do);
-   an algorithm too big to move is reached through a port (`TripPlanning`,
+   an algorithm too big to move is reached through an interface (`TripPlanning`,
    implemented by `core.TripPlanner`).
 2. **Params carry only what the UI knows.** The viewport, a search query, a
    position. Everything that comes from settings or a repository the use case
@@ -58,7 +58,7 @@ The worked example is `MapChargersObserver`, used by `HomeViewModel`.
    first result; override `onFirstResult` only to report it elsewhere.
 8. **Koin: `factory`, not `single`.** A `SubjectInteractor` keeps its params
    per instance; two ViewModels sharing one would steer each other. Declare
-   it in `chargeStopsModule()` next to its ports.
+   it in `chargeStopsModule()` next to its repositories and data sources.
 9. **A settings write from the UI is an interactor.** Reads stay
    direct — a ViewModel puts `vehicles.vehicle` straight into
    `combine()` — but neither ever calls a setter. One write, one interactor
@@ -122,7 +122,7 @@ fun onPlanRequested(destination: Destination) {
 Use-case tests live in `shared/src/jvmTest/.../domain/usecases/` and need no
 ViewModel — see `MapChargersObserverTest`:
 
-- Fake the ports with an `object : SiteRepository { … }` whose
+- Fake repositories and data sources with an `object : SiteRepository { … }` whose
   `storedSitesIn` returns a `MutableStateFlow` the fake fetch updates; use
   `DataStorePreferencesRepository(InMemoryPreferencesDataStore())` (or the
   repository the use case needs) as the real one.
