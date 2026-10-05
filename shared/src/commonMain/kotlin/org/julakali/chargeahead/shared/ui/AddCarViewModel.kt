@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.VehiclePreset
+import org.julakali.chargeahead.shared.domain.customVehicle
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,5 +44,9 @@ class AddCarViewModel(
     /** Adds the preset and selects it. */
     fun onPresetAdded(preset: VehiclePreset) {
         viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(preset.toProfile())) }
+    }
+
+    fun onCustomCarCreated(name: String) {
+        viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(customVehicle(name))) }
     }
 }

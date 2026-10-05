@@ -327,28 +327,71 @@ class PhoneAppFlowTest {
 
     @Test
     fun `auto in the drawer leads to the garage, where a preset becomes the car`() {
-        launch()
+        launch(withVehicle = false)
         val preset = CATALOG_PRESET_NAME
         openDrawer()
 
         compose.onNodeWithText(compose.string(R.string.drawer_car)).performClick()
-        waitForText(compose.string(R.string.garage_add))
+        waitForText(compose.string(R.string.garage_empty_title))
 
-        compose.onNodeWithText(compose.string(R.string.garage_add)).performClick()
+        compose.onNodeWithText(compose.string(R.string.garage_add_title)).performClick()
         waitForText(preset)
         compose.onNodeWithText(preset).performClick()
 
-        // Picking pops back to the garage, which now lists and uses the preset.
+        // Picking pops back to the garage, which now shows and uses the preset.
         waitForText(compose.string(R.string.garage_added, preset))
-        compose.onNodeWithText(compose.string(R.string.garage_add)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(R.string.garage_vehicle_row)).assertIsDisplayed()
         compose.onAllNodesWithText(preset).onFirst().assertIsDisplayed()
-        compose.onNodeWithText(compose.string(R.string.garage_no_car_yet)).assertDoesNotExist()
+        compose.onNodeWithText(compose.string(R.string.garage_empty_title)).assertDoesNotExist()
         assertEquals(preset, runBlocking { harness.vehicles.vehicle.first()?.displayName })
 
         pressBack()
-        waitForTextGone(compose.string(R.string.garage_add))
+        waitForTextGone(compose.string(R.string.garage_vehicle_row))
         openDrawer()
         compose.onAllNodesWithText(preset).onFirst().assertIsDisplayed()
+    }
+
+    @Test
+    fun `a car the catalog lacks is started from the search and opens on its values`() {
+        launch(withVehicle = false)
+        openDrawer()
+        compose.onNodeWithText(compose.string(R.string.drawer_car)).performClick()
+        waitForText(compose.string(R.string.garage_empty_title))
+        compose.onNodeWithText(compose.string(R.string.garage_add_title)).performClick()
+        waitForText(compose.string(R.string.garage_search))
+
+        compose.onNodeWithText(compose.string(R.string.garage_search)).performTextInput("Fiat 500e")
+        waitForText(compose.string(R.string.addcar_custom_named, "Fiat 500e"))
+        compose.onNodeWithText(compose.string(R.string.addcar_custom_named, "Fiat 500e")).performClick()
+
+        waitForText(compose.string(R.string.vehicle_remove))
+        compose.onAllNodesWithText("Fiat 500e").onFirst().assertIsDisplayed()
+        assertEquals("Fiat 500e", runBlocking { harness.vehicles.vehicle.first()?.displayName })
+
+        // Back goes to the garage, not to the search the car came from.
+        pressBack()
+        waitForText(compose.string(R.string.garage_vehicle_row))
+    }
+
+    @Test
+    fun `removing the car on its page leaves an empty garage`() {
+        launch(withVehicle = false)
+        openDrawer()
+        compose.onNodeWithText(compose.string(R.string.drawer_car)).performClick()
+        waitForText(compose.string(R.string.garage_empty_title))
+        compose.onNodeWithText(compose.string(R.string.garage_add_title)).performClick()
+        waitForText(CATALOG_PRESET_NAME)
+        compose.onNodeWithText(CATALOG_PRESET_NAME).performClick()
+        waitForText(compose.string(R.string.garage_vehicle_row))
+
+        compose.onNodeWithText(compose.string(R.string.garage_vehicle_row)).performClick()
+        waitForText(compose.string(R.string.vehicle_remove))
+        compose.onNodeWithText(compose.string(R.string.vehicle_remove)).performClick()
+        waitForText(compose.string(R.string.vehicle_remove_confirm))
+        compose.onNodeWithText(compose.string(R.string.vehicle_remove_confirm)).performClick()
+
+        waitForText(compose.string(R.string.garage_empty_title))
+        assertNull(runBlocking { harness.vehicles.vehicle.first() })
     }
 
     /** The corridor sites are hundreds of km out; "charge now" only looks a few km around the phone. */

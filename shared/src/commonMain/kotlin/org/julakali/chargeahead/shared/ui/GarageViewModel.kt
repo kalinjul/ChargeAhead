@@ -8,7 +8,6 @@ import org.julakali.chargeahead.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
-import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,37 +24,31 @@ data class GarageUiState(
     val selected: VehicleProfile? = null,
     /** How full the battery should still be at the destination. */
     val arrivalSocPercent: Double = DEFAULT_ARRIVAL_SOC_PERCENT,
-    /** The arrival-level dialog's entry; `null` while it is closed. */
-    val arrivalSocInput: String? = null,
-    /** The selected car's range on a full battery, down to 0 %. */
-    val selectedFullRangeKm: Double? = null,
-    /** The catalog consumption, when the selected car was added from a preset. */
-    val selectedPresetConsumption: Double? = null,
+    val arrivalSheet: Int? = null,
+    val fullRangeKm: Map<String, Double> = emptyMap(),
 )
 
-/** The garage screen: choose, edit, remove a car. */
+/** The garage screen: choose a car, set the arrival level. */
 class GarageViewModel(
     private val vehicles: VehicleRepository,
     private val observeGarage: GarageObserver,
     private val selectVehicle: SelectVehicleInteractor,
-    private val removeVehicle: RemoveVehicleInteractor,
     private val updateArrivalSoc: UpdateArrivalSocInteractor,
 ) : ViewModel() {
 
-    private val arrivalSocEditor = MutableStateFlow<String?>(null)
+    private val arrivalSheet = MutableStateFlow<Int?>(null)
 
     val uiState: StateFlow<GarageUiState> = combine(
         observeGarage.flow,
         vehicles.arrivalSocPercent,
-        arrivalSocEditor,
-    ) { garage, arrivalSoc, arrivalEditor ->
+        arrivalSheet,
+    ) { garage, arrivalSoc, arrivalSheet ->
         GarageUiState(
             vehicles = garage.vehicles,
             selected = garage.selected,
             arrivalSocPercent = arrivalSoc,
-            arrivalSocInput = arrivalEditor,
-            selectedFullRangeKm = garage.selectedFullRangeKm,
-            selectedPresetConsumption = garage.selectedPresetConsumption,
+            arrivalSheet = arrivalSheet,
+            fullRangeKm = garage.fullRangeKm,
         )
     }.stateIn(viewModelScope, WhileUiSubscribed, GarageUiState())
 
@@ -68,30 +61,23 @@ class GarageViewModel(
         viewModelScope.launch { selectVehicle(SelectVehicleInteractor.Params(profile)) }
     }
 
-    fun onVehicleRemoved(id: String) {
-        viewModelScope.launch { removeVehicle(RemoveVehicleInteractor.Params(id)) }
+    fun onArrivalSheetOpened() {
+        viewModelScope.launch { arrivalSheet.value = vehicles.arrivalSocPercent.first().roundToInt() }
     }
 
-    /** Opens the arrival-level dialog on the level currently in force. */
-    fun onArrivalSocEditRequested() {
-        viewModelScope.launch {
-            arrivalSocEditor.value = vehicles.arrivalSocPercent.first().roundToInt().toString()
-        }
+    fun onArrivalSheetChanged(percent: Int) {
+        // Only while the sheet is open: a late drag event must not reopen it.
+        arrivalSheet.update { open -> open?.let { percent.coerceIn(ARRIVAL_SOC_RANGE) } }
     }
 
-    fun onArrivalSocInputChanged(input: String) {
-        // Only while the dialog is open: a stray keystroke must not reopen it.
-        arrivalSocEditor.update { open -> open?.let { input.filter(Char::isDigit).take(3) } }
+    fun onArrivalSheetDismissed() {
+        arrivalSheet.value = null
     }
 
-    fun onArrivalSocEditDismissed() {
-        arrivalSocEditor.value = null
-    }
-
-    fun onArrivalSocConfirmed() {
-        val entered = arrivalSocEditor.value?.toIntOrNull()?.takeIf { it in ARRIVAL_SOC_RANGE } ?: return
-        arrivalSocEditor.value = null
-        viewModelScope.launch { updateArrivalSoc(UpdateArrivalSocInteractor.Params(entered.toDouble())) }
+    fun onArrivalSheetConfirmed() {
+        val chosen = arrivalSheet.value ?: return
+        arrivalSheet.value = null
+        viewModelScope.launch { updateArrivalSoc(UpdateArrivalSocInteractor.Params(chosen.toDouble())) }
     }
 }
 

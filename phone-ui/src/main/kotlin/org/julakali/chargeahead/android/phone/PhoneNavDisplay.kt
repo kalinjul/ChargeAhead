@@ -71,7 +71,7 @@ fun PhoneNavDisplay(
             entry<Garage> {
                 Page(title = stringResource(R.string.garage_title), onBack = navigator::back) { pagePadding ->
                     GarageRoute(
-                        onOpenAdvanced = { navigator.open(VehicleEdit) },
+                        onOpenVehicle = { navigator.open(VehicleEdit) },
                         onOpenAdd = { navigator.open(AddCar) },
                         modifier = Modifier.fillMaxSize().padding(pagePadding),
                     )
@@ -85,14 +85,19 @@ fun PhoneNavDisplay(
                             navigator.back()
                             onCarAdded(preset)
                         },
+                        // Back from its values lands in the garage, not the search.
+                        onCustomCreated = {
+                            navigator.back()
+                            navigator.open(VehicleEdit)
+                        },
                         modifier = Modifier.fillMaxSize().padding(pagePadding),
                     )
                 }
             }
 
             entry<VehicleEdit> {
-                Page(title = stringResource(R.string.phone_settings_title), onBack = navigator::back) { pagePadding ->
-                    VehicleSettingsRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                Page(title = stringResource(R.string.vehicle_title), onBack = navigator::back) { pagePadding ->
+                    VehicleSettingsRoute(onRemoved = navigator::back, modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 

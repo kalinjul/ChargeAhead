@@ -26,7 +26,7 @@ class GarageObserverTest {
         val garage = withTimeout(5_000) { observer().flow.first() }
 
         assertNull(garage.selected)
-        assertNull(garage.selectedFullRangeKm)
+        assertTrue(garage.fullRangeKm.isEmpty())
         assertNull(garage.selectedPresetConsumption)
     }
 
@@ -39,7 +39,21 @@ class GarageObserverTest {
 
         assertEquals(preset.consumptionKwhPer100Km, garage.selectedPresetConsumption)
         val expected = preset.toProfile().usableBatteryKwh / preset.consumptionKwhPer100Km * 100.0
-        assertEquals(expected, garage.selectedFullRangeKm!!, 0.5)
+        assertEquals(expected, garage.fullRangeKm.getValue(garage.selected!!.id), 0.5)
+    }
+
+    /** The cards next to the selected one show their own range. */
+    @Test
+    fun `every car in the garage reports its own full range`() = runBlocking {
+        val small = VehicleProfile("Klein", 40.0, 16.0, setOf(ConnectorType.CCS2))
+        val big = VehicleProfile("Groß", 100.0, 20.0, setOf(ConnectorType.CCS2))
+        vehicles.setVehicle(small)
+        vehicles.setVehicle(big)
+
+        val garage = withTimeout(5_000) { observer().flow.first { it.vehicles.size == 2 } }
+
+        assertEquals(250.0, garage.fullRangeKm.getValue(small.id), 0.5)
+        assertEquals(500.0, garage.fullRangeKm.getValue(big.id), 0.5)
     }
 
     @Test
@@ -68,7 +82,7 @@ class GarageObserverTest {
 
         val garage = withTimeout(5_000) { observer().flow.first { it.selected != null } }
 
-        assertTrue(garage.selectedFullRangeKm!! > 0.0)
+        assertTrue(garage.fullRangeKm.getValue(garage.selected!!.id) > 0.0)
         assertNull(garage.selectedPresetConsumption)
     }
 }

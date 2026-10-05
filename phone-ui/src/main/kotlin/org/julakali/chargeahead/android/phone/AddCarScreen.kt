@@ -15,7 +15,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.AppCard
-import org.julakali.chargeahead.android.phone.components.Fineprint
 import org.julakali.chargeahead.android.phone.components.SearchField
 import org.julakali.chargeahead.android.phone.components.TickRow
 import org.julakali.chargeahead.android.phone.components.TickStyle
@@ -28,6 +27,7 @@ import kotlin.math.roundToInt
 @Composable
 fun AddCarRoute(
     onAdded: (VehiclePreset) -> Unit,
+    onCustomCreated: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: AddCarViewModel = koinViewModel(),
 ) {
@@ -39,19 +39,25 @@ fun AddCarRoute(
             viewModel.onPresetAdded(preset)
             onAdded(preset)
         },
+        onCreateCustom = { name ->
+            viewModel.onCustomCarCreated(name)
+            onCustomCreated()
+        },
         modifier = modifier,
     )
 }
 
-/** The add-car screen: search the catalog, tap the +. */
 @Composable
 fun AddCarScreen(
     uiState: AddCarUiState,
     onSearchChange: (String) -> Unit,
     onAdd: (VehiclePreset) -> Unit,
+    onCreateCustom: (name: String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val hits = uiState.matches
+    val query = uiState.query.trim()
+    val defaultName = stringResource(R.string.addcar_custom_default_name)
 
     Column(
         modifier = modifier.padding(horizontal = 18.dp),
@@ -63,10 +69,6 @@ fun AddCarScreen(
             placeholder = stringResource(R.string.garage_search),
             modifier = Modifier.padding(top = 12.dp),
         )
-        if (hits.isEmpty()) {
-            Fineprint(stringResource(R.string.garage_none_found))
-            return@Column
-        }
         AppCard(modifier = Modifier.weight(1f, fill = false).padding(bottom = 12.dp)) {
             LazyColumn {
                 itemsIndexed(hits, key = { _, preset -> preset.id }) { index, preset ->
@@ -84,7 +86,20 @@ fun AddCarScreen(
                         onClick = { onAdd(preset) },
                     )
                 }
+                item(key = CUSTOM_KEY) {
+                    if (hits.isNotEmpty()) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+                    TickRow(
+                        label = if (query.isEmpty()) stringResource(R.string.addcar_custom) else stringResource(R.string.addcar_custom_named, query),
+                        sublabel = stringResource(R.string.addcar_custom_hint),
+                        checked = false,
+                        tick = TickStyle.ADD,
+                        onClick = { onCreateCustom(query.ifEmpty { defaultName }) },
+                    )
+                }
             }
         }
     }
 }
+
+/** Can't clash with a catalog id. */
+private const val CUSTOM_KEY = "custom-car"

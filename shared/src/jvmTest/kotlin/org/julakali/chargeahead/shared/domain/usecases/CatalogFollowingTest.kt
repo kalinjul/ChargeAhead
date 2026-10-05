@@ -60,6 +60,17 @@ class CatalogFollowingTest {
     }
 
     @Test
+    fun `the driver's own name survives an update, the values still follow`() = runBlocking {
+        vehicles.setVehicle(original.toProfile().copy(displayName = "Familienkutsche", ownName = true))
+
+        refresh()
+
+        val updated = vehicles.vehicle.first()!!
+        assertEquals("Familienkutsche", updated.displayName)
+        assertEquals(revised.usableBatteryKwh, updated.usableBatteryKwh)
+    }
+
+    @Test
     fun `a car typed in by hand is left alone`() = runBlocking {
         val manual = VehicleProfile("Fiat 500e 42 kWh", 30.0, 16.0, setOf(ConnectorType.CCS2))
         val added = original.toProfile()
@@ -73,13 +84,18 @@ class CatalogFollowingTest {
     }
 
     @Test
-    fun `restoring catalog values drops the driver's changes`() = runBlocking {
-        val mine = original.toProfile().copy(displayName = "Meiner", customized = true, ownConsumption = true)
+    fun `restoring catalog values drops the driver's values and keeps the name`() = runBlocking {
+        val mine = original.toProfile().copy(
+            displayName = "Meiner", ownName = true,
+            usableBatteryKwh = 35.0, customized = true,
+            consumptionKwhPer100Km = 25.0, ownConsumption = true,
+        )
         vehicles.setVehicle(mine)
 
         RestoreCatalogValuesInteractor(vehicles, FakeVehicleCatalog())().getOrThrow()
 
-        assertEquals(listOf(original.toProfile().copy(id = mine.id)), vehicles.vehicles.first())
+        val expected = original.toProfile().copy(id = mine.id, displayName = "Meiner", ownName = true)
+        assertEquals(listOf(expected), vehicles.vehicles.first())
         assertFalse(vehicles.vehicle.first()!!.customized)
     }
 
