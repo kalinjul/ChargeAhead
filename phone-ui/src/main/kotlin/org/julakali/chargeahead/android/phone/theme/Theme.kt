@@ -25,8 +25,6 @@ data class ChargeAheadExtras(
     val faint: Color,
     /** Dashed outline of a picked section and the "add" tick. */
     val sectionOutline: Color,
-    /** Outline of the saved-route button and the "delete" tick. */
-    val deleteOutline: Color,
     // Reserved for the trip summary's delay badge once traffic data exists.
     val trafficBg: Color,
     val trafficText: Color,
@@ -43,7 +41,6 @@ data class ChargeAheadExtras(
 private val LightExtras = ChargeAheadExtras(
     faint = Color(0xFF80868B),
     sectionOutline = Color(0xFFA8C7FA),
-    deleteOutline = Color(0xFFF2B8B2),
     trafficBg = Color(0xFFFEF7E0),
     trafficText = Color(0xFFB06000),
     // The primary's weight and chroma at their own hues, a step darker so white text clears 4.5:1.
@@ -56,7 +53,6 @@ private val LightExtras = ChargeAheadExtras(
 private val DarkExtras = ChargeAheadExtras(
     faint = Color(0xFF80868B),
     sectionOutline = Color(0xFF4A6FA5),
-    deleteOutline = Color(0xFF8C4A45),
     trafficBg = Color(0xFF3D2F0A),
     trafficText = Color(0xFFFDD663),
     // The dark primary's pastel weight; like it, both take ink rather than white.
@@ -72,7 +68,6 @@ val LocalChargeAheadExtras = staticCompositionLocalOf { LightExtras }
 object ChargeAheadColors {
     val faint: Color @Composable get() = LocalChargeAheadExtras.current.faint
     val sectionOutline: Color @Composable get() = LocalChargeAheadExtras.current.sectionOutline
-    val deleteOutline: Color @Composable get() = LocalChargeAheadExtras.current.deleteOutline
     val trafficBg: Color @Composable get() = LocalChargeAheadExtras.current.trafficBg
     val trafficText: Color @Composable get() = LocalChargeAheadExtras.current.trafficText
 

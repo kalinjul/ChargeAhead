@@ -23,7 +23,9 @@ import org.julakali.chargeahead.shared.currentTimeMillis
 import org.julakali.chargeahead.shared.domain.CarDataKind
 import org.julakali.chargeahead.shared.domain.CarDataPoint
 import org.julakali.chargeahead.shared.domain.CarDataStatus
+import org.julakali.chargeahead.shared.ui.CarDataUiState
 import org.julakali.chargeahead.shared.ui.CarDataViewModel
+import kotlin.math.roundToInt
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -36,15 +38,15 @@ fun CarDataDebugRoute(
     viewModel: CarDataViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    CarDataDebugScreen(points = uiState.points, modifier = modifier)
+    CarDataDebugScreen(uiState = uiState, modifier = modifier)
 }
 
 @Composable
 fun CarDataDebugScreen(
-    points: List<CarDataPoint>,
+    uiState: CarDataUiState,
     modifier: Modifier = Modifier,
 ) {
-    val byKind = points.associateBy { it.kind }
+    val byKind = uiState.points.associateBy { it.kind }
 
     Column(modifier = modifier.fillMaxSize()) {
         Fineprint(
@@ -52,6 +54,24 @@ fun CarDataDebugScreen(
             modifier = Modifier.padding(16.dp),
         )
         LazyColumn {
+            item(key = "soc") {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                    Row(Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.phone_field_soc), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        Text(
+                            uiState.socPercent?.let { stringResource(R.string.garage_percent, it.roundToInt()) } ?: stringResource(R.string.value_unknown),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
+                    Text(
+                        stringResource(if (uiState.socFromCar) R.string.phone_soc_source_car else R.string.phone_soc_source_stored),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    CarHardwareStatus(diagnostics = uiState.socDiagnostics, modifier = Modifier.padding(top = 16.dp))
+                }
+                HorizontalDivider()
+            }
             items(CarDataKind.entries, key = { it.name }) { kind ->
                 val point = byKind[kind]
                 Row(

@@ -75,19 +75,8 @@
 
     <!-- Settings -->
     <string name="phone_action_settings">Fahrzeug</string>
-    <string name="phone_settings_title">Fahrzeug und Ladestand</string>
-    <string name="phone_settings_intro">Beide Werte stehen im Datenblatt. Wichtig ist die <b>nutzbare</b> Kapazität, nicht die Bruttokapazität — sie ist meist einige Kilowattstunden kleiner.</string>
-    <string name="phone_field_name">Bezeichnung (frei wählbar)</string>
-    <string name="phone_field_battery">Nutzbare Kapazität in kWh</string>
-    <string name="phone_field_consumption">Durchschnittsverbrauch in kWh je 100 km</string>
     <string name="phone_field_soc">Ladestand in Prozent</string>
-    <string name="phone_connectors_heading">Steckertypen, die das Fahrzeug annimmt</string>
-    <string name="phone_connectors_hint">Nichts ausgewählt heißt: nicht filtern.</string>
-    <string name="phone_error_positive_number">Bitte eine Zahl größer als null eintragen.</string>
-    <string name="phone_settings_missing">Ohne Fahrzeug und Ladestand wird die Erreichbarkeit nicht berechnet — die Liste zeigt dann nur Entfernungen.</string>
-    <string name="phone_action_delete_vehicle">Fahrzeug löschen</string>
     <string name="phone_action_restore_catalog_values">Katalogwerte übernehmen</string>
-    <string name="phone_settings_customized">Eigene Werte: Aktualisierungen aus dem Fahrzeugkatalog werden für dieses Auto nicht übernommen.</string>
     <string name="phone_soc_source_car">Ladestand kommt aus dem Fahrzeug</string>
     <string name="phone_soc_source_stored">Kein Ladestand vom Fahrzeug. Der Wert stammt aus der letzten Eingabe beim Planen.</string>
 
@@ -149,7 +138,7 @@
     <string name="active_route_end">Navigieren beenden</string>
     <string name="active_route_ended">Navigation beendet</string>
     <string name="active_route_replanned">Route von hier neu geplant</string>
-    <string name="soc_dialog_car_silent">Das Auto meldet keinen Ladestand. Bitte den aktuellen Wert eingeben, damit die Route von hier neu geplant wird.</string>
+    <string name="soc_dialog_car_silent">Das Auto meldet keinen Ladestand. Bitte den aktuellen Wert wählen, damit die Route von hier neu geplant wird.</string>
     <string name="home_settings">Einstellungen</string>
     <string name="home_search_hint">Wohin soll\'s gehen?</string>
     <string name="home_search_clear">Eingabe löschen</string>
@@ -272,33 +261,51 @@
 
     <!-- Phone: garage -->
     <string name="garage_title">Garage</string>
-    <string name="garage_your_cars">Deine Autos</string>
-    <string name="garage_add">Auto hinzufügen …</string>
-    <string name="garage_delete">Auto entfernen …</string>
-    <string name="garage_delete_done">Fertig</string>
-    <string name="garage_remove_one">%1$s entfernen</string>
-    <string name="garage_specs">Daten — Grundlage der Planung</string>
-    <string name="garage_battery">Batterie</string>
-    <string name="garage_battery_value">%1$s kWh nutzbar</string>
-    <string name="garage_dc">DC-Spitze</string>
-    <string name="garage_dc_value">%1$d kW</string>
-    <string name="garage_dc_unknown">unbekannt</string>
-    <string name="garage_range">Reichweite</string>
-    <string name="garage_range_value">≈ %1$d km</string>
-    <string name="garage_consumption">Dein Durchschnittsverbrauch: %1$s kWh/100 km</string>
-    <string name="garage_consumption_hint">Datenblatt (WLTP) sagt %1$s — an die eigene Fahrweise anpassen. Gemeint ist der Durchschnitt über Stadt, Land und Autobahn; für jeden Abschnitt der Route rechnet die Planung selbst um.</string>
     <string name="garage_search">Fahrzeug suchen</string>
     <string name="garage_added">%1$s steht jetzt in der Garage</string>
     <string name="garage_add_title">Auto hinzufügen</string>
-    <string name="garage_no_car_yet">Noch kein Auto — eins aus der Liste wählen.</string>
-    <string name="garage_none_found">Kein Fahrzeug gefunden.</string>
     <string name="garage_preset_line">%1$s kWh · %2$s kWh/100 km · %3$d kW DC</string>
-    <string name="garage_arrival_soc">Ladestand am Ziel: %1$d %%</string>
-    <string name="garage_arrival_hint">So voll soll der Akku bei der Ankunft noch sein — die Planung lädt dafür.</string>
     <string name="garage_arrival_title">Ladestand am Ziel</string>
-    <string name="garage_advanced">Werte anpassen (Batterie, Anschlüsse)</string>
-    <string name="garage_connector">Anschluss</string>
-    <string name="garage_connector_ccs">CCS</string>
+    <string name="garage_range_number">≈ %1$d</string>
+    <string name="garage_range_unit">km</string>
+    <string name="garage_range_caption">bei deinem Ø-Verbrauch</string>
+    <string name="garage_stat_battery">Akku</string>
+    <string name="garage_stat_dc">Max. Laden</string>
+    <string name="garage_stat_consumption">Verbrauch</string>
+    <string name="garage_kwh">%1$s kWh</string>
+    <string name="garage_kw">%1$d kW</string>
+    <string name="garage_kwh_per_100">%1$s kWh/100 km</string>
+    <string name="garage_unit_kwh">kWh</string>
+    <string name="garage_unit_kw">kW</string>
+    <string name="garage_unit_kwh_per_100">kWh/100 km</string>
+    <string name="garage_percent">%1$d %%</string>
+    <string name="garage_vehicle_row">Fahrzeug anpassen</string>
+    <string name="garage_vehicle_row_hint">Name, Verbrauch, Akku, Ladeleistung</string>
+    <string name="garage_arrival_row_hint">Gilt für alle Autos</string>
+    <string name="garage_arrival_sheet_hint">So voll soll der Akku bei der Ankunft noch sein.</string>
+    <string name="garage_empty_title">Noch kein Auto</string>
+    <string name="garage_empty_text">Wähl dein Modell aus dem Katalog. Akku, Verbrauch und Ladeleistung kommen gleich mit.</string>
+    <string name="vehicle_title">Fahrzeug anpassen</string>
+    <string name="vehicle_model">Fahrzeug</string>
+    <string name="vehicle_model_own">Eigenes Fahrzeug</string>
+    <string name="vehicle_catalog_value">Katalog: %1$s</string>
+    <string name="vehicle_name">Name</string>
+    <string name="vehicle_consumption">Verbrauch</string>
+    <string name="vehicle_battery">Akku nutzbar</string>
+    <string name="vehicle_dc">Max. Laden</string>
+    <string name="vehicle_dc_unknown">unbekannt</string>
+    <string name="vehicle_number_invalid">Eine Zahl größer als 0</string>
+    <string name="vehicle_remove">Auto aus der Garage entfernen</string>
+    <string name="vehicle_restore_customized">Deine Werte weichen vom Katalog ab</string>
+    <string name="vehicle_restore_current">Entspricht dem Katalog</string>
+    <string name="vehicle_restore_unavailable">Nicht verfügbar für eigene Fahrzeuge</string>
+    <string name="vehicle_remove_title">„%1$s“ entfernen?</string>
+    <string name="vehicle_remove_text">Das Auto verschwindet aus der Garage, eigene Werte inklusive.</string>
+    <string name="vehicle_remove_confirm">Entfernen</string>
+    <string name="addcar_custom_named">„%1$s“ selbst anlegen</string>
+    <string name="addcar_custom">Eigenes Auto anlegen</string>
+    <string name="addcar_custom_hint">Nicht im Katalog? Die Werte trägst du danach ein.</string>
+    <string name="addcar_custom_default_name">Mein Auto</string>
 
     <!-- Phone: trip top bar -->
     <plurals name="trip_summary_stops">

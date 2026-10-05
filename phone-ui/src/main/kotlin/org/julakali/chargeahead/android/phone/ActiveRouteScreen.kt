@@ -32,7 +32,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.julakali.chargeahead.android.phone.components.AppCard
-import org.julakali.chargeahead.android.phone.components.SocEditDialog
+import org.julakali.chargeahead.android.phone.components.ChargeLevelKind
+import org.julakali.chargeahead.android.phone.components.ChargeLevelSheet
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
@@ -120,14 +121,15 @@ fun ActiveRouteScreen(
     val plan = trip.plan
     // Without a car reading, "Neu planen" asks for the level first.
     socInput?.let { input ->
-        SocEditDialog(
-            value = input,
+        ChargeLevelSheet(
             title = stringResource(R.string.soc_dialog_title),
-            confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = onSocInputChange,
+            subtitle = stringResource(R.string.soc_dialog_car_silent),
+            kind = ChargeLevelKind.NOW,
+            percent = input.toIntOrNull(),
+            onChange = { onSocInputChange(it.toString()) },
             onConfirm = onSocConfirm,
             onDismiss = onSocDismiss,
-            supportingText = stringResource(R.string.soc_dialog_car_silent),
+            confirmLabel = stringResource(R.string.trip_soc_confirm),
         )
     }
     Column(modifier) {

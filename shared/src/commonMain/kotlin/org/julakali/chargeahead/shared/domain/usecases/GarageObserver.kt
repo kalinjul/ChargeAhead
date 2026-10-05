@@ -23,7 +23,7 @@ class GarageObserver(
             Garage(
                 vehicles = owned,
                 selected = selected,
-                selectedFullRangeKm = selected?.let { RangeCalculator.rangeKm(it, socPercent = 100.0, reserveSocPercent = 0.0) },
+                fullRangeKm = owned.associate { it.id to RangeCalculator.rangeKm(it, socPercent = 100.0, reserveSocPercent = 0.0) },
                 selectedPresetConsumption = selected?.let { presets.presetOf(it)?.consumptionKwhPer100Km },
             )
         }

@@ -30,7 +30,7 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import org.julakali.chargeahead.android.phone.theme.tabular
 
-enum class TickStyle { CHECK, ADD, DELETE }
+enum class TickStyle { CHECK, ADD }
 
 /** Label, optional dot and sublabel, trailing tick circle. */
 @Composable
@@ -59,7 +59,6 @@ fun TickRow(
         }
         val scheme = MaterialTheme.colorScheme
         val (container, borderColor, iconTint) = when {
-            tick == TickStyle.DELETE -> Triple(scheme.errorContainer, ChargeAheadColors.deleteOutline, scheme.error)
             tick == TickStyle.ADD -> Triple(scheme.primaryContainer, ChargeAheadColors.sectionOutline, scheme.primary)
             checked -> Triple(scheme.primary, scheme.primary, scheme.onPrimary)
             else -> Triple(Color.Transparent, scheme.outlineVariant, Color.Transparent)
@@ -71,7 +70,6 @@ fun TickRow(
             val icon = when (tick) {
                 TickStyle.CHECK -> R.drawable.ic_check
                 TickStyle.ADD -> R.drawable.ic_add
-                TickStyle.DELETE -> R.drawable.ic_remove
             }
             if (tick != TickStyle.CHECK || checked) {
                 Icon(painterResource(icon), contentDescription = null, tint = iconTint, modifier = Modifier.size(12.dp))
