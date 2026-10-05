@@ -40,11 +40,15 @@ class TripSheetContentTest {
         var sentToMaps = false
         var sectionSent = false
         var toggledSelecting = false
+        var startSocTyped: String? = null
+        var arrivalSocTyped: String? = null
     }
 
     private fun sheet(
         layout: TripListLayout = TripListLayout.LIST,
         selection: SectionSelection = SectionSelection(),
+        socInput: String? = null,
+        arrivalSocInput: String? = null,
     ): Calls {
         val calls = Calls()
         compose.setThemedContent {
@@ -60,15 +64,15 @@ class TripSheetContentTest {
                     onOpenStop = { calls.openedStop = it },
                     onSendToMaps = { calls.sentToMaps = true },
                     socEditing = SocEditing(
-                        socInput = null,
-                        arrivalSocInput = null,
+                        socInput = socInput,
+                        arrivalSocInput = arrivalSocInput,
                         askedForReplan = false,
                         onEditStartSoc = { calls.editStartSoc = true },
-                        onSocInputChange = {},
+                        onSocInputChange = { calls.startSocTyped = it },
                         onSocConfirm = {},
                         onSocDismiss = {},
                         onEditArrivalSoc = { calls.editArrivalSoc = true },
-                        onArrivalSocInputChange = {},
+                        onArrivalSocInputChange = { calls.arrivalSocTyped = it },
                         onArrivalSocConfirm = {},
                         onArrivalSocDismiss = {},
                     ),
@@ -136,6 +140,25 @@ class TripSheetContentTest {
         val calls = sheet()
         compose.onNodeWithText("München").performClick()
         assertTrue(calls.editArrivalSoc)
+    }
+
+    /** Both levels are edited in the garage's charge-level sheet: slider and the usual picks. */
+    @Test
+    fun `the start level offers its quick picks`() {
+        val calls = sheet(socInput = "42")
+
+        compose.onNodeWithText(compose.string(R.string.garage_percent, 60)).performClick()
+
+        assertEquals("60", calls.startSocTyped)
+    }
+
+    @Test
+    fun `the arrival level offers its quick picks`() {
+        val calls = sheet(arrivalSocInput = "10")
+
+        compose.onNodeWithText(compose.string(R.string.garage_percent, 30)).performClick()
+
+        assertEquals("30", calls.arrivalSocTyped)
     }
 
     @Test

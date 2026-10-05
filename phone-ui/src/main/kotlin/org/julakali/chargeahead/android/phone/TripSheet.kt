@@ -68,12 +68,12 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.RankBadge
-import org.julakali.chargeahead.android.phone.components.SocEditDialog
+import org.julakali.chargeahead.android.phone.components.ChargeLevelKind
+import org.julakali.chargeahead.android.phone.components.ChargeLevelSheet
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
-import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import java.time.LocalTime
@@ -127,27 +127,29 @@ fun TripSheetContent(
 
     // The quick charge-level entry behind the start row. Confirming it re-plans.
     socEditing?.socInput?.let { input ->
-        SocEditDialog(
-            value = input,
+        ChargeLevelSheet(
             title = stringResource(R.string.soc_dialog_title),
-            confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = socEditing.onSocInputChange,
+            subtitle = if (socEditing.askedForReplan) stringResource(R.string.soc_dialog_car_silent) else null,
+            kind = ChargeLevelKind.NOW,
+            percent = input.toIntOrNull(),
+            onChange = { socEditing.onSocInputChange(it.toString()) },
             onConfirm = socEditing.onSocConfirm,
             onDismiss = socEditing.onSocDismiss,
-            supportingText = if (socEditing.askedForReplan) stringResource(R.string.soc_dialog_car_silent) else null,
+            confirmLabel = stringResource(R.string.trip_soc_confirm),
         )
     }
 
     // The level to arrive with, edited on the destination row. Confirming re-plans.
     socEditing?.arrivalSocInput?.let { input ->
-        SocEditDialog(
-            value = input,
+        ChargeLevelSheet(
             title = stringResource(R.string.garage_arrival_title),
-            confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = socEditing.onArrivalSocInputChange,
+            subtitle = stringResource(R.string.garage_arrival_sheet_hint),
+            kind = ChargeLevelKind.ARRIVAL,
+            percent = input.toIntOrNull(),
+            onChange = { socEditing.onArrivalSocInputChange(it.toString()) },
             onConfirm = socEditing.onArrivalSocConfirm,
             onDismiss = socEditing.onArrivalSocDismiss,
-            valueRange = ARRIVAL_SOC_RANGE.first.toFloat()..ARRIVAL_SOC_RANGE.last.toFloat(),
+            confirmLabel = stringResource(R.string.trip_soc_confirm),
         )
     }
 
