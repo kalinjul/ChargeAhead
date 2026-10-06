@@ -9,6 +9,14 @@ plugins {
     // Swift-friendly header: StateFlow as AsyncSequence, suspend as async,
     // Kotlin enums and sealed types as Swift enums.
     alias(libs.plugins.skie)
+    // The one string source for phone, car and iOS: composeResources/.
+    alias(libs.plugins.compose.compiler)
+    alias(libs.plugins.compose.multiplatform)
+}
+
+compose.resources {
+    publicResClass = true
+    packageOfResClass = "org.julakali.chargeahead.shared.resources"
 }
 
 skie {
@@ -26,6 +34,8 @@ kotlin {
         compileSdk = libs.versions.compileSdk.get().toInt()
         minSdk = libs.versions.minSdk.get().toInt()
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
+        // Without it the Android variant ships no composeResources at all.
+        androidResources { enable = true }
     }
 
     // Pure JVM target so the shared logic can be tested on a machine without
@@ -62,6 +72,8 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
+            api(libs.compose.components.resources)
+            api(libs.compose.mp.runtime)
             // api, not implementation: StateFlow is part of ChargeStopsFeature's
             // public signature, so androidApp and iosApp need the types on
             // their own compile classpath.
@@ -99,6 +111,8 @@ kotlin {
             implementation(libs.play.services.location)
         }
         jvmTest.dependencies {
+            // getString() on the desktop JVM asks skiko for the system theme.
+            implementation(compose.desktop.currentOs)
             // For the ViewModel tests only — see the version catalog.
             implementation(libs.kotlinx.coroutines.test)
         }

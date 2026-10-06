@@ -1,7 +1,7 @@
 [versions]
 agp = "9.4.0"
 kotlin = "2.4.20"
-composePlugin = "1.12.0"
+composePlugin = "1.12.1"
 
 compileSdk = "37"
 minSdk = "26"
@@ -121,6 +121,8 @@ androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTes
 androidx-compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
 # Local cache for text fields bound to a ViewModel: keeps keystrokes that the
 # asynchronous uiState round trip would otherwise overwrite.
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composePlugin" }
+compose-mp-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composePlugin" }
 compose-cache = { module = "de.charlex.compose:compose-cache", version.ref = "composeCache" }
 
 # Open-source licence list; the Gradle plugin generates the data at build time.
@@ -141,4 +143,5 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 aboutlibraries-android = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutLibraries" }
+compose-multiplatform = { id = "org.jetbrains.compose", version.ref = "composePlugin" }
 skie = { id = "co.touchlab.skie", version.ref = "skie" }
