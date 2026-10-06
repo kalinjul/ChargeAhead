@@ -348,7 +348,7 @@
     <string name="fmt_status_unknown">Status unbekannt</string>
     <string name="fmt_available_of">%1$d von %2$d frei</string>
     <string name="fmt_out_of_order">%1$d außer Betrieb</string>
-    <string name="fmt_after_distance">Nach %1$s</string>
+    <string name="fmt_planned_stop_detail">Nach %1$s · %2$s kW · %3$s → %4$s% in %5$s</string>
     <string name="fmt_charge_to">%1$s laden bis %2$s%</string>
     <string name="fmt_connector_type2">Typ 2</string>
     <string name="fmt_connector_unknown">Unbekannt</string>

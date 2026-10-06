@@ -13,7 +13,7 @@ import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Reachability
 import org.julakali.chargeahead.shared.resources.Res
-import org.julakali.chargeahead.shared.resources.fmt_after_distance
+import org.julakali.chargeahead.shared.resources.fmt_planned_stop_detail
 import org.julakali.chargeahead.shared.resources.fmt_arrival_about
 import org.julakali.chargeahead.shared.resources.fmt_available_of
 import org.julakali.chargeahead.shared.resources.fmt_charge_point
@@ -157,9 +157,14 @@ object ChargeStopFormatter {
 
     /** e.g. "Nach 142 km · 150 kW · 18 → 80% in 25 min". */
     fun plannedStopDetailLine(stop: PlannedStop): String =
-        Texts.string(Res.string.fmt_after_distance, formatDistanceKm(stop.kmFromStart)) + " · ${formatPowerKw(stop.maxPowerKw)} kW · " +
-            "${formatWholeNumber(stop.arrivalSocPercent)} → ${formatWholeNumber(stop.departureSocPercent)}% " +
-            "in ${minutesLabel(stop.chargeMinutes)}"
+        Texts.string(
+            Res.string.fmt_planned_stop_detail,
+            formatDistanceKm(stop.kmFromStart),
+            formatPowerKw(stop.maxPowerKw),
+            formatWholeNumber(stop.arrivalSocPercent),
+            formatWholeNumber(stop.departureSocPercent),
+            minutesLabel(stop.chargeMinutes),
+        )
 
     /** A bare distance for message texts, same rules as the row lines. */
     fun distanceLabel(distanceKm: Double): String = formatDistanceKm(distanceKm)
@@ -223,10 +228,10 @@ object ChargeStopFormatter {
         ConnectorType.UNKNOWN -> Texts.string(Res.string.fmt_connector_unknown)
     }
 
-    // One decimal below 10 km, whole numbers above. Rounded first: NumberFormat would round half-even.
+    // One decimal below 10 km, whole numbers above.
     private fun formatDistanceKm(distanceKm: Double): String {
         return if (distanceKm < 10.0) {
-            "${formatDecimal(round(distanceKm * 10.0) / 10.0, 1)} km"
+            "${formatDecimal(distanceKm, 1)} km"
         } else {
             "${formatWholeNumber(distanceKm)} km"
         }

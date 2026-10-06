@@ -108,6 +108,7 @@ import org.julakali.chargeahead.shared.resources.trip_summary_distance
 import org.julakali.chargeahead.shared.resources.trip_summary_stops
 import org.julakali.chargeahead.shared.resources.trip_tile_arrival
 import org.julakali.chargeahead.shared.resources.trip_tile_charge
+import org.julakali.chargeahead.shared.forUi
 
 /** The charge-level editors behind the trip's start and destination rows. */
 class SocEditing(
@@ -600,7 +601,7 @@ val LocalNow = staticCompositionLocalOf<() -> LocalTime> { { LocalTime.now() } }
 
 /** Wall-clock arrival, from [now] plus the ETA offset, in the device's 12h/24h style. */
 fun etaText(context: Context, minutesFromStart: Double, now: LocalTime): String {
-    val locale = context.resources.configuration.locales[0]
+    val locale = context.resources.configuration.locales[0].forUi()
     // "j" lets ICU pick the locale's hour cycle; DateFormat.is24HourFormat would ask Locale.getDefault() instead.
     val skeleton = when (Settings.System.getString(context.contentResolver, Settings.System.TIME_12_24)) {
         "24" -> "Hm"

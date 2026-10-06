@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.formatDecimal
 
 /** One line of the results panel: a recent destination or a geocoder hit. */
 data class SearchRow(
@@ -59,13 +60,10 @@ fun searchRows(query: String, results: List<Place>?, recent: List<Destination>, 
         }
     }
 
-/** "< 1", "4,2", "42" — the unit is the caller's resource string. */
+/** "< 1", "4,2" / "4.2", "42" — the unit is the caller's resource string. */
 fun Double.asKmLabel(): String = when {
     this < 1 -> "< 1"
-    this < 10 -> {
-        val tenths = (this * 10).roundToInt()
-        "${tenths / 10},${tenths % 10}"
-    }
+    this < 10 -> formatDecimal((this * 10).roundToInt() / 10.0, 1)
     else -> roundToInt().toString()
 }
 

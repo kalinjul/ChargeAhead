@@ -56,6 +56,7 @@ import org.julakali.chargeahead.shared.resources.plan_vehicle_missing
 import org.julakali.chargeahead.shared.resources.plan_vehicle_missing_action
 import org.julakali.chargeahead.shared.resources.trip_maps_sent
 import org.julakali.chargeahead.shared.resources.trip_stop_times
+import org.jetbrains.compose.resources.getString
 
 /**
  * The phone app: wires the map screen and the navigator's destinations
@@ -236,7 +237,6 @@ private fun TripEventEffect(
     onOpenGarage: () -> Unit,
     onCommitted: () -> Unit,
 ) {
-    val context = LocalContext.current
     val event by viewModel.event.collectAsStateWithLifecycle()
 
     LaunchedEffect(event) {
@@ -245,16 +245,16 @@ private fun TripEventEffect(
             TripEvent.PlanReady -> onPlanReady()
             TripEvent.VehicleMissing -> scope.launch {
                 val result = snackbar.showSnackbar(
-                    message = Texts.string(Res.string.plan_vehicle_missing),
-                    actionLabel = Texts.string(Res.string.plan_vehicle_missing_action),
+                    message = getString(Res.string.plan_vehicle_missing),
+                    actionLabel = getString(Res.string.plan_vehicle_missing_action),
                 )
                 if (result == SnackbarResult.ActionPerformed) onOpenGarage()
             }
             is TripEvent.NoChargerInReach -> snackbar.show(
                 scope,
-                Texts.string(Res.string.plan_failed_no_charger, current.afterKm.roundToInt()),
+                getString(Res.string.plan_failed_no_charger, current.afterKm.roundToInt()),
             )
-            TripEvent.NoRoute -> snackbar.show(scope, Texts.string(Res.string.plan_failed_no_route))
+            TripEvent.NoRoute -> snackbar.show(scope, getString(Res.string.plan_failed_no_route))
             TripEvent.TripCommitted -> onCommitted()
         }
         viewModel.onEventHandled()

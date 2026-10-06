@@ -47,6 +47,12 @@ class StringParityTest {
         }
     }
 
+    @Test
+    fun `the resource folders are exactly the supported languages`() {
+        val folders = File("src/commonMain/composeResources").listFiles()!!.map { it.name }.filter { it.startsWith("values") }
+        assertEquals(UI_LANGUAGES, folders.map { it.removePrefix("values").removePrefix("-").ifEmpty { "en" } }.toSet())
+    }
+
     private companion object {
         val PLACEHOLDER = Regex("%\\d\\$[sd]")
     }

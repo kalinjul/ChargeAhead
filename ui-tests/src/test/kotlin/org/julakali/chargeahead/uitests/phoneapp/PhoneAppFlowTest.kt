@@ -67,6 +67,8 @@ import org.julakali.chargeahead.shared.resources.trip_select_section
 import org.julakali.chargeahead.shared.resources.trip_send_maps
 import org.julakali.chargeahead.shared.resources.vehicle_remove
 import org.julakali.chargeahead.shared.resources.vehicle_remove_confirm
+import org.julakali.chargeahead.uitests.textsMatching
+import org.julakali.chargeahead.shared.resources.trip_tile_charge
 
 /** The phone app end to end, on the faked graph of [PhoneAppHarness]. */
 @RunWith(RobolectricTestRunner::class)
@@ -190,14 +192,12 @@ class PhoneAppFlowTest {
         waitForTrip()
 
         compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_tiles)).performClick()
-        compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithContentDescription(compose.string(Res.string.trip_layout_list)).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.waitUntil(WAIT_MILLIS) { compose.textsMatching(Res.string.trip_tile_charge, 2).isNotEmpty() }
+        compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_list)).assertIsDisplayed()
 
         compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_list)).performClick()
-        compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithContentDescription(compose.string(Res.string.trip_layout_tiles)).fetchSemanticsNodes().isNotEmpty()
-        }
+        compose.waitUntil(WAIT_MILLIS) { compose.textsMatching(Res.string.trip_tile_charge, 2).isEmpty() }
+        compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_tiles)).assertIsDisplayed()
     }
 
     @Test
@@ -258,10 +258,9 @@ class PhoneAppFlowTest {
     /** Tiles keep the action row inside the peek, so it can be tapped without expanding the sheet. */
     private fun showTiles() {
         compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_tiles)).performClick()
-        // The toggle flips its label once the tiles are in.
-        compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithContentDescription(compose.string(Res.string.trip_layout_list)).fetchSemanticsNodes().isNotEmpty()
-        }
+        // Waits for the tiles themselves, not just the toggle's new label.
+        compose.waitUntil(WAIT_MILLIS) { compose.textsMatching(Res.string.trip_tile_charge, 2).isNotEmpty() }
+        compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_list)).assertIsDisplayed()
     }
 
     /** The stop rows the planner actually placed, in trip order, by their fake site. */
