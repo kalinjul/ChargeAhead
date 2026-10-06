@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Badge
-import androidx.compose.material.icons.outlined.BatteryChargingFull
+import androidx.compose.material.icons.outlined.Battery0Bar
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Restore
@@ -193,7 +193,7 @@ fun VehicleSettingsScreen(
                     },
                     {
                         SettingRow(
-                            Icons.Outlined.BatteryChargingFull,
+                            Icons.Outlined.Battery0Bar,
                             stringResource(Res.string.vehicle_battery),
                             actions.onBatteryOpen,
                             value = stringResource(Res.string.garage_kwh, vehicle.usableBatteryKwh.oneDecimal()),

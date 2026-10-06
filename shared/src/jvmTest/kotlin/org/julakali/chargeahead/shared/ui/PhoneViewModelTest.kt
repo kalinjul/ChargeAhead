@@ -46,6 +46,7 @@ import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
 import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -105,6 +106,7 @@ class PhoneViewModelTest {
             GarageObserver(vehicles, catalog),
             SelectVehicleInteractor(vehicles),
             UpdateArrivalSocInteractor(vehicles),
+            UpdateManualSocInteractor(vehicles),
         )
 
         val preset = addCar.uiState.await { it.matches.isNotEmpty() }.matches.first()

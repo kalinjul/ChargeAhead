@@ -32,6 +32,8 @@ import org.julakali.chargeahead.shared.ui.VehicleEditor
 import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.garage_arrival_sheet_hint
 import org.julakali.chargeahead.shared.resources.garage_arrival_title
+import org.julakali.chargeahead.shared.resources.garage_soc_sheet_hint
+import org.julakali.chargeahead.shared.resources.garage_soc_title
 import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
 import org.julakali.chargeahead.shared.resources.soc_dialog_title
 import org.julakali.chargeahead.shared.resources.trip_soc_confirm
@@ -61,6 +63,7 @@ private fun Garage(state: GarageUiState) = PageFrame {
         uiState = state,
         onSelect = {}, onOpenVehicle = {}, onOpenAdd = {},
         onArrivalSheetOpen = {}, onArrivalChange = {}, onArrivalConfirm = {}, onArrivalDismiss = {},
+        onSocSheetOpen = {}, onSocChange = {}, onSocConfirm = {}, onSocDismiss = {},
     )
 }
 
@@ -95,6 +98,11 @@ fun GarageMiddleOfThree() = Garage(
 @PreviewTest
 @Preview(locale = "de", showBackground = true, widthDp = 411, heightDp = 640)
 @Composable
+fun GarageLoading() = Garage(GarageUiState(loading = true))
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true, widthDp = 411, heightDp = 640)
+@Composable
 fun GarageEmpty() = Garage(GarageUiState(arrivalSocPercent = 10.0))
 
 @PreviewTest
@@ -116,6 +124,20 @@ fun GarageArrivalSheetEnglish() = SheetFrame { ArrivalSheet() }
 @Preview(locale = "de", showBackground = true, widthDp = 411, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun GarageArrivalSheetDark() = SheetFrame { ArrivalSheet() }
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true, widthDp = 411)
+@Composable
+fun GarageBatteryLevelSheet() = SheetFrame {
+    ChargeLevelSheetContent(
+        title = stringResource(Res.string.garage_soc_title),
+        subtitle = stringResource(Res.string.garage_soc_sheet_hint),
+        kind = ChargeLevelKind.NOW,
+        percent = 6,
+        onChange = {},
+        onConfirm = {},
+    )
+}
 
 @Composable
 private fun ArrivalSheet() = ChargeLevelSheetContent(

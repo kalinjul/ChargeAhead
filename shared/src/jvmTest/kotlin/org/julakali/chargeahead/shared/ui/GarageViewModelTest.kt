@@ -13,6 +13,8 @@ import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
+import org.julakali.chargeahead.shared.domain.DEFAULT_ASSUMED_SOC_PERCENT
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import kotlin.test.AfterTest
@@ -20,6 +22,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** The garage page's own state: which car, and the arrival level's sheet. */
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -33,6 +36,7 @@ class GarageViewModelTest {
             GarageObserver(vehicles, catalog),
             SelectVehicleInteractor(vehicles),
             UpdateArrivalSocInteractor(vehicles),
+            UpdateManualSocInteractor(vehicles),
         )
     }
 
@@ -83,6 +87,44 @@ class GarageViewModelTest {
         viewModel.onArrivalSheetChanged(95)
 
         assertEquals(ARRIVAL_SOC_RANGE.last, viewModel.uiState.await { it.arrivalSheet != 10 }.arrivalSheet)
+    }
+
+    @Test
+    fun `the garage loads before it claims there is no car`() {
+        assertTrue(viewModel.uiState.value.loading)
+    }
+
+    @Test
+    fun `without an entered level the garage shows the one planning assumes`() = runBlocking<Unit> {
+        assertEquals(DEFAULT_ASSUMED_SOC_PERCENT, viewModel.uiState.await { !it.loading }.socPercent)
+    }
+
+    @Test
+    fun `the battery level sheet opens on the stored level and applies the dragged one`() = runBlocking<Unit> {
+        vehicles.setManualSocPercent(7.0)
+        viewModel.uiState.await { it.socPercent == 7.0 }
+
+        viewModel.onSocSheetOpened()
+        assertEquals(7, viewModel.uiState.await { it.socSheet != null }.socSheet)
+        viewModel.onSocSheetChanged(60)
+        viewModel.onSocSheetConfirmed()
+
+        assertNull(viewModel.uiState.await { it.socSheet == null }.socSheet)
+        assertEquals(60.0, vehicles.manualSocPercent.awaitValue { it == 60.0 })
+    }
+
+    @Test
+    fun `swiping the battery level sheet away keeps the level`() = runBlocking<Unit> {
+        vehicles.setManualSocPercent(40.0)
+        viewModel.uiState.await { it.socPercent == 40.0 }
+
+        viewModel.onSocSheetOpened()
+        viewModel.uiState.await { it.socSheet != null }
+        viewModel.onSocSheetChanged(90)
+        viewModel.onSocSheetDismissed()
+
+        viewModel.uiState.await { it.socSheet == null }
+        assertEquals(40.0, vehicles.manualSocPercent.first())
     }
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =

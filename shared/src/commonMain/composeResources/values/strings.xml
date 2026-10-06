@@ -286,9 +286,12 @@
     <string name="garage_unit_kwh_per_100">kWh/100 km</string>
     <string name="garage_percent">%1$d%</string>
     <string name="garage_vehicle_row">Edit car</string>
-    <string name="garage_vehicle_row_hint">Name, consumption, battery, charging power</string>
-    <string name="garage_arrival_row_hint">Applies to all cars</string>
+    <string name="garage_vehicle_row_hint">Change the specs of your car</string>
+    <string name="garage_arrival_row_hint">Battery left at your destination</string>
     <string name="garage_arrival_sheet_hint">How much charge you want left when you arrive.</string>
+    <string name="garage_soc_title">Current battery level</string>
+    <string name="garage_soc_row_hint">Used if the car doesn't communicate</string>
+    <string name="garage_soc_sheet_hint">How full the battery is right now.</string>
     <string name="garage_empty_title">No car yet</string>
     <string name="garage_empty_text">Pick your model from the catalog. Battery, consumption and charging power come with it.</string>
     <string name="vehicle_title">Edit car</string>

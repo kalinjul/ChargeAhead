@@ -73,6 +73,9 @@ interface TripPlanning {
 /** Assumed start charge when the driver never entered one. */
 const val DEFAULT_ASSUMED_SOC_PERCENT = 80.0
 
+/** A start level the driver can enter; an empty battery plans nothing. */
+val SOC_RANGE = 1..100
+
 /**
  * Plans with the selected vehicle and the stored preferences. A null
  * [startSocPercent] takes the stored manual level, and without one

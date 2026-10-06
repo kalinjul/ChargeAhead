@@ -289,8 +289,11 @@
     <string name="garage_percent">%1$d%</string>
     <string name="garage_vehicle_row">Fahrzeug anpassen</string>
     <string name="garage_vehicle_row_hint">Name, Verbrauch, Akku, Ladeleistung</string>
-    <string name="garage_arrival_row_hint">Gilt für alle Autos</string>
+    <string name="garage_arrival_row_hint">Restladung bei der Ankunft</string>
     <string name="garage_arrival_sheet_hint">So voll soll der Akku bei der Ankunft noch sein.</string>
+    <string name="garage_soc_title">Aktueller Ladestand</string>
+    <string name="garage_soc_row_hint">Startwert, wenn das Auto keinen meldet</string>
+    <string name="garage_soc_sheet_hint">So voll ist der Akku gerade.</string>
     <string name="garage_empty_title">Noch kein Auto</string>
     <string name="garage_empty_text">Wähl dein Modell aus dem Katalog. Akku, Verbrauch und Ladeleistung kommen gleich mit.</string>
     <string name="vehicle_title">Fahrzeug anpassen</string>

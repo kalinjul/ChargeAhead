@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.combine
 import org.julakali.chargeahead.shared.domain.DEFAULT_ARRIVAL_SOC_PERCENT
+import org.julakali.chargeahead.shared.domain.DEFAULT_ASSUMED_SOC_PERCENT
+import org.julakali.chargeahead.shared.domain.SOC_RANGE
 import org.julakali.chargeahead.shared.domain.MAX_ARRIVAL_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -18,39 +21,50 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
-/** The driver's cars and the arrival level the selected one plans with. */
+/** The driver's cars and the levels the selected one plans with. */
 data class GarageUiState(
+    /** Nothing read yet: neither cars nor their absence are known. */
+    val loading: Boolean = false,
     val vehicles: List<VehicleProfile> = emptyList(),
     val selected: VehicleProfile? = null,
     /** How full the battery should still be at the destination. */
     val arrivalSocPercent: Double = DEFAULT_ARRIVAL_SOC_PERCENT,
     val arrivalSheet: Int? = null,
+    /** The battery level planning starts from, unless the car reports one. */
+    val socPercent: Double = DEFAULT_ASSUMED_SOC_PERCENT,
+    val socSheet: Int? = null,
     val fullRangeKm: Map<String, Double> = emptyMap(),
 )
 
-/** The garage screen: choose a car, set the arrival level. */
+/** The garage screen: choose a car, set the battery and arrival levels. */
 class GarageViewModel(
     private val vehicles: VehicleRepository,
     private val observeGarage: GarageObserver,
     private val selectVehicle: SelectVehicleInteractor,
     private val updateArrivalSoc: UpdateArrivalSocInteractor,
+    private val updateManualSoc: UpdateManualSocInteractor,
 ) : ViewModel() {
 
     private val arrivalSheet = MutableStateFlow<Int?>(null)
+    private val socSheet = MutableStateFlow<Int?>(null)
 
     val uiState: StateFlow<GarageUiState> = combine(
         observeGarage.flow,
         vehicles.arrivalSocPercent,
         arrivalSheet,
-    ) { garage, arrivalSoc, arrivalSheet ->
+        vehicles.manualSocPercent,
+        socSheet,
+    ) { garage, arrivalSoc, arrivalSheet, manualSoc, socSheet ->
         GarageUiState(
             vehicles = garage.vehicles,
             selected = garage.selected,
             arrivalSocPercent = arrivalSoc,
             arrivalSheet = arrivalSheet,
             fullRangeKm = garage.fullRangeKm,
+            socPercent = manualSoc ?: DEFAULT_ASSUMED_SOC_PERCENT,
+            socSheet = socSheet,
         )
-    }.stateIn(viewModelScope, WhileUiSubscribed, GarageUiState())
+    }.stateIn(viewModelScope, WhileUiSubscribed, GarageUiState(loading = true))
 
     init {
         observeGarage(GarageObserver.Params())
@@ -78,6 +92,25 @@ class GarageViewModel(
         val chosen = arrivalSheet.value ?: return
         arrivalSheet.value = null
         viewModelScope.launch { updateArrivalSoc(UpdateArrivalSocInteractor.Params(chosen.toDouble())) }
+    }
+
+    fun onSocSheetOpened() {
+        viewModelScope.launch { socSheet.value = (vehicles.manualSocPercent.first() ?: DEFAULT_ASSUMED_SOC_PERCENT).roundToInt() }
+    }
+
+    fun onSocSheetChanged(percent: Int) {
+        // Only while the sheet is open: a late drag event must not reopen it.
+        socSheet.update { open -> open?.let { percent.coerceIn(SOC_RANGE) } }
+    }
+
+    fun onSocSheetDismissed() {
+        socSheet.value = null
+    }
+
+    fun onSocSheetConfirmed() {
+        val chosen = socSheet.value ?: return
+        socSheet.value = null
+        viewModelScope.launch { updateManualSoc(UpdateManualSocInteractor.Params(chosen.toDouble())) }
     }
 }
 
