@@ -1,6 +1,6 @@
 # Localisation (English + German) — design
 
-> **Status: draft, awaiting Raphael's review.** Two defaults below are marked *to confirm*.
+> **Status: approved 2026-10-06.**
 
 ## Goal
 
@@ -8,12 +8,12 @@ Every user-visible word on the phone, in Android Auto and on iOS/CarPlay comes f
 
 ## Decisions taken
 
-- **One source: Compose Multiplatform Resources in `:shared`.** Spike on `spike/compose-resources` showed it builds for android/jvm/iosArm64/iosSimulatorArm64 on AGP 9.4 and reaches all three surfaces.
+- **One source: Compose Multiplatform Resources in `:shared`, all of it in one PR (#183).** Spike on `spike/compose-resources` showed it builds for android/jvm/iosArm64/iosSimulatorArm64 on AGP 9.4 and reaches all three surfaces.
 - **UI text lives in the app.** The backend only localises its own payload (place names) from an `Accept-Language` header; it never sends finished sentences.
 - **Typography:** percent hugs the number in both languages (`42%`); counted nouns are plurals in both; arrival/departure are spelled out (`Ankunft`/`Arrival`, `Abfahrt`/`Departure`); *charge point* over *charging point*.
 - **Later, not now:** a build-time generator that renders the one source into native `strings.xml` and `.xcstrings` (noted in `plans/technical-debts.md`).
 
-## Defaults to confirm
+## Defaults (confirmed)
 
 1. **English is the fallback** (`values/`), German is `values-de/`. A French or Polish phone gets English.
 2. **No in-app language picker.** The app follows the system language, and on Android 13+ the system's per-app language setting. CMP resources read `Locale.getDefault()` only, so a picker would not work below Android 13.
