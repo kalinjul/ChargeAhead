@@ -16,7 +16,6 @@ import org.julakali.chargeahead.android.car.CarTestGraph.Companion.distanceOf
 import org.julakali.chargeahead.android.car.CarTestGraph.Companion.munich
 import org.julakali.chargeahead.android.car.CarTestGraph.Companion.plan
 import org.julakali.chargeahead.android.car.CarTestGraph.Companion.settle
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.EnergyState
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
@@ -30,6 +29,17 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_route_charge
+import org.julakali.chargeahead.shared.resources.car_route_direct
+import org.julakali.chargeahead.shared.resources.car_route_no_charger
+import org.julakali.chargeahead.shared.resources.car_route_no_route
+import org.julakali.chargeahead.shared.resources.car_route_no_vehicle
+import org.julakali.chargeahead.shared.resources.car_route_send_all
+import org.julakali.chargeahead.shared.resources.car_route_send_all_hint
+import org.julakali.chargeahead.shared.resources.car_soc_percent
+import org.julakali.chargeahead.shared.Texts
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The route screen on the production graph with the planner, the location
@@ -50,7 +60,7 @@ class RouteScreenTest {
         graph?.close()
     }
 
-    private fun string(id: Int, vararg args: Any) = graph!!.carContext.getString(id, *args)
+    private fun string(resource: StringResource, vararg args: Any) = Texts.string(resource, *args)
 
     private fun message(template: Template): String = (template as MessageTemplate).message.toString()
 
@@ -65,7 +75,7 @@ class RouteScreenTest {
     @Test
     fun `without a vehicle the screen says so`() {
         val graph = graph()
-        assertEquals(string(R.string.car_route_no_vehicle), message(graph.templateFor(TripPlanResult.NoRoute)))
+        assertEquals(string(Res.string.car_route_no_vehicle), message(graph.templateFor(TripPlanResult.NoRoute)))
     }
 
     @Test
@@ -73,7 +83,7 @@ class RouteScreenTest {
         val graph = graph()
         graph.withVehicle()
 
-        assertEquals(string(R.string.car_route_no_route), message(graph.templateFor(TripPlanResult.NoRoute)))
+        assertEquals(string(Res.string.car_route_no_route), message(graph.templateFor(TripPlanResult.NoRoute)))
     }
 
     @Test
@@ -83,7 +93,7 @@ class RouteScreenTest {
 
         val template = graph.templateFor(TripPlanResult.NoChargerInReach(afterKm = 312.4))
 
-        assertEquals(string(R.string.car_route_no_charger, ChargeStopFormatter.distanceLabel(312.4)), message(template))
+        assertEquals(string(Res.string.car_route_no_charger, ChargeStopFormatter.distanceLabel(312.4)), message(template))
     }
 
     @Test
@@ -91,7 +101,7 @@ class RouteScreenTest {
         val graph = graph()
         graph.withVehicle()
 
-        assertEquals(string(R.string.car_route_direct), message(graph.templateFor(TripPlanResult.Planned(plan(stops = 0)))))
+        assertEquals(string(Res.string.car_route_direct), message(graph.templateFor(TripPlanResult.Planned(plan(stops = 0)))))
     }
 
     @Test
@@ -105,8 +115,8 @@ class RouteScreenTest {
 
         val rows = template.itemList!!.items.map { it as Row }
         assertEquals(limit, rows.size)
-        assertEquals(string(R.string.car_route_send_all), rows.last().title.toString())
-        assertEquals(string(R.string.car_route_send_all_hint), rows.last().texts.single().toString())
+        assertEquals(string(Res.string.car_route_send_all), rows.last().title.toString())
+        assertEquals(string(Res.string.car_route_send_all_hint), rows.last().texts.single().toString())
         assertNull(rows.last().metadata?.place)
         val stops = rows.dropLast(1)
         stops.forEach { assertNotNull(distanceOf(it.texts.single())) }
@@ -130,7 +140,7 @@ class RouteScreenTest {
         // The fixture puts the stops 100 km apart along the route.
         assertEquals(listOf(100.0, 100.0, 100.0), rows.take(3).map { distanceOf(it.texts.single()) })
         assertEquals("Operator 1", rows.first().title.toString())
-        assertTrue(rows.first().texts.single().toString().endsWith(", ${string(R.string.car_route_charge, 80)}"))
+        assertTrue(rows.first().texts.single().toString().endsWith(", ${string(Res.string.car_route_charge, 80)}"))
     }
 
     @Test
@@ -186,7 +196,7 @@ class RouteScreenTest {
         assertTrue(graph.planner.startLevels.isEmpty())
 
         val step = (picker.onGetTemplate() as androidx.car.app.model.ListTemplate).singleList!!.items.map { it as Row }
-            .first { it.title.toString() == string(R.string.car_soc_percent, 90) }
+            .first { it.title.toString() == string(Res.string.car_soc_percent, 90) }
         click(step)
 
         assertEquals(listOf(90.0), graph.planner.startLevels)
@@ -222,6 +232,6 @@ class RouteScreenTest {
 
         graph.planner.gate!!.unlock()
         settle()
-        assertEquals(string(R.string.car_route_no_route), message(screen.onGetTemplate()))
+        assertEquals(string(Res.string.car_route_no_route), message(screen.onGetTemplate()))
     }
 }

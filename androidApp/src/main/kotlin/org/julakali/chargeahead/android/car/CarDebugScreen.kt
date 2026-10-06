@@ -10,7 +10,6 @@ import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.coarseDuration
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.CarDataKind
@@ -24,6 +23,31 @@ import org.julakali.chargeahead.shared.ui.CarDataViewModel
 import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_debug_energy
+import org.julakali.chargeahead.shared.resources.car_debug_energy_value
+import org.julakali.chargeahead.shared.resources.car_debug_fix
+import org.julakali.chargeahead.shared.resources.car_debug_fix_value
+import org.julakali.chargeahead.shared.resources.car_debug_just_now
+import org.julakali.chargeahead.shared.resources.car_debug_source_car
+import org.julakali.chargeahead.shared.resources.car_debug_source_cloud
+import org.julakali.chargeahead.shared.resources.car_debug_source_manual
+import org.julakali.chargeahead.shared.resources.cardata_age
+import org.julakali.chargeahead.shared.resources.cardata_kind_battery
+import org.julakali.chargeahead.shared.resources.cardata_kind_energy_low
+import org.julakali.chargeahead.shared.resources.cardata_kind_energy_profile
+import org.julakali.chargeahead.shared.resources.cardata_kind_model
+import org.julakali.chargeahead.shared.resources.cardata_kind_odometer
+import org.julakali.chargeahead.shared.resources.cardata_kind_range
+import org.julakali.chargeahead.shared.resources.cardata_kind_speed
+import org.julakali.chargeahead.shared.resources.cardata_never
+import org.julakali.chargeahead.shared.resources.cardata_no_data
+import org.julakali.chargeahead.shared.resources.cardata_no_hardware
+import org.julakali.chargeahead.shared.resources.cardata_no_permission
+import org.julakali.chargeahead.shared.resources.cardata_title
+import org.julakali.chargeahead.shared.resources.value_unknown
+import org.julakali.chargeahead.shared.Texts
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * What the car reports, read in the car: the charge state the app runs on,
@@ -65,7 +89,7 @@ class CarDebugScreen(
             .setSingleList(itemList.build())
             .setHeader(
                 Header.Builder()
-                    .setTitle(carContext.getString(R.string.cardata_title))
+                    .setTitle(Texts.string(Res.string.cardata_title))
                     .setStartHeaderAction(Action.BACK)
                     .build(),
             )
@@ -73,69 +97,68 @@ class CarDebugScreen(
     }
 
     private fun energyRow(energy: EnergyState?): Row = Row.Builder()
-        .setTitle(carContext.getString(R.string.car_debug_energy))
+        .setTitle(Texts.string(Res.string.car_debug_energy))
         .addText(
             energy?.let {
-                carContext.getString(R.string.car_debug_energy_value, it.socPercent.roundToInt(), sourceLabel(it.source)) +
+                Texts.string(Res.string.car_debug_energy_value, it.socPercent.roundToInt(), sourceLabel(it.source)) +
                     " · " + age(it.observedAtMillis)
-            } ?: carContext.getString(R.string.value_unknown),
+            } ?: Texts.string(Res.string.value_unknown),
         )
         .build()
 
     private fun fixRow(fix: Fix?): Row = Row.Builder()
-        .setTitle(carContext.getString(R.string.car_debug_fix))
+        .setTitle(Texts.string(Res.string.car_debug_fix))
         .addText(
             fix?.let {
-                carContext.getString(
-                    R.string.car_debug_fix_value,
+                Texts.string(Res.string.car_debug_fix_value,
                     "%.4f, %.4f".format(it.position.lat, it.position.lon),
-                    it.speedMps?.let { mps -> (mps * 3.6).roundToInt().toString() } ?: carContext.getString(R.string.value_unknown),
-                    it.bearingDeg?.roundToInt()?.toString() ?: carContext.getString(R.string.value_unknown),
+                    it.speedMps?.let { mps -> (mps * 3.6).roundToInt().toString() } ?: Texts.string(Res.string.value_unknown),
+                    it.bearingDeg?.roundToInt()?.toString() ?: Texts.string(Res.string.value_unknown),
                 ) + " · " + age(it.timestampMillis)
-            } ?: carContext.getString(R.string.value_unknown),
+            } ?: Texts.string(Res.string.value_unknown),
         )
         .build()
 
     private fun pointRow(kind: CarDataKind, point: CarDataPoint?): Row = Row.Builder()
-        .setTitle(carContext.getString(kindLabel(kind)))
+        .setTitle(Texts.string(kindLabel(kind)))
         .addText(
             point?.let { "${value(it)} · ${age(it.observedAtMillis)}" }
-                ?: carContext.getString(R.string.cardata_never),
+                ?: Texts.string(Res.string.cardata_never),
         )
         .build()
 
     private fun value(point: CarDataPoint): String = when (point.status) {
-        CarDataStatus.AVAILABLE -> point.value ?: carContext.getString(R.string.value_unknown)
-        CarDataStatus.NO_PERMISSION -> carContext.getString(R.string.cardata_no_permission)
-        CarDataStatus.NO_DATA -> carContext.getString(R.string.cardata_no_data)
-        CarDataStatus.NO_CAR_HARDWARE -> carContext.getString(R.string.cardata_no_hardware)
+        CarDataStatus.AVAILABLE -> point.value ?: Texts.string(Res.string.value_unknown)
+        CarDataStatus.NO_PERMISSION -> Texts.string(Res.string.cardata_no_permission)
+        CarDataStatus.NO_DATA -> Texts.string(Res.string.cardata_no_data)
+        CarDataStatus.NO_CAR_HARDWARE -> Texts.string(Res.string.cardata_no_hardware)
     }
 
-    private fun sourceLabel(source: SoCSourceKind): String = carContext.getString(
+    private fun sourceLabel(source: SoCSourceKind): String = Texts.string(
         when (source) {
-            SoCSourceKind.MANUAL -> R.string.car_debug_source_manual
-            SoCSourceKind.CAR_HARDWARE -> R.string.car_debug_source_car
-            SoCSourceKind.OEM_CLOUD -> R.string.car_debug_source_cloud
+            SoCSourceKind.MANUAL -> Res.string.car_debug_source_manual
+            SoCSourceKind.CAR_HARDWARE -> Res.string.car_debug_source_car
+            SoCSourceKind.OEM_CLOUD -> Res.string.car_debug_source_cloud
         },
     )
 
     /** "vor 3 Minuten", or "gerade eben" under a minute. */
     private fun age(atMillis: Long): String {
         val minutes = (time.nowMillis() - atMillis) / 60_000.0
-        if (minutes < 1) return carContext.getString(R.string.car_debug_just_now)
+        if (minutes < 1) return Texts.string(Res.string.car_debug_just_now)
         val (plural, count) = coarseDuration(minutes.toLong())
-        val text = carContext.resources.getQuantityString(plural, count, count)
-        return carContext.getString(R.string.cardata_age, text)
+        val text = Texts.plural(plural, count, count)
+        return Texts.string(Res.string.cardata_age, text)
     }
 
-    private fun kindLabel(kind: CarDataKind): Int = when (kind) {
-        CarDataKind.MODEL -> R.string.cardata_kind_model
-        CarDataKind.ENERGY_PROFILE -> R.string.cardata_kind_energy_profile
-        CarDataKind.BATTERY_PERCENT -> R.string.cardata_kind_battery
-        CarDataKind.RANGE -> R.string.cardata_kind_range
-        CarDataKind.ENERGY_IS_LOW -> R.string.cardata_kind_energy_low
-        CarDataKind.SPEED -> R.string.cardata_kind_speed
-        CarDataKind.ODOMETER -> R.string.cardata_kind_odometer
+    private fun kindLabel(kind: CarDataKind): StringResource = when (kind) {
+        CarDataKind.MODEL -> Res.string.cardata_kind_model
+        CarDataKind.ENERGY_PROFILE -> Res.string.cardata_kind_energy_profile
+        CarDataKind.BATTERY_PERCENT -> Res.string.cardata_kind_battery
+        CarDataKind.RANGE -> Res.string.cardata_kind_range
+        CarDataKind.ENERGY_IS_LOW -> Res.string.cardata_kind_energy_low
+        CarDataKind.SPEED -> Res.string.cardata_kind_speed
+        CarDataKind.ODOMETER -> Res.string.cardata_kind_odometer
     }
 }
 

@@ -10,10 +10,19 @@ import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ui.car.CarSoCViewModel
 import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_soc_carhardware_ask
+import org.julakali.chargeahead.shared.resources.car_soc_carhardware_asking
+import org.julakali.chargeahead.shared.resources.car_soc_carhardware_available
+import org.julakali.chargeahead.shared.resources.car_soc_carhardware_none
+import org.julakali.chargeahead.shared.resources.car_soc_current
+import org.julakali.chargeahead.shared.resources.car_soc_percent
+import org.julakali.chargeahead.shared.resources.car_soc_title
+import org.julakali.chargeahead.shared.resources.car_soc_unset
+import org.julakali.chargeahead.shared.Texts
 
 /**
  * Enter the state of charge manually while driving, in steps from high to
@@ -68,7 +77,7 @@ class SoCScreen(
         if (!hasCarFuelPermission) {
             itemList.addItem(
                 Row.Builder()
-                    .setTitle(carContext.getString(R.string.car_soc_carhardware_ask))
+                    .setTitle(Texts.string(Res.string.car_soc_carhardware_ask))
                     .setOnClickListener(::requestCarFuelPermission)
                     .build(),
             )
@@ -81,7 +90,7 @@ class SoCScreen(
             .setSingleList(itemList.build())
             .setHeader(
                 Header.Builder()
-                    .setTitle(carContext.getString(R.string.car_soc_title))
+                    .setTitle(Texts.string(Res.string.car_soc_title))
                     .setStartHeaderAction(Action.BACK)
                     .build(),
             )
@@ -91,13 +100,13 @@ class SoCScreen(
     /** "Current: 60%" — or a note that nothing has been entered yet. */
     private fun currentText(currentPercent: Double?): String {
         val percent = currentPercent
-            ?: return carContext.getString(R.string.car_soc_unset)
-        return carContext.getString(R.string.car_soc_current, percent.toInt().toString())
+            ?: return Texts.string(Res.string.car_soc_unset)
+        return Texts.string(Res.string.car_soc_current, percent.toInt().toString())
     }
 
     private fun buildRow(percent: Int): Row =
         Row.Builder()
-            .setTitle(carContext.getString(R.string.car_soc_percent, percent))
+            .setTitle(Texts.string(Res.string.car_soc_percent, percent))
             .setOnClickListener {
                 viewModel.onStepPicked(percent)
                 onPicked?.invoke(percent)
@@ -106,9 +115,9 @@ class SoCScreen(
 
     /** What the vehicle delivered on the last attempt. */
     private fun carHardwareText(carReading: String?): String = when {
-        permissionRequestPending -> carContext.getString(R.string.car_soc_carhardware_asking)
-        carReading != null -> carContext.getString(R.string.car_soc_carhardware_available, carReading)
-        else -> carContext.getString(R.string.car_soc_carhardware_none)
+        permissionRequestPending -> Texts.string(Res.string.car_soc_carhardware_asking)
+        carReading != null -> Texts.string(Res.string.car_soc_carhardware_available, carReading)
+        else -> Texts.string(Res.string.car_soc_carhardware_none)
     }
 
     /** Requested separately from location, and only here. */
