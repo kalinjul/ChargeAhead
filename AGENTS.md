@@ -380,6 +380,13 @@ depends on its shape stays unverified: whether Kotlin `object`s show up as
 `.shared`, whether `operator` becomes `operator_`, what Kotlin `enum`s are
 called in Swift.
 
+### On a Mac with Xcode — the whole app builds
+
+There the framework links and Swift compiles against the real header, so
+everything above that stays unverified on Linux gets checked: `xcodegen
+generate`, then the `xcodebuild` command from `iosApp/README.md`. It
+replaces `tools/check-swift.sh`.
+
 ## Before reporting something as done
 
 1. `./gradlew :androidApp:assembleDebug` completes — show the output, don't
@@ -394,7 +401,8 @@ called in Swift.
    `shared/` was touched. This is mandatory, not optional: otherwise
    `commonMain` is only checked against JVM and Android, and Kotlin/Native
    is stricter.
-4. `tools/check-swift.sh` completes, if Swift files were touched. If
+4. `tools/check-swift.sh` completes, if Swift files were touched (on a
+   Mac: the `xcodebuild` from `iosApp/README.md`). If
    `swiftc` isn't installed, the script exits with code 127 — then the
    Swift files are **also not** syntactically checked, and that must be
    reported as such.

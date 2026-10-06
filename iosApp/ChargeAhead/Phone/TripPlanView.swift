@@ -70,7 +70,7 @@ struct StopDetailView: View {
         List {
             Section {
                 Text(stop.site.name).font(.headline)
-                if let operatorName = stop.site.operator_ {
+                if let operatorName = stop.site.`operator` {
                     Text(operatorName).font(.subheadline)
                 }
                 Text(String(
