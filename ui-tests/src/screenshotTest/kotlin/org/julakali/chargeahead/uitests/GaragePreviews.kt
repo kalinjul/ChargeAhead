@@ -108,6 +108,11 @@ fun GarageEmptyDark() = Garage(GarageUiState(arrivalSocPercent = 10.0))
 fun GarageArrivalSheet() = SheetFrame { ArrivalSheet() }
 
 @PreviewTest
+@Preview(locale = "en", showBackground = true, widthDp = 411)
+@Composable
+fun GarageArrivalSheetEnglish() = SheetFrame { ArrivalSheet() }
+
+@PreviewTest
 @Preview(locale = "de", showBackground = true, widthDp = 411, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun GarageArrivalSheetDark() = SheetFrame { ArrivalSheet() }
