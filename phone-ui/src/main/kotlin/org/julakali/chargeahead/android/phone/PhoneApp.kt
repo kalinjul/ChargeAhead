@@ -57,6 +57,8 @@ import org.julakali.chargeahead.shared.resources.plan_vehicle_missing_action
 import org.julakali.chargeahead.shared.resources.trip_maps_sent
 import org.julakali.chargeahead.shared.resources.trip_stop_times
 import org.jetbrains.compose.resources.getString
+import org.julakali.chargeahead.shared.resources.phone_detail_no_navigation
+import org.julakali.chargeahead.android.phone.components.garageActionVisuals
 
 /**
  * The phone app: wires the map screen and the navigator's destinations
@@ -93,14 +95,20 @@ fun PhoneApp(librariesRes: Int) {
     )
     val clock = LocalNow.current
     val navigator = rememberPhoneNavigator()
+    var floatingControlsHeight by remember { mutableStateOf(0.dp) }
 
 
     fun collapseTripSheet() {
         scope.launch { sheetState.partialExpand() }
     }
 
+    fun openInMaps(link: String): Boolean =
+        context.openMapsLink(link).also { opened ->
+            if (!opened) snackbar.show(scope, Texts.string(Res.string.phone_detail_no_navigation))
+        }
+
     fun sendToMaps(link: String) {
-        if (context.openMapsLink(link)) snackbar.show(scope, Texts.string(Res.string.trip_maps_sent))
+        if (openInMaps(link)) snackbar.show(scope, Texts.string(Res.string.trip_maps_sent))
     }
 
     LocationHandshakeEffects(phoneAppViewModel, onSettled = homeViewModel::onLocateRequested)
@@ -136,8 +144,9 @@ fun PhoneApp(librariesRes: Int) {
             onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
             // Sending is committing: the plan becomes the active route, whose page is confirmation enough.
             onSendToMaps = { url ->
-                if (context.openMapsLink(url)) tripViewModel.commit()
+                if (openInMaps(url)) tripViewModel.commit()
             },
+            floatingControlsHeight = floatingControlsHeight,
             viewModel = tripViewModel,
         ) { peek ->
             // Just the map, built once and kept. Pages and sheets are a
@@ -165,6 +174,8 @@ fun PhoneApp(librariesRes: Int) {
                 // No vehicle? Planning reports it as an event.
                 onPick = tripViewModel::plan,
                 onClearTrip = tripViewModel::clear,
+                onOpenMaps = { link -> openInMaps(link) },
+                onFloatingControlsHeight = { floatingControlsHeight = it },
                 // No scaffold padding: the map draws under the status bar.
                 modifier = Modifier
                     .fillMaxSize()
@@ -245,8 +256,7 @@ private fun TripEventEffect(
             TripEvent.PlanReady -> onPlanReady()
             TripEvent.VehicleMissing -> scope.launch {
                 val result = snackbar.showSnackbar(
-                    message = getString(Res.string.plan_vehicle_missing),
-                    actionLabel = getString(Res.string.plan_vehicle_missing_action),
+                    garageActionVisuals(getString(Res.string.plan_vehicle_missing), getString(Res.string.plan_vehicle_missing_action)),
                 )
                 if (result == SnackbarResult.ActionPerformed) onOpenGarage()
             }

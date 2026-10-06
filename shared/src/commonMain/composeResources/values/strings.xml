@@ -216,7 +216,7 @@
     <string name="plan_search_hint">Search destination</string>
     <string name="plan_no_results">No results</string>
     <string name="plan_search_failed">Destination search unavailable</string>
-    <string name="plan_vehicle_missing">No car added — add one under “Car” in the menu.</string>
+    <string name="plan_vehicle_missing">No car in your garage yet.</string>
     <string name="plan_planning">Planning route…</string>
     <string name="plan_failed_no_route">No route found.</string>
     <string name="plan_failed_no_charger">No reachable fast charger after km %1$d — relax the filters or check the battery level.</string>

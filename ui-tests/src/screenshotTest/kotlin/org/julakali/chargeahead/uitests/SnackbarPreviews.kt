@@ -3,6 +3,7 @@ package org.julakali.chargeahead.uitests
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.SnackbarData
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarVisuals
@@ -13,6 +14,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
 import org.julakali.chargeahead.android.phone.components.AppSnackbar
+import org.julakali.chargeahead.android.phone.components.garageActionVisuals
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing_action
 import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.active_route_ended
 
@@ -33,14 +37,39 @@ private fun TripEnded() {
     }
 }
 
-/** A snackbar that is simply there, no host queue behind it. */
-private class StaticSnackbar(message: String) : SnackbarData {
-    override val visuals = object : SnackbarVisuals {
-        override val message = message
-        override val actionLabel: String? = null
-        override val withDismissAction = false
-        override val duration = SnackbarDuration.Short
+@PreviewTest
+@Preview(locale = "de", showBackground = true, widthDp = 400)
+@Composable
+fun SnackbarCarAction() = CarAction()
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true, widthDp = 400, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun SnackbarCarActionDark() = CarAction()
+
+@Composable
+private fun CarAction() {
+    PreviewScaffold {
+        Box(Modifier.width(400.dp)) {
+            AppSnackbar(
+                StaticSnackbar(
+                    garageActionVisuals(stringResource(Res.string.plan_vehicle_missing), stringResource(Res.string.plan_vehicle_missing_action)),
+                ),
+            )
+        }
     }
+}
+
+/** A snackbar that is simply there, no host queue behind it. */
+private class StaticSnackbar(override val visuals: SnackbarVisuals) : SnackbarData {
+    constructor(message: String) : this(
+        object : SnackbarVisuals {
+            override val message = message
+            override val actionLabel: String? = null
+            override val withDismissAction = false
+            override val duration = SnackbarDuration.Short
+        },
+    )
 
     override fun performAction() = Unit
     override fun dismiss() = Unit
