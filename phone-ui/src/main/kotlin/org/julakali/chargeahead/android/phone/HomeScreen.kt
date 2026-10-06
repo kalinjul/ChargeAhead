@@ -109,8 +109,10 @@ fun HomeRoute(
     /** `null` until the platform has been asked. */
     hasPermission: Boolean?,
     planningInProgress: Boolean,
-    /** The planned trip: its route replaces the browsing markers, its destination the search bar. */
+    /** The planned trip: its route replaces the browsing markers. */
     trip: TripPlan?,
+    /** Replaces the search bar; there even when no plan reached it. */
+    destination: Destination?,
     /** The trip sheet's peek, so the route fits above it. */
     mapBottomInset: Dp,
     onRequestPermission: () -> Unit,
@@ -148,6 +150,7 @@ fun HomeRoute(
         uiState = uiState,
         search = searchUi,
         trip = trip,
+        destination = destination,
         hasPermission = hasPermission,
         planningInProgress = planningInProgress,
         mapBottomInset = mapBottomInset,
@@ -188,6 +191,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     search: SearchUiState,
     trip: TripPlan?,
+    destination: Destination?,
     hasPermission: Boolean?,
     planningInProgress: Boolean,
     mapBottomInset: Dp,
@@ -325,6 +329,7 @@ fun HomeScreen(
                 HomeTopBar(
                     search = search,
                     trip = trip,
+                    destination = destination,
                     onExpandedChange = onSearchExpandedChange,
                     onQueryChange = onQueryChange,
                     onPick = onPick,
@@ -569,6 +574,7 @@ private fun HomePreview(
             uiState = uiState,
             search = SearchUiState(),
             trip = null,
+            destination = null,
             hasPermission = hasPermission,
             planningInProgress = planningInProgress,
             mapBottomInset = 0.dp,

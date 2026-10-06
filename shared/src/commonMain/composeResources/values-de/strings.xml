@@ -221,7 +221,9 @@
     <string name="plan_vehicle_missing">Noch kein Auto in der Garage.</string>
     <string name="plan_planning">Route wird geplant …</string>
     <string name="plan_failed_no_route">Keine Route gefunden.</string>
-    <string name="plan_failed_no_charger">Kein erreichbarer Schnelllader nach km %1$d — Filter lockern oder Ladestand prüfen.</string>
+    <string name="plan_failed_no_connection">Keine Verbindung zum Server.</string>
+    <string name="plan_failed_no_charger">Nach km %1$d ist kein Schnelllader mehr erreichbar.</string>
+    <string name="plan_failed_no_charger_at_start">Mit diesem Ladestand ist kein Schnelllader erreichbar.</string>
 
     <!-- Phone: trip plan -->
     <string name="trip_summary_distance">%1$d km</string>
@@ -247,6 +249,7 @@
     <string name="trip_destination">Ziel</string>
     <string name="trip_maps_sent">An Google Maps übergeben</string>
     <string name="trip_replan">Neu planen</string>
+    <string name="trip_unreachable_summary">Fahrt nicht planbar</string>
     <string name="trip_soc_edit">Ladestand am Start ändern</string>
     <string name="trip_arrival_soc_edit">Ladestand am Ziel ändern</string>
     <string name="trip_soc_confirm">Neu planen</string>

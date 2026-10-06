@@ -45,6 +45,7 @@ import org.julakali.chargeahead.shared.resources.car_route_direct
 import org.julakali.chargeahead.shared.resources.car_route_navigate
 import org.julakali.chargeahead.shared.resources.car_route_no_charger
 import org.julakali.chargeahead.shared.resources.car_route_no_route
+import org.julakali.chargeahead.shared.resources.plan_failed_no_connection
 import org.julakali.chargeahead.shared.resources.car_route_no_vehicle
 import org.julakali.chargeahead.shared.resources.car_route_planning
 import org.julakali.chargeahead.shared.resources.car_route_send_all
@@ -94,6 +95,7 @@ class RouteScreen(
         is TripPlanResult.Planned -> loadingTemplate(waitingForLocation = false)
         TripPlanResult.NoVehicle -> messageTemplate(Texts.string(Res.string.car_route_no_vehicle))
         TripPlanResult.NoRoute -> messageTemplate(Texts.string(Res.string.car_route_no_route))
+        TripPlanResult.NoConnection -> messageTemplate(Texts.string(Res.string.plan_failed_no_connection))
         is TripPlanResult.NoChargerInReach -> messageTemplate(
             Texts.string(Res.string.car_route_no_charger,
                 ChargeStopFormatter.distanceLabel(failure.afterKm),

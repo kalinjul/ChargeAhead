@@ -110,7 +110,7 @@ data class TripPlanOutcome(
     val plan: TripPlan?,
     val failure: TripPlanFailure?,
 ) {
-    enum class TripPlanFailure { NO_VEHICLE, NO_ROUTE, NO_CHARGER_IN_REACH }
+    enum class TripPlanFailure { NO_VEHICLE, NO_ROUTE, NO_CONNECTION, NO_CHARGER_IN_REACH }
 }
 
 /**
@@ -151,6 +151,7 @@ class TripPlanner {
                     is TripPlanResult.Planned -> TripPlanOutcome(result.plan, null)
                     is TripPlanResult.NoVehicle -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_VEHICLE)
                     is TripPlanResult.NoRoute -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_ROUTE)
+                    is TripPlanResult.NoConnection -> TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_CONNECTION)
                     is TripPlanResult.NoChargerInReach ->
                         TripPlanOutcome(null, TripPlanOutcome.TripPlanFailure.NO_CHARGER_IN_REACH)
                 }

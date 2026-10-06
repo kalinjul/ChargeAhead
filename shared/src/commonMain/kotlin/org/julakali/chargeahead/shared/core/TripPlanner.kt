@@ -18,6 +18,7 @@ import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.cancellableRunCatching
 
 /**
  * Plans a trip with the charging stops that get there soonest.
@@ -42,13 +43,11 @@ class TripPlanner(
         filters: ChargeFilters,
         networks: NetworkPreferences,
     ): TripPlanResult {
-        val route = try {
-            routeEngine.route(from, destination.position)
-        } catch (failure: Exception) {
-            null
-        } ?: return TripPlanResult.NoRoute
+        val route = cancellableRunCatching { routeEngine.route(from, destination.position) }
+            .getOrElse { return TripPlanResult.NoConnection }
+            ?: return TripPlanResult.NoRoute
 
-        val candidates = candidatesAlong(route, vehicle, networks)
+        val candidates = candidatesAlong(route, vehicle, networks) ?: return TripPlanResult.NoConnection
         val consumption = RoadLoadConsumption(vehicle)
         val totalKm = route.distanceKm
 
@@ -155,12 +154,14 @@ class TripPlanner(
     )
 
     /** Fetched in chunks, not as one polyline: the sources query radially with a result cap. */
-    private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
+    /** `null` when not one stretch of the route could be loaded. */
+    private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate>? {
         val measure = RouteMeasure(route)
         val cumulative = measure.cumulativeKm
         // Stops are planned at DC sites only, whatever AC inlets the car also has.
         val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }.filterTo(HashSet()) { it.isDc }
         val seen = LinkedHashMap<String, Candidate>()
+        var loadedAny = false
 
         var startIndex = 0
         while (startIndex < route.points.size - 1) {
@@ -171,11 +172,9 @@ class TripPlanner(
                 endIndex++
             }
             val area = PolylineArea(route.points.subList(startIndex, endIndex + 1), bufferKm = STOP_BUFFER_KM)
-            val sites = try {
-                repository.load(area, networks.selectedKeys())
-            } catch (failure: Exception) {
-                emptyList()
-            }
+            val sites = cancellableRunCatching { repository.load(area, networks.selectedKeys()) }
+                .onSuccess { loadedAny = true }
+                .getOrDefault(emptyList())
             for (site in sites) {
                 if (site.id in seen) continue
                 val power = site.connectors
@@ -194,6 +193,7 @@ class TripPlanner(
             }
             startIndex = endIndex
         }
+        if (!loadedAny) return null
         return seen.values.sortedBy { it.kmFromStart }
     }
 

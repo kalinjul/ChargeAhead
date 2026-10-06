@@ -11,6 +11,8 @@ import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.cancellableRunCatching
+import org.julakali.chargeahead.shared.domain.unreachable
 import org.julakali.chargeahead.shared.domain.planWithSettings
 
 /**
@@ -39,8 +41,17 @@ class PlanTripInteractor(
     )
 
     override suspend fun doWork(params: Params): TripPlanResult {
-        val result = planner.planWithSettings(vehicles, catalog, preferences, params.from, params.destination, params.startSocPercent, dispatchers.computation)
-        trips.update { it.planned(params.destination, (result as? TripPlanResult.Planned)?.plan) }
+        val result = cancellableRunCatching {
+            planner.planWithSettings(vehicles, catalog, preferences, params.from, params.destination, params.startSocPercent, dispatchers.computation)
+        }.getOrDefault(TripPlanResult.NoConnection)
+        val why = result.unreachable()
+        trips.update { state ->
+            when {
+                result is TripPlanResult.Planned -> state.planned(params.destination, result.plan)
+                why != null -> state.unreachable(params.destination, why)
+                else -> state.planDismissed()
+            }
+        }
         history.addRecentDestination(params.destination)
         return result
     }

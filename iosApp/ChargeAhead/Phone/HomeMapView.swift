@@ -184,6 +184,7 @@ struct HomeMapView: View {
         switch failure {
         case .noVehicle: return localized("ios_plan_vehicle_missing")
         case .noChargerInReach: return localized("ios_plan_failed_no_charger")
+        case .noConnection: return localized("plan_failed_no_connection")
         default: return localized("plan_failed_no_route")
         }
     }

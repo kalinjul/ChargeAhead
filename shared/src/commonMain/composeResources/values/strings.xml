@@ -219,7 +219,9 @@
     <string name="plan_vehicle_missing">No car in your garage yet.</string>
     <string name="plan_planning">Planning route…</string>
     <string name="plan_failed_no_route">No route found.</string>
-    <string name="plan_failed_no_charger">No reachable fast charger after km %1$d — relax the filters or check the battery level.</string>
+    <string name="plan_failed_no_connection">No connection to the server.</string>
+    <string name="plan_failed_no_charger">No fast charger in reach after km %1$d.</string>
+    <string name="plan_failed_no_charger_at_start">No fast charger in reach with this battery level.</string>
 
     <!-- Phone: trip plan -->
     <string name="trip_summary_distance">%1$d km</string>
@@ -245,6 +247,7 @@
     <string name="trip_destination">Destination</string>
     <string name="trip_maps_sent">Sent to Google Maps</string>
     <string name="trip_replan">Replan</string>
+    <string name="trip_unreachable_summary">Couldn't plan this trip</string>
     <string name="trip_soc_edit">Change starting battery level</string>
     <string name="trip_arrival_soc_edit">Change arrival battery level</string>
     <string name="trip_soc_confirm">Replan</string>

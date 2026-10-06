@@ -43,13 +43,13 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * The map with the trip sheet under it. The sheet only peeks while [trip] is
- * planned; [content] gets that peek so the map can keep the route above it.
+ * The map with the trip sheet under it. The sheet only peeks while there is a
+ * [trip]; [content] gets that peek so the map can keep the route above it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripSheetScaffold(
-    trip: TripUiState.Planned?,
+    trip: TripUiState.Sheet?,
     layout: TripListLayout,
     sheetState: SheetState,
     snackbar: SnackbarHostState,
@@ -101,6 +101,19 @@ fun TripSheetScaffold(
             },
             sheetContent = {
                 if (trip == null) return@BottomSheetScaffold
+                val socEditing = SocEditing(
+                    socInput = trip.socInput,
+                    arrivalSocInput = trip.arrivalSocInput,
+                    askedForReplan = trip.socAskedForReplan,
+                    onEditStartSoc = viewModel::onStartSocEditRequested,
+                    onSocInputChange = viewModel::onStartSocInputChanged,
+                    onSocConfirm = viewModel::onStartSocConfirmed,
+                    onSocDismiss = viewModel::onStartSocEditDismissed,
+                    onEditArrivalSoc = viewModel::onArrivalSocEditRequested,
+                    onArrivalSocInputChange = viewModel::onArrivalSocInputChanged,
+                    onArrivalSocConfirm = viewModel::onArrivalSocConfirmed,
+                    onArrivalSocDismiss = viewModel::onArrivalSocEditDismissed,
+                )
                 // The sheet's expanded position comes from this content's height, so the
                 // height stays constant; only the inner column follows the visible part.
                 Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f)) {
@@ -116,47 +129,43 @@ fun TripSheetScaffold(
                         ) {
                             BottomSheetDefaults.DragHandle()
                         }
-                        TripSummary(
-                            trip.plan,
-                            layout = layout,
-                            onToggleLayout = {
-                                if (expandable) {
-                                    // Tiles only exist collapsed: come down first, then slide.
-                                    scope.launch {
-                                        sheetState.partialExpand()
-                                        onLayoutChanged(TripListLayout.TILES)
-                                    }
-                                } else {
-                                    onLayoutChanged(TripListLayout.LIST)
-                                }
-                            },
-                            onReplan = onReplan,
-                        )
-                        TripSheetContent(
-                            plan = trip.plan,
-                            startSocPercent = trip.startSocPercent,
-                            layout = layout,
-                            selection = trip.selection,
-                            onToggleSelecting = viewModel::onSectionSelectingToggled,
-                            onPickPoint = viewModel::onSectionPointPicked,
-                            onSectionSent = viewModel::onSectionSent,
-                            onOpenStop = onOpenStop,
-                            onSendToMaps = { onSendToMaps(trip.mapsUrl) },
-                            socEditing = SocEditing(
-                                socInput = trip.socInput,
-                                arrivalSocInput = trip.arrivalSocInput,
-                                askedForReplan = trip.socAskedForReplan,
-                                onEditStartSoc = viewModel::onStartSocEditRequested,
-                                onSocInputChange = viewModel::onStartSocInputChanged,
-                                onSocConfirm = viewModel::onStartSocConfirmed,
-                                onSocDismiss = viewModel::onStartSocEditDismissed,
-                                onEditArrivalSoc = viewModel::onArrivalSocEditRequested,
-                                onArrivalSocInputChange = viewModel::onArrivalSocInputChanged,
-                                onArrivalSocConfirm = viewModel::onArrivalSocConfirmed,
-                                onArrivalSocDismiss = viewModel::onArrivalSocEditDismissed,
-                            ),
-                            modifier = Modifier.weight(1f),
-                        )
+                        when (trip) {
+                            is TripUiState.Unreachable -> {
+                                UnreachableTripSummary(onReplan = onReplan)
+                                UnreachableTripContent(trip, socEditing, Modifier.weight(1f))
+                            }
+                            is TripUiState.Planned -> {
+                                TripSummary(
+                                    trip.plan,
+                                    layout = layout,
+                                    onToggleLayout = {
+                                        if (expandable) {
+                                            // Tiles only exist collapsed: come down first, then slide.
+                                            scope.launch {
+                                                sheetState.partialExpand()
+                                                onLayoutChanged(TripListLayout.TILES)
+                                            }
+                                        } else {
+                                            onLayoutChanged(TripListLayout.LIST)
+                                        }
+                                    },
+                                    onReplan = onReplan,
+                                )
+                                TripSheetContent(
+                                    plan = trip.plan,
+                                    startSocPercent = trip.startSocPercent,
+                                    layout = layout,
+                                    selection = trip.selection,
+                                    onToggleSelecting = viewModel::onSectionSelectingToggled,
+                                    onPickPoint = viewModel::onSectionPointPicked,
+                                    onSectionSent = viewModel::onSectionSent,
+                                    onOpenStop = onOpenStop,
+                                    onSendToMaps = { onSendToMaps(trip.mapsUrl) },
+                                    socEditing = socEditing,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
                     }
                 }
             },

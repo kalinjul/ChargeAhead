@@ -14,7 +14,9 @@ import org.julakali.chargeahead.shared.domain.mapsUrl
 import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.reportedByCar
+import org.julakali.chargeahead.shared.domain.SOC_RANGE
 import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.UnreachableTrip
 import org.julakali.chargeahead.shared.domain.invoke
 import org.julakali.chargeahead.shared.domain.usecases.DismissPlannedTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
@@ -24,7 +26,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -37,21 +38,44 @@ sealed interface TripUiState {
 
     data object Planning : TripUiState
 
+    /** What the trip sheet shows: a plan, or why there is none, with both levels editable either way. */
+    sealed interface Sheet : TripUiState {
+        val destination: Destination
+        val startSocPercent: Double?
+
+        /** The quick charge-level editor's input; `null` while it is closed. */
+        val socInput: String?
+
+        /** The arrival-level editor's input; `null` while it is closed. */
+        val arrivalSocInput: String?
+
+        /** The start-level editor opened because "Neu planen" had no car reading to go on. */
+        val socAskedForReplan: Boolean
+    }
+
     data class Planned(
         val plan: TripPlan,
         val startPosition: LatLon?,
-        val startSocPercent: Double?,
+        override val startSocPercent: Double?,
         val selection: SectionSelection = SectionSelection(),
-        /** The quick charge-level editor's input; `null` while it is closed. */
-        val socInput: String? = null,
-        /** The arrival-level editor's input; `null` while it is closed. */
-        val arrivalSocInput: String? = null,
-        /** The start-level editor opened because "Neu planen" had no car reading to go on. */
-        val socAskedForReplan: Boolean = false,
-    ) : TripUiState {
+        override val socInput: String? = null,
+        override val arrivalSocInput: String? = null,
+        override val socAskedForReplan: Boolean = false,
+    ) : Sheet {
+        override val destination: Destination get() = plan.destination
+
         /** What "An Maps senden" hands over: the picked section, or the whole trip. */
         val mapsUrl: String get() = plan.mapsUrl(startPosition, selection)
     }
+
+    data class Unreachable(
+        override val destination: Destination,
+        val why: UnreachableTrip,
+        override val startSocPercent: Double?,
+        override val socInput: String? = null,
+        override val arrivalSocInput: String? = null,
+        override val socAskedForReplan: Boolean = false,
+    ) : Sheet
 }
 
 /**
@@ -60,14 +84,13 @@ sealed interface TripUiState {
  */
 sealed interface TripEvent {
 
-    /** A plan is ready. */
-    data object PlanReady : TripEvent
+    /** The sheet has something to show: a plan, or why there is none. */
+    data object SheetReady : TripEvent
 
     data object VehicleMissing : TripEvent
 
-    data class NoChargerInReach(val afterKm: Double) : TripEvent
-
-    data object NoRoute : TripEvent
+    /** Planning failed outside the planner's own outcomes, e.g. the backend was unreachable. */
+    data object NoConnection : TripEvent
 
     /** The plan went to Maps and is the committed trip now. */
     data object TripCommitted : TripEvent
@@ -95,7 +118,7 @@ class TripViewModel(
     val event: StateFlow<TripEvent?> = events.asStateFlow()
 
     val uiState: StateFlow<TripUiState> = combine(
-        trips.state.map { it.planned },
+        trips.state,
         isPlanning,
         selection,
         socEditor,
@@ -103,9 +126,20 @@ class TripViewModel(
         vehicles.manualSocPercent,
         feature.currentFix,
         socAskedForReplan,
-    ) { plan, planning, sectionSelection, socInput, arrivalSocInput, socPercent, fix, askedForReplan ->
+    ) { trip, planning, sectionSelection, socInput, arrivalSocInput, socPercent, fix, askedForReplan ->
+        val plan = trip.planned
+        val unreachable = trip.unreachable
+        val destination = trip.destination
         when {
             planning -> TripUiState.Planning
+            unreachable != null && destination != null -> TripUiState.Unreachable(
+                destination = destination,
+                why = unreachable,
+                startSocPercent = socPercent,
+                socInput = socInput,
+                arrivalSocInput = arrivalSocInput,
+                socAskedForReplan = askedForReplan,
+            )
             plan == null -> TripUiState.NoPlan
             else -> TripUiState.Planned(
                 plan = plan,
@@ -133,7 +167,7 @@ class TripViewModel(
             launch { socPercent?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)) } }
             planTrip(PlanTripInteractor.Params(from, destination, startSocPercent = socPercent))
                 .onSuccess(::onPlanned)
-                .onFailure { events.value = TripEvent.NoRoute }
+                .onFailure { events.value = TripEvent.NoConnection }
         }
     }
 
@@ -150,12 +184,7 @@ class TripViewModel(
     }
 
     private fun onPlanned(result: TripPlanResult) {
-        events.value = when (result) {
-            is TripPlanResult.Planned -> TripEvent.PlanReady
-            is TripPlanResult.NoVehicle -> TripEvent.VehicleMissing
-            is TripPlanResult.NoChargerInReach -> TripEvent.NoChargerInReach(result.afterKm)
-            is TripPlanResult.NoRoute -> TripEvent.NoRoute
-        }
+        events.value = if (result == TripPlanResult.NoVehicle) TripEvent.VehicleMissing else TripEvent.SheetReady
     }
 
     /**
@@ -192,7 +221,7 @@ class TripViewModel(
      * where we are; otherwise ask for the level first, and the confirm plans.
      */
     fun onReplanRequested() {
-        val destination = trips.state.value.planned?.destination ?: return
+        val destination = trips.state.value.currentDestination ?: return
         if (feature.currentEnergy.value.reportedByCar) {
             plan(destination)
         } else {
@@ -212,8 +241,8 @@ class TripViewModel(
 
     /** Re-plans the same destination from the charge level just entered. */
     fun onStartSocConfirmed() {
-        val socPercent = socEditor.value?.toIntOrNull()?.takeIf { it in 1..100 } ?: return
-        val destination = trips.state.value.planned?.destination ?: return
+        val socPercent = socEditor.value?.toIntOrNull()?.takeIf { it in SOC_RANGE } ?: return
+        val destination = trips.state.value.currentDestination ?: return
         socEditor.value = null
         plan(destination, socPercent.toDouble())
     }
@@ -242,7 +271,7 @@ class TripViewModel(
         viewModelScope.launch {
             replanWithArrivalSoc(ReplanWithArrivalSocInteractor.Params(socPercent.toDouble(), from))
                 .onSuccess { result -> result?.let(::onPlanned) }
-                .onFailure { events.value = TripEvent.NoRoute }
+                .onFailure { events.value = TripEvent.NoConnection }
         }
     }
 

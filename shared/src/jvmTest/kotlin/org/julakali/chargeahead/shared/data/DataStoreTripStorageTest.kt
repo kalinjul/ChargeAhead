@@ -17,6 +17,7 @@ import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteSegment
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripState
+import org.julakali.chargeahead.shared.domain.UnreachableTrip
 import org.julakali.chargeahead.shared.persistenceJson
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
@@ -38,6 +39,16 @@ class DataStoreTripStorageTest {
         storage.write(state)
 
         assertEquals(state, DataStoreTripStorage(preferences).read())
+    }
+
+    @Test
+    fun `a trip no plan reached is not kept across a restart`() = runBlocking {
+        storage.write(TripState(destination = munich, committed = committed).unreachable(munich, UnreachableTrip.NoConnection))
+
+        val restored = DataStoreTripStorage(preferences).read()
+
+        assertNull(restored?.unreachable)
+        assertEquals(committed, restored?.committed)
     }
 
     /** No mirror types: what is on disk is the domain types' own JSON. */

@@ -195,7 +195,7 @@ fun HomeSearchBar(
 /** Replaces the bar while a trip is shown. */
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, onTitleClick: () -> Unit, standalone: Boolean = true) {
+fun DestinationHeader(title: String, subtitle: String?, onClear: () -> Unit, onTitleClick: () -> Unit, standalone: Boolean = true) {
     PillContainer(standalone) {
         // Material's subtitle app bar is still expressive-only in 1.4.0, so the title slot stacks both lines.
         TopAppBar(
@@ -204,7 +204,7 @@ fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, onTi
                 Surface(onClick = onTitleClick, shape = CircleShape, color = Color.Transparent) {
                     Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
                         Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(
+                        if (subtitle != null) Text(
                             subtitle,
                             style = MaterialTheme.typography.bodyMedium.tabular,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,

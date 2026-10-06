@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared.domain
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,20 +20,28 @@ data class TripState(
     val destination: Destination? = null,
     val planned: TripPlan? = null,
     val committed: CommittedTrip? = null,
+    /** No plan reached [destination]. Not kept across a restart: the level or the connection will have changed. */
+    @Transient val unreachable: UnreachableTrip? = null,
 ) {
 
-    /** Without a [plan] the previous one stays. */
-    fun planned(destination: Destination, plan: TripPlan?): TripState =
-        copy(destination = destination, planned = plan ?: planned)
+    fun planned(destination: Destination, plan: TripPlan): TripState =
+        copy(destination = destination, planned = plan, unreachable = null)
+
+    /** The old plan goes: it was made for a level or a destination that no longer holds. */
+    fun unreachable(destination: Destination, why: UnreachableTrip): TripState =
+        copy(destination = destination, planned = null, unreachable = why)
+
+    /** The plan's destination, or the one no plan reached. */
+    val currentDestination: Destination? get() = planned?.destination ?: destination.takeIf { unreachable != null }
 
     /** Replaces the committed trip and takes the planned one off the map. */
     fun committed(trip: CommittedTrip): TripState =
-        copy(destination = trip.plan.destination, planned = null, committed = trip)
+        copy(destination = trip.plan.destination, planned = null, committed = trip, unreachable = null)
 
     /** A committed trip planned anew; what is on the map stays. */
     fun replanned(trip: CommittedTrip): TripState = copy(committed = trip)
 
-    fun planDismissed(): TripState = copy(planned = null)
+    fun planDismissed(): TripState = copy(planned = null, unreachable = null)
 
     fun ended(): TripState = copy(committed = null)
 }
