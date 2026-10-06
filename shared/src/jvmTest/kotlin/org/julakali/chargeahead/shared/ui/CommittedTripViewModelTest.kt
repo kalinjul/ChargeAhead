@@ -30,6 +30,7 @@ import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
+import org.julakali.chargeahead.shared.domain.UnreachableTrip
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
@@ -62,6 +63,7 @@ class CommittedTripViewModelTest {
     private val trips = TripRepository()
     private var plannedFrom: LatLon? = null
     private var plannedSoc: Double? = null
+    private var outcome: ((LatLon) -> TripPlanResult)? = null
 
     private fun plan(from: LatLon) = TripPlan(
         route = Route(listOf(from, muenchen.position), distanceKm = 776.0, durationMinutes = 470.0),
@@ -84,7 +86,7 @@ class CommittedTripViewModelTest {
         ): TripPlanResult {
             plannedFrom = from
             plannedSoc = startSocPercent
-            return TripPlanResult.Planned(plan(from))
+            return outcome?.invoke(from) ?: TripPlanResult.Planned(plan(from))
         }
     }
 
@@ -160,6 +162,35 @@ class CommittedTripViewModelTest {
         assertEquals(60.0, stored.startSocPercent)
         assertEquals(42L, stored.committedAtEpochMillis)
         assertNull(trips.state.value.planned, "the re-plan is committed, not left on the home screen")
+    }
+
+    @Test
+    fun `a failed replan says why and keeps the trip`() = runBlocking {
+        commitFromHamburg()
+        feature.locate()
+        val viewModel = viewModel()
+        viewModel.uiState.first { it.trip != null }
+
+        outcome = { TripPlanResult.NoChargerInReach(afterKm = 0.0) }
+        viewModel.replan(socPercent = 5.0)
+        assertEquals(CommittedTripEvent.ReplanFailed(UnreachableTrip.NoCharger(afterKm = 0.0)), withTimeout(5_000) { viewModel.event.first { it != null } })
+        viewModel.onEventHandled()
+
+        outcome = { TripPlanResult.NoRoute }
+        viewModel.replan()
+        assertEquals(CommittedTripEvent.ReplanFailed(UnreachableTrip.NoRoute), withTimeout(5_000) { viewModel.event.first { it != null } })
+        viewModel.onEventHandled()
+
+        outcome = { TripPlanResult.NoConnection }
+        viewModel.replan()
+        assertEquals(CommittedTripEvent.ReplanFailed(UnreachableTrip.NoConnection), withTimeout(5_000) { viewModel.event.first { it != null } })
+        viewModel.onEventHandled()
+
+        vehicles.setVehicle(null)
+        viewModel.replan()
+        assertEquals(CommittedTripEvent.VehicleMissing, withTimeout(5_000) { viewModel.event.first { it != null } })
+
+        assertEquals(plan(hamburg), trips.state.value.committed?.plan)
     }
 
     @Test

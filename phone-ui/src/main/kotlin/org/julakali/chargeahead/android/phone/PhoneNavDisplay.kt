@@ -135,6 +135,7 @@ fun PhoneNavDisplay(
                             navigator.back()
                             onTripEnded()
                         },
+                        onOpenGarage = { navigator.open(Garage) },
                         modifier = Modifier.fillMaxSize().padding(pagePadding),
                     )
                 }
