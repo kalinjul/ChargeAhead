@@ -356,4 +356,16 @@
         <item quantity="one">%1$d Ladepunkt</item>
         <item quantity="other">%1$d Ladepunkte</item>
     </plurals>
+
+    <!-- iOS only: wording that differs from Android (CarPlay, no drawer) -->
+    <string name="ios_home_map_placeholder">Kartenplatzhalter — Karten-SDK folgt</string>
+    <string name="ios_home_pill_plan">Planen</string>
+    <string name="ios_home_diagnostics">Info</string>
+    <string name="ios_plan_title">Route planen</string>
+    <string name="ios_plan_vehicle_missing">Kein Fahrzeug angelegt.</string>
+    <string name="ios_plan_failed_no_charger">Kein erreichbarer Schnelllader auf der Strecke.</string>
+    <string name="ios_trip_summary_time">%1$s unterwegs · davon %2$s laden</string>
+    <string name="ios_trip_summary_arrival">Ankunft mit %1$d%</string>
+    <string name="ios_cn_relaxed_note">Filter zu streng — sie wurden gelockert.</string>
+    <string name="ios_hint_car_ui">Die eigentliche Bedienung findet während der Fahrt in CarPlay statt. Diese Ansicht dient nur zur Kontrolle am Telefon.</string>
 </resources>

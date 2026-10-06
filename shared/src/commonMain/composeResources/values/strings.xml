@@ -355,4 +355,16 @@
         <item quantity="one">%1$d charge point</item>
         <item quantity="other">%1$d charge points</item>
     </plurals>
+
+    <!-- iOS only: wording that differs from Android (CarPlay, no drawer) -->
+    <string name="ios_home_map_placeholder">Map placeholder — map SDK to follow</string>
+    <string name="ios_home_pill_plan">Plan</string>
+    <string name="ios_home_diagnostics">Info</string>
+    <string name="ios_plan_title">Plan route</string>
+    <string name="ios_plan_vehicle_missing">No car added.</string>
+    <string name="ios_plan_failed_no_charger">No reachable fast charger on the route.</string>
+    <string name="ios_trip_summary_time">%1$s on the road · %2$s of it charging</string>
+    <string name="ios_trip_summary_arrival">Arrive with %1$d%</string>
+    <string name="ios_cn_relaxed_note">Filters too strict — they were relaxed.</string>
+    <string name="ios_hint_car_ui">PowerTrip is meant to be used in CarPlay while driving. This view is only for checking things on your phone.</string>
 </resources>

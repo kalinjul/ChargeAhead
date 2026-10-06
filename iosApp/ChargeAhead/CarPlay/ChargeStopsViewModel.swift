@@ -48,22 +48,18 @@ final class ChargeStopsViewModel: ObservableObject {
 extension ChargeStopsViewModel {
 
     /// What to show when there's nothing in the list.
-    var statusKey: String {
+    var statusText: String {
         switch state.phase {
         case .waitingForLocation:
-            return "status_waiting_for_location"
+            return localized("phone_status_waiting")
         case .loading:
-            return "status_loading"
+            return localized("phone_status_loading")
         case .ready:
-            return "status_no_stops"
+            return localized("phone_status_no_stops")
         case .failed:
             return state.failure == .locationUnavailable
-                ? "status_location_unavailable"
-                : "status_sites_unavailable"
+                ? localized("phone_status_location_unavailable")
+                : localized("phone_status_sites_unavailable")
         }
-    }
-
-    var statusText: String {
-        NSLocalizedString(statusKey, comment: "")
     }
 }

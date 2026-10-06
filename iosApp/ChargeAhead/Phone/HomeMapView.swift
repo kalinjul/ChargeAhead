@@ -47,10 +47,10 @@ final class PhoneSession: ObservableObject {
 
 extension HomeUiState {
     /// Location status for the map's caption; `nil` when there is nothing to say.
-    var statusKey: String? {
-        if locationUnavailable { return "status_location_unavailable" }
-        if searchingLocation { return "status_waiting_for_location" }
-        if loadingSites { return "status_loading" }
+    var statusText: String? {
+        if locationUnavailable { return localized("phone_status_location_unavailable") }
+        if searchingLocation { return localized("phone_status_waiting") }
+        if loadingSites { return localized("phone_status_loading") }
         return nil
     }
 }
@@ -76,16 +76,16 @@ struct HomeMapView: View {
 
                     VStack {
                         VStack(spacing: 2) {
-                            Text(NSLocalizedString("home_map_placeholder", comment: ""))
+                            Text(localized("ios_home_map_placeholder"))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
-                            if let status = state.statusKey {
-                                Text(NSLocalizedString(status, comment: ""))
+                            if let status = state.statusText {
+                                Text(status)
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
                             }
                             if planningInProgress {
-                                ProgressView(NSLocalizedString("plan_planning", comment: ""))
+                                ProgressView(localized("plan_planning"))
                                     .padding(.top, 8)
                             }
                             if let failure = planFailureText {
@@ -104,7 +104,7 @@ struct HomeMapView: View {
                                 showPlanSheet = true
                             } label: {
                                 Label(
-                                    NSLocalizedString("home_pill_plan", comment: ""),
+                                    localized("ios_home_pill_plan"),
                                     systemImage: "arrow.triangle.turn.up.right.diamond.fill"
                                 )
                                 .padding(.horizontal, 4)
@@ -115,7 +115,7 @@ struct HomeMapView: View {
                                 showChargeNow = true
                             } label: {
                                 Label(
-                                    NSLocalizedString("home_pill_charge_now", comment: ""),
+                                    localized("home_pill_charge_now"),
                                     systemImage: "bolt.fill"
                                 )
                                 .padding(.horizontal, 4)
@@ -143,10 +143,10 @@ struct HomeMapView: View {
                     }
                 }
             }
-            .navigationTitle(NSLocalizedString("app_name", comment: ""))
+            .navigationTitle(localized("app_name"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                NavigationLink(NSLocalizedString("home_diagnostics", comment: "")) {
+                NavigationLink(localized("ios_home_diagnostics")) {
                     ContentView()
                 }
             }
@@ -164,7 +164,7 @@ struct HomeMapView: View {
 
     private func startPlanning(to destination: Destination, from position: LatLon?) {
         guard let position = position else {
-            planFailureText = NSLocalizedString("home_no_position", comment: "")
+            planFailureText = localized("home_no_position")
             return
         }
         planningInProgress = true
@@ -175,16 +175,16 @@ struct HomeMapView: View {
             if let planned = outcome?.plan {
                 plan = planned
             } else {
-                planFailureText = NSLocalizedString(failureKey(outcome?.failure), comment: "")
+                planFailureText = failureText(outcome?.failure)
             }
         }
     }
 
-    private func failureKey(_ failure: TripPlanOutcome.TripPlanFailure?) -> String {
+    private func failureText(_ failure: TripPlanOutcome.TripPlanFailure?) -> String {
         switch failure {
-        case .noVehicle: return "plan_vehicle_missing"
-        case .noChargerInReach: return "plan_failed_no_charger"
-        default: return "plan_failed_no_route"
+        case .noVehicle: return localized("ios_plan_vehicle_missing")
+        case .noChargerInReach: return localized("ios_plan_failed_no_charger")
+        default: return localized("plan_failed_no_route")
         }
     }
 }
@@ -284,11 +284,11 @@ struct PlanSheetView: View {
                     }
                 }
             }
-            .searchable(text: $query, prompt: NSLocalizedString("plan_search_hint", comment: ""))
+            .searchable(text: $query, prompt: localized("plan_search_hint"))
             .onChange(of: query) { changed in
                 search.onQueryChanged(query: changed)
             }
-            .navigationTitle(NSLocalizedString("plan_title", comment: ""))
+            .navigationTitle(localized("ios_plan_title"))
             .navigationBarTitleDisplayMode(.inline)
         }
     }
@@ -309,15 +309,15 @@ struct ChargeNowView: View {
                 List {
                     switch onEnum(of: state) {
                     case .noPosition:
-                        Text(NSLocalizedString("home_no_position", comment: ""))
+                        Text(localized("home_no_position"))
                     case .loading:
-                        ProgressView(NSLocalizedString("cn_loading", comment: ""))
+                        ProgressView(localized("cn_loading"))
                     case .ready(let ready):
                         ChargeNowRows(result: ready.result)
                     }
                 }
             }
-            .navigationTitle(NSLocalizedString("cn_title", comment: ""))
+            .navigationTitle(localized("cn_title"))
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 chargeNow.onSheetOpened()
@@ -331,7 +331,7 @@ private struct ChargeNowRows: View {
 
     var body: some View {
         if !result.relaxed.isEmpty {
-            Text(NSLocalizedString("cn_relaxed_note", comment: ""))
+            Text(localized("ios_cn_relaxed_note"))
                 .font(.footnote)
                 .foregroundStyle(.red)
         }
@@ -349,7 +349,7 @@ private struct ChargeNowRows: View {
             }
         }
         if result.candidates.isEmpty {
-            Text(NSLocalizedString("cn_empty", comment: ""))
+            Text(localized("cn_empty"))
         }
     }
 }

@@ -43,10 +43,10 @@ class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
 
     private func makeListTemplate() -> CPListTemplate {
         let template = CPListTemplate(
-            title: NSLocalizedString("car_list_title", comment: ""),
+            title: localized("phone_title_stops"),
             sections: [makeSection()]
         )
-        template.emptyViewTitleVariants = [NSLocalizedString("car_list_title", comment: "")]
+        template.emptyViewTitleVariants = [localized("phone_title_stops")]
         template.emptyViewSubtitleVariants = [viewModel.statusText]
         return template
     }

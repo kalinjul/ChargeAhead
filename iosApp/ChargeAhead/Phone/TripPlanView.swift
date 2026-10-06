@@ -13,14 +13,14 @@ struct TripPlanView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("\(Int(plan.route.distanceKm.rounded())) km")
                         .font(.title2.bold())
-                    Text(String(
-                        format: NSLocalizedString("trip_summary_time_fmt", comment: ""),
+                    Text(localized(
+                        "ios_trip_summary_time",
                         minutesText(plan.totalMinutes),
                         minutesText(plan.chargeMinutes)
                     ))
                     .font(.subheadline)
-                    Text(String(
-                        format: NSLocalizedString("trip_summary_arrival_fmt", comment: ""),
+                    Text(localized(
+                        "ios_trip_summary_arrival",
                         Int(plan.arrivalSocPercent.rounded())
                     ))
                     .font(.footnote)
@@ -28,7 +28,7 @@ struct TripPlanView: View {
                 }
             }
 
-            Section(NSLocalizedString("trip_stops_heading", comment: "")) {
+            Section(localized("phone_title_stops")) {
                 ForEach(Array(plan.stops.enumerated()), id: \.element.site.id) { index, stop in
                     NavigationLink {
                         StopDetailView(stop: stop)
@@ -53,7 +53,7 @@ struct TripPlanView: View {
                         waypoints: waypoints
                     ))
                 } label: {
-                    Label(NSLocalizedString("trip_send_maps", comment: ""), systemImage: "map.fill")
+                    Label(localized("trip_send_maps"), systemImage: "map.fill")
                 }
             }
         }
@@ -73,8 +73,8 @@ struct StopDetailView: View {
                 if let operatorName = stop.site.`operator` {
                     Text(operatorName).font(.subheadline)
                 }
-                Text(String(
-                    format: NSLocalizedString("detail_plan_fmt", comment: ""),
+                Text(localized(
+                    "detail_kv_charge_value",
                     Int(stop.chargeMinutes.rounded()),
                     Int(stop.arrivalSocPercent.rounded()),
                     Int(stop.departureSocPercent.rounded())
@@ -85,11 +85,11 @@ struct StopDetailView: View {
                 Button {
                     openInMaps(MapsHandoff.shared.navigateUrl(target: stop.site.position))
                 } label: {
-                    Label(NSLocalizedString("phone_detail_navigate", comment: ""), systemImage: "map.fill")
+                    Label(localized("phone_detail_navigate"), systemImage: "map.fill")
                 }
             }
         }
-        .navigationTitle(NSLocalizedString("detail_title", comment: ""))
+        .navigationTitle(localized("detail_title"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

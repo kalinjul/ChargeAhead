@@ -9,7 +9,8 @@ ChargeAhead/
 ├── AppDelegate.swift              Scene routing: phone vs. CarPlay; SharedEntry creates features
 ├── Info.plist                     UIApplicationSceneManifest, permission texts
 ├── ChargeAhead.entitlements       com.apple.developer.carplay-charging
-├── de.lproj/Localizable.strings   German text for the phone UI and CarPlay
+├── Localized.swift                localized("key"): text from shared's composeResources
+├── {en,de}.lproj/InfoPlist.strings location permission text, the one native string
 ├── CarPlay/
 │   ├── CarPlaySceneDelegate.swift CPTemplateApplicationSceneDelegate, CPListTemplate
 │   └── ChargeStopsViewModel.swift corridor list for CarPlay (ChargeStopsWatcher)

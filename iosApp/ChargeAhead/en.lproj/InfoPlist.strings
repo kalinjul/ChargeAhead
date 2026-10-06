@@ -1,0 +1,2 @@
+/* Read by iOS before any Kotlin runs, so it can't come from shared's composeResources. */
+"NSLocationWhenInUseUsageDescription" = "PowerTrip needs your location to show reachable charging stops in your direction of travel.";
