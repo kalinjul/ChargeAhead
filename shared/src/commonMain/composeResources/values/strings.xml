@@ -336,4 +336,23 @@
     <string name="detail_connector_value">%1$d× CCS · %2$d kW</string>
     <string name="detail_navigate_maps">Navigate in Google Maps</string>
 
+
+    <!-- Shared formatter: car rows, phone sheets, CarPlay -->
+    <string name="fmt_arrival_about">Arrival ~%1$s%</string>
+    <string name="fmt_reachable">Reachable</string>
+    <string name="fmt_marginal">Tight</string>
+    <string name="fmt_unreachable">Out of range</string>
+    <string name="fmt_charge_points_unknown">Charge points unknown</string>
+    <string name="fmt_charge_point">Charge point</string>
+    <string name="fmt_status_unknown">Status unknown</string>
+    <string name="fmt_available_of">%1$d of %2$d free</string>
+    <string name="fmt_out_of_order">%1$d out of order</string>
+    <string name="fmt_after_distance">After %1$s</string>
+    <string name="fmt_charge_to">%1$s charging to %2$s%</string>
+    <string name="fmt_connector_type2">Type 2</string>
+    <string name="fmt_connector_unknown">Unknown</string>
+    <plurals name="fmt_charge_points">
+        <item quantity="one">%1$d charge point</item>
+        <item quantity="other">%1$d charge points</item>
+    </plurals>
 </resources>
