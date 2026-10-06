@@ -7,7 +7,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.getBoundsInRoot
 import org.julakali.chargeahead.android.phone.AddCarScreen
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.ui.AddCarUiState
@@ -17,6 +16,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.addcar_custom
+import org.julakali.chargeahead.shared.resources.addcar_custom_default_name
+import org.julakali.chargeahead.shared.resources.addcar_custom_named
 
 @RunWith(RobolectricTestRunner::class)
 class AddCarScreenTest {
@@ -35,7 +38,7 @@ class AddCarScreenTest {
         search(AddCarUiState(query = "Hyun", matches = listOf(ioniq)))
 
         val hit = compose.onNodeWithText(ioniq.name).getBoundsInRoot()
-        val own = compose.onNodeWithText(compose.string(R.string.addcar_custom_named, "Hyun")).getBoundsInRoot()
+        val own = compose.onNodeWithText(compose.string(Res.string.addcar_custom_named, "Hyun")).getBoundsInRoot()
         assertTrue(own.top > hit.top)
     }
 
@@ -43,8 +46,8 @@ class AddCarScreenTest {
     fun `without a hit the own car is all there is, under the searched name`() {
         search(AddCarUiState(query = " Fiat 500e "))
 
-        assertEquals(1, compose.onAllNodesWithText(compose.string(R.string.addcar_custom_named, "Fiat 500e")).fetchSemanticsNodes().size)
-        compose.onNodeWithText(compose.string(R.string.addcar_custom_named, "Fiat 500e")).performClick()
+        assertEquals(1, compose.onAllNodesWithText(compose.string(Res.string.addcar_custom_named, "Fiat 500e")).fetchSemanticsNodes().size)
+        compose.onNodeWithText(compose.string(Res.string.addcar_custom_named, "Fiat 500e")).performClick()
 
         assertEquals("Fiat 500e", created)
     }
@@ -53,8 +56,8 @@ class AddCarScreenTest {
     fun `an empty search offers an own car under a default name`() {
         search(AddCarUiState())
 
-        compose.onNodeWithText(compose.string(R.string.addcar_custom)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.addcar_custom)).performClick()
 
-        assertEquals(compose.string(R.string.addcar_custom_default_name), created)
+        assertEquals(compose.string(Res.string.addcar_custom_default_name), created)
     }
 }

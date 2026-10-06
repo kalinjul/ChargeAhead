@@ -13,7 +13,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.Icons
@@ -27,6 +27,9 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.map_compass
+import org.julakali.chargeahead.shared.resources.map_zoom_hint
 
 /** The bar's height: Material's search field is 56dp; the destination header matches it. */
 val SEARCH_BAR_HEIGHT = 56.dp
@@ -75,7 +78,7 @@ fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface) {
 fun ZoomHintChip(onClick: () -> Unit) {
     ElevatedAssistChip(
         onClick = onClick,
-        label = { Text(stringResource(R.string.map_zoom_hint)) },
+        label = { Text(stringResource(Res.string.map_zoom_hint)) },
         leadingIcon = { Icon(Icons.Outlined.ZoomIn, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
     )
 }
@@ -120,7 +123,7 @@ fun CompassButton(bearing: () -> Float, onClick: () -> Unit) {
     RoundIconButton(onClick = onClick) {
         Icon(
             imageVector = Icons.Filled.Navigation,
-            contentDescription = stringResource(R.string.map_compass),
+            contentDescription = stringResource(Res.string.map_compass),
             tint = CompassRed,
             // graphicsLayer, so a turning map only invalidates the draw.
             modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -bearing() },

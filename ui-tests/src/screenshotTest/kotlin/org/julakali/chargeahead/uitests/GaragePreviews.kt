@@ -13,10 +13,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
 import org.julakali.chargeahead.android.phone.AddCarScreen
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.ChargeLevelKind
 import org.julakali.chargeahead.android.phone.components.ChargeLevelSheetContent
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import org.julakali.chargeahead.android.phone.CarDataDebugScreen
 import org.julakali.chargeahead.android.phone.GarageScreen
 import org.julakali.chargeahead.android.phone.VehicleSettingsActions
@@ -30,6 +29,12 @@ import org.julakali.chargeahead.shared.ui.CarDataUiState
 import org.julakali.chargeahead.shared.ui.GarageUiState
 import org.julakali.chargeahead.shared.ui.VehicleSettingsUiState
 import org.julakali.chargeahead.shared.ui.VehicleEditor
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.garage_arrival_sheet_hint
+import org.julakali.chargeahead.shared.resources.garage_arrival_title
+import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
+import org.julakali.chargeahead.shared.resources.soc_dialog_title
+import org.julakali.chargeahead.shared.resources.trip_soc_confirm
 
 private val Id3 = VehicleProfile("VW ID.3 Pro S", 77.0, 16.5, setOf(ConnectorType.CCS2, ConnectorType.TYPE2), dcPeakPowerKw = 175.0, modelId = "id3", id = "a")
 private val Model3 = VehicleProfile("Tesla Model 3 LR", 75.0, 15.5, setOf(ConnectorType.CCS2, ConnectorType.TYPE2), dcPeakPowerKw = 250.0, modelId = "m3", id = "b")
@@ -109,8 +114,8 @@ fun GarageArrivalSheetDark() = SheetFrame { ArrivalSheet() }
 
 @Composable
 private fun ArrivalSheet() = ChargeLevelSheetContent(
-    title = stringResource(R.string.garage_arrival_title),
-    subtitle = stringResource(R.string.garage_arrival_sheet_hint),
+    title = stringResource(Res.string.garage_arrival_title),
+    subtitle = stringResource(Res.string.garage_arrival_sheet_hint),
     kind = ChargeLevelKind.ARRIVAL,
     percent = 20,
     onChange = {},
@@ -123,13 +128,13 @@ private fun ArrivalSheet() = ChargeLevelSheetContent(
 @Composable
 fun TripStartLevelSheetEmpty() = SheetFrame {
     ChargeLevelSheetContent(
-        title = stringResource(R.string.soc_dialog_title),
-        subtitle = stringResource(R.string.soc_dialog_car_silent),
+        title = stringResource(Res.string.soc_dialog_title),
+        subtitle = stringResource(Res.string.soc_dialog_car_silent),
         kind = ChargeLevelKind.NOW,
         percent = null,
         onChange = {},
         onConfirm = {},
-        confirmLabel = stringResource(R.string.trip_soc_confirm),
+        confirmLabel = stringResource(Res.string.trip_soc_confirm),
     )
 }
 

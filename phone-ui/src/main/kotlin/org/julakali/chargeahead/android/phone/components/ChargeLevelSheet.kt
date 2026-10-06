@@ -16,11 +16,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.garage_percent
+import org.julakali.chargeahead.shared.resources.soc_dialog_apply
 
 enum class ChargeLevelKind(val range: IntRange, val picks: List<Int>) {
     NOW(1..100, listOf(20, 40, 60, 80)),
@@ -38,7 +40,7 @@ fun ChargeLevelSheet(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
     subtitle: String? = null,
-    confirmLabel: String = stringResource(R.string.soc_dialog_apply),
+    confirmLabel: String = stringResource(Res.string.soc_dialog_apply),
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         ChargeLevelSheetContent(title, kind, percent, onChange, onConfirm, subtitle, confirmLabel)
@@ -54,7 +56,7 @@ fun ChargeLevelSheetContent(
     onChange: (Int) -> Unit,
     onConfirm: () -> Unit,
     subtitle: String? = null,
-    confirmLabel: String = stringResource(R.string.soc_dialog_apply),
+    confirmLabel: String = stringResource(Res.string.soc_dialog_apply),
 ) {
     val level = percent?.takeIf { it in kind.range }
     SettingSheetContent(
@@ -77,7 +79,7 @@ fun ChargeLevelSheetContent(
                 FilterChip(
                     selected = on,
                     onClick = { onChange(pick) },
-                    label = { Text(stringResource(R.string.garage_percent, pick)) },
+                    label = { Text(stringResource(Res.string.garage_percent, pick)) },
                     leadingIcon = if (on) {
                         { Icon(Icons.Outlined.Check, contentDescription = null, modifier = Modifier.size(FilterChipDefaults.IconSize)) }
                     } else {

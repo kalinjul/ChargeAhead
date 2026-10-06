@@ -25,11 +25,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.AppCard
 import org.julakali.chargeahead.android.phone.components.Fineprint
 import org.julakali.chargeahead.android.phone.components.LazyFlowRow
@@ -38,6 +37,11 @@ import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.shared.ui.NetworksUiState
 import org.julakali.chargeahead.shared.ui.NetworksViewModel
 import org.koin.androidx.compose.koinViewModel
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.phone_networks_intro
+import org.julakali.chargeahead.shared.resources.phone_networks_mine
+import org.julakali.chargeahead.shared.resources.phone_networks_no_match
+import org.julakali.chargeahead.shared.resources.phone_networks_search
 
 /**
  * Selecting charging networks from the shipped catalog. Leaving the screen
@@ -73,22 +77,22 @@ fun NetworkSettingsScreen(
 ) {
     Column(modifier = modifier.padding(horizontal = 18.dp)) {
         SectionLabel(
-            text = stringResource(R.string.phone_networks_mine),
+            text = stringResource(Res.string.phone_networks_mine),
             modifier = Modifier.padding(top = 16.dp),
         )
-        Fineprint(text = stringResource(R.string.phone_networks_intro))
+        Fineprint(text = stringResource(Res.string.phone_networks_intro))
 
         SearchField(
             value = uiState.search,
             onValueChange = onSearchChange,
-            placeholder = stringResource(R.string.phone_networks_search),
+            placeholder = stringResource(Res.string.phone_networks_search),
             modifier = Modifier.padding(top = 16.dp),
         )
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             if (uiState.networks.isEmpty()) {
                 Fineprint(
-                    text = stringResource(R.string.phone_networks_no_match, uiState.search.trim()),
+                    text = stringResource(Res.string.phone_networks_no_match, uiState.search.trim()),
                     modifier = Modifier.padding(top = 16.dp),
                 )
             } else {

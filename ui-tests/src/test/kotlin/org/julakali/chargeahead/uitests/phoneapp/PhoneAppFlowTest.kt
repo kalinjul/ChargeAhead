@@ -27,7 +27,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import org.julakali.chargeahead.android.phone.PhoneApp
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.uitests.setThemedContent
 import org.julakali.chargeahead.uitests.string
 import org.junit.After
@@ -42,6 +41,32 @@ import org.robolectric.Shadows
 import org.robolectric.shadows.ShadowDialog
 import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeSite
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.active_route_end
+import org.julakali.chargeahead.shared.resources.addcar_custom_named
+import org.julakali.chargeahead.shared.resources.drawer_car
+import org.julakali.chargeahead.shared.resources.garage_add_title
+import org.julakali.chargeahead.shared.resources.garage_added
+import org.julakali.chargeahead.shared.resources.garage_empty_title
+import org.julakali.chargeahead.shared.resources.garage_search
+import org.julakali.chargeahead.shared.resources.garage_vehicle_row
+import org.julakali.chargeahead.shared.resources.home_pill_active_route
+import org.julakali.chargeahead.shared.resources.home_pill_charge_now
+import org.julakali.chargeahead.shared.resources.home_search_back
+import org.julakali.chargeahead.shared.resources.home_search_hint
+import org.julakali.chargeahead.shared.resources.home_settings
+import org.julakali.chargeahead.shared.resources.home_trip_clear
+import org.julakali.chargeahead.shared.resources.phone_detail_navigate
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing_action
+import org.julakali.chargeahead.shared.resources.trip_layout_list
+import org.julakali.chargeahead.shared.resources.trip_layout_tiles
+import org.julakali.chargeahead.shared.resources.trip_section_hint
+import org.julakali.chargeahead.shared.resources.trip_section_hint_second
+import org.julakali.chargeahead.shared.resources.trip_select_section
+import org.julakali.chargeahead.shared.resources.trip_send_maps
+import org.julakali.chargeahead.shared.resources.vehicle_remove
+import org.julakali.chargeahead.shared.resources.vehicle_remove_confirm
 
 /** The phone app end to end, on the faked graph of [PhoneAppHarness]. */
 @RunWith(RobolectricTestRunner::class)
@@ -61,8 +86,8 @@ class PhoneAppFlowTest {
         compose.setThemedContent { PhoneApp(librariesRes = 0) }
     }
 
-    private fun searchHint() = compose.string(R.string.home_search_hint)
-    private fun chargeNowPill() = compose.string(R.string.home_pill_charge_now)
+    private fun searchHint() = compose.string(Res.string.home_search_hint)
+    private fun chargeNowPill() = compose.string(Res.string.home_pill_charge_now)
 
     private fun countOf(text: String, substring: Boolean = false) =
         compose.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().size
@@ -88,10 +113,10 @@ class PhoneAppFlowTest {
     }
 
     /** The drawer content stays composed while closed, so displayed is the tell, not existence. */
-    private fun drawerOpen() = compose.onNodeWithText(compose.string(R.string.drawer_car)).isDisplayed()
+    private fun drawerOpen() = compose.onNodeWithText(compose.string(Res.string.drawer_car)).isDisplayed()
 
     private fun openDrawer() {
-        compose.onNodeWithContentDescription(compose.string(R.string.home_settings)).performClick()
+        compose.onNodeWithContentDescription(compose.string(Res.string.home_settings)).performClick()
         compose.waitUntil(WAIT_MILLIS) { drawerOpen() }
     }
 
@@ -121,7 +146,7 @@ class PhoneAppFlowTest {
         searchAndPick()
         waitForTrip()
 
-        compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).performClick()
+        compose.onNodeWithContentDescription(compose.string(Res.string.home_trip_clear)).performClick()
 
         waitForText(chargeNowPill())
         compose.onNodeWithText("München", substring = true).assertDoesNotExist()
@@ -152,10 +177,10 @@ class PhoneAppFlowTest {
         launch(withVehicle = false)
         searchAndPick()
 
-        waitForText(compose.string(R.string.plan_vehicle_missing))
-        compose.onNodeWithText(compose.string(R.string.plan_vehicle_missing_action)).assertIsDisplayed()
+        waitForText(compose.string(Res.string.plan_vehicle_missing))
+        compose.onNodeWithText(compose.string(Res.string.plan_vehicle_missing_action)).assertIsDisplayed()
         compose.onNodeWithText(chargeNowPill()).assertIsDisplayed()
-        compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(compose.string(Res.string.home_trip_clear)).assertDoesNotExist()
     }
 
     @Test
@@ -164,43 +189,43 @@ class PhoneAppFlowTest {
         searchAndPick()
         waitForTrip()
 
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_layout_tiles)).performClick()
+        compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_tiles)).performClick()
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithContentDescription(compose.string(R.string.trip_layout_list)).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription(compose.string(Res.string.trip_layout_list)).fetchSemanticsNodes().isNotEmpty()
         }
 
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_layout_list)).performClick()
+        compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_list)).performClick()
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithContentDescription(compose.string(R.string.trip_layout_tiles)).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription(compose.string(Res.string.trip_layout_tiles)).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
     @Test
     fun `aktive route is dimmed until a trip was sent, then shows it until navigieren beenden`() {
         launch()
-        val pill = compose.string(R.string.home_pill_active_route)
+        val pill = compose.string(Res.string.home_pill_active_route)
         compose.onNodeWithText(pill).assertIsNotEnabled()
 
         searchAndPick()
         waitForTrip()
         showTiles()
         val stops = plannedSites()
-        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_send_maps)).performClick()
         nextStartedUrl()
 
         // Sending commits: the page is on top, with the same stops.
-        waitForText(compose.string(R.string.active_route_end))
+        waitForText(compose.string(Res.string.active_route_end))
         stops.forEach { compose.onNodeWithText(it.operator!!, substring = true).assertIsDisplayed() }
 
         // Back lands on browsing, the pill is live now and reopens the page.
         pressBack()
-        waitForTextGone(compose.string(R.string.active_route_end))
+        waitForTextGone(compose.string(Res.string.active_route_end))
         compose.onNodeWithText(searchHint()).assertIsDisplayed()
         compose.onNodeWithText(pill).assertIsEnabled().performClick()
-        waitForText(compose.string(R.string.active_route_end))
+        waitForText(compose.string(Res.string.active_route_end))
 
-        compose.onNodeWithText(compose.string(R.string.active_route_end)).performClick()
-        waitForTextGone(compose.string(R.string.active_route_end))
+        compose.onNodeWithText(compose.string(Res.string.active_route_end)).performClick()
+        waitForTextGone(compose.string(Res.string.active_route_end))
         compose.onNodeWithText(pill).assertIsNotEnabled()
         assertNull(harness.trips.state.value.committed)
     }
@@ -232,10 +257,10 @@ class PhoneAppFlowTest {
 
     /** Tiles keep the action row inside the peek, so it can be tapped without expanding the sheet. */
     private fun showTiles() {
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_layout_tiles)).performClick()
+        compose.onNodeWithContentDescription(compose.string(Res.string.trip_layout_tiles)).performClick()
         // The toggle flips its label once the tiles are in.
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithContentDescription(compose.string(R.string.trip_layout_list)).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription(compose.string(Res.string.trip_layout_list)).fetchSemanticsNodes().isNotEmpty()
         }
     }
 
@@ -259,13 +284,13 @@ class PhoneAppFlowTest {
         val stops = plannedSites()
         assertTrue("the planner placed no stops", stops.isNotEmpty())
 
-        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_send_maps)).performClick()
 
         val url = nextStartedUrl()
         // Origin stays "my location", the stops ride along as waypoints, München is the destination.
         assertEquals(MapsHandoff.directionsUrl(origin = null, destination = harness.muenchen, waypoints = stops.map { it.position }), url)
         // Sending commits: the active route page takes over.
-        waitForText(compose.string(R.string.active_route_end))
+        waitForText(compose.string(Res.string.active_route_end))
     }
 
     @Test
@@ -277,17 +302,17 @@ class PhoneAppFlowTest {
         val stops = plannedSites()
         assertTrue("need two stops for a section", stops.size >= 2)
 
-        compose.onNodeWithText(compose.string(R.string.trip_select_section)).performClick()
-        waitForText(compose.string(R.string.trip_section_hint))
+        compose.onNodeWithText(compose.string(Res.string.trip_select_section)).performClick()
+        waitForText(compose.string(Res.string.trip_section_hint))
         compose.onNodeWithText(stops[0].operator!!, substring = true).performClick()
-        waitForText(compose.string(R.string.trip_section_hint_second))
+        waitForText(compose.string(Res.string.trip_section_hint_second))
         compose.onNodeWithText(stops[1].operator!!, substring = true).performClick()
-        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_send_maps)).performClick()
 
         // From stop 1 to stop 2: the first point becomes a waypoint, the last the destination.
         assertEquals(MapsHandoff.directionsUrl(origin = null, destination = stops[1].position, waypoints = listOf(stops[0].position)), nextStartedUrl())
         // The whole plan is committed, whatever section went out.
-        waitForText(compose.string(R.string.active_route_end))
+        waitForText(compose.string(Res.string.active_route_end))
     }
 
     @Test
@@ -299,8 +324,8 @@ class PhoneAppFlowTest {
         val stop = plannedSites().first()
 
         compose.onNodeWithText(stop.operator!!, substring = true).performClick()
-        waitForText(compose.string(R.string.phone_detail_navigate))
-        compose.onNodeWithText(compose.string(R.string.phone_detail_navigate)).performClick()
+        waitForText(compose.string(Res.string.phone_detail_navigate))
+        compose.onNodeWithText(compose.string(Res.string.phone_detail_navigate)).performClick()
 
         assertEquals(MapsHandoff.geoUri(stop.position, stop.name), nextStartedUrl())
     }
@@ -314,11 +339,11 @@ class PhoneAppFlowTest {
         val stop = plannedSites().first()
 
         compose.onNodeWithText(stop.operator!!, substring = true).performClick()
-        waitForText(compose.string(R.string.phone_detail_navigate))
+        waitForText(compose.string(Res.string.phone_detail_navigate))
 
         pressBack()
 
-        waitForTextGone(compose.string(R.string.phone_detail_navigate))
+        waitForTextGone(compose.string(Res.string.phone_detail_navigate))
         compose.onNodeWithText("München", substring = true).assertIsDisplayed()
         compose.onNodeWithText(stop.operator!!, substring = true).assertIsDisplayed()
     }
@@ -329,22 +354,22 @@ class PhoneAppFlowTest {
         val preset = CATALOG_PRESET_NAME
         openDrawer()
 
-        compose.onNodeWithText(compose.string(R.string.drawer_car)).performClick()
-        waitForText(compose.string(R.string.garage_empty_title))
+        compose.onNodeWithText(compose.string(Res.string.drawer_car)).performClick()
+        waitForText(compose.string(Res.string.garage_empty_title))
 
-        compose.onNodeWithText(compose.string(R.string.garage_add_title)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.garage_add_title)).performClick()
         waitForText(preset)
         compose.onNodeWithText(preset).performClick()
 
         // Picking pops back to the garage, which now shows and uses the preset.
-        waitForText(compose.string(R.string.garage_added, preset))
-        compose.onNodeWithText(compose.string(R.string.garage_vehicle_row)).assertIsDisplayed()
+        waitForText(compose.string(Res.string.garage_added, preset))
+        compose.onNodeWithText(compose.string(Res.string.garage_vehicle_row)).assertIsDisplayed()
         compose.onAllNodesWithText(preset).onFirst().assertIsDisplayed()
-        compose.onNodeWithText(compose.string(R.string.garage_empty_title)).assertDoesNotExist()
+        compose.onNodeWithText(compose.string(Res.string.garage_empty_title)).assertDoesNotExist()
         assertEquals(preset, runBlocking { harness.vehicles.vehicle.first()?.displayName })
 
         pressBack()
-        waitForTextGone(compose.string(R.string.garage_vehicle_row))
+        waitForTextGone(compose.string(Res.string.garage_vehicle_row))
         openDrawer()
         compose.onAllNodesWithText(preset).onFirst().assertIsDisplayed()
     }
@@ -353,42 +378,42 @@ class PhoneAppFlowTest {
     fun `a car the catalog lacks is started from the search and opens on its values`() {
         launch(withVehicle = false)
         openDrawer()
-        compose.onNodeWithText(compose.string(R.string.drawer_car)).performClick()
-        waitForText(compose.string(R.string.garage_empty_title))
-        compose.onNodeWithText(compose.string(R.string.garage_add_title)).performClick()
-        waitForText(compose.string(R.string.garage_search))
+        compose.onNodeWithText(compose.string(Res.string.drawer_car)).performClick()
+        waitForText(compose.string(Res.string.garage_empty_title))
+        compose.onNodeWithText(compose.string(Res.string.garage_add_title)).performClick()
+        waitForText(compose.string(Res.string.garage_search))
 
-        compose.onNodeWithText(compose.string(R.string.garage_search)).performTextInput("Fiat 500e")
-        waitForText(compose.string(R.string.addcar_custom_named, "Fiat 500e"))
-        compose.onNodeWithText(compose.string(R.string.addcar_custom_named, "Fiat 500e")).performClick()
+        compose.onNodeWithText(compose.string(Res.string.garage_search)).performTextInput("Fiat 500e")
+        waitForText(compose.string(Res.string.addcar_custom_named, "Fiat 500e"))
+        compose.onNodeWithText(compose.string(Res.string.addcar_custom_named, "Fiat 500e")).performClick()
 
-        waitForText(compose.string(R.string.vehicle_remove))
+        waitForText(compose.string(Res.string.vehicle_remove))
         compose.onAllNodesWithText("Fiat 500e").onFirst().assertIsDisplayed()
         assertEquals("Fiat 500e", runBlocking { harness.vehicles.vehicle.first()?.displayName })
 
         // Back goes to the garage, not to the search the car came from.
         pressBack()
-        waitForText(compose.string(R.string.garage_vehicle_row))
+        waitForText(compose.string(Res.string.garage_vehicle_row))
     }
 
     @Test
     fun `removing the car on its page leaves an empty garage`() {
         launch(withVehicle = false)
         openDrawer()
-        compose.onNodeWithText(compose.string(R.string.drawer_car)).performClick()
-        waitForText(compose.string(R.string.garage_empty_title))
-        compose.onNodeWithText(compose.string(R.string.garage_add_title)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.drawer_car)).performClick()
+        waitForText(compose.string(Res.string.garage_empty_title))
+        compose.onNodeWithText(compose.string(Res.string.garage_add_title)).performClick()
         waitForText(CATALOG_PRESET_NAME)
         compose.onNodeWithText(CATALOG_PRESET_NAME).performClick()
-        waitForText(compose.string(R.string.garage_vehicle_row))
+        waitForText(compose.string(Res.string.garage_vehicle_row))
 
-        compose.onNodeWithText(compose.string(R.string.garage_vehicle_row)).performClick()
-        waitForText(compose.string(R.string.vehicle_remove))
-        compose.onNodeWithText(compose.string(R.string.vehicle_remove)).performClick()
-        waitForText(compose.string(R.string.vehicle_remove_confirm))
-        compose.onNodeWithText(compose.string(R.string.vehicle_remove_confirm)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.garage_vehicle_row)).performClick()
+        waitForText(compose.string(Res.string.vehicle_remove))
+        compose.onNodeWithText(compose.string(Res.string.vehicle_remove)).performClick()
+        waitForText(compose.string(Res.string.vehicle_remove_confirm))
+        compose.onNodeWithText(compose.string(Res.string.vehicle_remove_confirm)).performClick()
 
-        waitForText(compose.string(R.string.garage_empty_title))
+        waitForText(compose.string(Res.string.garage_empty_title))
         assertNull(runBlocking { harness.vehicles.vehicle.first() })
     }
 
@@ -424,7 +449,7 @@ class PhoneAppFlowTest {
 
         compose.onNodeWithText("Fastned").performClick()
 
-        waitForText(compose.string(R.string.phone_detail_navigate))
+        waitForText(compose.string(Res.string.phone_detail_navigate))
     }
 
     /** Closing and reopening right away must not swallow the tap. */
@@ -464,7 +489,7 @@ class PhoneAppFlowTest {
 
         waitForText("Münch")
         waitForText("München")
-        compose.onNodeWithContentDescription(compose.string(R.string.home_search_back)).assertIsDisplayed()
+        compose.onNodeWithContentDescription(compose.string(Res.string.home_search_back)).assertIsDisplayed()
     }
 
     private companion object {

@@ -37,11 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.Fineprint
 import org.julakali.chargeahead.android.phone.components.SectionLabel
 import androidx.compose.foundation.layout.heightIn
@@ -62,6 +61,24 @@ import org.julakali.chargeahead.shared.ui.LicensesUiState
 import org.julakali.chargeahead.shared.ui.LicensesViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.about_data_sources_failed
+import org.julakali.chargeahead.shared.resources.about_data_sources_open_dataset
+import org.julakali.chargeahead.shared.resources.about_data_sources_retry
+import org.julakali.chargeahead.shared.resources.about_dataset_other
+import org.julakali.chargeahead.shared.resources.about_dataset_places
+import org.julakali.chargeahead.shared.resources.about_dataset_routing
+import org.julakali.chargeahead.shared.resources.about_dataset_sites
+import org.julakali.chargeahead.shared.resources.about_dataset_status
+import org.julakali.chargeahead.shared.resources.about_legal_imprint
+import org.julakali.chargeahead.shared.resources.about_legal_imprint_body
+import org.julakali.chargeahead.shared.resources.about_legal_privacy
+import org.julakali.chargeahead.shared.resources.about_licenses_back_to_top
+import org.julakali.chargeahead.shared.resources.about_licenses_data_sources
+import org.julakali.chargeahead.shared.resources.about_licenses_intro
+import org.julakali.chargeahead.shared.resources.about_licenses_libraries
+import org.julakali.chargeahead.shared.resources.app_name
 
 /** Imprint (§ 5 DDG) and privacy policy. The privacy policy follows. */
 @Composable
@@ -72,11 +89,11 @@ fun LegalScreen(modifier: Modifier = Modifier) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
-        SectionLabel(stringResource(R.string.about_legal_imprint))
+        SectionLabel(stringResource(Res.string.about_legal_imprint))
         SelectionContainer {
-            Text(stringResource(R.string.about_legal_imprint_body), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(Res.string.about_legal_imprint_body), style = MaterialTheme.typography.bodyMedium)
         }
-        SectionLabel(stringResource(R.string.about_legal_privacy), modifier = Modifier.padding(top = 24.dp))
+        SectionLabel(stringResource(Res.string.about_legal_privacy), modifier = Modifier.padding(top = 24.dp))
     }
 }
 
@@ -121,13 +138,13 @@ fun LicensesScreen(
             header = {
                 item(key = "intro") {
                     Fineprint(
-                        stringResource(R.string.about_licenses_intro, stringResource(R.string.app_name)),
+                        stringResource(Res.string.about_licenses_intro, stringResource(Res.string.app_name)),
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
                     )
                 }
                 stickyHeader(key = "data-sources") {
                     SectionHeader(
-                        title = stringResource(R.string.about_licenses_data_sources),
+                        title = stringResource(Res.string.about_licenses_data_sources),
                         expanded = dataSourcesExpanded,
                         onToggle = { dataSourcesExpanded = !dataSourcesExpanded },
                     )
@@ -135,7 +152,7 @@ fun LicensesScreen(
                 if (dataSourcesExpanded) dataSourceItems(uiState.dataSources, onRetry)
                 stickyHeader(key = "libraries") {
                     SectionHeader(
-                        title = stringResource(R.string.about_licenses_libraries),
+                        title = stringResource(Res.string.about_licenses_libraries),
                         expanded = librariesExpanded,
                         onToggle = { librariesExpanded = !librariesExpanded },
                     )
@@ -150,7 +167,7 @@ fun LicensesScreen(
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
         ) {
             FloatingActionButton(onClick = { scope.launch { listState.animateScrollToItem(0) } }) {
-                Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(R.string.about_licenses_back_to_top))
+                Icon(Icons.Default.KeyboardArrowUp, contentDescription = stringResource(Res.string.about_licenses_back_to_top))
             }
         }
     }
@@ -191,8 +208,8 @@ private fun LazyListScope.dataSourceItems(state: DataSourcesState, onRetry: () -
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
             ) {
-                Fineprint(stringResource(R.string.about_data_sources_failed), modifier = Modifier.weight(1f))
-                TextButton(onClick = onRetry) { Text(stringResource(R.string.about_data_sources_retry)) }
+                Fineprint(stringResource(Res.string.about_data_sources_failed), modifier = Modifier.weight(1f))
+                TextButton(onClick = onRetry) { Text(stringResource(Res.string.about_data_sources_retry)) }
             }
         }
 
@@ -235,7 +252,7 @@ private fun DataSourceRow(source: DataSource) {
                         IconButton(onClick = { uriHandler.openUri(url) }) {
                             Icon(
                                 Icons.AutoMirrored.Filled.OpenInNew,
-                                contentDescription = stringResource(R.string.about_data_sources_open_dataset),
+                                contentDescription = stringResource(Res.string.about_data_sources_open_dataset),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -247,11 +264,11 @@ private fun DataSourceRow(source: DataSource) {
     }
 }
 
-private val DatasetKind.label: Int
+private val DatasetKind.label: StringResource
     get() = when (this) {
-        DatasetKind.SITES -> R.string.about_dataset_sites
-        DatasetKind.STATUS -> R.string.about_dataset_status
-        DatasetKind.ROUTING -> R.string.about_dataset_routing
-        DatasetKind.PLACES -> R.string.about_dataset_places
-        DatasetKind.OTHER -> R.string.about_dataset_other
+        DatasetKind.SITES -> Res.string.about_dataset_sites
+        DatasetKind.STATUS -> Res.string.about_dataset_status
+        DatasetKind.ROUTING -> Res.string.about_dataset_routing
+        DatasetKind.PLACES -> Res.string.about_dataset_places
+        DatasetKind.OTHER -> Res.string.about_dataset_other
     }

@@ -20,6 +20,8 @@ import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.SearchRow
 import java.time.LocalTime
+import org.jetbrains.compose.resources.StringResource
+import org.julakali.chargeahead.shared.Texts
 
 /** Hamburg → München with three stops; the numbers are round so the rows read predictably. */
 object Fixtures {
@@ -107,4 +109,5 @@ fun ComposeRule.setThemedContent(content: @Composable () -> Unit) {
     }
 }
 
-fun ComposeRule.string(id: Int, vararg args: Any): String = activity.getString(id, *args)
+@Suppress("UnusedReceiverParameter") // keeps the call sites reading compose.string(…)
+fun ComposeRule.string(resource: StringResource, vararg args: Any): String = Texts.string(resource, *args)

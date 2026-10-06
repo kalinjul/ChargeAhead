@@ -36,7 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -47,6 +47,32 @@ import org.julakali.chargeahead.shared.ui.VehicleSettingsViewModel
 import org.julakali.chargeahead.shared.ui.VehicleEditor
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.garage_kw
+import org.julakali.chargeahead.shared.resources.garage_kwh
+import org.julakali.chargeahead.shared.resources.garage_kwh_per_100
+import org.julakali.chargeahead.shared.resources.garage_unit_kw
+import org.julakali.chargeahead.shared.resources.garage_unit_kwh
+import org.julakali.chargeahead.shared.resources.garage_unit_kwh_per_100
+import org.julakali.chargeahead.shared.resources.phone_action_restore_catalog_values
+import org.julakali.chargeahead.shared.resources.soc_dialog_apply
+import org.julakali.chargeahead.shared.resources.soc_dialog_cancel
+import org.julakali.chargeahead.shared.resources.vehicle_battery
+import org.julakali.chargeahead.shared.resources.vehicle_catalog_value
+import org.julakali.chargeahead.shared.resources.vehicle_consumption
+import org.julakali.chargeahead.shared.resources.vehicle_dc
+import org.julakali.chargeahead.shared.resources.vehicle_dc_unknown
+import org.julakali.chargeahead.shared.resources.vehicle_model
+import org.julakali.chargeahead.shared.resources.vehicle_model_own
+import org.julakali.chargeahead.shared.resources.vehicle_name
+import org.julakali.chargeahead.shared.resources.vehicle_number_invalid
+import org.julakali.chargeahead.shared.resources.vehicle_remove
+import org.julakali.chargeahead.shared.resources.vehicle_remove_confirm
+import org.julakali.chargeahead.shared.resources.vehicle_remove_text
+import org.julakali.chargeahead.shared.resources.vehicle_remove_title
+import org.julakali.chargeahead.shared.resources.vehicle_restore_current
+import org.julakali.chargeahead.shared.resources.vehicle_restore_customized
+import org.julakali.chargeahead.shared.resources.vehicle_restore_unavailable
 
 @Composable
 fun VehicleSettingsRoute(
@@ -101,35 +127,35 @@ fun VehicleSettingsScreen(
     when (val editor = uiState.editor) {
         null -> Unit
         is VehicleEditor.Consumption -> FieldDialog(
-            stringResource(R.string.vehicle_consumption), editor.input, stringResource(R.string.garage_unit_kwh_per_100), editor.applicable, actions,
-            catalogValue = catalog?.let { stringResource(R.string.garage_kwh_per_100, it.consumptionKwhPer100Km.oneDecimal()) },
+            stringResource(Res.string.vehicle_consumption), editor.input, stringResource(Res.string.garage_unit_kwh_per_100), editor.applicable, actions,
+            catalogValue = catalog?.let { stringResource(Res.string.garage_kwh_per_100, it.consumptionKwhPer100Km.oneDecimal()) },
         )
         is VehicleEditor.Name -> FieldDialog(
-            stringResource(R.string.vehicle_name), editor.input, unit = null, editor.applicable, actions,
+            stringResource(Res.string.vehicle_name), editor.input, unit = null, editor.applicable, actions,
             catalogValue = catalog?.displayName,
         )
         is VehicleEditor.Battery -> FieldDialog(
-            stringResource(R.string.vehicle_battery), editor.input, stringResource(R.string.garage_unit_kwh), editor.applicable, actions,
-            catalogValue = catalog?.let { stringResource(R.string.garage_kwh, it.usableBatteryKwh.oneDecimal()) },
+            stringResource(Res.string.vehicle_battery), editor.input, stringResource(Res.string.garage_unit_kwh), editor.applicable, actions,
+            catalogValue = catalog?.let { stringResource(Res.string.garage_kwh, it.usableBatteryKwh.oneDecimal()) },
         )
         is VehicleEditor.DcPeak -> FieldDialog(
-            stringResource(R.string.vehicle_dc), editor.input, stringResource(R.string.garage_unit_kw), editor.applicable, actions,
-            catalogValue = catalog?.dcPeakPowerKw?.let { stringResource(R.string.garage_kw, it.roundToInt()) },
+            stringResource(Res.string.vehicle_dc), editor.input, stringResource(Res.string.garage_unit_kw), editor.applicable, actions,
+            catalogValue = catalog?.dcPeakPowerKw?.let { stringResource(Res.string.garage_kw, it.roundToInt()) },
         )
     }
 
     if (uiState.confirmingRemoval) {
         AlertDialog(
             onDismissRequest = actions.onRemoveCancel,
-            title = { Text(stringResource(R.string.vehicle_remove_title, vehicle.displayName)) },
-            text = { Text(stringResource(R.string.vehicle_remove_text)) },
+            title = { Text(stringResource(Res.string.vehicle_remove_title, vehicle.displayName)) },
+            text = { Text(stringResource(Res.string.vehicle_remove_text)) },
             confirmButton = {
                 TextButton(
                     onClick = actions.onRemoveConfirm,
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) { Text(stringResource(R.string.vehicle_remove_confirm)) }
+                ) { Text(stringResource(Res.string.vehicle_remove_confirm)) }
             },
-            dismissButton = { TextButton(onClick = actions.onRemoveCancel) { Text(stringResource(R.string.soc_dialog_cancel)) } },
+            dismissButton = { TextButton(onClick = actions.onRemoveCancel) { Text(stringResource(Res.string.soc_dialog_cancel)) } },
         )
     }
 
@@ -146,40 +172,40 @@ fun VehicleSettingsScreen(
                 listOf {
                     SettingRow(
                         Icons.Outlined.DirectionsCar,
-                        stringResource(R.string.vehicle_model),
+                        stringResource(Res.string.vehicle_model),
                         onClick = null,
-                        value = uiState.catalog?.name ?: stringResource(R.string.vehicle_model_own),
+                        value = uiState.catalog?.name ?: stringResource(Res.string.vehicle_model_own),
                     )
                 },
             )
             SettingsCard(
                 listOf(
                     {
-                        SettingRow(Icons.Outlined.Badge, stringResource(R.string.vehicle_name), actions.onNameOpen, value = vehicle.displayName)
+                        SettingRow(Icons.Outlined.Badge, stringResource(Res.string.vehicle_name), actions.onNameOpen, value = vehicle.displayName)
                     },
                     {
                         SettingRow(
                             Icons.Outlined.Speed,
-                            stringResource(R.string.vehicle_consumption),
+                            stringResource(Res.string.vehicle_consumption),
                             actions.onConsumptionOpen,
-                            value = stringResource(R.string.garage_kwh_per_100, vehicle.consumptionKwhPer100Km.oneDecimal()),
+                            value = stringResource(Res.string.garage_kwh_per_100, vehicle.consumptionKwhPer100Km.oneDecimal()),
                         )
                     },
                     {
                         SettingRow(
                             Icons.Outlined.BatteryChargingFull,
-                            stringResource(R.string.vehicle_battery),
+                            stringResource(Res.string.vehicle_battery),
                             actions.onBatteryOpen,
-                            value = stringResource(R.string.garage_kwh, vehicle.usableBatteryKwh.oneDecimal()),
+                            value = stringResource(Res.string.garage_kwh, vehicle.usableBatteryKwh.oneDecimal()),
                         )
                     },
                     {
                         SettingRow(
                             Icons.Outlined.Bolt,
-                            stringResource(R.string.vehicle_dc),
+                            stringResource(Res.string.vehicle_dc),
                             actions.onDcPeakOpen,
-                            value = vehicle.dcPeakPowerKw?.let { stringResource(R.string.garage_kw, it.roundToInt()) }
-                                ?: stringResource(R.string.vehicle_dc_unknown),
+                            value = vehicle.dcPeakPowerKw?.let { stringResource(Res.string.garage_kw, it.roundToInt()) }
+                                ?: stringResource(Res.string.vehicle_dc_unknown),
                         )
                     },
                 ),
@@ -190,13 +216,13 @@ fun VehicleSettingsScreen(
                 listOf {
                     SettingRow(
                         Icons.Outlined.Restore,
-                        stringResource(R.string.phone_action_restore_catalog_values),
+                        stringResource(Res.string.phone_action_restore_catalog_values),
                         actions.onRestoreCatalogValues,
                         supporting = stringResource(
                             when {
-                                uiState.catalog == null -> R.string.vehicle_restore_unavailable
-                                uiState.canRestoreCatalogValues -> R.string.vehicle_restore_customized
-                                else -> R.string.vehicle_restore_current
+                                uiState.catalog == null -> Res.string.vehicle_restore_unavailable
+                                uiState.canRestoreCatalogValues -> Res.string.vehicle_restore_customized
+                                else -> Res.string.vehicle_restore_current
                             },
                         ),
                         enabled = uiState.canRestoreCatalogValues,
@@ -211,7 +237,7 @@ fun VehicleSettingsScreen(
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
             ) {
-                Text(stringResource(R.string.vehicle_remove))
+                Text(stringResource(Res.string.vehicle_remove))
             }
         }
     }
@@ -233,9 +259,9 @@ private fun FieldDialog(
             FieldEditor(label = title, initial = input, unit = unit, applicable = applicable, catalogValue = catalogValue, onValueChange = actions.onInputChange)
         },
         confirmButton = {
-            TextButton(onClick = actions.onConfirm, enabled = applicable) { Text(stringResource(R.string.soc_dialog_apply)) }
+            TextButton(onClick = actions.onConfirm, enabled = applicable) { Text(stringResource(Res.string.soc_dialog_apply)) }
         },
-        dismissButton = { TextButton(onClick = actions.onDismiss) { Text(stringResource(R.string.soc_dialog_cancel)) } },
+        dismissButton = { TextButton(onClick = actions.onDismiss) { Text(stringResource(Res.string.soc_dialog_cancel)) } },
     )
 }
 
@@ -265,8 +291,8 @@ fun FieldEditor(
         supportingText = {
             Text(
                 when {
-                    invalid -> stringResource(R.string.vehicle_number_invalid)
-                    catalogValue != null -> stringResource(R.string.vehicle_catalog_value, catalogValue)
+                    invalid -> stringResource(Res.string.vehicle_number_invalid)
+                    catalogValue != null -> stringResource(Res.string.vehicle_catalog_value, catalogValue)
                     else -> ""
                 },
             )

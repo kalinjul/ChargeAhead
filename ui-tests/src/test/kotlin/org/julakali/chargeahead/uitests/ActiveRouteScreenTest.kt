@@ -12,7 +12,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.ActiveRouteScreen
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.SectionSelection
@@ -23,6 +22,15 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.active_route_end
+import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
+import org.julakali.chargeahead.shared.resources.soc_dialog_title
+import org.julakali.chargeahead.shared.resources.trip_arrival_soc_edit
+import org.julakali.chargeahead.shared.resources.trip_replan
+import org.julakali.chargeahead.shared.resources.trip_select_section
+import org.julakali.chargeahead.shared.resources.trip_send_maps
+import org.julakali.chargeahead.shared.resources.trip_soc_edit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "+w600dp-h1000dp")
@@ -74,8 +82,8 @@ class ActiveRouteScreenTest {
     @Test
     fun `the start row has no charge-level pen on the active route`() {
         screen()
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_soc_edit)).assertDoesNotExist()
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_arrival_soc_edit)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(compose.string(Res.string.trip_soc_edit)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(compose.string(Res.string.trip_arrival_soc_edit)).assertDoesNotExist()
     }
 
     @Test
@@ -88,20 +96,20 @@ class ActiveRouteScreenTest {
     @Test
     fun `the buttons do what they say`() {
         val calls = screen()
-        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_send_maps)).performClick()
         assertTrue(calls.sentToMaps)
-        compose.onNodeWithText(compose.string(R.string.trip_select_section)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_select_section)).performClick()
         assertTrue(calls.toggledSelecting)
-        compose.onNodeWithText(compose.string(R.string.trip_replan)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_replan)).performClick()
         assertTrue(calls.replanned)
-        compose.onNodeWithText(compose.string(R.string.active_route_end)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.active_route_end)).performClick()
         assertTrue(calls.ended)
     }
 
     @Test
     fun `the charge-level prompt says why it is asking`() {
         screen(socInput = "42")
-        compose.onNodeWithText(compose.string(R.string.soc_dialog_title)).assertIsDisplayed()
-        compose.onNodeWithText(compose.string(R.string.soc_dialog_car_silent)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.soc_dialog_title)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.soc_dialog_car_silent)).assertIsDisplayed()
     }
 }

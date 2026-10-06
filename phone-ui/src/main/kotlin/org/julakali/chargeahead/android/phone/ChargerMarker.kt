@@ -36,7 +36,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -55,6 +55,8 @@ import org.julakali.chargeahead.shared.domain.MapCharger
 import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.android.phone.R
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.map_out_of_order
 
 @Composable
 @GoogleMapComposable
@@ -205,7 +207,7 @@ fun ChargerPill(
                     )
                     SiteAvailability.OutOfOrder -> Icon(
                         Icons.Outlined.Block,
-                        contentDescription = stringResource(R.string.map_out_of_order),
+                        contentDescription = stringResource(Res.string.map_out_of_order),
                         tint = p.red,
                         modifier = Modifier.size(14.dp),
                     )

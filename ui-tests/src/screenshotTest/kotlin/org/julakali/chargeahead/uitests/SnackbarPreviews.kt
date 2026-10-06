@@ -8,12 +8,13 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarVisuals
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.android.tools.screenshot.PreviewTest
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.AppSnackbar
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.active_route_ended
 
 @PreviewTest
 @Preview(locale = "de", showBackground = true, widthDp = 400)
@@ -28,7 +29,7 @@ fun SnackbarTripEndedDark() = TripEnded()
 @Composable
 private fun TripEnded() {
     PreviewScaffold {
-        Box(Modifier.padding(12.dp)) { AppSnackbar(StaticSnackbar(stringResource(R.string.active_route_ended))) }
+        Box(Modifier.padding(12.dp)) { AppSnackbar(StaticSnackbar(stringResource(Res.string.active_route_ended))) }
     }
 }
 

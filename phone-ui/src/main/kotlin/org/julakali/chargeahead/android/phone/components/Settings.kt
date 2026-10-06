@@ -22,12 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.theme.DISABLED_ALPHA
 import org.julakali.chargeahead.android.phone.theme.tabular
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.soc_dialog_apply
 
 @Composable
 fun SettingsCard(rows: List<@Composable () -> Unit>, modifier: Modifier = Modifier) {
@@ -81,7 +82,7 @@ fun SettingSheetContent(
     onApply: () -> Unit,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    applyLabel: String = stringResource(R.string.soc_dialog_apply),
+    applyLabel: String = stringResource(Res.string.soc_dialog_apply),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(

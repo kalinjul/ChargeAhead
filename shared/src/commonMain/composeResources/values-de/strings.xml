@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="app_name">PowerTrip</string>
     <!-- Android Auto -->
 
     <string name="car_permission_message">Für Ladesäulen voraus wird der Standort gebraucht. Die Freigabe erfolgt am Telefon.</string>

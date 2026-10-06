@@ -13,10 +13,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.theme.tabular
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.common_back
 
 /** Start-aligned title on the arrow's row, no hairline, same ground as the page. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,7 +45,7 @@ fun AppTopBar(
         },
         navigationIcon = {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.common_back))
             }
         },
         actions = actions,

@@ -13,12 +13,13 @@ import org.julakali.chargeahead.android.phone.NetworkSettingsScreen
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.ui.NetworksUiState
 import org.junit.Rule
-import org.julakali.chargeahead.android.phone.R
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.assertCountEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.phone_networks_mine
 
 @RunWith(RobolectricTestRunner::class)
 class NetworkSettingsScreenTest {
@@ -58,7 +59,7 @@ class NetworkSettingsScreenTest {
         compose.setThemedContent {
             NetworkSettingsScreen(uiState = NetworksUiState(), onSearchChange = {}, onNetworkToggled = {})
         }
-        compose.onNodeWithText(compose.string(R.string.phone_networks_mine), ignoreCase = true).assertExists()
+        compose.onNodeWithText(compose.string(Res.string.phone_networks_mine), ignoreCase = true).assertExists()
         compose.onAllNodesWithText("Stöber", substring = true).assertCountEquals(0)
     }
 }

@@ -46,6 +46,16 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.Texts
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.active_route_ended
+import org.julakali.chargeahead.shared.resources.garage_added
+import org.julakali.chargeahead.shared.resources.plan_failed_no_charger
+import org.julakali.chargeahead.shared.resources.plan_failed_no_route
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing_action
+import org.julakali.chargeahead.shared.resources.trip_maps_sent
+import org.julakali.chargeahead.shared.resources.trip_stop_times
 
 /**
  * The phone app: wires the map screen and the navigator's destinations
@@ -89,7 +99,7 @@ fun PhoneApp(librariesRes: Int) {
     }
 
     fun sendToMaps(link: String) {
-        if (context.openMapsLink(link)) snackbar.show(scope, context.getString(R.string.trip_maps_sent))
+        if (context.openMapsLink(link)) snackbar.show(scope, Texts.string(Res.string.trip_maps_sent))
     }
 
     LocationHandshakeEffects(phoneAppViewModel, onSettled = homeViewModel::onLocateRequested)
@@ -166,12 +176,12 @@ fun PhoneApp(librariesRes: Int) {
         navigator = navigator,
         librariesRes = librariesRes,
         preferredNetworkCount = drawerUi.preferredNetworkCount,
-        onCarAdded = { preset -> snackbar.show(scope, context.getString(R.string.garage_added, preset.name)) },
+        onCarAdded = { preset -> snackbar.show(scope, Texts.string(Res.string.garage_added, preset.name)) },
         onNavigateTo = { position -> sendToMaps(MapsHandoff.navigateUrl(position)) },
         onOpenStop = { stop -> homeViewModel.onSiteSelected(stop.site) },
         onOpenSite = homeViewModel::onSiteSelected,
         onSendToMaps = ::sendToMaps,
-        onTripEnded = { snackbar.show(scope, context.getString(R.string.active_route_ended)) },
+        onTripEnded = { snackbar.show(scope, Texts.string(Res.string.active_route_ended)) },
         activeRouteTitle = activeRouteTitle,
         modifier = Modifier.fillMaxSize(),
     )
@@ -235,16 +245,16 @@ private fun TripEventEffect(
             TripEvent.PlanReady -> onPlanReady()
             TripEvent.VehicleMissing -> scope.launch {
                 val result = snackbar.showSnackbar(
-                    message = context.getString(R.string.plan_vehicle_missing),
-                    actionLabel = context.getString(R.string.plan_vehicle_missing_action),
+                    message = Texts.string(Res.string.plan_vehicle_missing),
+                    actionLabel = Texts.string(Res.string.plan_vehicle_missing_action),
                 )
                 if (result == SnackbarResult.ActionPerformed) onOpenGarage()
             }
             is TripEvent.NoChargerInReach -> snackbar.show(
                 scope,
-                context.getString(R.string.plan_failed_no_charger, current.afterKm.roundToInt()),
+                Texts.string(Res.string.plan_failed_no_charger, current.afterKm.roundToInt()),
             )
-            TripEvent.NoRoute -> snackbar.show(scope, context.getString(R.string.plan_failed_no_route))
+            TripEvent.NoRoute -> snackbar.show(scope, Texts.string(Res.string.plan_failed_no_route))
             TripEvent.TripCommitted -> onCommitted()
         }
         viewModel.onEventHandled()
@@ -254,8 +264,7 @@ private fun TripEventEffect(
 /** Arrival and departure, when [selected] is one of this trip's stops. */
 private fun TripPlan.stopLine(context: Context, selected: ChargeStop, now: LocalTime): String? =
     stops.firstOrNull { it.site.id == selected.site.id }?.let { stop ->
-        context.getString(
-            R.string.trip_stop_times,
+        Texts.string(Res.string.trip_stop_times,
             etaText(context, stop.arrivalMinutesFromStart, now),
             etaText(context, stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
         )
