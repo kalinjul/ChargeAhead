@@ -8,7 +8,6 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.semantics.SemanticsProperties
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.SearchResultsPanel
 import org.julakali.chargeahead.shared.ui.SearchRow
 import org.julakali.chargeahead.shared.ui.SearchUiState
@@ -17,6 +16,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.plan_no_results
+import org.julakali.chargeahead.shared.resources.plan_result_distance
+import org.julakali.chargeahead.shared.resources.plan_search_failed
 
 @RunWith(RobolectricTestRunner::class)
 class SearchResultsPanelTest {
@@ -31,7 +34,7 @@ class SearchResultsPanelTest {
         panel(SearchUiState(rows = listOf(Fixtures.searchRow("München", "Marienplatz 1", distanceKm = 612.0))))
         compose.onNodeWithText("München").assertIsDisplayed()
         compose.onNodeWithText("Marienplatz 1").assertIsDisplayed()
-        compose.onNodeWithText(compose.string(R.string.plan_result_distance, "612")).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.plan_result_distance, "612")).assertIsDisplayed()
     }
 
     @Test
@@ -46,13 +49,13 @@ class SearchResultsPanelTest {
     @Test
     fun `a failed search says so`() {
         panel(SearchUiState(query = "München", failed = true))
-        compose.onNodeWithText(compose.string(R.string.plan_search_failed)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.plan_search_failed)).assertIsDisplayed()
     }
 
     @Test
     fun `no hits for a long query reads as no results`() {
         panel(SearchUiState(query = "Nirgendwo", rows = emptyList(), searching = false))
-        compose.onNodeWithText(compose.string(R.string.plan_no_results)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.plan_no_results)).assertIsDisplayed()
     }
 
     @Test

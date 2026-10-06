@@ -1,6 +1,5 @@
 package org.julakali.chargeahead.android.car
 
-import androidx.annotation.StringRes
 import androidx.car.app.CarContext
 import androidx.car.app.Screen
 import androidx.car.app.constraints.ConstraintManager
@@ -22,6 +21,15 @@ import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.car.CarChargeNowViewModel
 import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_home_charge_now
+import org.julakali.chargeahead.shared.resources.car_now_empty
+import org.julakali.chargeahead.shared.resources.car_now_loading
+import org.julakali.chargeahead.shared.resources.car_now_relaxed
+import org.julakali.chargeahead.shared.resources.car_relax_networks
+import org.julakali.chargeahead.shared.resources.car_waiting_for_location
+import org.julakali.chargeahead.shared.Texts
+import org.jetbrains.compose.resources.StringResource
 
 /**
  * The best fast chargers around the current position on the host's map,
@@ -41,14 +49,14 @@ class ChargeNowScreen(
 
     override fun onGetTemplate(): Template {
         val current = when (val state = viewModel.uiState.value) {
-            ChargeNowUiState.NoPosition -> return loadingTemplate(R.string.car_waiting_for_location)
-            ChargeNowUiState.Loading -> return loadingTemplate(R.string.car_now_loading)
+            ChargeNowUiState.NoPosition -> return loadingTemplate(Res.string.car_waiting_for_location)
+            ChargeNowUiState.Loading -> return loadingTemplate(Res.string.car_now_loading)
             is ChargeNowUiState.Ready -> state.result
         }
 
         val candidates = current.candidates + current.more
         if (candidates.isEmpty()) {
-            return MessageTemplate.Builder(carContext.getString(R.string.car_now_empty))
+            return MessageTemplate.Builder(Texts.string(Res.string.car_now_empty))
                 .setHeader(
                     Header.Builder()
                         .setTitle(title())
@@ -84,10 +92,10 @@ class ChargeNowScreen(
             .build()
     }
 
-    private fun loadingTemplate(@StringRes waitingText: Int): Template =
+    private fun loadingTemplate(waitingText: StringResource): Template =
         PlaceListMapTemplate.Builder()
             .setLoading(true)
-            .setTitle("${title()} · ${carContext.getString(waitingText)}")
+            .setTitle("${title()} · ${Texts.string(waitingText)}")
             .setHeaderAction(Action.BACK)
             .build()
 
@@ -105,14 +113,14 @@ class ChargeNowScreen(
         if (result.relaxed.isEmpty()) return null
 
         val names = result.relaxed.joinToString(", ") { relaxed ->
-            carContext.getString(
+            Texts.string(
                 when (relaxed) {
-                    RelaxedFilter.NETWORKS -> R.string.car_relax_networks
+                    RelaxedFilter.NETWORKS -> Res.string.car_relax_networks
                 },
             )
         }
         return Row.Builder()
-            .setTitle(carContext.getString(R.string.car_now_relaxed, names))
+            .setTitle(Texts.string(Res.string.car_now_relaxed, names))
             .build()
     }
 
@@ -121,5 +129,5 @@ class ChargeNowScreen(
         .setOnClickListener(viewModel::onRefresh)
         .build()
 
-    private fun title(): String = carContext.getString(R.string.car_home_charge_now)
+    private fun title(): String = Texts.string(Res.string.car_home_charge_now)
 }

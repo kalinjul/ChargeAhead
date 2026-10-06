@@ -24,7 +24,6 @@ import org.julakali.chargeahead.shared.domain.ChargeMode
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
-import androidx.annotation.StringRes
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Power
@@ -55,7 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.PrefRow
@@ -66,6 +65,27 @@ import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.ui.DrawerUiState
 import kotlin.math.roundToInt
+import org.jetbrains.compose.resources.StringResource
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.app_name
+import org.julakali.chargeahead.shared.resources.drawer_about
+import org.julakali.chargeahead.shared.resources.drawer_car
+import org.julakali.chargeahead.shared.resources.drawer_car_none
+import org.julakali.chargeahead.shared.resources.drawer_cardata
+import org.julakali.chargeahead.shared.resources.drawer_debug
+import org.julakali.chargeahead.shared.resources.drawer_legal
+import org.julakali.chargeahead.shared.resources.drawer_licenses
+import org.julakali.chargeahead.shared.resources.drawer_min_power
+import org.julakali.chargeahead.shared.resources.drawer_mode
+import org.julakali.chargeahead.shared.resources.drawer_mode_ac
+import org.julakali.chargeahead.shared.resources.drawer_mode_info
+import org.julakali.chargeahead.shared.resources.drawer_mode_tooltip
+import org.julakali.chargeahead.shared.resources.drawer_networks
+import org.julakali.chargeahead.shared.resources.drawer_networks_all
+import org.julakali.chargeahead.shared.resources.drawer_networks_selected
+import org.julakali.chargeahead.shared.resources.drawer_power_step
+import org.julakali.chargeahead.shared.resources.drawer_preferences
+import org.julakali.chargeahead.shared.resources.mode_browse
 
 /** What a drawer row asks for; the app decides which destination that is. */
 enum class DrawerTarget { VEHICLE, NETWORKS, LEGAL, LICENSES, CAR_DATA }
@@ -95,58 +115,58 @@ fun DrawerContent(
         }
 
         Column {
-            SectionLabel(stringResource(R.string.drawer_preferences))
+            SectionLabel(stringResource(Res.string.drawer_preferences))
             PrefRow(
                 icon = painterResource(R.drawable.ic_car),
-                label = stringResource(R.string.drawer_car),
-                sublabel = uiState.vehicleName ?: stringResource(R.string.drawer_car_none),
+                label = stringResource(Res.string.drawer_car),
+                sublabel = uiState.vehicleName ?: stringResource(Res.string.drawer_car_none),
                 onClick = { onOpen(DrawerTarget.VEHICLE) },
             )
             PrefRow(
                 icon = painterResource(R.drawable.ic_filter),
-                label = stringResource(R.string.drawer_networks),
+                label = stringResource(Res.string.drawer_networks),
                 sublabel = networksSummary(uiState.preferredNetworkCount),
                 onClick = { onOpen(DrawerTarget.NETWORKS) },
             )
         }
 
         Column {
-            SectionLabel(stringResource(R.string.drawer_min_power))
+            SectionLabel(stringResource(Res.string.drawer_min_power))
             PowerSegments(filters, onFilters)
         }
 
         Column {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SectionLabel(stringResource(R.string.drawer_mode))
+                SectionLabel(stringResource(Res.string.drawer_mode))
                 ModeInfoButton()
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                ModeToggle(ChargeMode.AC, R.string.drawer_mode_ac, Icons.Outlined.Power, uiState.mode, onModeSelected, Modifier.weight(1f))
-                ModeToggle(ChargeMode.BROWSE, R.string.mode_browse, Icons.Outlined.TravelExplore, uiState.mode, onModeSelected, Modifier.weight(1f))
+                ModeToggle(ChargeMode.AC, Res.string.drawer_mode_ac, Icons.Outlined.Power, uiState.mode, onModeSelected, Modifier.weight(1f))
+                ModeToggle(ChargeMode.BROWSE, Res.string.mode_browse, Icons.Outlined.TravelExplore, uiState.mode, onModeSelected, Modifier.weight(1f))
             }
         }
 
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            SectionLabel(stringResource(R.string.drawer_about), modifier = Modifier.padding(top = 12.dp))
+            SectionLabel(stringResource(Res.string.drawer_about), modifier = Modifier.padding(top = 12.dp))
             PrefRow(
                 icon = painterResource(R.drawable.ic_info),
-                label = stringResource(R.string.drawer_legal),
+                label = stringResource(Res.string.drawer_legal),
                 onClick = { onOpen(DrawerTarget.LEGAL) },
             )
             PrefRow(
                 icon = painterResource(R.drawable.ic_document),
-                label = stringResource(R.string.drawer_licenses),
+                label = stringResource(Res.string.drawer_licenses),
                 onClick = { onOpen(DrawerTarget.LICENSES) },
             )
         }
 
         Column {
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            SectionLabel(stringResource(R.string.drawer_debug), modifier = Modifier.padding(top = 12.dp))
+            SectionLabel(stringResource(Res.string.drawer_debug), modifier = Modifier.padding(top = 12.dp))
             PrefRow(
                 icon = painterResource(R.drawable.ic_send),
-                label = stringResource(R.string.drawer_cardata),
+                label = stringResource(Res.string.drawer_cardata),
                 onClick = { onOpen(DrawerTarget.CAR_DATA) },
             )
         }
@@ -157,16 +177,16 @@ fun DrawerContent(
 @Composable
 fun networksSummary(preferredCount: Int): String =
     if (preferredCount > 0) {
-        stringResource(R.string.drawer_networks_selected, preferredCount)
+        stringResource(Res.string.drawer_networks_selected, preferredCount)
     } else {
-        stringResource(R.string.drawer_networks_all)
+        stringResource(Res.string.drawer_networks_all)
     }
 
 /** One mode as a quick-settings tile with the shapes swapped: a squircle when off, a pill in the mode's colour when on. */
 @Composable
 private fun ModeToggle(
     mode: ChargeMode,
-    @StringRes labelRes: Int,
+    labelRes: StringResource,
     icon: ImageVector,
     current: ChargeMode,
     onSelect: (ChargeMode) -> Unit,
@@ -224,8 +244,8 @@ private fun ModeInfoButton() {
             state.dismiss()
         },
         tooltip = {
-            RichTooltip(title = { Text(stringResource(R.string.drawer_mode)) }) {
-                Text(stringResource(R.string.drawer_mode_tooltip))
+            RichTooltip(title = { Text(stringResource(Res.string.drawer_mode)) }) {
+                Text(stringResource(Res.string.drawer_mode_tooltip))
             }
         },
         state = state,
@@ -253,7 +273,7 @@ private fun ModeInfoButton() {
             ) {
                 Icon(
                     painterResource(R.drawable.ic_info),
-                    contentDescription = stringResource(R.string.drawer_mode_info),
+                    contentDescription = stringResource(Res.string.drawer_mode_info),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
                 )
@@ -284,7 +304,7 @@ private fun PowerSegments(filters: ChargeFilters, onFilters: (ChargeFilters) -> 
                 modifier = Modifier.weight(1f),
             ) {
                 Text(
-                    stringResource(R.string.drawer_power_step, step.roundToInt()),
+                    stringResource(Res.string.drawer_power_step, step.roundToInt()),
                     style = MaterialTheme.typography.labelMedium.tabular,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(vertical = 8.dp),
@@ -305,7 +325,7 @@ fun DrawerHead(modifier: Modifier = Modifier) {
         Image(painterResource(R.drawable.ic_powertrip), contentDescription = null, modifier = Modifier.height(24.dp))
         Image(
             painterResource(R.drawable.logo_powertrip_text),
-            contentDescription = stringResource(R.string.app_name),
+            contentDescription = stringResource(Res.string.app_name),
             modifier = Modifier.height(32.dp),
         )
     }

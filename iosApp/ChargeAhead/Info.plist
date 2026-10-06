@@ -3,7 +3,12 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
-	<string>de</string>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>de</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>PowerTrip</string>
 	<key>CFBundleExecutable</key>
@@ -27,7 +32,7 @@
 	     requires position and heading. Without this text, iOS rejects the
 	     request without even prompting. -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>PowerTrip braucht deinen Standort, um erreichbare Ladestopps in Fahrtrichtung anzuzeigen.</string>
+	<string>PowerTrip needs your location to show reachable charging stops in your direction of travel.</string>
 
 	<!-- The backend address and token do not belong in the repository.
 	     They come from the build settings CHARGEAHEAD_BASE_URL and

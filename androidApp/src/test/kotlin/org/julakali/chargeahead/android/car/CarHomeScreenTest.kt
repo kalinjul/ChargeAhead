@@ -20,6 +20,16 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_home_active_route
+import org.julakali.chargeahead.shared.resources.car_home_charge_now
+import org.julakali.chargeahead.shared.resources.car_home_enter_destination
+import org.julakali.chargeahead.shared.resources.car_home_soc
+import org.julakali.chargeahead.shared.resources.car_home_soc_percent
+import org.julakali.chargeahead.shared.resources.car_home_soc_unset
+import org.julakali.chargeahead.shared.resources.car_permission_message
+import org.julakali.chargeahead.shared.Texts
+import org.jetbrains.compose.resources.StringResource
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
@@ -40,7 +50,7 @@ class CarHomeScreenTest {
         graph?.close()
     }
 
-    private fun string(id: Int, vararg args: Any) = graph!!.carContext.getString(id, *args)
+    private fun string(resource: StringResource, vararg args: Any) = Texts.string(resource, *args)
 
     private fun CarTestGraph.tiles(): List<GridItem> {
         val screen = CarHomeScreen(carContext, feature, session, permissions)
@@ -53,10 +63,10 @@ class CarHomeScreenTest {
         val tiles = graph().tiles()
 
         assertEquals(
-            listOf(R.string.car_home_enter_destination, R.string.car_home_charge_now, R.string.car_home_soc).map(::string),
+            listOf(Res.string.car_home_enter_destination, Res.string.car_home_charge_now, Res.string.car_home_soc).map(::string),
             tiles.map { it.title.toString() },
         )
-        assertEquals(string(R.string.car_home_soc_unset), tiles.last().text.toString())
+        assertEquals(string(Res.string.car_home_soc_unset), tiles.last().text.toString())
         assertEquals(R.drawable.ic_battery_0, tiles.last().image!!.icon!!.resId)
     }
 
@@ -64,7 +74,7 @@ class CarHomeScreenTest {
     fun `the level tile shows the percent the feature knows`() {
         val tiles = graph(energy = EnergyState(63.0, SoCSourceKind.MANUAL, 0L)).tiles()
 
-        assertEquals(string(R.string.car_home_soc_percent, 63), tiles.last().text.toString())
+        assertEquals(string(Res.string.car_home_soc_percent, 63), tiles.last().text.toString())
         assertEquals(R.drawable.ic_battery_60, tiles.last().image!!.icon!!.resId)
     }
 
@@ -76,7 +86,7 @@ class CarHomeScreenTest {
 
         val tiles = graph.tiles()
 
-        assertEquals(string(R.string.car_home_active_route), tiles.first().title.toString())
+        assertEquals(string(Res.string.car_home_active_route), tiles.first().title.toString())
         assertEquals("München", tiles.first().text.toString())
         assertTrue(graph.screens.screensPushed.single() is RouteScreen)
     }
@@ -98,7 +108,7 @@ class CarHomeScreenTest {
 
         val template = screen.onGetTemplate() as MessageTemplate
 
-        assertEquals(string(R.string.car_permission_message), template.message.toString())
+        assertEquals(string(Res.string.car_permission_message), template.message.toString())
         assertTrue(graph.screens.screensPushed.isEmpty())
     }
 }

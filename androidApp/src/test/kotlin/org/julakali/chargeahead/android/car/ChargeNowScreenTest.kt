@@ -8,7 +8,6 @@ import org.julakali.chargeahead.android.car.CarTestGraph.Companion.click
 import org.julakali.chargeahead.android.car.CarTestGraph.Companion.distanceOf
 import org.julakali.chargeahead.android.car.CarTestGraph.Companion.settle
 import org.julakali.chargeahead.android.car.CarTestGraph.Companion.hamburg
-import org.julakali.chargeahead.android.phone.R
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -18,6 +17,10 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_now_empty
+import org.julakali.chargeahead.shared.Texts
+import org.jetbrains.compose.resources.StringResource
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
@@ -34,7 +37,7 @@ class ChargeNowScreenTest {
     @After
     fun stopGraph() = graph.close()
 
-    private fun string(id: Int, vararg args: Any) = graph.carContext.getString(id, *args)
+    private fun string(resource: StringResource, vararg args: Any) = Texts.string(resource, *args)
 
     private fun screen(): ChargeNowScreen = ChargeNowScreen(graph.carContext, graph.session).also { settle() }
 
@@ -45,7 +48,7 @@ class ChargeNowScreenTest {
     fun `nothing stored nearby is a message`() {
         val template = screen().onGetTemplate() as MessageTemplate
 
-        assertEquals(string(R.string.car_now_empty), template.message.toString())
+        assertEquals(string(Res.string.car_now_empty), template.message.toString())
     }
 
     @Test

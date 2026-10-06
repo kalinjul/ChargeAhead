@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
@@ -35,6 +35,8 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import org.julakali.chargeahead.android.phone.theme.tabular
 import de.charlex.compose.cache.rememberForUserInput
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.phone_search_clear
 /**
  * Search field: bordered, rounded, magnifier left, no underline.
  *
@@ -63,7 +65,7 @@ fun SearchField(value: String, onValueChange: (String) -> Unit, placeholder: Str
                 IconButton(onClick = { onTextChange("") }) {
                     Icon(
                         painterResource(R.drawable.ic_remove),
-                        contentDescription = stringResource(R.string.phone_search_clear),
+                        contentDescription = stringResource(Res.string.phone_search_clear),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(17.dp),
                     )

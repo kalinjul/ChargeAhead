@@ -62,7 +62,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -84,6 +84,18 @@ import org.julakali.chargeahead.shared.ui.SearchRow
 import org.julakali.chargeahead.shared.ui.SearchUiState
 import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.koin.androidx.compose.koinViewModel
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.home_mode_off
+import org.julakali.chargeahead.shared.resources.home_pill_active_route
+import org.julakali.chargeahead.shared.resources.home_pill_charge_now
+import org.julakali.chargeahead.shared.resources.home_settings
+import org.julakali.chargeahead.shared.resources.map_my_location
+import org.julakali.chargeahead.shared.resources.mode_ac
+import org.julakali.chargeahead.shared.resources.mode_browse
+import org.julakali.chargeahead.shared.resources.phone_permission_action
+import org.julakali.chargeahead.shared.resources.phone_permission_message
+import org.julakali.chargeahead.shared.resources.phone_status_location_unavailable
+import org.julakali.chargeahead.shared.resources.plan_planning
 
 private enum class HomeMode { BROWSING, SEARCHING, TRIP }
 
@@ -254,7 +266,7 @@ fun HomeScreen(
                         searching -> Unit
                         // Location is running and getting nowhere.
                         uiState.locationUnavailable -> HintChip(
-                            stringResource(R.string.phone_status_location_unavailable),
+                            stringResource(Res.string.phone_status_location_unavailable),
                             MaterialTheme.colorScheme.error,
                         )
                     }
@@ -293,7 +305,7 @@ fun HomeScreen(
                     RoundIconButton(onClick = onSettings) {
                         Icon(
                             Icons.Outlined.Menu,
-                            contentDescription = stringResource(R.string.home_settings),
+                            contentDescription = stringResource(Res.string.home_settings),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(22.dp),
                         )
@@ -328,7 +340,7 @@ fun HomeScreen(
                         } else {
                             Icon(
                                 Icons.Filled.MyLocation,
-                                contentDescription = stringResource(R.string.map_my_location),
+                                contentDescription = stringResource(Res.string.map_my_location),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -351,13 +363,13 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        stringResource(R.string.phone_permission_message),
+                        stringResource(Res.string.phone_permission_message),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                     )
                     Button(onClick = onRequestPermission) {
-                        Text(stringResource(R.string.phone_permission_action))
+                        Text(stringResource(Res.string.phone_permission_action))
                     }
                 }
             }
@@ -375,7 +387,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
                 ) {
                     CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
-                    Text(stringResource(R.string.plan_planning))
+                    Text(stringResource(Res.string.plan_planning))
                 }
             }
         }
@@ -392,7 +404,7 @@ fun HomeScreen(
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     HomePill(
-                        text = stringResource(R.string.home_pill_charge_now),
+                        text = stringResource(Res.string.home_pill_charge_now),
                         icon = painterResource(R.drawable.ic_battery),
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -400,7 +412,7 @@ fun HomeScreen(
                         onClick = onChargeNow,
                     )
                     HomePill(
-                        text = stringResource(R.string.home_pill_active_route),
+                        text = stringResource(Res.string.home_pill_active_route),
                         icon = painterResource(R.drawable.ic_route),
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -461,12 +473,12 @@ private fun ModeFlag(mode: ChargeMode, onDismiss: () -> Unit, modifier: Modifier
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
             Text(
-                stringResource(if (mode == ChargeMode.AC) R.string.mode_ac else R.string.mode_browse),
+                stringResource(if (mode == ChargeMode.AC) Res.string.mode_ac else Res.string.mode_browse),
                 style = MaterialTheme.typography.labelMedium,
             )
             Icon(
                 Icons.Default.Close,
-                contentDescription = stringResource(R.string.home_mode_off),
+                contentDescription = stringResource(Res.string.home_mode_off),
                 modifier = Modifier.padding(start = 4.dp).size(14.dp),
             )
         }

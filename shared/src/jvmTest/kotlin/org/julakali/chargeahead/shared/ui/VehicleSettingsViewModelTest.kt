@@ -109,7 +109,7 @@ class VehicleSettingsViewModelTest {
         assertEquals(preset, viewModel.uiState.await { it.catalog != null }.catalog)
 
         viewModel.onConsumptionEditOpened()
-        assertEquals(VehicleEditor.Consumption(preset.consumptionKwhPer100Km.asGermanInput()), viewModel.uiState.await { it.editor != null }.editor)
+        assertEquals(VehicleEditor.Consumption(preset.consumptionKwhPer100Km.asLocalInput()), viewModel.uiState.await { it.editor != null }.editor)
         viewModel.onEditorInputChanged("21,3")
         viewModel.onEditorConfirmed()
 
@@ -124,7 +124,7 @@ class VehicleSettingsViewModelTest {
 
         viewModel.onConsumptionEditOpened()
         viewModel.uiState.await { it.editor != null }
-        viewModel.onEditorInputChanged(preset.consumptionKwhPer100Km.asGermanInput())
+        viewModel.onEditorInputChanged(preset.consumptionKwhPer100Km.asLocalInput())
         viewModel.onEditorConfirmed()
 
         val stored = vehicles.vehicle.awaitValue { it?.consumptionKwhPer100Km != 25.0 }!!
@@ -168,7 +168,7 @@ class VehicleSettingsViewModelTest {
 
         viewModel.onConsumptionEditOpened()
         viewModel.uiState.await { it.editor != null }
-        viewModel.onEditorInputChanged((preset.consumptionKwhPer100Km + 2).asGermanInput())
+        viewModel.onEditorInputChanged((preset.consumptionKwhPer100Km + 2).asLocalInput())
         viewModel.onEditorConfirmed()
 
         assertTrue(viewModel.uiState.await { it.canRestoreCatalogValues }.canRestoreCatalogValues)

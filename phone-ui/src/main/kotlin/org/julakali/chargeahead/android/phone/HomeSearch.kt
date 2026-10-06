@@ -64,7 +64,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
@@ -73,6 +73,14 @@ import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.ui.SearchRow
 import org.julakali.chargeahead.shared.ui.SearchUiState
 import org.julakali.chargeahead.shared.ui.asKmLabel
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.home_search_back
+import org.julakali.chargeahead.shared.resources.home_search_clear
+import org.julakali.chargeahead.shared.resources.home_search_hint
+import org.julakali.chargeahead.shared.resources.home_trip_clear
+import org.julakali.chargeahead.shared.resources.plan_no_results
+import org.julakali.chargeahead.shared.resources.plan_result_distance
+import org.julakali.chargeahead.shared.resources.plan_search_failed
 
 /** The always-present search pill. Focus switches the app into searching. */
 @Composable
@@ -118,7 +126,7 @@ fun HomeSearchBar(
                 IconButton(onClick = onBack) {
                     Icon(
                         Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.home_search_back),
+                        contentDescription = stringResource(Res.string.home_search_back),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -141,7 +149,7 @@ fun HomeSearchBar(
                     ) {
                         if (query.isEmpty()) {
                             Text(
-                                stringResource(R.string.home_search_hint),
+                                stringResource(Res.string.home_search_hint),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = ChargeAheadColors.faint,
                                 maxLines = 1,
@@ -167,13 +175,13 @@ fun HomeSearchBar(
                     if (expanded) {
                         Icon(
                             Icons.Outlined.Close,
-                            contentDescription = stringResource(R.string.home_search_clear),
+                            contentDescription = stringResource(Res.string.home_search_clear),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     } else {
                         Icon(
                             painterResource(R.drawable.ic_remove),
-                            contentDescription = stringResource(R.string.home_search_clear),
+                            contentDescription = stringResource(Res.string.home_search_clear),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp),
                         )
@@ -212,7 +220,7 @@ fun DestinationHeader(title: String, subtitle: String, onClear: () -> Unit, onTi
                 IconButton(onClick = onClear) {
                     Icon(
                         painterResource(R.drawable.ic_remove),
-                        contentDescription = stringResource(R.string.home_trip_clear),
+                        contentDescription = stringResource(Res.string.home_trip_clear),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp),
                     )
@@ -249,9 +257,9 @@ fun SearchResultsPanel(
     }
     container {
         when {
-            uiState.failed -> Message(stringResource(R.string.plan_search_failed), error = true)
+            uiState.failed -> Message(stringResource(Res.string.plan_search_failed), error = true)
             uiState.rows.isEmpty() && !uiState.isQueryTooShort && !uiState.searching ->
-                Message(stringResource(R.string.plan_no_results))
+                Message(stringResource(Res.string.plan_no_results))
             uiState.rows.isEmpty() -> Unit
             else -> LazyColumn(modifier = if (standalone) Modifier.heightIn(max = 360.dp) else Modifier.fillMaxSize()) {
                 items(uiState.rows, key = { "${it.destination.position}${it.title}" }) { row ->
@@ -284,7 +292,7 @@ fun SearchResultsPanel(
                         }
                         row.distanceKm?.let {
                             Text(
-                                stringResource(R.string.plan_result_distance, it.asKmLabel()),
+                                stringResource(Res.string.plan_result_distance, it.asKmLabel()),
                                 style = MaterialTheme.typography.bodySmall.tabular,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

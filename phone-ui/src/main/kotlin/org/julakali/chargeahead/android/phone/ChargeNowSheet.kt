@@ -33,10 +33,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.AppCard
 import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.android.phone.components.StationCard
@@ -47,6 +46,15 @@ import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.cn_distance_power
+import org.julakali.chargeahead.shared.resources.cn_empty
+import org.julakali.chargeahead.shared.resources.cn_more
+import org.julakali.chargeahead.shared.resources.cn_navigate
+import org.julakali.chargeahead.shared.resources.cn_relaxed
+import org.julakali.chargeahead.shared.resources.cn_subtitle
+import org.julakali.chargeahead.shared.resources.cn_title
+import org.julakali.chargeahead.shared.resources.home_no_position
 
 @Composable
 fun ChargeNowRoute(
@@ -73,11 +81,11 @@ fun ChargeNowSheetContent(
     // than half the screen, and it measures that on the first frame. A list that is sometimes
     // shorter would open the sheet expanded at content height instead.
     Column(modifier = modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.cn_title), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.cn_title), style = MaterialTheme.typography.titleMedium)
 
         when (uiState) {
             ChargeNowUiState.NoPosition -> Text(
-                stringResource(R.string.home_no_position),
+                stringResource(Res.string.home_no_position),
                 modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
             )
 
@@ -103,14 +111,14 @@ fun ChargeNowSheetContent(
                 val result = uiState.result
                 if (result.candidates.isEmpty()) {
                     Text(
-                        stringResource(R.string.cn_empty),
+                        stringResource(Res.string.cn_empty),
                         modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
                     )
                     return@Column
                 }
                 // Relaxed filters are context, not an error: same line, same tone.
                 Text(
-                    stringResource(if (result.relaxed.isEmpty()) R.string.cn_subtitle else R.string.cn_relaxed),
+                    stringResource(if (result.relaxed.isEmpty()) Res.string.cn_subtitle else Res.string.cn_relaxed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -123,7 +131,7 @@ fun ChargeNowSheetContent(
                         ChargeNowCard(rank = index + 1, candidate = candidate, onNavigate = onNavigate, onOpen = onOpen)
                     }
                     if (result.more.isNotEmpty()) {
-                        item { SectionLabel(stringResource(R.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
+                        item { SectionLabel(stringResource(Res.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
                         itemsIndexed(result.more, key = { _, c -> "more-${c.site.id}" }) { index, candidate ->
                             ChargeNowCard(
                                 rank = result.candidates.size + index + 1,
@@ -150,10 +158,10 @@ private fun ChargeNowCard(
         rank = rank,
         badgeColor = operatorColor(candidate.site),
         title = candidate.site.operator ?: candidate.site.name,
-        metaLine = stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
+        metaLine = stringResource(Res.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
         address = ChargeStopFormatter.addressLine(candidate.site),
         onSend = { onNavigate(candidate) },
-        sendContentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
+        sendContentDescription = stringResource(Res.string.cn_navigate, candidate.site.name),
         onClick = { onOpen(candidate) },
     )
 }

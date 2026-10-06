@@ -26,6 +26,11 @@ import org.julakali.chargeahead.shared.ui.car.CarSiteDetailViewModel
 import org.koin.core.parameter.parametersOf
 import org.koin.core.scope.Scope
 import kotlinx.coroutines.launch
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_detail_back
+import org.julakali.chargeahead.shared.resources.car_detail_charge
+import org.julakali.chargeahead.shared.resources.car_detail_navigate
+import org.julakali.chargeahead.shared.Texts
 
 /**
  * One charging site: where it is, how far, what it offers right now, and
@@ -57,14 +62,14 @@ class SiteDetailScreen(
         pane.setImage(paneLogo())
         pane.addAction(
             Action.Builder()
-                .setTitle(carContext.getString(R.string.car_detail_navigate))
+                .setTitle(Texts.string(Res.string.car_detail_navigate))
                 .setBackgroundColor(CarColor.PRIMARY)
                 .setOnClickListener { navigateTo(carContext, site.name, site.position) }
                 .build(),
         )
         pane.addAction(
             Action.Builder()
-                .setTitle(carContext.getString(R.string.car_detail_back))
+                .setTitle(Texts.string(Res.string.car_detail_back))
                 .setOnClickListener { screenManager.pop() }
                 .build(),
         )
@@ -85,8 +90,7 @@ class SiteDetailScreen(
         ChargeStopFormatter.addressLine(site)?.let { rows += Row.Builder().setTitle(it).build() }
 
         val charge = stop?.let {
-            carContext.getString(
-                R.string.car_detail_charge,
+            Texts.string(Res.string.car_detail_charge,
                 it.arrivalSocPercent.toInt(),
                 it.departureSocPercent.toInt(),
                 ChargeStopFormatter.minutesLabel(it.chargeMinutes),

@@ -51,6 +51,11 @@ fun TripSheetListSectionPicked() = Sheet(TripListLayout.LIST, SectionSelection(s
 fun TripSheetTiles() = Sheet(TripListLayout.TILES)
 
 @PreviewTest
+@Preview(locale = "en", showBackground = true)
+@Composable
+fun TripSheetTilesEnglish() = Sheet(TripListLayout.TILES)
+
+@PreviewTest
 @Preview(locale = "de", showBackground = true, fontScale = 1.5f)
 @Composable
 fun TripSheetListLargeFont() = Sheet(TripListLayout.LIST)

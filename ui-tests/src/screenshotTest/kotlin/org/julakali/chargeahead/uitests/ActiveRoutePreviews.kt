@@ -44,6 +44,11 @@ private fun Screen(selection: SectionSelection = SectionSelection(), planning: B
 fun ActiveRoute() = Screen()
 
 @PreviewTest
+@Preview(locale = "en", showBackground = true)
+@Composable
+fun ActiveRouteEnglish() = Screen()
+
+@PreviewTest
 @Preview(locale = "de", showBackground = true)
 @Composable
 fun ActiveRouteSectionPicked() = Screen(SectionSelection(selecting = true, a = 1, b = 2))

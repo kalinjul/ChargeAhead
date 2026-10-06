@@ -60,7 +60,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -77,6 +77,25 @@ import org.julakali.chargeahead.shared.ui.GarageUiState
 import org.julakali.chargeahead.shared.ui.GarageViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.garage_add_title
+import org.julakali.chargeahead.shared.resources.garage_arrival_row_hint
+import org.julakali.chargeahead.shared.resources.garage_arrival_sheet_hint
+import org.julakali.chargeahead.shared.resources.garage_arrival_title
+import org.julakali.chargeahead.shared.resources.garage_empty_text
+import org.julakali.chargeahead.shared.resources.garage_empty_title
+import org.julakali.chargeahead.shared.resources.garage_percent
+import org.julakali.chargeahead.shared.resources.garage_range_caption
+import org.julakali.chargeahead.shared.resources.garage_range_number
+import org.julakali.chargeahead.shared.resources.garage_range_unit
+import org.julakali.chargeahead.shared.resources.garage_stat_battery
+import org.julakali.chargeahead.shared.resources.garage_stat_consumption
+import org.julakali.chargeahead.shared.resources.garage_stat_dc
+import org.julakali.chargeahead.shared.resources.garage_unit_kw
+import org.julakali.chargeahead.shared.resources.garage_unit_kwh
+import org.julakali.chargeahead.shared.resources.garage_unit_kwh_per_100
+import org.julakali.chargeahead.shared.resources.garage_vehicle_row
+import org.julakali.chargeahead.shared.resources.garage_vehicle_row_hint
 
 @Composable
 fun GarageRoute(
@@ -116,8 +135,8 @@ fun GarageScreen(
 
     uiState.arrivalSheet?.let { percent ->
         ChargeLevelSheet(
-            title = stringResource(R.string.garage_arrival_title),
-            subtitle = stringResource(R.string.garage_arrival_sheet_hint),
+            title = stringResource(Res.string.garage_arrival_title),
+            subtitle = stringResource(Res.string.garage_arrival_sheet_hint),
             kind = ChargeLevelKind.ARRIVAL,
             percent = percent,
             onChange = onArrivalChange,
@@ -153,24 +172,24 @@ fun GarageScreen(
         val arrivalRow: @Composable () -> Unit = {
             SettingRow(
                 icon = Icons.Outlined.Flag,
-                title = stringResource(R.string.garage_arrival_title),
-                supporting = stringResource(R.string.garage_arrival_row_hint),
-                value = stringResource(R.string.garage_percent, uiState.arrivalSocPercent.roundToInt()),
+                title = stringResource(Res.string.garage_arrival_title),
+                supporting = stringResource(Res.string.garage_arrival_row_hint),
+                value = stringResource(Res.string.garage_percent, uiState.arrivalSocPercent.roundToInt()),
                 onClick = onArrivalSheetOpen,
             )
         }
         val vehicleRow: @Composable () -> Unit = {
             SettingRow(
                 icon = Icons.Outlined.Tune,
-                title = stringResource(R.string.garage_vehicle_row),
-                supporting = stringResource(R.string.garage_vehicle_row_hint),
+                title = stringResource(Res.string.garage_vehicle_row),
+                supporting = stringResource(Res.string.garage_vehicle_row_hint),
                 onClick = onOpenVehicle,
             )
         }
         SettingsCard(if (selected == null) listOf(arrivalRow) else listOf(vehicleRow, arrivalRow), inset)
     }
     if (selected != null) {
-        val label = stringResource(R.string.garage_add_title)
+        val label = stringResource(Res.string.garage_add_title)
         ExtendedFloatingActionButton(
             onClick = onOpenAdd,
             // Material hides the text from TalkBack; the label goes on the icon.
@@ -292,18 +311,18 @@ private fun CarCardFace(vehicle: VehicleProfile, fullRangeKm: Double?, shape: Sh
             fullRangeKm?.let { km ->
                 Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(top = 14.dp)) {
                     Text(
-                        stringResource(R.string.garage_range_number, km.roundToInt()),
+                        stringResource(Res.string.garage_range_number, km.roundToInt()),
                         style = MaterialTheme.typography.displayMedium.tabular,
                         fontWeight = FontWeight.Medium,
                     )
                     Text(
-                        " " + stringResource(R.string.garage_range_unit),
+                        " " + stringResource(Res.string.garage_range_unit),
                         style = MaterialTheme.typography.titleLarge,
                         modifier = Modifier.padding(bottom = 6.dp),
                     )
                 }
                 Text(
-                    stringResource(R.string.garage_range_caption),
+                    stringResource(Res.string.garage_range_caption),
                     style = MaterialTheme.typography.bodyMedium,
                     color = LocalContentColor.current.copy(alpha = SECONDARY_ALPHA),
                 )
@@ -312,21 +331,21 @@ private fun CarCardFace(vehicle: VehicleProfile, fullRangeKm: Double?, shape: Sh
             // Number above, unit below, so the three columns line up however long the unit is.
             Row {
                 Stat(
-                    stringResource(R.string.garage_stat_battery),
+                    stringResource(Res.string.garage_stat_battery),
                     vehicle.usableBatteryKwh.oneDecimal(),
-                    stringResource(R.string.garage_unit_kwh),
+                    stringResource(Res.string.garage_unit_kwh),
                     Modifier.weight(1f),
                 )
                 Stat(
-                    stringResource(R.string.garage_stat_dc),
+                    stringResource(Res.string.garage_stat_dc),
                     vehicle.dcPeakPowerKw?.roundToInt()?.toString() ?: "–",
-                    stringResource(R.string.garage_unit_kw),
+                    stringResource(Res.string.garage_unit_kw),
                     Modifier.weight(1f),
                 )
                 Stat(
-                    stringResource(R.string.garage_stat_consumption),
+                    stringResource(Res.string.garage_stat_consumption),
                     vehicle.consumptionKwhPer100Km.oneDecimal(),
-                    stringResource(R.string.garage_unit_kwh_per_100),
+                    stringResource(Res.string.garage_unit_kwh_per_100),
                     Modifier.weight(1f),
                 )
             }
@@ -360,9 +379,9 @@ private fun EmptyGarageCard(onAdd: () -> Unit, modifier: Modifier = Modifier) {
                     Icon(Icons.Outlined.DirectionsCar, contentDescription = null, modifier = Modifier.size(32.dp))
                 }
             }
-            Text(stringResource(R.string.garage_empty_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
+            Text(stringResource(Res.string.garage_empty_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 16.dp))
             Text(
-                stringResource(R.string.garage_empty_text),
+                stringResource(Res.string.garage_empty_text),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -371,7 +390,7 @@ private fun EmptyGarageCard(onAdd: () -> Unit, modifier: Modifier = Modifier) {
             Button(onClick = onAdd, modifier = Modifier.padding(top = 20.dp)) {
                 Icon(Icons.Outlined.Add, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                 Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                Text(stringResource(R.string.garage_add_title))
+                Text(stringResource(Res.string.garage_add_title))
             }
         }
     }

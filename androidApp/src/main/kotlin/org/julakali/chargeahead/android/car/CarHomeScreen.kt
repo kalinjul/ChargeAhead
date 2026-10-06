@@ -19,6 +19,17 @@ import org.julakali.chargeahead.shared.ui.car.CarHomeViewModel
 import org.koin.core.scope.Scope
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.app_name
+import org.julakali.chargeahead.shared.resources.car_home_active_route
+import org.julakali.chargeahead.shared.resources.car_home_charge_now
+import org.julakali.chargeahead.shared.resources.car_home_enter_destination
+import org.julakali.chargeahead.shared.resources.car_home_soc
+import org.julakali.chargeahead.shared.resources.car_home_soc_percent
+import org.julakali.chargeahead.shared.resources.car_home_soc_unset
+import org.julakali.chargeahead.shared.resources.car_permission_action
+import org.julakali.chargeahead.shared.resources.car_permission_message
+import org.julakali.chargeahead.shared.Texts
 
 /**
  * The car's start screen: tiles for destination, charging now and the
@@ -98,7 +109,7 @@ class CarHomeScreen(
         )
         .build()
 
-    private fun title(): String = carContext.getString(R.string.app_name)
+    private fun title(): String = Texts.string(Res.string.app_name)
 
     // IMAGE_TYPE_ICON: tintable, so the tiles carry the brand colour.
     private fun tile(title: String, iconRes: Int, text: String? = null, onClick: () -> Unit): GridItem =
@@ -109,20 +120,20 @@ class CarHomeScreen(
             .setOnClickListener(onClick)
             .build()
 
-    private fun searchTile(): GridItem = tile(carContext.getString(R.string.car_home_enter_destination), R.drawable.ic_search) {
+    private fun searchTile(): GridItem = tile(Texts.string(Res.string.car_home_enter_destination), R.drawable.ic_search) {
         screenManager.push(DestinationSearchScreen(carContext, session, permissions))
     }
 
-    private fun chargeNowTile(): GridItem = tile(carContext.getString(R.string.car_home_charge_now), R.drawable.ic_bolt) {
+    private fun chargeNowTile(): GridItem = tile(Texts.string(Res.string.car_home_charge_now), R.drawable.ic_bolt) {
         screenManager.push(ChargeNowScreen(carContext, session))
     }
 
     /** The level as a battery drawn to it, in steps of ten; empty when nothing is known. */
     private fun socTile(socPercent: Int?): GridItem = tile(
-        carContext.getString(R.string.car_home_soc),
+        Texts.string(Res.string.car_home_soc),
         batteryIcon(socPercent),
-        text = socPercent?.let { carContext.getString(R.string.car_home_soc_percent, it) }
-            ?: carContext.getString(R.string.car_home_soc_unset),
+        text = socPercent?.let { Texts.string(Res.string.car_home_soc_percent, it) }
+            ?: Texts.string(Res.string.car_home_soc_unset),
     ) {
         screenManager.push(SoCScreen(carContext, session, permissions))
     }
@@ -133,7 +144,7 @@ class CarHomeScreen(
     }
 
     private fun activeRouteTile(destination: Destination): GridItem =
-        tile(carContext.getString(R.string.car_home_active_route), R.drawable.ic_route, text = destination.name) {
+        tile(Texts.string(Res.string.car_home_active_route), R.drawable.ic_route, text = destination.name) {
             openRoute(destination)
         }
 
@@ -155,7 +166,7 @@ class CarHomeScreen(
     }
 
     private fun permissionTemplate(): Template =
-        MessageTemplate.Builder(carContext.getString(R.string.car_permission_message))
+        MessageTemplate.Builder(Texts.string(Res.string.car_permission_message))
             .setHeader(
                 Header.Builder()
                     .setTitle(title())
@@ -164,7 +175,7 @@ class CarHomeScreen(
             )
             .addAction(
                 Action.Builder()
-                    .setTitle(carContext.getString(R.string.car_permission_action))
+                    .setTitle(Texts.string(Res.string.car_permission_action))
                     .setOnClickListener(::requestLocationPermission)
                     .build(),
             )

@@ -12,6 +12,21 @@ import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Reachability
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.fmt_planned_stop_detail
+import org.julakali.chargeahead.shared.resources.fmt_arrival_about
+import org.julakali.chargeahead.shared.resources.fmt_available_of
+import org.julakali.chargeahead.shared.resources.fmt_charge_point
+import org.julakali.chargeahead.shared.resources.fmt_charge_points
+import org.julakali.chargeahead.shared.resources.fmt_charge_points_unknown
+import org.julakali.chargeahead.shared.resources.fmt_charge_to
+import org.julakali.chargeahead.shared.resources.fmt_connector_type2
+import org.julakali.chargeahead.shared.resources.fmt_connector_unknown
+import org.julakali.chargeahead.shared.resources.fmt_marginal
+import org.julakali.chargeahead.shared.resources.fmt_out_of_order
+import org.julakali.chargeahead.shared.resources.fmt_reachable
+import org.julakali.chargeahead.shared.resources.fmt_status_unknown
+import org.julakali.chargeahead.shared.resources.fmt_unreachable
 import kotlin.math.round
 
 /** Shared display strings, so Android Auto and CarPlay show the same lines. */
@@ -32,12 +47,12 @@ object ChargeStopFormatter {
     fun secondaryLine(stop: ChargeStop): String {
         val soc = stop.socOnArrivalPercent
         return if (soc != null) {
-            "Ankunft ca. ${formatWholeNumber(soc)} %"
+            Texts.string(Res.string.fmt_arrival_about, formatWholeNumber(soc))
         } else {
             when (stop.reachability) {
-                Reachability.REACHABLE -> "Erreichbar"
-                Reachability.MARGINAL -> "Knapp"
-                Reachability.UNREACHABLE -> "Nicht erreichbar"
+                Reachability.REACHABLE -> Texts.string(Res.string.fmt_reachable)
+                Reachability.MARGINAL -> Texts.string(Res.string.fmt_marginal)
+                Reachability.UNREACHABLE -> Texts.string(Res.string.fmt_unreachable)
                 Reachability.UNKNOWN -> connectorSummary(stop)
             }
         }
@@ -45,7 +60,7 @@ object ChargeStopFormatter {
 
     /** Never empty: this line has a fixed slot in both car UIs. */
     private fun connectorSummary(stop: ChargeStop): String =
-        chargePointSummary(stop.site) ?: "Ladepunkte unbekannt"
+        chargePointSummary(stop.site) ?: Texts.string(Res.string.fmt_charge_points_unknown)
 
     private fun strongestConnector(connectors: List<Connector>): Connector? =
         connectors.maxByOrNull { it.maxPowerKw }
@@ -81,11 +96,7 @@ object ChargeStopFormatter {
             .sortedByDescending { it.maxPowerKw }
             .map { connector ->
                 val count = connector.count
-                val countPart = when {
-                    count == null -> null
-                    count == 1 -> "1 Ladepunkt"
-                    else -> "$count Ladepunkte"
-                }
+                val countPart = count?.let { Texts.plural(Res.plurals.fmt_charge_points, it, it) }
                 listOfNotNull(
                     "${connectorTypeLabel(connector.type)} ${formatPowerKw(connector.maxPowerKw)} kW",
                     countPart,
@@ -101,12 +112,12 @@ object ChargeStopFormatter {
             val offer = listOfNotNull(
                 types.joinToString(" / ").takeIf { it.isNotEmpty() },
                 group.maxPowerKw?.let { "${formatPowerKw(it)} kW" },
-            ).joinToString(" ").ifEmpty { "Ladepunkt" }
+            ).joinToString(" ").ifEmpty { Texts.string(Res.string.fmt_charge_point) }
             val known = group.total - group.unknown
             listOfNotNull(
                 offer,
-                if (known == 0) "Status unbekannt" else "${group.available} von $known frei",
-                group.outOfOrder.takeIf { it > 0 }?.let { "$it außer Betrieb" },
+                if (known == 0) Texts.string(Res.string.fmt_status_unknown) else Texts.string(Res.string.fmt_available_of, group.available, known),
+                group.outOfOrder.takeIf { it > 0 }?.let { Texts.string(Res.string.fmt_out_of_order, it) },
             ).joinToString(" · ")
         }
 
@@ -144,11 +155,16 @@ object ChargeStopFormatter {
     fun plannedStopAddressLine(stop: PlannedStop): String? =
         addressLine(stop.site) ?: stop.site.name.takeIf { stop.site.operator != null }
 
-    /** e.g. "Nach 142 km · 150 kW · 18 → 80 % in 25 min". */
+    /** e.g. "Nach 142 km · 150 kW · 18 → 80% in 25 min". */
     fun plannedStopDetailLine(stop: PlannedStop): String =
-        "Nach ${formatDistanceKm(stop.kmFromStart)} · ${formatPowerKw(stop.maxPowerKw)} kW · " +
-            "${formatWholeNumber(stop.arrivalSocPercent)} → ${formatWholeNumber(stop.departureSocPercent)} % " +
-            "in ${minutesLabel(stop.chargeMinutes)}"
+        Texts.string(
+            Res.string.fmt_planned_stop_detail,
+            formatDistanceKm(stop.kmFromStart),
+            formatPowerKw(stop.maxPowerKw),
+            formatWholeNumber(stop.arrivalSocPercent),
+            formatWholeNumber(stop.departureSocPercent),
+            minutesLabel(stop.chargeMinutes),
+        )
 
     /** A bare distance for message texts, same rules as the row lines. */
     fun distanceLabel(distanceKm: Double): String = formatDistanceKm(distanceKm)
@@ -161,9 +177,9 @@ object ChargeStopFormatter {
     /** e.g. "25 min". */
     fun minutesLabel(minutes: Double): String = "${formatWholeNumber(minutes)} min"
 
-    /** e.g. "25 min laden bis 69 %" — how long, and what it buys. */
+    /** e.g. "25 min laden bis 69%" — how long, and what it buys. */
     fun chargeToLabel(stop: PlannedStop): String =
-        "${minutesLabel(stop.chargeMinutes)} laden bis ${formatWholeNumber(stop.departureSocPercent)} %"
+        Texts.string(Res.string.fmt_charge_to, minutesLabel(stop.chargeMinutes), formatWholeNumber(stop.departureSocPercent))
 
     // --- Car rows: charge now ---
 
@@ -189,7 +205,7 @@ object ChargeStopFormatter {
         if (counts.isEmpty() || counts.any { it == null }) return null
 
         val total = counts.filterNotNull().sum()
-        return if (total == 1) "1 Ladepunkt" else "$total Ladepunkte"
+        return Texts.plural(Res.plurals.fmt_charge_points, total, total)
     }
 
     // Rounded to 10 m.
@@ -205,20 +221,17 @@ object ChargeStopFormatter {
 
     private fun connectorTypeLabel(type: ConnectorType): String = when (type) {
         ConnectorType.CCS2 -> "CCS"
-        ConnectorType.TYPE2 -> "Typ 2"
+        ConnectorType.TYPE2 -> Texts.string(Res.string.fmt_connector_type2)
         ConnectorType.CHADEMO -> "CHAdeMO"
         ConnectorType.TESLA_NACS -> "NACS"
         ConnectorType.SCHUKO -> "Schuko"
-        ConnectorType.UNKNOWN -> "Unbekannt"
+        ConnectorType.UNKNOWN -> Texts.string(Res.string.fmt_connector_unknown)
     }
 
-    // One decimal below 10 km, whole numbers above — German decimal comma.
+    // One decimal below 10 km, whole numbers above.
     private fun formatDistanceKm(distanceKm: Double): String {
         return if (distanceKm < 10.0) {
-            val tenths = round(distanceKm * 10.0).toLong()
-            val whole = tenths / 10
-            val fraction = tenths % 10
-            "$whole,$fraction km"
+            "${formatDecimal(distanceKm, 1)} km"
         } else {
             "${formatWholeNumber(distanceKm)} km"
         }

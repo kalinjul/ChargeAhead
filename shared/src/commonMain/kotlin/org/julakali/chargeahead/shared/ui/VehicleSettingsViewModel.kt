@@ -20,6 +20,7 @@ import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import kotlin.math.abs
 import kotlin.math.round
+import org.julakali.chargeahead.shared.formatDecimal
 
 sealed interface VehicleEditor {
     val applicable: Boolean
@@ -82,11 +83,11 @@ class VehicleSettingsViewModel(
 
     fun onNameEditOpened() = open { VehicleEditor.Name(it.displayName) }
 
-    fun onBatteryEditOpened() = open { VehicleEditor.Battery(it.usableBatteryKwh.asGermanInput()) }
+    fun onBatteryEditOpened() = open { VehicleEditor.Battery(it.usableBatteryKwh.asLocalInput()) }
 
-    fun onDcPeakEditOpened() = open { VehicleEditor.DcPeak(it.dcPeakPowerKw?.asGermanInput().orEmpty()) }
+    fun onDcPeakEditOpened() = open { VehicleEditor.DcPeak(it.dcPeakPowerKw?.asLocalInput().orEmpty()) }
 
-    fun onConsumptionEditOpened() = open { VehicleEditor.Consumption(it.consumptionKwhPer100Km.asGermanInput()) }
+    fun onConsumptionEditOpened() = open { VehicleEditor.Consumption(it.consumptionKwhPer100Km.asLocalInput()) }
 
     fun onEditorInputChanged(input: String) = editor.update {
         when (it) {
@@ -145,7 +146,8 @@ class VehicleSettingsViewModel(
 internal fun String.toPositiveDoubleOrNull(): Double? =
     replace(',', '.').trim().toDoubleOrNull()?.takeIf { it > 0.0 }
 
-internal fun Double.asGermanInput(): String = asInput().replace('.', ',')
+/** What an editor opens with: [asInput] in the UI language's notation ("16,5" / "16.5"). */
+internal fun Double.asLocalInput(): String = asInput().let { if ('.' in it) formatDecimal(it.toDouble(), 1) else it }
 
 /** One decimal at most, whole numbers without the ".0". */
 internal fun Double.asInput(): String {

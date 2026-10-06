@@ -8,14 +8,14 @@ struct ContentView: View {
         List {
             Section {
                 LabeledContent(
-                    NSLocalizedString("phone_platform_label", comment: ""),
+                    localized("phone_platform_label"),
                     value: Platform_iosKt.platformName()
                 )
-                Text(NSLocalizedString("phone_hint_car_ui", comment: ""))
+                Text(localized("ios_hint_car_ui"))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
         }
-        .navigationTitle(NSLocalizedString("app_name", comment: ""))
+        .navigationTitle(localized("app_name"))
     }
 }

@@ -11,11 +11,23 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Reachability
+import java.util.Locale
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
+/** German unless a test says otherwise; the English twins sit at the bottom. */
 class ChargeStopFormatterTest {
+
+    private val saved = Locale.getDefault()
+
+    @BeforeTest
+    fun german() = Locale.setDefault(Locale.GERMANY)
+
+    @AfterTest
+    fun restore() = Locale.setDefault(saved)
 
     private val site = ChargeSite(
         id = "test-site",
@@ -61,7 +73,7 @@ class ChargeStopFormatterTest {
     @Test
     fun secondaryLine_withKnownSoc_showsArrivalPercent() {
         val stop = ChargeStop(site, distanceKm = 12.0, reachability = Reachability.REACHABLE, socOnArrivalPercent = 34.0)
-        assertEquals("Ankunft ca. 34 %", ChargeStopFormatter.secondaryLine(stop))
+        assertEquals("Ankunft ca. 34%", ChargeStopFormatter.secondaryLine(stop))
     }
 
     @Test
@@ -301,14 +313,14 @@ class ChargeStopFormatterTest {
     @Test
     fun plannedStopDetailLine_showsProgressArrivalPowerAndChargeTime() {
         assertEquals(
-            "Nach 142 km · 150 kW · 18 → 80 % in 25 min",
+            "Nach 142 km · 150 kW · 18 → 80% in 25 min",
             ChargeStopFormatter.plannedStopDetailLine(plannedStop()),
         )
     }
 
     @Test
     fun chargeToLabel_showsTimeAndTargetLevel() {
-        assertEquals("25 min laden bis 80 %", ChargeStopFormatter.chargeToLabel(plannedStop()))
+        assertEquals("25 min laden bis 80%", ChargeStopFormatter.chargeToLabel(plannedStop()))
     }
 
     @Test
@@ -351,8 +363,53 @@ class ChargeStopFormatterTest {
 
     // The labels iOS composes its own rows from.
     @Test
-    fun labels_forPlatformComposedLines_useGermanFormats() {
+    fun labels_forPlatformComposedLines_areTheSameInBothLanguages() {
         assertEquals("150 kW", ChargeStopFormatter.powerKwLabel(150.4))
         assertEquals("25 min", ChargeStopFormatter.minutesLabel(24.6))
+    }
+
+    @Test
+    fun english_secondaryLines() {
+        Locale.setDefault(Locale.US)
+        val withSoc = ChargeStop(site, distanceKm = 12.0, reachability = Reachability.REACHABLE, socOnArrivalPercent = 34.0)
+        assertEquals("Arrival ~34%", ChargeStopFormatter.secondaryLine(withSoc))
+        val reachable = ChargeStop(site, distanceKm = 12.0, reachability = Reachability.REACHABLE, socOnArrivalPercent = null)
+        assertEquals("Reachable", ChargeStopFormatter.secondaryLine(reachable))
+        val counted = ChargeStop(site, distanceKm = 12.0, reachability = Reachability.UNKNOWN, socOnArrivalPercent = null)
+        assertEquals("6 charge points", ChargeStopFormatter.secondaryLine(counted))
+    }
+
+    @Test
+    fun english_distancesUseAPoint() {
+        Locale.setDefault(Locale.US)
+        assertEquals("8.4 km", ChargeStopFormatter.distanceLabel(8.43))
+        assertEquals("12 km", ChargeStopFormatter.distanceLabel(12.4))
+    }
+
+    @Test
+    fun english_liveConnectorLines() {
+        Locale.setDefault(Locale.US)
+        val groups = listOf(
+            LiveConnectorGroup(listOf(ConnectorType.CCS2), 300.0, available = 2, occupied = 1, outOfOrder = 1, unknown = 0),
+            LiveConnectorGroup(listOf(ConnectorType.TYPE2), 22.0, available = 0, occupied = 1, outOfOrder = 0, unknown = 0),
+            LiveConnectorGroup(emptyList(), null, available = 0, occupied = 0, outOfOrder = 0, unknown = 2),
+        )
+        assertEquals(
+            listOf("CCS 300 kW · 2 of 4 free · 1 out of order", "Type 2 22 kW · 0 of 1 free", "Charge point · Status unknown"),
+            ChargeStopFormatter.liveConnectorLines(groups),
+        )
+    }
+
+    @Test
+    fun english_plannedStopLines() {
+        Locale.setDefault(Locale.US)
+        assertEquals("After 142 km · 150 kW · 18 → 80% in 25 min", ChargeStopFormatter.plannedStopDetailLine(plannedStop()))
+        assertEquals("25 min charging to 80%", ChargeStopFormatter.chargeToLabel(plannedStop()))
+    }
+
+    @Test
+    fun aLanguageWithoutStringsFallsBackToEnglish() {
+        Locale.setDefault(Locale.FRANCE)
+        assertEquals("Reachable", ChargeStopFormatter.secondaryLine(ChargeStop(site, 12.0, Reachability.REACHABLE, null)))
     }
 }

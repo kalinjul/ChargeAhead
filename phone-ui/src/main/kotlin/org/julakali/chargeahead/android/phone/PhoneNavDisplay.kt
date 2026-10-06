@@ -14,7 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -25,6 +25,15 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.VehiclePreset
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.active_route_title
+import org.julakali.chargeahead.shared.resources.cardata_title
+import org.julakali.chargeahead.shared.resources.drawer_legal
+import org.julakali.chargeahead.shared.resources.drawer_licenses
+import org.julakali.chargeahead.shared.resources.garage_add_title
+import org.julakali.chargeahead.shared.resources.garage_title
+import org.julakali.chargeahead.shared.resources.phone_networks_title
+import org.julakali.chargeahead.shared.resources.vehicle_title
 
 /**
  * Everything the navigator can open: full-screen pages, and the sheets that
@@ -69,7 +78,7 @@ fun PhoneNavDisplay(
             entry<Home> { }
 
             entry<Garage> {
-                Page(title = stringResource(R.string.garage_title), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.garage_title), onBack = navigator::back) { pagePadding ->
                     GarageRoute(
                         onOpenVehicle = { navigator.open(VehicleEdit) },
                         onOpenAdd = { navigator.open(AddCar) },
@@ -79,7 +88,7 @@ fun PhoneNavDisplay(
             }
 
             entry<AddCar> {
-                Page(title = stringResource(R.string.garage_add_title), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.garage_add_title), onBack = navigator::back) { pagePadding ->
                     AddCarRoute(
                         onAdded = { preset ->
                             navigator.back()
@@ -96,14 +105,14 @@ fun PhoneNavDisplay(
             }
 
             entry<VehicleEdit> {
-                Page(title = stringResource(R.string.vehicle_title), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.vehicle_title), onBack = navigator::back) { pagePadding ->
                     VehicleSettingsRoute(onRemoved = navigator::back, modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<Networks> {
                 Page(
-                    title = stringResource(R.string.phone_networks_title),
+                    title = stringResource(Res.string.phone_networks_title),
                     subtitle = networksSummary(preferredNetworkCount),
                     onBack = navigator::back,
                 ) { pagePadding ->
@@ -112,13 +121,13 @@ fun PhoneNavDisplay(
             }
 
             entry<CarData> {
-                Page(title = stringResource(R.string.cardata_title), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.cardata_title), onBack = navigator::back) { pagePadding ->
                     CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<ActiveRoute> {
-                Page(title = activeRouteTitle ?: stringResource(R.string.active_route_title), onBack = navigator::back) { pagePadding ->
+                Page(title = activeRouteTitle ?: stringResource(Res.string.active_route_title), onBack = navigator::back) { pagePadding ->
                     ActiveRouteRoute(
                         onOpenStop = onOpenStop,
                         onSendToMaps = onSendToMaps,
@@ -132,13 +141,13 @@ fun PhoneNavDisplay(
             }
 
             entry<Legal> {
-                Page(title = stringResource(R.string.drawer_legal), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.drawer_legal), onBack = navigator::back) { pagePadding ->
                     LegalScreen(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<Licenses> {
-                Page(title = stringResource(R.string.drawer_licenses), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.drawer_licenses), onBack = navigator::back) { pagePadding ->
                     LicensesRoute(librariesRes = librariesRes, modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }

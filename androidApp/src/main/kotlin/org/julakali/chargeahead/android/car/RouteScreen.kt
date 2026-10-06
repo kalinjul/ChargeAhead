@@ -37,6 +37,20 @@ import org.koin.core.scope.Scope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_home_charge_now
+import org.julakali.chargeahead.shared.resources.car_no_navigation_app
+import org.julakali.chargeahead.shared.resources.car_route_charge
+import org.julakali.chargeahead.shared.resources.car_route_direct
+import org.julakali.chargeahead.shared.resources.car_route_navigate
+import org.julakali.chargeahead.shared.resources.car_route_no_charger
+import org.julakali.chargeahead.shared.resources.car_route_no_route
+import org.julakali.chargeahead.shared.resources.car_route_no_vehicle
+import org.julakali.chargeahead.shared.resources.car_route_planning
+import org.julakali.chargeahead.shared.resources.car_route_send_all
+import org.julakali.chargeahead.shared.resources.car_route_send_all_hint
+import org.julakali.chargeahead.shared.resources.car_waiting_for_location
+import org.julakali.chargeahead.shared.Texts
 
 /**
  * The route on the host's map: every charging stop as a numbered marker in
@@ -78,11 +92,10 @@ class RouteScreen(
 
     private fun failureTemplate(failure: TripPlanResult): Template = when (failure) {
         is TripPlanResult.Planned -> loadingTemplate(waitingForLocation = false)
-        TripPlanResult.NoVehicle -> messageTemplate(carContext.getString(R.string.car_route_no_vehicle))
-        TripPlanResult.NoRoute -> messageTemplate(carContext.getString(R.string.car_route_no_route))
+        TripPlanResult.NoVehicle -> messageTemplate(Texts.string(Res.string.car_route_no_vehicle))
+        TripPlanResult.NoRoute -> messageTemplate(Texts.string(Res.string.car_route_no_route))
         is TripPlanResult.NoChargerInReach -> messageTemplate(
-            carContext.getString(
-                R.string.car_route_no_charger,
+            Texts.string(Res.string.car_route_no_charger,
                 ChargeStopFormatter.distanceLabel(failure.afterKm),
             ),
         )
@@ -90,13 +103,13 @@ class RouteScreen(
 
     private fun loadingTemplate(waitingForLocation: Boolean): Template {
         val waitingText = if (waitingForLocation) {
-            R.string.car_waiting_for_location
+            Res.string.car_waiting_for_location
         } else {
-            R.string.car_route_planning
+            Res.string.car_route_planning
         }
         return PlaceListMapTemplate.Builder()
             .setLoading(true)
-            .setTitle(titleText(carContext.getString(waitingText)))
+            .setTitle(titleText(Texts.string(waitingText)))
             .setHeaderAction(Action.BACK)
             .build()
     }
@@ -136,14 +149,14 @@ class RouteScreen(
             .build()
 
     /**
-     * "Ionity" over "142 km, laden bis 68 %", the distance being the leg
+     * "Ionity" over "142 km, laden bis 68%", the distance being the leg
      * from the previous stop (from the start for the first). The host
      * numbers the row after its marker. Arrival level and charge time live
      * in the detail.
      */
     private fun stopRow(ordinal: Int, stop: PlannedStop, legKm: Double): Row {
         val name = OperatorShortName.of(stop.site.operator) ?: stop.site.operator ?: stop.site.name
-        val charge = carContext.getString(R.string.car_route_charge, stop.departureSocPercent.toInt())
+        val charge = Texts.string(Res.string.car_route_charge, stop.departureSocPercent.toInt())
         return Row.Builder()
             .setTitle(name)
             .addText(distanceLine(legKm, suffix = charge, separator = ", "))
@@ -174,8 +187,8 @@ class RouteScreen(
     }
 
     private fun sendAllRow(plan: TripPlan): Row = Row.Builder()
-        .setTitle(carContext.getString(R.string.car_route_send_all))
-        .addText(carContext.getString(R.string.car_route_send_all_hint))
+        .setTitle(Texts.string(Res.string.car_route_send_all))
+        .addText(Texts.string(Res.string.car_route_send_all_hint))
         // IMAGE_TYPE_ICON: only tintable icons get recolored by the host.
         .setImage(icon(R.drawable.ic_send, CarColor.PRIMARY), Row.IMAGE_TYPE_ICON)
         .setOnClickListener { sendRouteToMaps(plan) }
@@ -229,7 +242,7 @@ class RouteScreen(
             if (!startOnPhone(navigation) && !startOnPhone(directions)) {
                 CarToast.makeText(
                     carContext,
-                    carContext.getString(R.string.car_no_navigation_app),
+                    Texts.string(Res.string.car_no_navigation_app),
                     CarToast.LENGTH_LONG,
                 ).show()
             }
@@ -261,11 +274,11 @@ class RouteScreen(
 
     /** Destination in reach without charging: no list to show, just the handoff. */
     private fun directTemplate(): Template =
-        MessageTemplate.Builder(carContext.getString(R.string.car_route_direct))
+        MessageTemplate.Builder(Texts.string(Res.string.car_route_direct))
             .setHeader(header())
             .addAction(
                 Action.Builder()
-                    .setTitle(carContext.getString(R.string.car_route_navigate))
+                    .setTitle(Texts.string(Res.string.car_route_navigate))
                     .setBackgroundColor(CarColor.PRIMARY)
                     .setOnClickListener { (viewModel.uiState.value as? CarRouteUiState.Ready)?.plan?.let(::startNavigation) }
                     .build(),
@@ -281,7 +294,7 @@ class RouteScreen(
 
     /** Body actions may carry titles — unlike the strip's icons. */
     private fun chargeNowTitledAction(): Action = Action.Builder()
-        .setTitle(carContext.getString(R.string.car_home_charge_now))
+        .setTitle(Texts.string(Res.string.car_home_charge_now))
         .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
         .build()
 

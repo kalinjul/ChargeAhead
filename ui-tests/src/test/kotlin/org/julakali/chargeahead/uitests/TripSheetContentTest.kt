@@ -9,7 +9,6 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.julakali.chargeahead.android.phone.SocEditing
 import org.julakali.chargeahead.android.phone.TripSheetContent
@@ -24,6 +23,17 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.garage_percent
+import org.julakali.chargeahead.shared.resources.trip_dep_now
+import org.julakali.chargeahead.shared.resources.trip_section_hint
+import org.julakali.chargeahead.shared.resources.trip_select_cancel
+import org.julakali.chargeahead.shared.resources.trip_select_section
+import org.julakali.chargeahead.shared.resources.trip_send_maps
+import org.julakali.chargeahead.shared.resources.trip_start
+import org.julakali.chargeahead.shared.resources.trip_stop_charge
+import org.julakali.chargeahead.shared.resources.trip_stop_times
+import org.julakali.chargeahead.shared.resources.trip_tile_arrival
 
 /** Tall and wide enough that every row and tile is on screen. */
 @RunWith(RobolectricTestRunner::class)
@@ -89,7 +99,7 @@ class TripSheetContentTest {
     @Test
     fun `start row shows the charge level`() {
         sheet()
-        compose.onNodeWithText(compose.string(R.string.trip_dep_now, 26)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.trip_dep_now, 26)).assertIsDisplayed()
     }
 
     @Test
@@ -99,7 +109,7 @@ class TripSheetContentTest {
             compose.onNodeWithText(stop.site.operator!!).assertIsDisplayed()
             compose.onNodeWithText(
                 compose.string(
-                    R.string.trip_stop_charge,
+                    Res.string.trip_stop_charge,
                     stop.maxPowerKw.toInt(),
                     stop.arrivalSocPercent.toInt(),
                     stop.departureSocPercent.toInt(),
@@ -107,7 +117,7 @@ class TripSheetContentTest {
             ).assertIsDisplayed()
             compose.onNodeWithText(
                 compose.string(
-                    R.string.trip_stop_times,
+                    Res.string.trip_stop_times,
                     etaText(compose.activity, stop.arrivalMinutesFromStart, Fixtures.now),
                     etaText(compose.activity, stop.arrivalMinutesFromStart + stop.chargeMinutes, Fixtures.now),
                 ),
@@ -118,7 +128,7 @@ class TripSheetContentTest {
     @Test
     fun `first stop arrives at 16 00 on the pinned clock`() {
         sheet()
-        compose.onNodeWithText(compose.string(R.string.trip_stop_times, "16:00", "16:30")).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.trip_stop_times, "16:00", "16:30")).assertIsDisplayed()
     }
 
     @Test
@@ -131,7 +141,7 @@ class TripSheetContentTest {
     @Test
     fun `tapping the start edits the charge level`() {
         val calls = sheet()
-        compose.onNodeWithText(compose.string(R.string.trip_start)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_start)).performClick()
         assertTrue(calls.editStartSoc)
     }
 
@@ -147,7 +157,7 @@ class TripSheetContentTest {
     fun `the start level offers its quick picks`() {
         val calls = sheet(socInput = "42")
 
-        compose.onNodeWithText(compose.string(R.string.garage_percent, 60)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.garage_percent, 60)).performClick()
 
         assertEquals("60", calls.startSocTyped)
     }
@@ -156,7 +166,7 @@ class TripSheetContentTest {
     fun `the arrival level offers its quick picks`() {
         val calls = sheet(arrivalSocInput = "10")
 
-        compose.onNodeWithText(compose.string(R.string.garage_percent, 30)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.garage_percent, 30)).performClick()
 
         assertEquals("30", calls.arrivalSocTyped)
     }
@@ -172,19 +182,19 @@ class TripSheetContentTest {
     @Test
     fun `the section hint shows while selecting`() {
         sheet(selection = SectionSelection(selecting = true))
-        compose.onNodeWithText(compose.string(R.string.trip_section_hint)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.trip_section_hint)).assertIsDisplayed()
     }
 
     @Test
     fun `no section hint outside selection`() {
         sheet()
-        compose.onNodeWithText(compose.string(R.string.trip_section_hint)).assertDoesNotExist()
+        compose.onNodeWithText(compose.string(Res.string.trip_section_hint)).assertDoesNotExist()
     }
 
     @Test
     fun `send to maps hands over the trip and ends the section`() {
         val calls = sheet()
-        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_send_maps)).performClick()
         assertTrue(calls.sentToMaps)
         assertTrue(calls.sectionSent)
     }
@@ -192,14 +202,14 @@ class TripSheetContentTest {
     @Test
     fun `the section button toggles selecting`() {
         val calls = sheet()
-        compose.onNodeWithText(compose.string(R.string.trip_select_section)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.trip_select_section)).performClick()
         assertTrue(calls.toggledSelecting)
     }
 
     @Test
     fun `while selecting the section button reads cancel`() {
         sheet(selection = SectionSelection(selecting = true))
-        compose.onNodeWithText(compose.string(R.string.trip_select_cancel)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.trip_select_cancel)).assertIsDisplayed()
     }
 
     // TILES
@@ -210,7 +220,7 @@ class TripSheetContentTest {
         stops.forEach { stop ->
             compose.onNodeWithText(stop.site.operator!!).assertIsDisplayed()
             compose.onNodeWithText(
-                compose.string(R.string.trip_tile_arrival, etaText(compose.activity, stop.arrivalMinutesFromStart, Fixtures.now)),
+                compose.string(Res.string.trip_tile_arrival, etaText(compose.activity, stop.arrivalMinutesFromStart, Fixtures.now)),
             ).assertIsDisplayed()
         }
     }
@@ -225,7 +235,7 @@ class TripSheetContentTest {
     @Test
     fun `tiles keep the action row`() {
         sheet(layout = TripListLayout.TILES)
-        compose.onNodeWithText(compose.string(R.string.trip_send_maps)).assertIsDisplayed()
-        compose.onNodeWithText(compose.string(R.string.trip_select_section)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.trip_send_maps)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.trip_select_section)).assertIsDisplayed()
     }
 }

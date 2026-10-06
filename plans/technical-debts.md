@@ -36,3 +36,10 @@
       and the Navigation3 rule; ARCHITECTURE.md §8/§9 and AGENTS.md were
       updated with each round; the per-phase plans under
       `docs/superpowers/plans/2026-09-09-*` are the decision records.
+- [ ] Side project to localisation: one string source that a build-time
+      generator renders into native resources per build — `strings.xml`
+      for Android/Android Auto, `.xcstrings` for iOS — instead of Compose
+      Multiplatform Resources at runtime. CMP resources only follow
+      `Locale.getDefault()` (no per-app language below Android 13, no
+      injectable locale), skip Android escapes (`%%`, `\'`) and need a
+      suspend wrapper on iOS; native resources have none of that.

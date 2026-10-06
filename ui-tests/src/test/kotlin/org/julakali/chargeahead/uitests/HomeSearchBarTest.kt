@@ -14,13 +14,16 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import org.julakali.chargeahead.android.phone.HomeSearchBar
-import org.julakali.chargeahead.android.phone.R
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.home_search_back
+import org.julakali.chargeahead.shared.resources.home_search_clear
+import org.julakali.chargeahead.shared.resources.home_search_hint
 
 @RunWith(RobolectricTestRunner::class)
 class HomeSearchBarTest {
@@ -51,13 +54,13 @@ class HomeSearchBarTest {
         )
     }
 
-    private val clear get() = compose.onNodeWithContentDescription(compose.string(R.string.home_search_clear))
+    private val clear get() = compose.onNodeWithContentDescription(compose.string(Res.string.home_search_clear))
     private val spinner get() = compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate))
 
     @Test
     fun `placeholder is shown while nothing is typed`() {
         bar()
-        compose.onNodeWithText(compose.string(R.string.home_search_hint)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.home_search_hint)).assertIsDisplayed()
     }
 
     @Test
@@ -105,19 +108,19 @@ class HomeSearchBarTest {
     fun `expanded shows a back arrow that calls onBack`() {
         var backs = 0
         bar(expanded = true, onBack = { backs++ })
-        compose.onNodeWithContentDescription(compose.string(R.string.home_search_back)).performClick()
+        compose.onNodeWithContentDescription(compose.string(Res.string.home_search_back)).performClick()
         assertEquals(1, backs)
     }
 
     @Test
     fun `collapsed has no back arrow`() {
         bar()
-        compose.onNodeWithContentDescription(compose.string(R.string.home_search_back)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(compose.string(Res.string.home_search_back)).assertDoesNotExist()
     }
 
     @Test
     fun `expanded without a query shows no x, the arrow is the way out`() {
         bar(expanded = true, clearable = true)
-        compose.onNodeWithContentDescription(compose.string(R.string.home_search_clear)).assertDoesNotExist()
+        compose.onNodeWithContentDescription(compose.string(Res.string.home_search_clear)).assertDoesNotExist()
     }
 }

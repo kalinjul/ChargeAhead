@@ -11,6 +11,11 @@ import org.julakali.chargeahead.android.PhoneUiVisibility
 import org.julakali.chargeahead.android.phone.R
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_route_next_stop_only
+import org.julakali.chargeahead.shared.resources.car_route_open_phone
+import org.julakali.chargeahead.shared.resources.car_route_send_all
+import org.julakali.chargeahead.shared.Texts
 
 /**
  * Asks the driver to open the app on the phone for the whole-route hand-off,
@@ -32,17 +37,17 @@ class OpenPhoneScreen(
     }
 
     override fun onGetTemplate(): Template =
-        MessageTemplate.Builder(carContext.getString(R.string.car_route_open_phone))
+        MessageTemplate.Builder(Texts.string(Res.string.car_route_open_phone))
             .setHeader(
                 Header.Builder()
-                    .setTitle(carContext.getString(R.string.car_route_send_all))
+                    .setTitle(Texts.string(Res.string.car_route_send_all))
                     .setStartHeaderAction(Action.BACK)
                     .build(),
             )
             .setIcon(icon(R.drawable.ic_destination))
             .addAction(
                 Action.Builder()
-                    .setTitle(carContext.getString(R.string.car_route_next_stop_only))
+                    .setTitle(Texts.string(Res.string.car_route_next_stop_only))
                     .setOnClickListener {
                         screenManager.pop()
                         onNextStopOnly()
