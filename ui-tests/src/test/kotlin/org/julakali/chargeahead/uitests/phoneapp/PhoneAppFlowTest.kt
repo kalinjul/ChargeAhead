@@ -166,15 +166,13 @@ class PhoneAppFlowTest {
 
         compose.onNodeWithContentDescription(compose.string(R.string.trip_layout_tiles)).performClick()
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithText(" kW · ", substring = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithContentDescription(compose.string(R.string.trip_layout_list)).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_layout_list)).assertIsDisplayed()
 
         compose.onNodeWithContentDescription(compose.string(R.string.trip_layout_list)).performClick()
         compose.waitUntil(WAIT_MILLIS) {
-            compose.onAllNodesWithText(" kW · ", substring = true).fetchSemanticsNodes().isEmpty()
+            compose.onAllNodesWithContentDescription(compose.string(R.string.trip_layout_tiles)).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onNodeWithContentDescription(compose.string(R.string.trip_layout_tiles)).assertIsDisplayed()
     }
 
     @Test

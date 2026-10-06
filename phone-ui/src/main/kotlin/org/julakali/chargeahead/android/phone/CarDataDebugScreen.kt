@@ -126,11 +126,7 @@ private fun CarDataPoint.displayValue(): String = when (status) {
 @Composable
 private fun CarDataPoint.ageText(): String {
     val minutes = ((currentTimeMillis() - observedAtMillis) / 60_000L).coerceAtLeast(0)
-    val (plural, count) = when {
-        minutes < 60 -> R.plurals.phone_duration_minutes to minutes.toInt()
-        minutes < 60 * 24 -> R.plurals.phone_duration_hours to (minutes / 60).toInt()
-        else -> R.plurals.phone_duration_days to (minutes / (60 * 24)).toInt()
-    }
+    val (plural, count) = coarseDuration(minutes)
     val text = pluralStringResource(plural, count, count)
     return stringResource(R.string.cardata_age, text)
 }

@@ -73,10 +73,6 @@ fun CarHardwareStatus(
 @Composable
 private fun ago(millis: Long): String {
     val minutes = ((currentTimeMillis() - millis) / 60_000L).coerceAtLeast(0L)
-    val (plural, count) = when {
-        minutes < 60 -> R.plurals.phone_duration_minutes to minutes.toInt()
-        minutes < 60 * 24 -> R.plurals.phone_duration_hours to (minutes / 60).toInt()
-        else -> R.plurals.phone_duration_days to (minutes / (60 * 24)).toInt()
-    }
+    val (plural, count) = coarseDuration(minutes)
     return pluralStringResource(plural, count, count)
 }

@@ -51,7 +51,7 @@ The Android resource folders will hold no translations any more, so `generateLoc
 
 ## Migration
 
-- Move `phone-ui/res/values/strings.xml` (German) to `values-de/` in composeResources, the English from `localisation-en` to `values/`, rewrite escapes.
+- The English already sits in `composeResources/values-en/` (inert until the plugin is on, escapes already in CMP form); it becomes `values/` with the fallback decision. Move `phone-ui/res/values/strings.xml` (German) to `values-de/` and rewrite its escapes.
 - `R.string`/`R.plurals` → `Res.string`/`Res.plurals`: about 475 references in 51 files (phone-ui, androidApp car, ui-tests).
 - The 10 `LocalContextGetResourceValueCall` lint errors (`context.getString` inside composables) go away in the same move.
 - `ChargeStopFormatter` literals → `Res` strings + `formatDecimal`.
@@ -77,3 +77,34 @@ The Android resource folders will hold no translations any more, so `generateLoc
 ## Out of scope
 
 Native string generator (side project), miles/imperial units, British English variant, store listing translations, legal text translation beyond the existing imprint wording.
+
+## Appendix: English wording for strings without a key yet
+
+```
+ChargeStopFormatter:
+  "Ankunft ca. %d%"           → "Arrival ~%d%"
+  "Erreichbar"                → "Reachable"
+  "Knapp"                     → "Tight"
+  "Nicht erreichbar"          → "Out of range"
+  "Ladepunkte unbekannt"      → "Charge points unknown"
+  "1 Ladepunkt" / "%d Ladepunkte" → "1 charge point" / "%d charge points"
+  "Ladepunkt"                 → "Charge point"
+  "Status unbekannt"          → "Status unknown"
+  "%d von %d frei"            → "%d of %d free"
+  "%d außer Betrieb"          → "%d out of order"
+  "Nach %s · …"               → "After %s · …"
+  "%s laden bis %d%"          → "%s charging to %d%"
+  "Typ 2" / "Unbekannt"       → "Type 2" / "Unknown"
+  "8,4 km" (decimal comma)    → "8.4 km" via locale-aware number formatting
+
+iOS only:
+  home_map_placeholder        → "Map placeholder — map SDK to follow"
+  home_pill_plan              → "Plan"
+  home_diagnostics            → "Info"
+  plan_title                  → "Plan route"
+  trip_stops_heading          → "Charging stops"
+  trip_summary_time_fmt       → "%@ on the road · %@ of it charging"
+  trip_summary_arrival_fmt    → "Arrive with %d%%"
+  cn_relaxed_note             → "Filters too strict — they were relaxed."
+  detail_plan_fmt             → "%d min · %d%% → %d%%"
+```

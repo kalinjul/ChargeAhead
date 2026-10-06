@@ -11,6 +11,7 @@ import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
 import org.julakali.chargeahead.android.phone.R
+import org.julakali.chargeahead.android.phone.coarseDuration
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.CarDataKind
 import org.julakali.chargeahead.shared.domain.CarDataPoint
@@ -122,11 +123,7 @@ class CarDebugScreen(
     private fun age(atMillis: Long): String {
         val minutes = (time.nowMillis() - atMillis) / 60_000.0
         if (minutes < 1) return carContext.getString(R.string.car_debug_just_now)
-        val (plural, count) = when {
-            minutes < 60 -> R.plurals.phone_duration_minutes to minutes.toInt()
-            minutes < 60 * 24 -> R.plurals.phone_duration_hours to (minutes / 60).toInt()
-            else -> R.plurals.phone_duration_days to (minutes / (60 * 24)).toInt()
-        }
+        val (plural, count) = coarseDuration(minutes.toLong())
         val text = carContext.resources.getQuantityString(plural, count, count)
         return carContext.getString(R.string.cardata_age, text)
     }

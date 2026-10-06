@@ -50,7 +50,7 @@ class CarDebugScreenTest {
         val rows = (screen.onGetTemplate() as ListTemplate).singleList!!.items.map { it as Row }
 
         assertEquals(string(R.string.car_debug_energy), rows[0].title.toString())
-        assertTrue(rows[0].texts.single().toString().startsWith("42 % · ${string(R.string.car_debug_source_car)}"))
+        assertTrue(rows[0].texts.single().toString().startsWith(string(R.string.car_debug_energy_value, 42, string(R.string.car_debug_source_car))))
         assertEquals(string(R.string.car_debug_fix), rows[1].title.toString())
         assertTrue(rows[1].texts.single().toString().startsWith("53.5500, 9.9900"))
         val speed = rows.first { it.title.toString() == string(R.string.cardata_kind_speed) }
