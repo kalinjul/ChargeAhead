@@ -4,7 +4,8 @@ import Shared
 
 /// Selects the scene configuration for the connecting session's role: phone
 /// UI (SwiftUI) or CarPlay template UI. Both are declared in Info.plist.
-class AppDelegate: NSObject, UIApplicationDelegate {
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,

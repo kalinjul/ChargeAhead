@@ -57,7 +57,7 @@ class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
         let stops = Array(viewModel.stops.prefix(maxRows))
 
         let items = stops.map { stop -> CPListItem in
-            let title = [stop.site.name, stop.site.operator_]
+            let title = [stop.site.name, stop.site.`operator`]
                 .compactMap { $0 }
                 .joined(separator: " · ")
             let primaryLine = ChargeStopFormatter.shared.primaryLine(stop: stop)
