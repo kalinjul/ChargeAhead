@@ -64,8 +64,9 @@ diff, commit the PNG.
 
 - Behaviour: `@RunWith(RobolectricTestRunner::class)`,
   `createAndroidComposeRule<ComponentActivity>()`, content wrapped in
-  `ChargeAheadTheme`, strings via `compose.activity.getString(R.string.x)`
-  so the German copy is matched, not retyped. Match by text or content
+  `ChargeAheadTheme`, strings via `compose.string(Res.string.x)` so the
+  German copy is matched, not retyped (`robolectric.properties` pins
+  `de-rDE`). Match by text or content
   description; a `testTag` is the last resort.
 - Screenshot: a public top-level `@PreviewTest @Preview(showBackground = true)`
   composable in `ui-tests/src/screenshotTest`, wrapped in `ChargeAheadTheme`,
