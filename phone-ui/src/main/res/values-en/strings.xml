@@ -119,9 +119,18 @@
     <string name="phone_carhardware_no_data">The car\'s display unit doesn\'t report a battery level (%1$s). The value you entered is used.</string>
     <string name="phone_carhardware_no_permission">Permission for car data is missing. It can only be granted in the car.</string>
     <string name="phone_carhardware_no_hardware">This car\'s display unit doesn\'t offer any car data.</string>
-    <string name="phone_duration_minutes">%1$d minutes</string>
-    <string name="phone_duration_hours">%1$d hours</string>
-    <string name="phone_duration_days">%1$d days</string>
+    <plurals name="phone_duration_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="phone_duration_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="phone_duration_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
 
     <string name="phone_attribution">Routing and place search: © OpenStreetMap contributors (ODbL). Chargers: OpenChargeMap and Bundesnetzagentur.</string>
 
@@ -216,9 +225,9 @@
     <string name="trip_duration_hours_minutes">%1$dh %2$dm</string>
     <string name="trip_duration_minutes">%1$d min</string>
     <string name="trip_stop_charge">%1$d kW | %2$d%% - %3$d%%</string>
-    <string name="trip_stop_times">Arrive %1$s | Leave %2$s</string>
+    <string name="trip_stop_times">Arrival %1$s | Departure %2$s</string>
     <string name="trip_tile_charge">%1$d kW · %2$d min</string>
-    <string name="trip_tile_arrival">arr. %1$s</string>
+    <string name="trip_tile_arrival">Arrival %1$s</string>
     <string name="trip_layout_tiles">Show as tiles</string>
     <string name="trip_layout_list">Show as list</string>
     <string name="trip_send_maps">Send to Maps</string>
@@ -227,7 +236,7 @@
     <string name="trip_section_hint">Tap the start and end of the section</string>
     <string name="trip_dep_now">Battery: %1$d%%</string>
     <string name="trip_dep_now_unknown">Battery level unknown</string>
-    <string name="trip_arr">arr. %1$s · %2$d%%</string>
+    <string name="trip_arr">Arrival %1$s · %2$d%%</string>
     <string name="trip_send_stop">Send %1$s to Maps</string>
     <string name="trip_summary_charging">%1$s charging</string>
     <string name="trip_section_hint_second">Now tap the end point</string>
@@ -331,18 +340,18 @@
       Kept here so the wording is decided in one place once they move to resources.
 
       ChargeStopFormatter:
-        "Ankunft ca. %d %"          → "Arrival ~%d%"
+        "Ankunft ca. %d%"           → "Arrival ~%d%"
         "Erreichbar"                → "Reachable"
         "Knapp"                     → "Tight"
         "Nicht erreichbar"          → "Out of range"
-        "Ladepunkte unbekannt"      → "Charging points unknown"
-        "1 Ladepunkt" / "%d Ladepunkte" → "1 charging point" / "%d charging points"
-        "Ladepunkt"                 → "Charging point"
+        "Ladepunkte unbekannt"      → "Charge points unknown"
+        "1 Ladepunkt" / "%d Ladepunkte" → "1 charge point" / "%d charge points"
+        "Ladepunkt"                 → "Charge point"
         "Status unbekannt"          → "Status unknown"
         "%d von %d frei"            → "%d of %d free"
         "%d außer Betrieb"          → "%d out of order"
         "Nach %s · …"               → "After %s · …"
-        "%s laden bis %d %"         → "%s charging to %d%"
+        "%s laden bis %d%"          → "%s charging to %d%"
         "Typ 2" / "Unbekannt"       → "Type 2" / "Unknown"
         "8,4 km" (decimal comma)    → "8.4 km" via locale-aware number formatting
 

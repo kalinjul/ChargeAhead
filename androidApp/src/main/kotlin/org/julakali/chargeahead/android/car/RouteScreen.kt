@@ -136,7 +136,7 @@ class RouteScreen(
             .build()
 
     /**
-     * "Ionity" over "142 km, laden bis 68 %", the distance being the leg
+     * "Ionity" over "142 km, laden bis 68%", the distance being the leg
      * from the previous stop (from the start for the first). The host
      * numbers the row after its marker. Arrival level and charge time live
      * in the detail.

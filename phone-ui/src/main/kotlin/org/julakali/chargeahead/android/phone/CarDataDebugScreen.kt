@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
@@ -125,10 +126,11 @@ private fun CarDataPoint.displayValue(): String = when (status) {
 @Composable
 private fun CarDataPoint.ageText(): String {
     val minutes = ((currentTimeMillis() - observedAtMillis) / 60_000L).coerceAtLeast(0)
-    val text = when {
-        minutes < 60 -> stringResource(R.string.phone_duration_minutes, minutes.toInt())
-        minutes < 60 * 24 -> stringResource(R.string.phone_duration_hours, (minutes / 60).toInt())
-        else -> stringResource(R.string.phone_duration_days, (minutes / (60 * 24)).toInt())
+    val (plural, count) = when {
+        minutes < 60 -> R.plurals.phone_duration_minutes to minutes.toInt()
+        minutes < 60 * 24 -> R.plurals.phone_duration_hours to (minutes / 60).toInt()
+        else -> R.plurals.phone_duration_days to (minutes / (60 * 24)).toInt()
     }
+    val text = pluralStringResource(plural, count, count)
     return stringResource(R.string.cardata_age, text)
 }

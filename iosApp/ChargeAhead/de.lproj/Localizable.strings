@@ -33,12 +33,12 @@
 "plan_failed_no_charger" = "Kein erreichbarer Schnelllader auf der Strecke.";
 "trip_stops_heading" = "Ladestopps";
 "trip_summary_time_fmt" = "%@ unterwegs · davon %@ laden";
-"trip_summary_arrival_fmt" = "Ankunft mit %d %%";
+"trip_summary_arrival_fmt" = "Ankunft mit %d%%";
 "trip_send_maps" = "An Maps senden";
 "cn_title" = "Jetzt laden";
 "cn_relaxed_note" = "Filter zu streng — sie wurden gelockert.";
 "cn_empty" = "Keine Schnelllader in der Nähe gefunden.";
 "cn_loading" = "Ladesäulen werden gesucht …";
 "detail_title" = "Ladestopp";
-"detail_plan_fmt" = "%d min · %d %% → %d %%";
+"detail_plan_fmt" = "%d min · %d%% → %d%%";
 "phone_detail_navigate" = "Navigation starten";

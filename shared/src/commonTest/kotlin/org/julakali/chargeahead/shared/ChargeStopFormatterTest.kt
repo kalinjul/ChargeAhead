@@ -61,7 +61,7 @@ class ChargeStopFormatterTest {
     @Test
     fun secondaryLine_withKnownSoc_showsArrivalPercent() {
         val stop = ChargeStop(site, distanceKm = 12.0, reachability = Reachability.REACHABLE, socOnArrivalPercent = 34.0)
-        assertEquals("Ankunft ca. 34 %", ChargeStopFormatter.secondaryLine(stop))
+        assertEquals("Ankunft ca. 34%", ChargeStopFormatter.secondaryLine(stop))
     }
 
     @Test
@@ -301,14 +301,14 @@ class ChargeStopFormatterTest {
     @Test
     fun plannedStopDetailLine_showsProgressArrivalPowerAndChargeTime() {
         assertEquals(
-            "Nach 142 km · 150 kW · 18 → 80 % in 25 min",
+            "Nach 142 km · 150 kW · 18 → 80% in 25 min",
             ChargeStopFormatter.plannedStopDetailLine(plannedStop()),
         )
     }
 
     @Test
     fun chargeToLabel_showsTimeAndTargetLevel() {
-        assertEquals("25 min laden bis 80 %", ChargeStopFormatter.chargeToLabel(plannedStop()))
+        assertEquals("25 min laden bis 80%", ChargeStopFormatter.chargeToLabel(plannedStop()))
     }
 
     @Test

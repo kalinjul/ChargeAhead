@@ -32,7 +32,7 @@ object ChargeStopFormatter {
     fun secondaryLine(stop: ChargeStop): String {
         val soc = stop.socOnArrivalPercent
         return if (soc != null) {
-            "Ankunft ca. ${formatWholeNumber(soc)} %"
+            "Ankunft ca. ${formatWholeNumber(soc)}%"
         } else {
             when (stop.reachability) {
                 Reachability.REACHABLE -> "Erreichbar"
@@ -144,10 +144,10 @@ object ChargeStopFormatter {
     fun plannedStopAddressLine(stop: PlannedStop): String? =
         addressLine(stop.site) ?: stop.site.name.takeIf { stop.site.operator != null }
 
-    /** e.g. "Nach 142 km · 150 kW · 18 → 80 % in 25 min". */
+    /** e.g. "Nach 142 km · 150 kW · 18 → 80% in 25 min". */
     fun plannedStopDetailLine(stop: PlannedStop): String =
         "Nach ${formatDistanceKm(stop.kmFromStart)} · ${formatPowerKw(stop.maxPowerKw)} kW · " +
-            "${formatWholeNumber(stop.arrivalSocPercent)} → ${formatWholeNumber(stop.departureSocPercent)} % " +
+            "${formatWholeNumber(stop.arrivalSocPercent)} → ${formatWholeNumber(stop.departureSocPercent)}% " +
             "in ${minutesLabel(stop.chargeMinutes)}"
 
     /** A bare distance for message texts, same rules as the row lines. */
@@ -161,9 +161,9 @@ object ChargeStopFormatter {
     /** e.g. "25 min". */
     fun minutesLabel(minutes: Double): String = "${formatWholeNumber(minutes)} min"
 
-    /** e.g. "25 min laden bis 69 %" — how long, and what it buys. */
+    /** e.g. "25 min laden bis 69%" — how long, and what it buys. */
     fun chargeToLabel(stop: PlannedStop): String =
-        "${minutesLabel(stop.chargeMinutes)} laden bis ${formatWholeNumber(stop.departureSocPercent)} %"
+        "${minutesLabel(stop.chargeMinutes)} laden bis ${formatWholeNumber(stop.departureSocPercent)}%"
 
     // --- Car rows: charge now ---
 

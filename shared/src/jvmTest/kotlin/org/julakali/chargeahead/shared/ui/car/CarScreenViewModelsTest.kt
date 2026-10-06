@@ -161,7 +161,7 @@ class CarScreenViewModelsTest {
         diagnostics.recordSoCDiagnostics(SoCDiagnostics(0L, SoCDiagnostics.Outcome.NO_DATA, detail = "status 2"))
         assertNull(viewModel.uiState.await { true }.carReading)
 
-        diagnostics.recordSoCDiagnostics(SoCDiagnostics(1L, SoCDiagnostics.Outcome.AVAILABLE, detail = "72 %"))
-        assertEquals("72 %", viewModel.uiState.await { it.carReading != null }.carReading)
+        diagnostics.recordSoCDiagnostics(SoCDiagnostics(1L, SoCDiagnostics.Outcome.AVAILABLE, detail = "72%"))
+        assertEquals("72%", viewModel.uiState.await { it.carReading != null }.carReading)
     }
 }

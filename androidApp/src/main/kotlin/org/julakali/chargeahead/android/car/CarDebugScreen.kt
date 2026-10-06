@@ -122,11 +122,12 @@ class CarDebugScreen(
     private fun age(atMillis: Long): String {
         val minutes = (time.nowMillis() - atMillis) / 60_000.0
         if (minutes < 1) return carContext.getString(R.string.car_debug_just_now)
-        val text = when {
-            minutes < 60 -> carContext.getString(R.string.phone_duration_minutes, minutes.toInt())
-            minutes < 60 * 24 -> carContext.getString(R.string.phone_duration_hours, (minutes / 60).toInt())
-            else -> carContext.getString(R.string.phone_duration_days, (minutes / (60 * 24)).toInt())
+        val (plural, count) = when {
+            minutes < 60 -> R.plurals.phone_duration_minutes to minutes.toInt()
+            minutes < 60 * 24 -> R.plurals.phone_duration_hours to (minutes / 60).toInt()
+            else -> R.plurals.phone_duration_days to (minutes / (60 * 24)).toInt()
         }
+        val text = carContext.resources.getQuantityString(plural, count, count)
         return carContext.getString(R.string.cardata_age, text)
     }
 

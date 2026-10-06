@@ -6,6 +6,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
@@ -72,9 +73,10 @@ fun CarHardwareStatus(
 @Composable
 private fun ago(millis: Long): String {
     val minutes = ((currentTimeMillis() - millis) / 60_000L).coerceAtLeast(0L)
-    return when {
-        minutes < 60 -> stringResource(R.string.phone_duration_minutes, minutes.toInt())
-        minutes < 60 * 24 -> stringResource(R.string.phone_duration_hours, (minutes / 60).toInt())
-        else -> stringResource(R.string.phone_duration_days, (minutes / (60 * 24)).toInt())
+    val (plural, count) = when {
+        minutes < 60 -> R.plurals.phone_duration_minutes to minutes.toInt()
+        minutes < 60 * 24 -> R.plurals.phone_duration_hours to (minutes / 60).toInt()
+        else -> R.plurals.phone_duration_days to (minutes / (60 * 24)).toInt()
     }
+    return pluralStringResource(plural, count, count)
 }
