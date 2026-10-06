@@ -7,6 +7,7 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.client.request.get
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import java.util.Locale
 import kotlinx.coroutines.runBlocking
 import org.julakali.chargeahead.shared.BackendConfig
 import kotlin.test.Test
@@ -58,5 +59,26 @@ class HttpClientFactoryTest {
         assertFailsWith<ClientRequestException> { createHttpClient(engine, backend).get("v1/networks") }
 
         assertEquals(1, calls)
+    }
+
+    @Test
+    fun `every request says which language the ui speaks, also after a switch`() = runBlocking {
+        val saved = Locale.getDefault()
+        val seen = mutableListOf<String?>()
+        val engine = MockEngine { request ->
+            seen += request.headers[HttpHeaders.AcceptLanguage]
+            respond("{}", HttpStatusCode.OK)
+        }
+        val client = createHttpClient(engine, backend)
+        try {
+            Locale.setDefault(Locale.GERMANY)
+            client.get("v1/networks")
+            Locale.setDefault(Locale.US)
+            client.get("v1/networks")
+        } finally {
+            Locale.setDefault(saved)
+        }
+
+        assertEquals(listOf<String?>("de-DE", "en-US"), seen)
     }
 }
