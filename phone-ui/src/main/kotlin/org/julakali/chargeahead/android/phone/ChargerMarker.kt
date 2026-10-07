@@ -49,9 +49,10 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMapComposable
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberUpdatedMarkerState
-import org.julakali.chargeahead.shared.domain.AvailabilityLevel
 import org.julakali.chargeahead.shared.domain.ChargeSpeed
 import org.julakali.chargeahead.shared.domain.MapCharger
+import org.julakali.chargeahead.shared.domain.MarkerTone
+import org.julakali.chargeahead.shared.domain.tone
 import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.android.phone.R
@@ -177,7 +178,7 @@ fun ChargerPill(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 3.dp, bottom = 3.dp),
         ) {
-            Bolts(count = speed.bolts, color = if (outOfOrder) p.grey else p.speedColor(speed), halo = p.surface)
+            Bolts(count = speed.bolts, color = p.color(MarkerTone.bolts(speed, availability)), halo = p.surface)
             if (!label.isNullOrBlank()) {
                 Text(
                     text = label,
@@ -194,13 +195,13 @@ fun ChargerPill(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
                     .fillMaxHeight()
-                    .background(level?.let(p::tint) ?: p.redTint)
+                    .background(level?.let { p.tint(it.tone) } ?: p.redTint)
                     .padding(start = 6.dp, end = 8.dp),
             ) {
                 when (availability) {
                     is SiteAvailability.Live -> Text(
                         text = "${availability.free}/${availability.total}",
-                        color = level?.let(p::strong) ?: p.red,
+                        color = level?.let { p.strong(it.tone) } ?: p.red,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -225,11 +226,7 @@ fun ChargerPill(
 fun ChargerDot(speed: ChargeSpeed, availability: SiteAvailability?, modifier: Modifier = Modifier) {
     val outOfOrder = availability is SiteAvailability.OutOfOrder
     val p = pillPalette()
-    val fill = when (availability) {
-        is SiteAvailability.Live -> p.levelColor(availability.level)
-        SiteAvailability.OutOfOrder -> p.grey
-        null -> p.speedColor(speed)
-    }
+    val fill = p.color(MarkerTone.dot(speed, availability))
     Box(
         modifier
             .size(15.dp)
@@ -305,29 +302,24 @@ private val DarkPill = PillPalette(
 @Composable
 private fun pillPalette(): PillPalette = if (isSystemInDarkTheme()) DarkPill else LightPill
 
-private fun PillPalette.speedColor(speed: ChargeSpeed): Color = when (speed) {
-    ChargeSpeed.SLOW -> red
-    ChargeSpeed.MEDIUM -> amber
-    ChargeSpeed.FAST, ChargeSpeed.ULTRA, ChargeSpeed.HYPER -> green
+private fun PillPalette.color(tone: MarkerTone): Color = when (tone) {
+    MarkerTone.GOOD -> green
+    MarkerTone.WARN -> amber
+    MarkerTone.BAD -> red
+    MarkerTone.MUTED -> grey
 }
 
-private fun PillPalette.levelColor(level: AvailabilityLevel): Color = when (level) {
-    AvailabilityLevel.GOOD -> green
-    AvailabilityLevel.LOW -> amber
-    AvailabilityLevel.NONE -> red
-}
-
-private fun PillPalette.tint(level: AvailabilityLevel): Color = when (level) {
-    AvailabilityLevel.GOOD -> greenTint
-    AvailabilityLevel.LOW -> amberTint
-    AvailabilityLevel.NONE -> redTint
+private fun PillPalette.tint(tone: MarkerTone): Color = when (tone) {
+    MarkerTone.GOOD -> greenTint
+    MarkerTone.WARN -> amberTint
+    MarkerTone.BAD, MarkerTone.MUTED -> redTint
 }
 
 /** Text on the tint: green, a darker amber for contrast on light, red. */
-private fun PillPalette.strong(level: AvailabilityLevel): Color = when (level) {
-    AvailabilityLevel.GOOD -> green
-    AvailabilityLevel.LOW -> amberStrong
-    AvailabilityLevel.NONE -> red
+private fun PillPalette.strong(tone: MarkerTone): Color = when (tone) {
+    MarkerTone.GOOD -> green
+    MarkerTone.WARN -> amberStrong
+    MarkerTone.BAD, MarkerTone.MUTED -> red
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFE8EAED)
