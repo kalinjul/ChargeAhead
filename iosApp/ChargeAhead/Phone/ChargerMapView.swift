@@ -13,6 +13,12 @@ struct ChargerMapView: View {
     @State private var compact = false
 
     var body: some View {
+        GeometryReader { geometry in
+            map(widthPoints: geometry.size.width)
+        }
+    }
+
+    private func map(widthPoints: CGFloat) -> some View {
         Map(position: $camera) {
             UserAnnotation()
             // TODO cluster dense areas (SwiftUI's Map has none; MKMapView's clusteringIdentifier does)
@@ -33,8 +39,9 @@ struct ChargerMapView: View {
             MapScaleView()
         }
         .onMapCameraChange(frequency: .onEnd) { context in
-            compact = context.region.span.longitudeDelta > Self.maxPillLongitudeSpan
-            onViewportChanged(Self.viewport(of: context.region))
+            let degreesPerPoint = context.region.span.longitudeDelta / max(widthPoints, 1)
+            compact = degreesPerPoint > Self.degreesPerPoint(atZoom: Self.pillZoom)
+            onViewportChanged(degreesPerPoint > Self.degreesPerPoint(atZoom: Self.minChargerZoom) ? nil : Self.viewport(of: context.region))
         }
         .onChange(of: position == nil, initial: true) {
             // The first fix centres the map; after that the camera is the driver's.
@@ -44,15 +51,17 @@ struct ChargerMapView: View {
         }
     }
 
-    /// Roughly Android's zoom 10 on a phone: wider than this, markers stop being useful.
-    private static let maxLongitudeSpan = 0.6
+    /// Android's MIN_CHARGER_ZOOM and PILL_ZOOM: below the first nothing loads, below the second pills become dots.
+    private static let minChargerZoom = 10.0
+    private static let pillZoom = 11.0
 
-    /// Roughly Android's zoom 11: wider than this, pills shrink to dots.
-    private static let maxPillLongitudeSpan = 0.3
+    /// What a web-mercator zoom level shows per point, so the thresholds hold on any screen width.
+    private static func degreesPerPoint(atZoom zoom: Double) -> Double {
+        360 / (256 * pow(2, zoom))
+    }
 
-    static func viewport(of region: MKCoordinateRegion) -> BoundingBox? {
+    static func viewport(of region: MKCoordinateRegion) -> BoundingBox {
         let span = region.span
-        guard span.longitudeDelta <= maxLongitudeSpan else { return nil }
         return BoundingBox(
             south: region.center.latitude - span.latitudeDelta / 2,
             west: region.center.longitude - span.longitudeDelta / 2,
