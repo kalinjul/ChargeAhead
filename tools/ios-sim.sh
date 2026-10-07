@@ -37,6 +37,7 @@ runtimes = json.load(sys.stdin)["devices"]
 devices = [d for key in sorted(runtimes, reverse=True) for d in runtimes[key]]
 if name:
     hits = [d for d in devices if d["name"] == name]
+    hits = [d for d in hits if d["state"] == "Booted"] or hits
 else:
     iphones = [d for d in devices if d["name"].startswith("iPhone")]
     booted = [d for d in iphones if d["state"] == "Booted"]
@@ -50,7 +51,7 @@ print(hits[0]["udid"] if hits else "")
 
 udid() {
   local id
-  id="$(device_udid)"
+  id="$(device_udid)" || die "could not list the simulators (xcrun simctl)"
   [ "$id" != "several" ] || die "several iPhones are booted; pick one with IOS_SIM_DEVICE=\"<name>\" (see: $0 devices)"
   [ -n "$id" ] || die "no simulator found${IOS_SIM_DEVICE:+ named \"$IOS_SIM_DEVICE\"}; install a runtime with: xcodebuild -downloadPlatform iOS"
   echo "$id"
@@ -107,6 +108,7 @@ case "${1:-run}" in
   screenshot)
     id="$(udid)"
     file="${2:-$BUILD_DIR/screenshot.png}"
+    mkdir -p "$(dirname "$file")"
     xcrun simctl io "$id" screenshot "$file" >/dev/null
     echo "$file"
     ;;
