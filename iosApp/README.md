@@ -24,7 +24,14 @@ project.yml                        XcodeGen spec for the Xcode project
 
 ## Building
 
-The app compiles and links against the real `Shared.framework` (SKIE
+To build it and run it in the simulator in one go (see the `ios-simulator`
+skill for restart, screenshots, logs and location):
+
+```bash
+tools/ios-sim.sh run
+```
+
+By hand, the app compiles and links against the real `Shared.framework` (SKIE
 included) on a Mac with Xcode. Without a simulator runtime installed, build
 for the simulator SDK directly:
 
