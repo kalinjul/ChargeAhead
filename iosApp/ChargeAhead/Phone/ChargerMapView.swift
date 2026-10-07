@@ -22,13 +22,18 @@ struct ChargerMapView: View {
         Map(position: $camera) {
             UserAnnotation()
             // TODO cluster dense areas (SwiftUI's Map has none; MKMapView's clusteringIdentifier does)
+            // TODO thresholds from the camera, not the north-up span, so a rotated map keeps its pills
             ForEach(chargers, id: \.site.id) { charger in
                 Annotation(charger.site.name, coordinate: charger.site.position.coordinate, anchor: .center) {
-                    if compact {
-                        ChargerDot(charger: charger)
-                    } else {
-                        ChargerPill(charger: charger)
+                    Group {
+                        if compact {
+                            ChargerDot(charger: charger)
+                        } else {
+                            ChargerPill(charger: charger)
+                        }
                     }
+                    // Larger text than this would bury the map under its own markers.
+                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                 }
                 .annotationTitles(.hidden)
             }

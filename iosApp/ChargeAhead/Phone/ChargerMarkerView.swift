@@ -47,8 +47,6 @@ struct ChargerPill: View {
         .background(Color(.tertiarySystemBackground))
         .clipShape(Capsule())
         .overlay(Capsule().strokeBorder(look.ringColor, lineWidth: look.outOfOrder ? 2 : 1))
-        // Larger text than this would bury the map under its own markers.
-        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(look.accessibilityLabel)
     }
@@ -151,7 +149,6 @@ private struct MarkerLook {
 }
 
 private extension MarkerTone {
-    /// Dots and tints: the system colours.
     var fill: Color {
         switch self {
         case .good: return .green

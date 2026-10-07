@@ -319,7 +319,8 @@ private fun PillPalette.tint(tone: MarkerTone): Color = when (tone) {
 private fun PillPalette.strong(tone: MarkerTone): Color = when (tone) {
     MarkerTone.GOOD -> green
     MarkerTone.WARN -> amberStrong
-    MarkerTone.BAD, MarkerTone.MUTED -> red
+    MarkerTone.BAD -> red
+    MarkerTone.MUTED -> grey
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFFE8EAED)
