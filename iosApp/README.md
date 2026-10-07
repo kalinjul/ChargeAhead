@@ -6,7 +6,7 @@ assistant (as of M1 — see [../ARCHITECTURE.md](../ARCHITECTURE.md) and
 
 ```
 ChargeAhead/
-├── AppDelegate.swift              Scene routing: phone vs. CarPlay; SharedEntry creates features
+├── AppDelegate.swift              Scene routing: phone vs. CarPlay; SharedEntry starts the graph at launch and creates features
 ├── Info.plist                     UIApplicationSceneManifest, permission texts
 ├── ChargeAhead.entitlements       com.apple.developer.carplay-charging
 ├── Localized.swift                localized("key"): text from shared's composeResources
@@ -24,7 +24,14 @@ project.yml                        XcodeGen spec for the Xcode project
 
 ## Building
 
-The app compiles and links against the real `Shared.framework` (SKIE
+To build it and run it in the simulator in one go (see the `ios-simulator`
+skill for restart, screenshots, logs and location):
+
+```bash
+tools/ios-sim.sh run
+```
+
+By hand, the app compiles and links against the real `Shared.framework` (SKIE
 included) on a Mac with Xcode. Without a simulator runtime installed, build
 for the simulator SDK directly:
 

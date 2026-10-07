@@ -9,6 +9,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(
         _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        SharedEntry.start()
+        return true
+    }
+
+    func application(
+        _ application: UIApplication,
         configurationForConnecting connectingSceneSession: UISceneSession,
         options: UIScene.ConnectionOptions
     ) -> UISceneConfiguration {
@@ -35,12 +43,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 /// The shared entry points both scenes build on.
 enum SharedEntry {
 
-    /// A feature the caller owns and closes.
-    static func newFeature() -> ChargeStopsFeature {
-        IosEntryPointsKt.createChargeStopsFeature(
+    /// Builds the shared graph once, before any scene connects.
+    static func start() {
+        IosEntryPointsKt.startChargeAhead(
             backendBaseUrl: bundleValue("ChargeAheadBaseUrl"),
             backendToken: bundleValue("ChargeAheadToken")
         )
+    }
+
+    /// A feature the caller owns and closes.
+    static func newFeature() -> ChargeStopsFeature {
+        IosEntryPointsKt.createChargeStopsFeature()
     }
 
     /// Injected into Info.plist via a build setting; the shared module stops

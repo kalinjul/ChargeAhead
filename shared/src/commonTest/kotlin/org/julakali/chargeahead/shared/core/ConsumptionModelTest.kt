@@ -183,7 +183,7 @@ class ConsumptionModelTest {
     }
 
     @Test
-    fun `a steep descent charges the battery, but only by the recuperated share`() {
+    fun `a steep descent charges the battery but only by the recuperated share`() {
         val pass = route(20.0, 60.0, listOf(segment(0.0, 20.0, 60.0, descentM = 1200.0)))
 
         val energy = model.energyKwh(pass, 0.0, 20.0)

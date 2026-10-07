@@ -12,6 +12,7 @@ xcuserdata/
 *.xcodeproj/project.xcworkspace/
 *.xcodeproj/xcuserdata/
 iosApp/ChargeAhead.xcodeproj/
+iosApp/build/
 .build/
 secrets.properties
 # Signing keys never belong in the repository (docs/ci-cd.md).

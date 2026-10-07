@@ -363,8 +363,8 @@
     </plurals>
 
     <!-- iOS only: wording that differs from Android (CarPlay, no drawer) -->
-    <string name="ios_home_map_placeholder">Map placeholder — map SDK to follow</string>
     <string name="ios_home_pill_plan">Plan</string>
+    <string name="ios_done">Done</string>
     <string name="ios_home_diagnostics">Info</string>
     <string name="ios_plan_title">Plan route</string>
     <string name="ios_plan_vehicle_missing">No car added.</string>

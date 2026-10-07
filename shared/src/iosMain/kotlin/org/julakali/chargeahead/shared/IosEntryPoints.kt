@@ -15,7 +15,9 @@ import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.julakali.chargeahead.shared.settings.createTripDataStore
 import org.julakali.chargeahead.shared.settings.settingsModule
+import org.julakali.chargeahead.shared.ui.AddCarViewModel
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
+import org.julakali.chargeahead.shared.ui.GarageViewModel
 import org.julakali.chargeahead.shared.ui.CorridorViewModel
 import org.julakali.chargeahead.shared.ui.HomeViewModel
 import org.julakali.chargeahead.shared.ui.SearchViewModel
@@ -36,15 +38,27 @@ import org.julakali.chargeahead.shared.ui.phoneSession
 import org.julakali.chargeahead.shared.domain.usecases.StartAppInteractor
 import org.julakali.chargeahead.shared.domain.invoke
 
-/**
- * The process-wide graph, built on the first [createChargeStopsFeature] call;
- * the first call's values win.
- * TODO start Koin explicitly from Swift (#39)
- */
 private var graph: Koin? = null
 
-private fun graph(backend: BackendConfig): Koin =
-    graph ?: koinApplication {
+/**
+ * Builds the process-wide graph, once, from the app delegate's launch.
+ * @throws IllegalArgumentException when the backend is not configured; the app cannot run without it.
+ * @throws IllegalStateException when it already ran.
+ */
+fun startChargeAhead(backendBaseUrl: String?, backendToken: String?) {
+    check(graph == null) { "ChargeAhead is already started" }
+    val backend = requireNotNull(BackendConfig.of(backendBaseUrl, backendToken)) {
+        "ChargeAheadBaseUrl and ChargeAheadToken must be set in Info.plist"
+    }
+    val koin = buildGraph(backend)
+    graph = koin
+    koin.get<CoroutineScope>(AppScope).launch { koin.get<StartAppInteractor>()() }
+}
+
+private fun requireGraph(): Koin = checkNotNull(graph) { "No graph yet — call startChargeAhead first" }
+
+private fun buildGraph(backend: BackendConfig): Koin =
+    koinApplication {
         modules(
             settingsModule { createSettingsDataStore(dataStoreScope()) },
             module {
@@ -56,32 +70,18 @@ private fun graph(backend: BackendConfig): Koin =
             chargeStopsModule(),
             sharedUiModule(),
         )
-    }.koin.also { graph = it }
+    }.koin
 
 private fun Scope.dataStoreScope(): CoroutineScope = get<CoroutineScope>(AppScope) + get<AppCoroutineDispatchers>().io
 
-/**
- * @throws IllegalArgumentException when the backend is not configured; the app cannot run without it.
- */
-fun createChargeStopsFeature(
-    backendBaseUrl: String?,
-    backendToken: String?,
-): ChargeStopsFeature {
-    val backend = requireNotNull(BackendConfig.of(backendBaseUrl, backendToken)) {
-        "ChargeAheadBaseUrl and ChargeAheadToken must be set in Info.plist"
-    }
-    val koin = graph(backend)
-    koin.get<CoroutineScope>(AppScope).launch { koin.get<StartAppInteractor>()() }
-    // Each caller owns its feature; the data graph beneath is shared.
-    return koin.get(SessionFeature) { parametersOf(CoreLocationSource(), null) }
-}
+/** Each caller owns its feature; the data graph beneath is shared. */
+fun createChargeStopsFeature(): ChargeStopsFeature =
+    requireGraph().get(SessionFeature) { parametersOf(CoreLocationSource(), null) }
 
 /** The corridor list for CarPlay: every state change, on the main thread, until [stop]. */
 class ChargeStopsWatcher(feature: ChargeStopsFeature) {
 
-    private val koin: Koin = requireNotNull(graph) {
-        "No graph yet — call createChargeStopsFeature first"
-    }
+    private val koin: Koin = requireGraph()
     private val session = koin.phoneSession(feature)
     private val viewModels = ViewModelHost()
     private val viewModel = viewModels.get { session.get<CorridorViewModel>() }
@@ -119,9 +119,7 @@ data class TripPlanOutcome(
  */
 class PhoneViewModels(private val feature: ChargeStopsFeature) {
 
-    private val koin: Koin = requireNotNull(graph) {
-        "No graph yet — call createChargeStopsFeature first"
-    }
+    private val koin: Koin = requireGraph()
     private val session = koin.phoneSession(feature)
     private val host = ViewModelHost()
 
@@ -130,6 +128,10 @@ class PhoneViewModels(private val feature: ChargeStopsFeature) {
     fun chargeNow(): ChargeNowViewModel = host.get { session.get<ChargeNowViewModel>() }
 
     fun search(): SearchViewModel = host.get { session.get<SearchViewModel> { parametersOf(SavedStateHandle()) } }
+
+    fun garage(): GarageViewModel = host.get { session.get<GarageViewModel>() }
+
+    fun addCar(): AddCarViewModel = host.get { session.get<AddCarViewModel>() }
 
     fun clear() {
         host.clear()
@@ -140,9 +142,7 @@ class PhoneViewModels(private val feature: ChargeStopsFeature) {
 /** Plans a trip for Swift, which sees [planTrip] as `async`. */
 class TripPlanner {
 
-    private val planTrip: PlanTripInteractor = requireNotNull(graph) {
-        "No graph yet — call createChargeStopsFeature first"
-    }.get()
+    private val planTrip: PlanTripInteractor = requireGraph().get()
 
     suspend fun planTrip(from: LatLon, destination: Destination): TripPlanOutcome =
         planTrip(PlanTripInteractor.Params(from, destination)).fold(
