@@ -22,7 +22,7 @@ import org.julakali.chargeahead.shared.Texts
  * and goes ahead by itself once it is visible. The next stop alone is offered
  * as the alternative.
  */
-class OpenPhoneScreen(
+class CarOpenPhoneScreen(
     carContext: CarContext,
     private val onPhoneOpened: () -> Unit,
     private val onNextStopOnly: () -> Unit,

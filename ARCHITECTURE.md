@@ -622,11 +622,11 @@ the platform layer does nothing but translate.
 | Screen | Android Auto | CarPlay (target, #152) |
 |---|---|---|
 | Home: tiles for destination, "Jetzt laden", charge level, active route; a committed trip pushes the route by itself | `CarHomeScreen`, `GridTemplate` | `CPGridTemplate` |
-| Destination search with recents | `DestinationSearchScreen`, `SearchTemplate` | `CPSearchTemplate` |
-| Route: stops as numbered markers on the host's map, "Navigation starten" commits and hands the first stop to the host, "Neu planen" with the car's reading or the picker | `RouteScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
-| Charge now: the best nearby as markers, host refresh after panning | `ChargeNowScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
-| Site detail: address, distance, charge, live points, "Navigieren" | `SiteDetailScreen`, `PaneTemplate` | `CPInformationTemplate` |
-| Manual charge level, also the picker before a re-plan | `SoCScreen`, `ListTemplate` | `CPListTemplate` |
+| Destination search with recents | `CarDestinationSearchScreen`, `SearchTemplate` | `CPSearchTemplate` |
+| Route: stops as numbered markers on the host's map, "Navigation starten" commits and hands the first stop to the host, "Neu planen" with the car's reading or the picker | `CarRouteScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
+| Charge now: the best nearby as markers, host refresh after panning | `CarChargeNowScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
+| Site detail: address, distance, charge, live points, "Navigieren" | `CarSiteDetailScreen`, `PaneTemplate` | `CPInformationTemplate` |
+| Manual charge level, also the picker before a re-plan | `CarSoCScreen`, `ListTemplate` | `CPListTemplate` |
 | What the car reports, behind the home header's info | `CarDebugScreen`, `ListTemplate` | — |
 
 All of it on Car App API level 1. The host owns layout and camera: a grid

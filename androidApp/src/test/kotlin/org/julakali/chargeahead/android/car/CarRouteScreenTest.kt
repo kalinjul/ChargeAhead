@@ -49,7 +49,7 @@ import org.jetbrains.compose.resources.StringResource
 @RunWith(RobolectricTestRunner::class)
 // The real Application starts the production Koin graph; this test brings its own.
 @Config(application = Application::class)
-class RouteScreenTest {
+class CarRouteScreenTest {
 
     private var graph: CarTestGraph? = null
 
@@ -67,7 +67,7 @@ class RouteScreenTest {
     /** The screen's template once the plan the fake returns has landed. */
     private fun CarTestGraph.templateFor(result: TripPlanResult): Template {
         planner.result = result
-        val screen = RouteScreen(carContext, session, munich, permissions = permissions)
+        val screen = CarRouteScreen(carContext, session, munich, permissions = permissions)
         settle()
         return screen.onGetTemplate()
     }
@@ -151,7 +151,7 @@ class RouteScreenTest {
         graph.planner.result = TripPlanResult.Planned(plan)
         // The grid is the root; the route sits on top of it, as after a destination search.
         graph.screens.push(CarHomeScreen(graph.carContext, graph.feature, graph.session, graph.permissions))
-        val screen = RouteScreen(graph.carContext, graph.session, munich, permissions = graph.permissions)
+        val screen = CarRouteScreen(graph.carContext, graph.session, munich, permissions = graph.permissions)
         graph.screens.push(screen)
         // The test manager pops only screens that have a lifecycle, as the host's does.
         ScreenController(screen).moveToState(Lifecycle.State.STARTED)
@@ -176,7 +176,7 @@ class RouteScreenTest {
 
         click(template.itemList!!.items.first() as Row)
 
-        assertTrue(graph.screens.screensPushed.last() is SiteDetailScreen)
+        assertTrue(graph.screens.screensPushed.last() is CarSiteDetailScreen)
     }
 
     @Test
@@ -185,14 +185,14 @@ class RouteScreenTest {
         graph.withVehicle()
         graph.planner.result = TripPlanResult.Planned(plan(stops = 1))
         graph.withCommittedTrip(plan(stops = 1))
-        val screen = RouteScreen(graph.carContext, graph.session, munich, activeRoute = true, permissions = graph.permissions)
+        val screen = CarRouteScreen(graph.carContext, graph.session, munich, activeRoute = true, permissions = graph.permissions)
         settle()
         val replan = (screen.onGetTemplate() as PlaceListMapTemplate).actionStrip!!.actions.last()
 
         click(replan)
 
         val picker = graph.screens.screensPushed.last()
-        assertTrue(picker is SoCScreen)
+        assertTrue(picker is CarSoCScreen)
         assertTrue(graph.planner.startLevels.isEmpty())
 
         val step = (picker.onGetTemplate() as androidx.car.app.model.ListTemplate).singleList!!.items.map { it as Row }
@@ -208,14 +208,14 @@ class RouteScreenTest {
         graph.withVehicle()
         graph.planner.result = TripPlanResult.Planned(plan(stops = 1))
         graph.withCommittedTrip(plan(stops = 1))
-        val screen = RouteScreen(graph.carContext, graph.session, munich, activeRoute = true, permissions = graph.permissions)
+        val screen = CarRouteScreen(graph.carContext, graph.session, munich, activeRoute = true, permissions = graph.permissions)
         settle()
         val replan = (screen.onGetTemplate() as PlaceListMapTemplate).actionStrip!!.actions.last()
 
         click(replan)
 
         assertEquals(listOf(42.0), graph.planner.startLevels)
-        assertTrue(graph.screens.screensPushed.none { it is SoCScreen })
+        assertTrue(graph.screens.screensPushed.none { it is CarSoCScreen })
     }
 
     @Test
@@ -224,7 +224,7 @@ class RouteScreenTest {
         graph.withVehicle()
         graph.planner.result = TripPlanResult.NoRoute
         graph.planner.gate = Mutex(locked = true)
-        val screen = RouteScreen(graph.carContext, graph.session, munich, permissions = graph.permissions)
+        val screen = CarRouteScreen(graph.carContext, graph.session, munich, permissions = graph.permissions)
         settle()
 
         assertTrue((screen.onGetTemplate() as PlaceListMapTemplate).isLoading)

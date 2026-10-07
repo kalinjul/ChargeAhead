@@ -28,7 +28,7 @@ import org.julakali.chargeahead.shared.Texts
  * Enter the state of charge manually while driving, in steps from high to
  * low. A caller that needs the pick, like a re-plan, gets it through [onPicked].
  */
-class SoCScreen(
+class CarSoCScreen(
     carContext: CarContext,
     session: Scope,
     private val permissions: CarPermissions,

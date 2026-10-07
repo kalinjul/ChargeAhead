@@ -36,7 +36,7 @@ import org.julakali.chargeahead.shared.Texts
  * One charging site: where it is, how far, what it offers right now, and
  * the hand-off to navigation. For a planned [stop] the charge at it too.
  */
-class SiteDetailScreen(
+class CarSiteDetailScreen(
     carContext: CarContext,
     session: Scope,
     private val site: ChargeSite,

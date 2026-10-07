@@ -61,7 +61,7 @@ import org.julakali.chargeahead.shared.Texts
  * sends the whole route through the phone, for those who want Maps to hold
  * every waypoint.
  */
-class RouteScreen(
+class CarRouteScreen(
     carContext: CarContext,
     private val session: Scope,
     private val destination: Destination,
@@ -164,7 +164,7 @@ class RouteScreen(
             .addText(distanceLine(legKm, suffix = charge, separator = ", "))
             .setMetadata(placeMetadata(stop.site.position, ordinal.toString()))
             .setBrowsable(true)
-            .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, stop.site, stop)) }
+            .setOnClickListener { screenManager.push(CarSiteDetailScreen(carContext, session, stop.site, stop)) }
             .build()
     }
 
@@ -207,7 +207,7 @@ class RouteScreen(
             handOffRoute(plan)
         } else {
             screenManager.push(
-                OpenPhoneScreen(
+                CarOpenPhoneScreen(
                     carContext,
                     onPhoneOpened = { handOffRoute(plan) },
                     onNextStopOnly = { plan.stops.first().site.let { navigateTo(carContext, it.name, it.position) } },
@@ -234,7 +234,7 @@ class RouteScreen(
             Uri.parse(MapsHandoff.directionsUrl(origin = null, plan.destination.position, waypoints)),
         )
         lifecycleScope.launch {
-            // Coming back from OpenPhoneScreen, this screen isn't started yet.
+            // Coming back from CarOpenPhoneScreen, this screen isn't started yet.
             lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.STARTED) }
             navigateTo(carContext, first.name, first.position)
             // The phone's route must arrive after the host's single stop.
@@ -269,7 +269,7 @@ class RouteScreen(
         .setIcon(icon(R.drawable.ic_refresh))
         .setOnClickListener {
             if (!viewModel.onReplanRequested()) {
-                screenManager.push(SoCScreen(carContext, session, permissions, onPicked = viewModel::onReplanWith))
+                screenManager.push(CarSoCScreen(carContext, session, permissions, onPicked = viewModel::onReplanWith))
             }
         }
         .build()
@@ -297,7 +297,7 @@ class RouteScreen(
     /** Body actions may carry titles — unlike the strip's icons. */
     private fun chargeNowTitledAction(): Action = Action.Builder()
         .setTitle(Texts.string(Res.string.car_home_charge_now))
-        .setOnClickListener { screenManager.push(ChargeNowScreen(carContext, session)) }
+        .setOnClickListener { screenManager.push(CarChargeNowScreen(carContext, session)) }
         .build()
 
     private fun header(): Header = Header.Builder()
