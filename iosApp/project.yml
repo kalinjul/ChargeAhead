@@ -77,3 +77,28 @@ targets:
           export JAVA_HOME="${JAVA_HOME:-$(/usr/libexec/java_home 2>/dev/null || true)}"
           ./gradlew :shared:embedAndSignAppleFrameworkForXcode
         basedOnDependencyAnalysis: false
+
+  # Taps through the app in the simulator: tools/ios-sim.sh uitest.
+  ChargeAheadUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: ChargeAheadUITests
+    dependencies:
+      - target: ChargeAhead
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.julakali.chargeahead.uitests
+        GENERATE_INFOPLIST_FILE: true
+
+schemes:
+  ChargeAhead:
+    build:
+      targets:
+        ChargeAhead: all
+        ChargeAheadUITests: [test]
+    test:
+      targets:
+        - ChargeAheadUITests
+

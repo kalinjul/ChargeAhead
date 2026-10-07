@@ -9,6 +9,7 @@
 #   tools/ios-sim.sh screenshot [file.png]
 #   tools/ios-sim.sh logs         # the app's log, live, until Ctrl+C
 #   tools/ios-sim.sh location <lat> <lon>
+#   tools/ios-sim.sh uitest       # the UI tests; screenshots in iosApp/build/uitest/screenshots
 #   tools/ios-sim.sh devices      # simulators to choose from
 #
 # IOS_SIM_DEVICE picks the simulator by name ("iPhone 17 Pro"); without it,
@@ -64,14 +65,18 @@ boot() {
   xcrun simctl bootstatus "$1" -b >/dev/null
 }
 
-build() {
+generate() {
   command -v xcodegen >/dev/null || die "xcodegen missing: brew install xcodegen"
   [ -f "$IOS_DIR/Secrets.xcconfig" ] || echo "warning: iosApp/Secrets.xcconfig missing, the app will stop at launch" >&2
   (cd "$IOS_DIR" && xcodegen generate --quiet)
   # Only a JDK that exists; otherwise project.yml's script phase finds one itself.
-  local jdk=()
+  jdk=()
   if [ -n "${JAVA_HOME:-}" ]; then jdk=("JAVA_HOME=$JAVA_HOME")
   elif [ -d "$STUDIO_JDK" ]; then jdk=("JAVA_HOME=$STUDIO_JDK"); fi
+}
+
+build() {
+  generate
   xcodebuild -project "$IOS_DIR/ChargeAhead.xcodeproj" -target ChargeAhead \
     -configuration Debug -sdk iphonesimulator -arch arm64 \
     CODE_SIGNING_ALLOWED=NO SYMROOT="$BUILD_DIR" ${jdk[@]+"${jdk[@]}"} \
@@ -96,6 +101,19 @@ case "${1:-run}" in
     launch "$id"
     ;;
   build) build ;;
+  uitest)
+    id="$(udid)"
+    boot "$id"
+    generate
+    out="$BUILD_DIR/uitest"
+    rm -rf "$out"
+    mkdir -p "$out/screenshots"
+    TEST_RUNNER_SCREENSHOT_DIR="$out/screenshots" xcodebuild test \
+      -project "$IOS_DIR/ChargeAhead.xcodeproj" -scheme ChargeAhead \
+      -destination "id=$id" -derivedDataPath "$out/derived" \
+      -resultBundlePath "$out/result.xcresult" ${jdk[@]+"${jdk[@]}"} -quiet
+    echo "screenshots in $out/screenshots"
+    ;;
   restart)
     id="$(udid)"
     boot "$id"
