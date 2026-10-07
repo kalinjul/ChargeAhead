@@ -10,19 +10,20 @@ struct ChargerMapView: View {
 
     @State private var camera: MapCameraPosition = .automatic
     @State private var followedFirstFix = false
+    @State private var compact = false
 
     var body: some View {
         Map(position: $camera) {
             UserAnnotation()
             // TODO cluster dense areas (SwiftUI's Map has none; MKMapView's clusteringIdentifier does)
-            // TODO tint by availability like the Android markers
             ForEach(chargers, id: \.site.id) { charger in
-                Marker(
-                    charger.site.name,
-                    monogram: Text("\(Int(charger.maxPowerKw.rounded()))"),
-                    coordinate: charger.site.position.coordinate
-                )
-                .tint(Color.accentColor)
+                Annotation(charger.site.name, coordinate: charger.site.position.coordinate, anchor: .center) {
+                    if compact {
+                        ChargerDot(charger: charger)
+                    } else {
+                        ChargerPill(charger: charger)
+                    }
+                }
                 .annotationTitles(.hidden)
             }
         }
@@ -32,6 +33,7 @@ struct ChargerMapView: View {
             MapScaleView()
         }
         .onMapCameraChange(frequency: .onEnd) { context in
+            compact = context.region.span.longitudeDelta > Self.maxPillLongitudeSpan
             onViewportChanged(Self.viewport(of: context.region))
         }
         .onChange(of: position == nil, initial: true) {
@@ -44,6 +46,9 @@ struct ChargerMapView: View {
 
     /// Roughly Android's zoom 10 on a phone: wider than this, markers stop being useful.
     private static let maxLongitudeSpan = 0.6
+
+    /// Roughly Android's zoom 11: wider than this, pills shrink to dots.
+    private static let maxPillLongitudeSpan = 0.3
 
     static func viewport(of region: MKCoordinateRegion) -> BoundingBox? {
         let span = region.span
