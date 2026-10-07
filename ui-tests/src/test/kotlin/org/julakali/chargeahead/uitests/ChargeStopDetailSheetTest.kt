@@ -16,7 +16,7 @@ class ChargeStopDetailSheetTest {
     val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun sheet(tripLine: String? = null) = compose.setThemedContent {
-        ChargeStopDetailSheet(stop = Fixtures.chargeStop, live = null, onDismiss = {}, tripLine = tripLine)
+        ChargeStopDetailSheet(stop = Fixtures.chargeStop, live = null, onDismiss = {}, onOpenMaps = {}, tripLine = tripLine)
     }
 
     @Test

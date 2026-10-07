@@ -20,7 +20,7 @@ class ReplanWithArrivalSocInteractor(
 
     override suspend fun doWork(params: Params): TripPlanResult? {
         updateArrivalSoc(UpdateArrivalSocInteractor.Params(params.socPercent)).getOrThrow()
-        val destination = trips.state.value.planned?.destination ?: return null
+        val destination = trips.state.value.currentDestination ?: return null
         return planTrip(PlanTripInteractor.Params(params.from, destination)).getOrThrow()
     }
 }

@@ -17,7 +17,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
@@ -47,10 +46,10 @@ fun ChargeStopDetailSheet(
     stop: ChargeStop,
     live: List<LiveConnectorGroup>?,
     onDismiss: () -> Unit,
+    onOpenMaps: (String) -> Unit,
     /** Arrival and departure when the site is a planned stop. */
     tripLine: String? = null,
 ) {
-    val context = LocalContext.current
 
     AppSheet(onDismissRequest = onDismiss) {
         Column {
@@ -124,7 +123,7 @@ fun ChargeStopDetailSheet(
 
         Button(
             onClick = {
-                context.openMapsLink(MapsHandoff.geoUri(stop.site.position, stop.site.name))
+                onOpenMaps(MapsHandoff.geoUri(stop.site.position, stop.site.name))
                 onDismiss()
             },
             shape = MaterialTheme.shapes.medium,

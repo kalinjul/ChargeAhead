@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Power
 import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -117,7 +119,7 @@ fun DrawerContent(
         Column {
             SectionLabel(stringResource(Res.string.drawer_preferences))
             PrefRow(
-                icon = painterResource(R.drawable.ic_car),
+                icon = rememberVectorPainter(Icons.Outlined.DirectionsCar),
                 label = stringResource(Res.string.drawer_car),
                 sublabel = uiState.vehicleName ?: stringResource(Res.string.drawer_car_none),
                 onClick = { onOpen(DrawerTarget.VEHICLE) },

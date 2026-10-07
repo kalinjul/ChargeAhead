@@ -54,14 +54,6 @@ class TripRepositoryTest {
     }
 
     @Test
-    fun `a failed plan keeps the previous one but moves the destination`() {
-        val state = TripState().planned(munich.destination, munich).planned(kiel.destination, plan = null)
-
-        assertEquals(kiel.destination, state.destination)
-        assertEquals(munich, state.planned)
-    }
-
-    @Test
     fun `committing takes the planned trip off the map`() {
         val trip = CommittedTrip(munich, 60.0, 1L)
 

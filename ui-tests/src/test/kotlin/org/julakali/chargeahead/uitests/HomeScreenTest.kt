@@ -46,6 +46,7 @@ class HomeScreenTest {
             uiState = uiState,
             search = SearchUiState(),
             trip = trip,
+            destination = trip?.destination,
             hasPermission = true,
             planningInProgress = false,
             mapBottomInset = 0.dp,

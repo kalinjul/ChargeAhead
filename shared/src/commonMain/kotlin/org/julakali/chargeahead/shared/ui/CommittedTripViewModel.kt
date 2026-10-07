@@ -19,6 +19,8 @@ import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.reportedByCar
 import org.julakali.chargeahead.shared.domain.TripPlanResult
+import org.julakali.chargeahead.shared.domain.unreachable
+import org.julakali.chargeahead.shared.domain.UnreachableTrip
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.invoke
 import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
@@ -42,7 +44,10 @@ data class CommittedTripUiState(
 
 sealed interface CommittedTripEvent {
     data object Replanned : CommittedTripEvent
-    data object NoRoute : CommittedTripEvent
+
+    /** The re-plan got nowhere; the trip under way stays. */
+    data class ReplanFailed(val why: UnreachableTrip) : CommittedTripEvent
+    data object VehicleMissing : CommittedTripEvent
     data object Ended : CommittedTripEvent
 }
 
@@ -114,7 +119,11 @@ class CommittedTripViewModel(
         selection.value = SectionSelection()
         viewModelScope.launch {
             val result = replanCommittedTrip(ReplanCommittedTripInteractor.Params(from, socPercent)).getOrNull()
-            events.value = if (result is TripPlanResult.Planned) CommittedTripEvent.Replanned else CommittedTripEvent.NoRoute
+            events.value = when (result) {
+                is TripPlanResult.Planned -> CommittedTripEvent.Replanned
+                TripPlanResult.NoVehicle -> CommittedTripEvent.VehicleMissing
+                else -> CommittedTripEvent.ReplanFailed(result?.unreachable() ?: UnreachableTrip.NoConnection)
+            }
         }
     }
 

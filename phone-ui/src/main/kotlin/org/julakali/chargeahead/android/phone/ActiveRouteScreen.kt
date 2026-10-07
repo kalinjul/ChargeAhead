@@ -17,6 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import org.julakali.chargeahead.android.phone.components.AppSnackbarHost
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing_action
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing
+import androidx.compose.material3.SnackbarResult
+import org.julakali.chargeahead.android.phone.components.garageActionVisuals
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,7 +53,6 @@ import kotlin.math.roundToInt
 import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.active_route_end
 import org.julakali.chargeahead.shared.resources.active_route_replanned
-import org.julakali.chargeahead.shared.resources.plan_failed_no_route
 import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
 import org.julakali.chargeahead.shared.resources.soc_dialog_title
 import org.julakali.chargeahead.shared.resources.trip_arr
@@ -62,17 +67,26 @@ fun ActiveRouteRoute(
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: (String) -> Unit,
     onEnded: () -> Unit,
+    onOpenGarage: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: CommittedTripViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val event by viewModel.event.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    // Outlives the effect: consuming the event restarts it, which would cancel the message.
+    val scope = rememberCoroutineScope()
     LaunchedEffect(event) {
-        when (event) {
+        when (val current = event) {
             null -> return@LaunchedEffect
-            CommittedTripEvent.Replanned -> snackbar.showSnackbar(getString(Res.string.active_route_replanned))
-            CommittedTripEvent.NoRoute -> snackbar.showSnackbar(getString(Res.string.plan_failed_no_route))
+            CommittedTripEvent.Replanned -> scope.launch { snackbar.showSnackbar(getString(Res.string.active_route_replanned)) }
+            is CommittedTripEvent.ReplanFailed -> scope.launch { snackbar.showSnackbar(current.why.loadMessage()) }
+            CommittedTripEvent.VehicleMissing -> scope.launch {
+                val result = snackbar.showSnackbar(
+                    garageActionVisuals(getString(Res.string.plan_vehicle_missing), getString(Res.string.plan_vehicle_missing_action)),
+                )
+                if (result == SnackbarResult.ActionPerformed) onOpenGarage()
+            }
             CommittedTripEvent.Ended -> onEnded()
         }
         viewModel.onEventHandled()

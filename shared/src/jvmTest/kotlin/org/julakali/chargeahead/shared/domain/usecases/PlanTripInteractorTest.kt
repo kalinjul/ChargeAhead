@@ -13,6 +13,7 @@ import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.UnreachableTrip
 import org.julakali.chargeahead.shared.domain.DEFAULT_ASSUMED_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.VehicleProfile
@@ -102,6 +103,19 @@ class PlanTripTest {
     }
 
     @Test
+    fun `planning after the last car left closes whatever the sheet showed`() = runBlocking {
+        vehicles.setVehicle(vehicle)
+        outcome = { TripPlanResult.NoChargerInReach(afterKm = 0.0) }
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+        vehicles.setVehicle(null)
+
+        assertSame(TripPlanResult.NoVehicle, planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow())
+
+        assertNull(trips.state.value.planned)
+        assertNull(trips.state.value.unreachable)
+    }
+
+    @Test
     fun `a plan becomes the planned trip and its destination the app-wide one`() = runBlocking {
         vehicles.setVehicle(vehicle)
 
@@ -113,7 +127,7 @@ class PlanTripTest {
     }
 
     @Test
-    fun `a failed plan keeps the planned one but still sets the destination`() = runBlocking {
+    fun `no route drops the planned trip and keeps the new destination as unreachable`() = runBlocking {
         vehicles.setVehicle(vehicle)
         planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
         outcome = { TripPlanResult.NoRoute }
@@ -121,8 +135,46 @@ class PlanTripTest {
 
         planTrip(PlanTripInteractor.Params(from, hamburg)).getOrThrow()
 
-        assertEquals(munich, trips.state.value.planned?.destination)
+        assertNull(trips.state.value.planned)
         assertEquals(hamburg, trips.state.value.destination)
+        assertEquals(UnreachableTrip.NoRoute, trips.state.value.unreachable)
+    }
+
+    @Test
+    fun `no charger in reach drops the planned trip and keeps its destination as unreachable`() = runBlocking {
+        vehicles.setVehicle(vehicle)
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+        outcome = { TripPlanResult.NoChargerInReach(afterKm = 0.0) }
+
+        planTrip(PlanTripInteractor.Params(from, munich, startSocPercent = 5.0)).getOrThrow()
+
+        assertNull(trips.state.value.planned)
+        assertEquals(munich, trips.state.value.destination)
+        assertEquals(UnreachableTrip.NoCharger(afterKm = 0.0), trips.state.value.unreachable)
+    }
+
+    @Test
+    fun `no connection keeps the destination as unreachable for that reason`() = runBlocking {
+        vehicles.setVehicle(vehicle)
+        outcome = { TripPlanResult.NoConnection }
+
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+
+        assertEquals(UnreachableTrip.NoConnection, trips.state.value.unreachable)
+    }
+
+    @Test
+    fun `an unreachable trip re-plans with a new arrival charge and is planned again`() = runBlocking {
+        vehicles.setVehicle(vehicle)
+        outcome = { TripPlanResult.NoChargerInReach(afterKm = 0.0) }
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+        outcome = { destination -> TripPlanResult.Planned(plan(destination)) }
+
+        val result = replanWithArrivalSoc(ReplanWithArrivalSocInteractor.Params(10.0, from)).getOrThrow()
+
+        assertIs<TripPlanResult.Planned>(result)
+        assertEquals(munich, trips.state.value.planned?.destination)
+        assertNull(trips.state.value.unreachable)
     }
 
     @Test

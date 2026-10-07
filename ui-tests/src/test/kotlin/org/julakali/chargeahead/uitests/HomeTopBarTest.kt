@@ -7,6 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.HomeTopBar
+import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.SearchUiState
@@ -28,6 +29,7 @@ class HomeTopBarTest {
     private fun topBar(
         search: SearchUiState = SearchUiState(),
         trip: TripPlan? = null,
+        destination: Destination? = trip?.destination,
         onClearTrip: () -> Unit = {},
         onFlyTo: (LatLon) -> Unit = {},
     ) = compose.setThemedContent {
@@ -39,6 +41,7 @@ class HomeTopBarTest {
             onPick = {},
             onClearTrip = onClearTrip,
             onFlyTo = onFlyTo,
+            destination = destination,
         )
     }
 
@@ -50,6 +53,13 @@ class HomeTopBarTest {
         topBar()
         hint.assertIsDisplayed()
         header.assertDoesNotExist()
+    }
+
+    @Test
+    fun `a destination no plan reached still replaces the bar`() {
+        topBar(destination = Fixtures.plan.destination)
+        header.assertIsDisplayed()
+        hint.assertDoesNotExist()
     }
 
     @Test

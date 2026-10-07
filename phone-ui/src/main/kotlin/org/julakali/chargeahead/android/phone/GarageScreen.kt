@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Battery0Bar
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Flag
@@ -71,6 +73,8 @@ import org.julakali.chargeahead.android.phone.components.ChargeLevelSheet
 import org.julakali.chargeahead.android.phone.components.SectionLabel
 import org.julakali.chargeahead.android.phone.components.SettingRow
 import org.julakali.chargeahead.android.phone.components.SettingsCard
+import org.julakali.chargeahead.android.phone.components.SkeletonBar
+import org.julakali.chargeahead.android.phone.components.rememberShimmerBrush
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.ui.GarageUiState
@@ -88,6 +92,9 @@ import org.julakali.chargeahead.shared.resources.garage_percent
 import org.julakali.chargeahead.shared.resources.garage_range_caption
 import org.julakali.chargeahead.shared.resources.garage_range_number
 import org.julakali.chargeahead.shared.resources.garage_range_unit
+import org.julakali.chargeahead.shared.resources.garage_soc_row_hint
+import org.julakali.chargeahead.shared.resources.garage_soc_sheet_hint
+import org.julakali.chargeahead.shared.resources.garage_soc_title
 import org.julakali.chargeahead.shared.resources.garage_stat_battery
 import org.julakali.chargeahead.shared.resources.garage_stat_consumption
 import org.julakali.chargeahead.shared.resources.garage_stat_dc
@@ -114,6 +121,10 @@ fun GarageRoute(
         onArrivalChange = viewModel::onArrivalSheetChanged,
         onArrivalConfirm = viewModel::onArrivalSheetConfirmed,
         onArrivalDismiss = viewModel::onArrivalSheetDismissed,
+        onSocSheetOpen = viewModel::onSocSheetOpened,
+        onSocChange = viewModel::onSocSheetChanged,
+        onSocConfirm = viewModel::onSocSheetConfirmed,
+        onSocDismiss = viewModel::onSocSheetDismissed,
         modifier = modifier,
     )
 }
@@ -129,9 +140,29 @@ fun GarageScreen(
     onArrivalChange: (Int) -> Unit,
     onArrivalConfirm: () -> Unit,
     onArrivalDismiss: () -> Unit,
+    onSocSheetOpen: () -> Unit,
+    onSocChange: (Int) -> Unit,
+    onSocConfirm: () -> Unit,
+    onSocDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (uiState.loading) {
+        GarageSkeleton(modifier)
+        return
+    }
     val selected = uiState.selected
+
+    uiState.socSheet?.let { percent ->
+        ChargeLevelSheet(
+            title = stringResource(Res.string.garage_soc_title),
+            subtitle = stringResource(Res.string.garage_soc_sheet_hint),
+            kind = ChargeLevelKind.NOW,
+            percent = percent,
+            onChange = onSocChange,
+            onConfirm = onSocConfirm,
+            onDismiss = onSocDismiss,
+        )
+    }
 
     uiState.arrivalSheet?.let { percent ->
         ChargeLevelSheet(
@@ -178,6 +209,15 @@ fun GarageScreen(
                 onClick = onArrivalSheetOpen,
             )
         }
+        val socRow: @Composable () -> Unit = {
+            SettingRow(
+                icon = Icons.Outlined.Battery0Bar,
+                title = stringResource(Res.string.garage_soc_title),
+                supporting = stringResource(Res.string.garage_soc_row_hint),
+                value = stringResource(Res.string.garage_percent, uiState.socPercent.roundToInt()),
+                onClick = onSocSheetOpen,
+            )
+        }
         val vehicleRow: @Composable () -> Unit = {
             SettingRow(
                 icon = Icons.Outlined.Tune,
@@ -186,7 +226,8 @@ fun GarageScreen(
                 onClick = onOpenVehicle,
             )
         }
-        SettingsCard(if (selected == null) listOf(arrivalRow) else listOf(vehicleRow, arrivalRow), inset)
+        if (selected != null) SettingsCard(listOf(vehicleRow), inset)
+        SettingsCard(listOf(socRow, arrivalRow), inset)
     }
     if (selected != null) {
         val label = stringResource(Res.string.garage_add_title)
@@ -362,6 +403,24 @@ private fun Stat(label: String, value: String, unit: String, modifier: Modifier 
     }
 }
 
+/** The page's outline while the garage is read: a car card, then the two settings cards. */
+@Composable
+private fun GarageSkeleton(modifier: Modifier = Modifier) {
+    val shimmer = rememberShimmerBrush()
+    Column(
+        modifier = modifier.fillMaxSize().padding(horizontal = PAGE_INSET).padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+    ) {
+        SkeletonBar(shimmer, Modifier.fillMaxWidth().height(SKELETON_CARD_HEIGHT), shape = RoundedCornerShape(CARD_CORNER))
+        SkeletonBar(
+            shimmer,
+            Modifier.padding(top = CARDS_BREAK).fillMaxWidth().height(SKELETON_ROW_HEIGHT),
+            shape = MaterialTheme.shapes.large,
+        )
+        SkeletonBar(shimmer, Modifier.fillMaxWidth().height(SKELETON_ROW_HEIGHT * 2), shape = MaterialTheme.shapes.large)
+    }
+}
+
 @Composable
 private fun EmptyGarageCard(onAdd: () -> Unit, modifier: Modifier = Modifier) {
     AppCard(modifier.fillMaxWidth()) {
@@ -406,6 +465,10 @@ private fun Int.nearestPageOf(index: Int, count: Int): Int {
 }
 
 private val CARD_CORNER = 24.dp
+
+/** Roughly a car card and a two-line settings row, so the page barely moves when they arrive. */
+private val SKELETON_CARD_HEIGHT = 228.dp
+private val SKELETON_ROW_HEIGHT = 72.dp
 
 /** About what 3dp of elevation looks like. */
 private val SHADOW_BLUR = 8.dp

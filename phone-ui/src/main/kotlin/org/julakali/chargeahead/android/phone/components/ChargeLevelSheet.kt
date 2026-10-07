@@ -19,13 +19,14 @@ import androidx.compose.ui.Modifier
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
+import org.julakali.chargeahead.shared.domain.SOC_RANGE
 import kotlin.math.roundToInt
 import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.garage_percent
 import org.julakali.chargeahead.shared.resources.soc_dialog_apply
 
 enum class ChargeLevelKind(val range: IntRange, val picks: List<Int>) {
-    NOW(1..100, listOf(20, 40, 60, 80)),
+    NOW(SOC_RANGE, listOf(20, 40, 60, 80)),
 
     ARRIVAL(ARRIVAL_SOC_RANGE, listOf(10, 20, 30, 50)),
 }

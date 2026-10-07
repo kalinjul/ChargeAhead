@@ -32,6 +32,7 @@ import org.julakali.chargeahead.shared.resources.garage_arrival_title
 import org.julakali.chargeahead.shared.resources.garage_empty_title
 import org.julakali.chargeahead.shared.resources.garage_percent
 import org.julakali.chargeahead.shared.resources.garage_range_number
+import org.julakali.chargeahead.shared.resources.garage_soc_title
 import org.julakali.chargeahead.shared.resources.garage_vehicle_row
 import org.julakali.chargeahead.shared.resources.soc_dialog_apply
 
@@ -51,13 +52,18 @@ class GarageScreenTest {
     private var arrivalOpened = false
     private var arrivalChanged: Int? = null
     private var arrivalConfirmed = false
+    private var socOpened = false
+    private var socChanged: Int? = null
+    private var socConfirmed = false
 
-    private fun twoCars(arrivalSheet: Int? = null) = GarageUiState(
+    private fun twoCars(arrivalSheet: Int? = null, socSheet: Int? = null) = GarageUiState(
         vehicles = listOf(id3, model3),
         selected = id3,
         arrivalSocPercent = 10.0,
         fullRangeKm = mapOf(id3.id to 467.0, model3.id to 484.0),
         arrivalSheet = arrivalSheet,
+        socPercent = 60.0,
+        socSheet = socSheet,
     )
 
     /** Lets a test swap the state under a running screen, as the ViewModel would. */
@@ -75,6 +81,10 @@ class GarageScreenTest {
                 onArrivalChange = { arrivalChanged = it },
                 onArrivalConfirm = { arrivalConfirmed = true },
                 onArrivalDismiss = {},
+                onSocSheetOpen = { socOpened = true },
+                onSocChange = { socChanged = it },
+                onSocConfirm = { socConfirmed = true },
+                onSocDismiss = {},
             )
         }
     }
@@ -173,6 +183,35 @@ class GarageScreenTest {
 
         assertEquals(30, arrivalChanged)
         assertTrue(arrivalConfirmed)
+    }
+
+    @Test
+    fun `the battery level row shows the level and opens its sheet`() {
+        garage(twoCars())
+
+        compose.onNodeWithText(compose.string(Res.string.garage_percent, 60)).performScrollTo().performClick()
+
+        assertTrue(socOpened)
+    }
+
+    @Test
+    fun `a pick in the battery level sheet sets the level, Übernehmen applies it`() {
+        garage(twoCars(socSheet = 60))
+
+        compose.onNodeWithText(compose.string(Res.string.garage_percent, 20)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.soc_dialog_apply)).performClick()
+
+        assertEquals(20, socChanged)
+        assertTrue(socConfirmed)
+    }
+
+    @Test
+    fun `while loading the garage claims neither cars nor their absence`() {
+        garage(GarageUiState(loading = true))
+
+        compose.onNodeWithText(compose.string(Res.string.garage_empty_title)).assertDoesNotExist()
+        compose.onNodeWithText(compose.string(Res.string.garage_add_title)).assertDoesNotExist()
+        compose.onNodeWithText(compose.string(Res.string.garage_soc_title)).assertDoesNotExist()
     }
 
     @Test

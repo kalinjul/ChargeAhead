@@ -54,6 +54,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.graphics.RectangleShape
@@ -105,8 +109,10 @@ fun HomeRoute(
     /** `null` until the platform has been asked. */
     hasPermission: Boolean?,
     planningInProgress: Boolean,
-    /** The planned trip: its route replaces the browsing markers, its destination the search bar. */
+    /** The planned trip: its route replaces the browsing markers. */
     trip: TripPlan?,
+    /** Replaces the search bar; there even when no plan reached it. */
+    destination: Destination?,
     /** The trip sheet's peek, so the route fits above it. */
     mapBottomInset: Dp,
     onRequestPermission: () -> Unit,
@@ -124,6 +130,10 @@ fun HomeRoute(
     /** A search hit was picked; the search has closed by then. */
     onPick: (Destination) -> Unit,
     onClearTrip: () -> Unit,
+    /** A link for the navigation app, from a charger's detail sheet. */
+    onOpenMaps: (String) -> Unit,
+    /** How far the floating buttons reach up from the bottom edge, 0 while none are shown. */
+    onFloatingControlsHeight: (Dp) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
     searchViewModel: SearchViewModel = koinViewModel(),
@@ -140,6 +150,7 @@ fun HomeRoute(
         uiState = uiState,
         search = searchUi,
         trip = trip,
+        destination = destination,
         hasPermission = hasPermission,
         planningInProgress = planningInProgress,
         mapBottomInset = mapBottomInset,
@@ -160,6 +171,7 @@ fun HomeRoute(
             onPick(row.destination)
         },
         onClearTrip = onClearTrip,
+        onFloatingControlsHeight = onFloatingControlsHeight,
         modifier = modifier,
     )
 
@@ -168,6 +180,7 @@ fun HomeRoute(
             stop = stop,
             live = uiState.selectedStopLive,
             onDismiss = viewModel::onSelectedStopDismissed,
+            onOpenMaps = onOpenMaps,
             tripLine = tripLineFor(stop),
         )
     }
@@ -178,6 +191,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     search: SearchUiState,
     trip: TripPlan?,
+    destination: Destination?,
     hasPermission: Boolean?,
     planningInProgress: Boolean,
     mapBottomInset: Dp,
@@ -197,6 +211,7 @@ fun HomeScreen(
     onPick: (SearchRow) -> Unit,
     onClearTrip: () -> Unit,
     modifier: Modifier = Modifier,
+    onFloatingControlsHeight: (Dp) -> Unit = {},
 ) {
     val homeMode = when {
         search.expanded -> HomeMode.SEARCHING
@@ -314,6 +329,7 @@ fun HomeScreen(
                 HomeTopBar(
                     search = search,
                     trip = trip,
+                    destination = destination,
                     onExpandedChange = onSearchExpandedChange,
                     onQueryChange = onQueryChange,
                     onPick = onPick,
@@ -393,10 +409,19 @@ fun HomeScreen(
         }
 
         if (homeMode == HomeMode.BROWSING) {
+            val density = LocalDensity.current
+            DisposableEffect(Unit) { onDispose { onFloatingControlsHeight(0.dp) } }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp),
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 24.dp)
+                    .onGloballyPositioned { buttons ->
+                        val screenHeight = buttons.findRootCoordinates().size.height
+                        onFloatingControlsHeight(with(density) { (screenHeight - buttons.boundsInRoot().top).toDp() })
+                    },
             ) {
                 if (uiState.belowMinZoom) {
                     // Tapping the hint lands on full markers, not on the dot tier.
@@ -549,6 +574,7 @@ private fun HomePreview(
             uiState = uiState,
             search = SearchUiState(),
             trip = null,
+            destination = null,
             hasPermission = hasPermission,
             planningInProgress = planningInProgress,
             mapBottomInset = 0.dp,

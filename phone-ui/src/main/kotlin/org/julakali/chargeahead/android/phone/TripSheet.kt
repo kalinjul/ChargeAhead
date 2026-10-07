@@ -33,16 +33,23 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.ViewWeek
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import org.julakali.chargeahead.android.phone.components.AppCard
@@ -80,6 +87,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.trip_unreachable_summary
+import org.julakali.chargeahead.shared.ui.TripUiState
 import org.julakali.chargeahead.shared.resources.garage_arrival_sheet_hint
 import org.julakali.chargeahead.shared.resources.garage_arrival_title
 import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
@@ -155,33 +164,7 @@ fun TripSheetContent(
     val selectionA = selection.a
     val selectionB = selection.b
 
-    // The quick charge-level entry behind the start row. Confirming it re-plans.
-    socEditing?.socInput?.let { input ->
-        ChargeLevelSheet(
-            title = stringResource(Res.string.soc_dialog_title),
-            subtitle = if (socEditing.askedForReplan) stringResource(Res.string.soc_dialog_car_silent) else null,
-            kind = ChargeLevelKind.NOW,
-            percent = input.toIntOrNull(),
-            onChange = { socEditing.onSocInputChange(it.toString()) },
-            onConfirm = socEditing.onSocConfirm,
-            onDismiss = socEditing.onSocDismiss,
-            confirmLabel = stringResource(Res.string.trip_soc_confirm),
-        )
-    }
-
-    // The level to arrive with, edited on the destination row. Confirming re-plans.
-    socEditing?.arrivalSocInput?.let { input ->
-        ChargeLevelSheet(
-            title = stringResource(Res.string.garage_arrival_title),
-            subtitle = stringResource(Res.string.garage_arrival_sheet_hint),
-            kind = ChargeLevelKind.ARRIVAL,
-            percent = input.toIntOrNull(),
-            onChange = { socEditing.onArrivalSocInputChange(it.toString()) },
-            onConfirm = socEditing.onArrivalSocConfirm,
-            onDismiss = socEditing.onArrivalSocDismiss,
-            confirmLabel = stringResource(Res.string.trip_soc_confirm),
-        )
-    }
+    socEditing?.let { SocEditors(it) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (selecting) {
@@ -298,6 +281,36 @@ fun TripSheetContent(
     }
 }
 
+/** The charge-level sheets behind the start and destination rows; confirming either re-plans. */
+@Composable
+private fun SocEditors(socEditing: SocEditing) {
+    socEditing.socInput?.let { input ->
+        ChargeLevelSheet(
+            title = stringResource(Res.string.soc_dialog_title),
+            subtitle = if (socEditing.askedForReplan) stringResource(Res.string.soc_dialog_car_silent) else null,
+            kind = ChargeLevelKind.NOW,
+            percent = input.toIntOrNull(),
+            onChange = { socEditing.onSocInputChange(it.toString()) },
+            onConfirm = socEditing.onSocConfirm,
+            onDismiss = socEditing.onSocDismiss,
+            confirmLabel = stringResource(Res.string.trip_soc_confirm),
+        )
+    }
+
+    socEditing.arrivalSocInput?.let { input ->
+        ChargeLevelSheet(
+            title = stringResource(Res.string.garage_arrival_title),
+            subtitle = stringResource(Res.string.garage_arrival_sheet_hint),
+            kind = ChargeLevelKind.ARRIVAL,
+            percent = input.toIntOrNull(),
+            onChange = { socEditing.onArrivalSocInputChange(it.toString()) },
+            onConfirm = socEditing.onArrivalSocConfirm,
+            onDismiss = socEditing.onArrivalSocDismiss,
+            confirmLabel = stringResource(Res.string.trip_soc_confirm),
+        )
+    }
+}
+
 
 /** Start, stops and destination on one vertical line. */
 @Composable
@@ -398,13 +411,15 @@ private fun StopRail(
 private fun RailRow(
     index: Int,
     last: Int,
-    selected: Boolean,
-    /** Rounded only where the picked span begins or ends. */
-    selectionShape: Shape,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     dot: @Composable () -> Unit,
+    selected: Boolean = false,
+    /** Rounded only where the picked span begins or ends. */
+    selectionShape: Shape = RectangleShape,
     trailing: androidx.compose.ui.graphics.painter.Painter? = null,
     trailingDescription: String? = null,
+    /** Body text beside an icon: centred on it, where a title sits on the dot by its line height. */
+    centerOnDot: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val lineColor = MaterialTheme.colorScheme.outlineVariant
@@ -417,7 +432,7 @@ private fun RailRow(
             .then(
                 if (selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer, selectionShape) else Modifier,
             )
-            .clickable(onClick = onClick),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
         Box(
             Modifier
@@ -441,8 +456,12 @@ private fun RailRow(
         }
         Column(Modifier.weight(1f)) {
             Column(
-                Modifier.padding(top = ROW_PADDING, bottom = ROW_PADDING, end = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                if (centerOnDot) {
+                    Modifier.padding(top = DOT_TOP, bottom = ROW_PADDING, end = 8.dp).heightIn(min = DOT_SIZE)
+                } else {
+                    Modifier.padding(top = ROW_PADDING, bottom = ROW_PADDING, end = 8.dp)
+                },
+                verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
             ) {
                 content()
             }
@@ -541,25 +560,7 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.weight(1f))
-            // The search reopens with the same destination typed in.
-            Surface(
-                onClick = onReplan,
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                ) {
-                    Icon(
-                        painterResource(R.drawable.ic_route),
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Text(stringResource(Res.string.trip_replan), style = MaterialTheme.typography.labelMedium)
-                }
-            }
+            ReplanChip(onReplan)
             IconButton(onClick = onToggleLayout) {
                 Icon(
                     if (layout == TripListLayout.LIST) Icons.Outlined.ViewWeek else Icons.AutoMirrored.Outlined.FormatListBulleted,
@@ -573,6 +574,95 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+@Composable
+private fun ReplanChip(onReplan: () -> Unit) {
+    AssistChip(
+        onClick = onReplan,
+        label = { Text(stringResource(Res.string.trip_replan)) },
+        leadingIcon = {
+            Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
+        },
+        shape = MaterialTheme.shapes.small,
+        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = null,
+    )
+}
+
+/** The summary row when no plan came out: the reason in short, and the way to try again. */
+@Composable
+fun UnreachableTripSummary(onReplan: () -> Unit) {
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                // The planned summary's height, which its layout button sets.
+                .heightIn(min = LocalMinimumInteractiveComponentSize.current)
+                .padding(start = 16.dp, end = 10.dp, top = 2.dp, bottom = 2.dp)
+                .fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(Res.string.trip_unreachable_summary),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(Modifier.weight(1f))
+            ReplanChip(onReplan)
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+/**
+ * Start and destination with the reason in between, both levels still editable:
+ * the way out of "no charger in reach" is a different level.
+ */
+@Composable
+fun UnreachableTripContent(trip: TripUiState.Unreachable, socEditing: SocEditing, modifier: Modifier = Modifier) {
+    SocEditors(socEditing)
+    val pen = painterResource(R.drawable.ic_pen)
+    // The sheet stays at its peek here, so a large font scrolls instead of cutting the destination off.
+    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+        RailRow(
+            index = 0,
+            last = 2,
+            onClick = socEditing.onEditStartSoc,
+            dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
+            trailing = pen,
+            trailingDescription = stringResource(Res.string.trip_soc_edit),
+        ) {
+            Text(stringResource(Res.string.trip_start), style = MaterialTheme.typography.titleSmall)
+            MetaLine(
+                trip.startSocPercent?.let { stringResource(Res.string.trip_dep_now, it.roundToInt()) }
+                    ?: stringResource(Res.string.trip_dep_now_unknown),
+            )
+        }
+        RailRow(
+            index = 1,
+            last = 2,
+            onClick = null,
+            dot = { Icon(Icons.Outlined.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
+            centerOnDot = true,
+        ) {
+            Text(trip.why.message(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        }
+        RailRow(
+            index = 2,
+            last = 2,
+            onClick = socEditing.onEditArrivalSoc,
+            dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
+            trailing = pen,
+            trailingDescription = stringResource(Res.string.trip_arrival_soc_edit),
+        ) {
+            Text(
+                trip.destination.name,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 

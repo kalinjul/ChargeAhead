@@ -186,6 +186,17 @@ class PhoneAppFlowTest {
     }
 
     @Test
+    fun `without a sheet the snackbar stays above the floating buttons`() {
+        launch(withVehicle = false)
+        searchAndPick()
+        waitForText(compose.string(Res.string.plan_vehicle_missing))
+
+        val message = compose.onNodeWithText(compose.string(Res.string.plan_vehicle_missing)).getBoundsInRoot()
+        val buttons = compose.onNodeWithText(chargeNowPill()).getBoundsInRoot()
+        assertTrue("message ends at ${message.bottom}, buttons start at ${buttons.top}", message.bottom < buttons.top)
+    }
+
+    @Test
     fun `the layout toggle hides the drag handle in tiles`() {
         launch()
         searchAndPick()
