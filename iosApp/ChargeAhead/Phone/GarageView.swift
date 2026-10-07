@@ -209,6 +209,8 @@ private struct LevelSheet: View {
 struct AddCarView: View {
     let addCar: AddCarViewModel
     @Environment(\.dismiss) private var dismiss
+    // The field's own echo: read back from the ViewModel, fast typing lost characters.
+    @State private var query = ""
 
     var body: some View {
         Observing(addCar.uiState) { state in
@@ -237,11 +239,10 @@ struct AddCarView: View {
                     ContentUnavailableView.search(text: state.query)
                 }
             }
-            .searchable(
-                text: Binding(get: { state.query }, set: { addCar.onQueryChanged(query: $0) }),
-                prompt: localized("garage_search")
-            )
         }
+        .searchable(text: $query, prompt: localized("garage_search"))
+        .onChange(of: query) { _, text in addCar.onQueryChanged(query: text) }
+        .onAppear { query = addCar.uiState.value.query }
         .navigationTitle(localized("garage_add_title"))
         .navigationBarTitleDisplayMode(.inline)
     }

@@ -16,8 +16,14 @@ final class GarageUITests: XCTestCase {
         snapshot("garage-before")
 
         app.buttons["garage-add"].tap()
-        let firstPreset = app.buttons.matching(identifier: "preset").firstMatch
-        XCTAssertTrue(firstPreset.waitForExistence(timeout: 20), "the catalog never arrived")
+        XCTAssertTrue(app.buttons.matching(identifier: "preset").firstMatch.waitForExistence(timeout: 20), "the catalog never arrived")
+        let search = app.searchFields.firstMatch
+        search.tap()
+        // Typed at full speed: the field reads its text back from the shared ViewModel.
+        search.typeText("Tesla")
+        XCTAssertEqual(search.value as? String, "Tesla")
+        let firstPreset = app.buttons.matching(NSPredicate(format: "identifier == 'preset' AND label BEGINSWITH 'Tesla'")).firstMatch
+        XCTAssertTrue(firstPreset.waitForExistence(timeout: 10), "no Tesla in the catalog")
         snapshot("add-car")
         let name = firstPreset.label.components(separatedBy: ",").first ?? ""
         firstPreset.tap()
