@@ -6,7 +6,7 @@ assistant (as of M1 — see [../ARCHITECTURE.md](../ARCHITECTURE.md) and
 
 ```
 ChargeAhead/
-├── AppDelegate.swift              Scene routing: phone vs. CarPlay; SharedEntry creates features
+├── AppDelegate.swift              Scene routing: phone vs. CarPlay; SharedEntry starts the graph at launch and creates features
 ├── Info.plist                     UIApplicationSceneManifest, permission texts
 ├── ChargeAhead.entitlements       com.apple.developer.carplay-charging
 ├── Localized.swift                localized("key"): text from shared's composeResources

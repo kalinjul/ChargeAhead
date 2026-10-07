@@ -41,6 +41,7 @@ private var graph: Koin? = null
 /**
  * Builds the process-wide graph, once, from the app delegate's launch.
  * @throws IllegalArgumentException when the backend is not configured; the app cannot run without it.
+ * @throws IllegalStateException when it already ran.
  */
 fun startChargeAhead(backendBaseUrl: String?, backendToken: String?) {
     check(graph == null) { "ChargeAhead is already started" }
