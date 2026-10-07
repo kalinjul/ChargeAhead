@@ -4,6 +4,7 @@ import Shared
 /// The garage: the car planning uses, adding one from the catalog, and the two battery levels.
 struct GarageView: View {
     @StateObject private var owner: ViewModelOwner
+    @Environment(\.dismiss) private var dismiss
 
     init(feature: ChargeStopsFeature) {
         _owner = StateObject(wrappedValue: ViewModelOwner(feature: feature))
@@ -38,7 +39,7 @@ struct GarageView: View {
                                 }
                                 .foregroundStyle(.primary)
                                 .accessibilityIdentifier("vehicle")
-                                .accessibilityValue(vehicle.id == state.selected?.id ? "selected" : "")
+                                .accessibilityAddTraits(vehicle.id == state.selected?.id ? .isSelected : [])
                             }
                             NavigationLink {
                                 AddCarView(addCar: owner.viewModels.addCar())
@@ -49,7 +50,7 @@ struct GarageView: View {
                         }
                         Section {
                             LevelRow(
-                                icon: "battery.25",
+                                icon: "bolt.batteryblock",
                                 title: localized("garage_soc_title"),
                                 hint: localized("garage_soc_row_hint"),
                                 percent: state.socPercent
@@ -65,37 +66,50 @@ struct GarageView: View {
                         }
                     }
                 }
-                .sheet(isPresented: Binding(
-                    get: { state.socSheet != nil },
-                    set: { shown in if !shown { garage.onSocSheetDismissed() } }
-                )) {
+                .sheet(item: Binding(
+                    get: { state.socSheet.map { OpenLevel(percent: $0.intValue) } },
+                    set: { open in if open == nil { garage.onSocSheetDismissed() } }
+                )) { open in
                     LevelSheet(
                         title: localized("garage_soc_title"),
                         hint: localized("garage_soc_sheet_hint"),
-                        percent: state.socSheet?.intValue ?? 0,
+                        percent: open.percent,
                         range: TripPlanKt.SOC_RANGE,
                         onChange: { garage.onSocSheetChanged(percent: Int32($0)) },
-                        onApply: { garage.onSocSheetConfirmed() }
+                        onApply: { garage.onSocSheetConfirmed() },
+                        onCancel: { garage.onSocSheetDismissed() }
                     )
                 }
-                .sheet(isPresented: Binding(
-                    get: { state.arrivalSheet != nil },
-                    set: { shown in if !shown { garage.onArrivalSheetDismissed() } }
-                )) {
+                .sheet(item: Binding(
+                    get: { state.arrivalSheet.map { OpenLevel(percent: $0.intValue) } },
+                    set: { open in if open == nil { garage.onArrivalSheetDismissed() } }
+                )) { open in
                     LevelSheet(
                         title: localized("garage_arrival_title"),
                         hint: localized("garage_arrival_sheet_hint"),
-                        percent: state.arrivalSheet?.intValue ?? 0,
+                        percent: open.percent,
                         range: GarageViewModelKt.ARRIVAL_SOC_RANGE,
                         onChange: { garage.onArrivalSheetChanged(percent: Int32($0)) },
-                        onApply: { garage.onArrivalSheetConfirmed() }
+                        onApply: { garage.onArrivalSheetConfirmed() },
+                        onCancel: { garage.onArrivalSheetDismissed() }
                     )
                 }
             }
             .navigationTitle(localized("garage_title"))
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localized("ios_done")) { dismiss() }
+                }
+            }
         }
     }
+}
+
+/// A sheet's level as an item, so `.sheet(item:)` keeps showing it while the sheet animates away.
+private struct OpenLevel: Identifiable {
+    let percent: Int
+    var id: Int { 0 }
 }
 
 private struct VehicleRow: View {
@@ -163,10 +177,15 @@ private struct LevelSheet: View {
     let range: KotlinIntRange
     let onChange: (Int) -> Void
     let onApply: () -> Void
+    let onCancel: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(title).font(.title2.bold())
+            HStack {
+                Text(title).font(.title2.bold())
+                Spacer()
+                Button(localized("soc_dialog_cancel"), role: .cancel, action: onCancel)
+            }
             Text(hint).foregroundStyle(.secondary)
             Text(localized("garage_percent", Int32(percent)))
                 .font(.system(size: 56, weight: .semibold, design: .rounded))
@@ -190,7 +209,6 @@ private struct LevelSheet: View {
 struct AddCarView: View {
     let addCar: AddCarViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var query = ""
 
     var body: some View {
         Observing(addCar.uiState) { state in
@@ -214,9 +232,16 @@ struct AddCarView: View {
                 .foregroundStyle(.primary)
                 .accessibilityIdentifier("preset")
             }
+            .overlay {
+                if state.matches.isEmpty && !state.query.isEmpty {
+                    ContentUnavailableView.search(text: state.query)
+                }
+            }
+            .searchable(
+                text: Binding(get: { state.query }, set: { addCar.onQueryChanged(query: $0) }),
+                prompt: localized("garage_search")
+            )
         }
-        .searchable(text: $query, prompt: localized("garage_search"))
-        .onChange(of: query) { _, text in addCar.onQueryChanged(query: text) }
         .navigationTitle(localized("garage_add_title"))
         .navigationBarTitleDisplayMode(.inline)
     }

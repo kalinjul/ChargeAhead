@@ -365,6 +365,7 @@
 
     <!-- iOS only: wording that differs from Android (CarPlay, no drawer) -->
     <string name="ios_home_pill_plan">Planen</string>
+    <string name="ios_done">Fertig</string>
     <string name="ios_home_diagnostics">Info</string>
     <string name="ios_plan_title">Route planen</string>
     <string name="ios_plan_vehicle_missing">Kein Fahrzeug angelegt.</string>

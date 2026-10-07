@@ -12,7 +12,7 @@ final class GarageUITests: XCTestCase {
 
     func testACarFromTheCatalogBecomesTheOneToPlanWith() {
         app.buttons["garage"].tap()
-        XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["garage-add"].waitForExistence(timeout: 10))
         snapshot("garage-before")
 
         app.buttons["garage-add"].tap()
@@ -22,7 +22,7 @@ final class GarageUITests: XCTestCase {
         let name = firstPreset.label.components(separatedBy: ",").first ?? ""
         firstPreset.tap()
 
-        let selected = app.buttons.matching(NSPredicate(format: "identifier == 'vehicle' AND value == 'selected'")).firstMatch
+        let selected = app.buttons.matching(NSPredicate(format: "identifier == 'vehicle' AND isSelected == true")).firstMatch
         XCTAssertTrue(selected.waitForExistence(timeout: 10), "the added car is not the selected one")
         XCTAssertTrue(selected.label.hasPrefix(name), "selected \(selected.label), added \(name)")
         snapshot("garage-after")

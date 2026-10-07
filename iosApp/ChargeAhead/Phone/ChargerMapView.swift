@@ -14,9 +14,16 @@ struct ChargerMapView: View {
     var body: some View {
         Map(position: $camera) {
             UserAnnotation()
+            // TODO cluster dense areas (SwiftUI's Map has none; MKMapView's clusteringIdentifier does)
+            // TODO tint by availability like the Android markers
             ForEach(chargers, id: \.site.id) { charger in
-                Marker(charger.site.name, systemImage: "bolt.fill", coordinate: charger.site.position.coordinate)
-                    .tint(.green)
+                Marker(
+                    charger.site.name,
+                    monogram: Text("\(Int(charger.maxPowerKw.rounded()))"),
+                    coordinate: charger.site.position.coordinate
+                )
+                .tint(Color.accentColor)
+                .annotationTitles(.hidden)
             }
         }
         .mapControls {
@@ -27,7 +34,7 @@ struct ChargerMapView: View {
         .onMapCameraChange(frequency: .onEnd) { context in
             onViewportChanged(Self.viewport(of: context.region))
         }
-        .onChange(of: position?.lat) {
+        .onChange(of: position == nil, initial: true) {
             // The first fix centres the map; after that the camera is the driver's.
             guard !followedFirstFix, let fix = position else { return }
             followedFirstFix = true

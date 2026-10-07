@@ -66,7 +66,7 @@ struct HomeMapView: View {
 
                     VStack {
                         VStack(spacing: 2) {
-                            if state.belowMinZoom {
+                            if state.belowMinZoom && state.position != nil {
                                 Text(localized("map_zoom_hint"))
                                     .font(.footnote)
                                     .padding(.horizontal, 12)
@@ -77,6 +77,9 @@ struct HomeMapView: View {
                                 Text(status)
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(.regularMaterial, in: Capsule())
                             }
                             if planningInProgress {
                                 ProgressView(localized("plan_planning"))
@@ -86,6 +89,9 @@ struct HomeMapView: View {
                                 Text(failure)
                                     .font(.footnote)
                                     .foregroundStyle(.red)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(.regularMaterial, in: Capsule())
                                     .padding(.top, 8)
                             }
                             if planFailure == .noVehicle {
@@ -230,7 +236,7 @@ struct PlanSheetView: View {
                 }
             }
             .searchable(text: $query, prompt: localized("plan_search_hint"))
-            .onChange(of: query) { changed in
+            .onChange(of: query) { _, changed in
                 search.onQueryChanged(query: changed)
             }
             .navigationTitle(localized("ios_plan_title"))

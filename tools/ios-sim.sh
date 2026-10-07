@@ -105,6 +105,9 @@ case "${1:-run}" in
     id="$(udid)"
     boot "$id"
     generate
+    # A fresh install each run: the tests start from an empty garage.
+    xcrun simctl uninstall "$id" "$BUNDLE_ID" 2>/dev/null || true
+    xcrun simctl privacy "$id" grant location "$BUNDLE_ID"
     out="$BUILD_DIR/uitest"
     rm -rf "$out"
     mkdir -p "$out/screenshots"
