@@ -12,7 +12,8 @@
 #   tools/ios-sim.sh devices      # simulators to choose from
 #
 # IOS_SIM_DEVICE picks the simulator by name ("iPhone 17 Pro"); without it,
-# the first available iPhone. Needs Xcode, an iOS simulator runtime
+# the booted iPhone, or else an iPhone on the newest runtime. Runs under
+# macOS's stock bash 3.2. Needs Xcode, an iOS simulator runtime
 # (`xcodebuild -downloadPlatform iOS`) and xcodegen (`brew install xcodegen`).
 # The backend comes from iosApp/Secrets.xcconfig, see iosApp/README.md.
 set -euo pipefail
@@ -22,39 +23,57 @@ IOS_DIR="$REPO_ROOT/iosApp"
 BUILD_DIR="$IOS_DIR/build"
 APP="$BUILD_DIR/Debug-iphonesimulator/ChargeAhead.app"
 BUNDLE_ID="org.julakali.chargeahead"
-JDK="${JAVA_HOME:-/Applications/Android Studio.app/Contents/jbr/Contents/Home}"
+STUDIO_JDK="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 
 die() { echo "$*" >&2; exit 1; }
 
+# One device for every command: the named one, else the booted iPhone, else an
+# iPhone on the newest runtime. Several booted and none named is refused.
 device_udid() {
-  local name="${IOS_SIM_DEVICE:-}"
   xcrun simctl list devices available --json | python3 -c '
 import json, sys
 name = sys.argv[1]
-devices = [d for rt in json.load(sys.stdin)["devices"].values() for d in rt if d.get("isAvailable")]
-iphones = [d for d in devices if (d["name"] == name if name else d["name"].startswith("iPhone"))]
-print(iphones[0]["udid"] if iphones else "")
-' "$name"
+runtimes = json.load(sys.stdin)["devices"]
+devices = [d for key in sorted(runtimes, reverse=True) for d in runtimes[key]]
+if name:
+    hits = [d for d in devices if d["name"] == name]
+else:
+    iphones = [d for d in devices if d["name"].startswith("iPhone")]
+    booted = [d for d in iphones if d["state"] == "Booted"]
+    if len(booted) > 1:
+        print("several")
+        sys.exit()
+    hits = booted or iphones
+print(hits[0]["udid"] if hits else "")
+' "${IOS_SIM_DEVICE:-}"
 }
 
-booted_udid() {
-  local udid
-  udid="$(device_udid)"
-  [ -n "$udid" ] || die "no simulator found${IOS_SIM_DEVICE:+ named \"$IOS_SIM_DEVICE\"}; install a runtime with: xcodebuild -downloadPlatform iOS"
+udid() {
+  local id
+  id="$(device_udid)"
+  [ "$id" != "several" ] || die "several iPhones are booted; pick one with IOS_SIM_DEVICE=\"<name>\" (see: $0 devices)"
+  [ -n "$id" ] || die "no simulator found${IOS_SIM_DEVICE:+ named \"$IOS_SIM_DEVICE\"}; install a runtime with: xcodebuild -downloadPlatform iOS"
+  echo "$id"
+}
+
+boot() {
   # Booting a booted device fails; that's fine.
-  xcrun simctl boot "$udid" 2>/dev/null || true
-  open -a Simulator --args -CurrentDeviceUDID "$udid"
-  xcrun simctl bootstatus "$udid" -b >/dev/null
-  echo "$udid"
+  xcrun simctl boot "$1" 2>/dev/null || true
+  open -a Simulator --args -CurrentDeviceUDID "$1"
+  xcrun simctl bootstatus "$1" -b >/dev/null
 }
 
 build() {
   command -v xcodegen >/dev/null || die "xcodegen missing: brew install xcodegen"
   [ -f "$IOS_DIR/Secrets.xcconfig" ] || echo "warning: iosApp/Secrets.xcconfig missing, the app will stop at launch" >&2
   (cd "$IOS_DIR" && xcodegen generate --quiet)
+  # Only a JDK that exists; otherwise project.yml's script phase finds one itself.
+  local jdk=()
+  if [ -n "${JAVA_HOME:-}" ]; then jdk=("JAVA_HOME=$JAVA_HOME")
+  elif [ -d "$STUDIO_JDK" ]; then jdk=("JAVA_HOME=$STUDIO_JDK"); fi
   xcodebuild -project "$IOS_DIR/ChargeAhead.xcodeproj" -target ChargeAhead \
     -configuration Debug -sdk iphonesimulator -arch arm64 \
-    CODE_SIGNING_ALLOWED=NO SYMROOT="$BUILD_DIR" JAVA_HOME="$JDK" \
+    CODE_SIGNING_ALLOWED=NO SYMROOT="$BUILD_DIR" ${jdk[@]+"${jdk[@]}"} \
     build -quiet
   echo "built $APP"
 }
@@ -68,24 +87,37 @@ launch() {
 case "${1:-run}" in
   run)
     build
-    udid="$(booted_udid)"
-    xcrun simctl install "$udid" "$APP"
+    id="$(udid)"
+    boot "$id"
+    xcrun simctl install "$id" "$APP"
     # Without it the first launch stops at the permission prompt, and the map has no position.
-    xcrun simctl privacy "$udid" grant location "$BUNDLE_ID"
-    launch "$udid"
+    xcrun simctl privacy "$id" grant location "$BUNDLE_ID"
+    launch "$id"
     ;;
   build) build ;;
-  restart) launch "$(booted_udid)" ;;
-  stop) xcrun simctl terminate booted "$BUNDLE_ID" ;;
+  restart)
+    id="$(udid)"
+    boot "$id"
+    launch "$id"
+    ;;
+  stop)
+    id="$(udid)"
+    xcrun simctl terminate "$id" "$BUNDLE_ID"
+    ;;
   screenshot)
+    id="$(udid)"
     file="${2:-$BUILD_DIR/screenshot.png}"
-    xcrun simctl io booted screenshot "$file" >/dev/null
+    xcrun simctl io "$id" screenshot "$file" >/dev/null
     echo "$file"
     ;;
-  logs) xcrun simctl spawn booted log stream --style compact --predicate 'process == "ChargeAhead"' ;;
+  logs)
+    id="$(udid)"
+    xcrun simctl spawn "$id" log stream --style compact --predicate 'process == "ChargeAhead"'
+    ;;
   location)
     [ $# -eq 3 ] || die "usage: $0 location <lat> <lon>"
-    xcrun simctl location booted set "$2,$3"
+    id="$(udid)"
+    xcrun simctl location "$id" set "$2,$3"
     ;;
   devices) xcrun simctl list devices available | grep -E "iPhone|iPad|==" ;;
   *) die "usage: $0 [run|build|restart|stop|screenshot [file]|logs|location <lat> <lon>|devices]" ;;
