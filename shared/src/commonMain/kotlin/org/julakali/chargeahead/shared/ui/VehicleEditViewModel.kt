@@ -42,7 +42,7 @@ sealed interface VehicleEditor {
     }
 }
 
-data class VehicleSettingsUiState(
+data class VehicleEditUiState(
     val vehicle: VehicleProfile? = null,
     val catalog: VehiclePreset? = null,
     /** The name aside: it is the driver's, not the catalog's. */
@@ -52,7 +52,7 @@ data class VehicleSettingsUiState(
     val removed: Boolean = false,
 )
 
-class VehicleSettingsViewModel(
+class VehicleEditViewModel(
     vehicles: VehicleRepository,
     catalog: VehicleCatalogRepository,
     private val editVehicle: EditVehicleInteractor,
@@ -64,14 +64,14 @@ class VehicleSettingsViewModel(
     private val confirmingRemoval = MutableStateFlow(false)
     private val removed = MutableStateFlow(false)
 
-    val uiState: StateFlow<VehicleSettingsUiState> = combine(
+    val uiState: StateFlow<VehicleEditUiState> = combine(
         vehicles.vehicle,
         catalog.presets,
         editor,
         combine(confirmingRemoval, removed, ::Pair),
     ) { vehicle, presets, editor, (confirmingRemoval, removed) ->
         val preset = vehicle?.let { presets.presetOf(it) }
-        VehicleSettingsUiState(
+        VehicleEditUiState(
             vehicle = vehicle,
             catalog = preset,
             canRestoreCatalogValues = vehicle != null && preset != null && vehicle.differsFrom(preset),
@@ -79,7 +79,7 @@ class VehicleSettingsViewModel(
             confirmingRemoval = confirmingRemoval,
             removed = removed,
         )
-    }.stateIn(viewModelScope, WhileUiSubscribed, VehicleSettingsUiState())
+    }.stateIn(viewModelScope, WhileUiSubscribed, VehicleEditUiState())
 
     fun onNameEditOpened() = open { VehicleEditor.Name(it.displayName) }
 

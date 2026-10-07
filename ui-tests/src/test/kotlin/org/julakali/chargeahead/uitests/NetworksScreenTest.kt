@@ -9,7 +9,7 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import org.julakali.chargeahead.android.phone.NetworkSettingsScreen
+import org.julakali.chargeahead.android.phone.NetworksScreen
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.ui.NetworksUiState
 import org.junit.Rule
@@ -22,7 +22,7 @@ import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.phone_networks_mine
 
 @RunWith(RobolectricTestRunner::class)
-class NetworkSettingsScreenTest {
+class NetworksScreenTest {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
@@ -38,7 +38,7 @@ class NetworkSettingsScreenTest {
         var uiState by mutableStateOf(NetworksUiState(networks = networks))
 
         compose.setThemedContent {
-            NetworkSettingsScreen(
+            NetworksScreen(
                 uiState = uiState,
                 onSearchChange = {},
                 onNetworkToggled = { key -> uiState = uiState.copy(selected = uiState.selected + key) },
@@ -57,7 +57,7 @@ class NetworkSettingsScreenTest {
     @Test
     fun `the browse switch is gone`() {
         compose.setThemedContent {
-            NetworkSettingsScreen(uiState = NetworksUiState(), onSearchChange = {}, onNetworkToggled = {})
+            NetworksScreen(uiState = NetworksUiState(), onSearchChange = {}, onNetworkToggled = {})
         }
         compose.onNodeWithText(compose.string(Res.string.phone_networks_mine), ignoreCase = true).assertExists()
         compose.onAllNodesWithText("Stöber", substring = true).assertCountEquals(0)

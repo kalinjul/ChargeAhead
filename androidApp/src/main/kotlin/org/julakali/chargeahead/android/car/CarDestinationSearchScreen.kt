@@ -24,7 +24,7 @@ import org.julakali.chargeahead.shared.Texts
  * Type a destination in the car. While driving, the host disables the
  * keyboard and the recent destinations remain.
  */
-class DestinationSearchScreen(
+class CarDestinationSearchScreen(
     carContext: CarContext,
     private val session: Scope,
     private val permissions: CarPermissions,
@@ -81,6 +81,6 @@ class DestinationSearchScreen(
     private fun choose(destination: Destination) {
         // The search screen replaces itself with the route.
         screenManager.pop()
-        screenManager.push(RouteScreen(carContext, session, destination, permissions = permissions))
+        screenManager.push(CarRouteScreen(carContext, session, destination, permissions = permissions))
     }
 }

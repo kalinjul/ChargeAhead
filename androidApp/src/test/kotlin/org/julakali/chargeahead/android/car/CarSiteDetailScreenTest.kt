@@ -25,7 +25,7 @@ import org.jetbrains.compose.resources.StringResource
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
-class SiteDetailScreenTest {
+class CarSiteDetailScreenTest {
 
     private lateinit var graph: CarTestGraph
 
@@ -42,7 +42,7 @@ class SiteDetailScreenTest {
     @Test
     fun `a planned stop shows the distance with its charge and hands off to navigation`() {
         val stop = plan(stops = 1).stops.single()
-        val screen = SiteDetailScreen(graph.carContext, graph.session, stop.site, stop)
+        val screen = CarSiteDetailScreen(graph.carContext, graph.session, stop.site, stop)
         settle()
 
         val template = screen.onGetTemplate() as PaneTemplate
@@ -62,7 +62,7 @@ class SiteDetailScreenTest {
 
     @Test
     fun `a plain site shows its power instead of a charge`() {
-        val screen = SiteDetailScreen(graph.carContext, graph.session, site(1))
+        val screen = CarSiteDetailScreen(graph.carContext, graph.session, site(1))
         settle()
 
         val rows = (screen.onGetTemplate() as PaneTemplate).pane.rows

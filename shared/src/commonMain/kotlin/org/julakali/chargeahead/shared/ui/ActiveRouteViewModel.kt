@@ -27,7 +27,7 @@ import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import kotlin.math.roundToInt
 
-data class CommittedTripUiState(
+data class ActiveRouteUiState(
     val trip: CommittedTrip?,
     val selection: SectionSelection = SectionSelection(),
     val planning: Boolean = false,
@@ -42,17 +42,17 @@ data class CommittedTripUiState(
     val mapsUrl: String? get() = trip?.plan?.mapsUrl(startPosition, selection)
 }
 
-sealed interface CommittedTripEvent {
-    data object Replanned : CommittedTripEvent
+sealed interface ActiveRouteEvent {
+    data object Replanned : ActiveRouteEvent
 
     /** The re-plan got nowhere; the trip under way stays. */
-    data class ReplanFailed(val why: UnreachableTrip) : CommittedTripEvent
-    data object VehicleMissing : CommittedTripEvent
-    data object Ended : CommittedTripEvent
+    data class ReplanFailed(val why: UnreachableTrip) : ActiveRouteEvent
+    data object VehicleMissing : ActiveRouteEvent
+    data object Ended : ActiveRouteEvent
 }
 
 /** The trip the driver is on: its stops, sending it again, planning it anew, ending it. */
-class CommittedTripViewModel(
+class ActiveRouteViewModel(
     private val vehicles: VehicleRepository,
     private val feature: ChargeStopsFeature,
     private val replanCommittedTrip: ReplanCommittedTripInteractor,
@@ -62,24 +62,24 @@ class CommittedTripViewModel(
 
     private val selection = MutableStateFlow(SectionSelection())
     private val socEditor = MutableStateFlow<String?>(null)
-    private val events = MutableStateFlow<CommittedTripEvent?>(null)
+    private val events = MutableStateFlow<ActiveRouteEvent?>(null)
 
-    val event: StateFlow<CommittedTripEvent?> = events.asStateFlow()
+    val event: StateFlow<ActiveRouteEvent?> = events.asStateFlow()
 
-    val uiState: StateFlow<CommittedTripUiState> = combine(
+    val uiState: StateFlow<ActiveRouteUiState> = combine(
         trips.state.map { it.committed },
         selection,
         replanCommittedTrip.inProgress,
         feature.currentFix,
         socEditor,
     ) { trip, sectionSelection, isPlanning, fix, socInput ->
-        CommittedTripUiState(trip, sectionSelection, isPlanning, fix?.position, socInput)
+        ActiveRouteUiState(trip, sectionSelection, isPlanning, fix?.position, socInput)
         // Seeded from the stores: the page's own ViewModel is born on the tap, an empty
         // first value would slide in an empty page.
     }.stateIn(
         viewModelScope,
         WhileUiSubscribed,
-        CommittedTripUiState(trip = trips.state.value.committed, startPosition = feature.currentFix.value?.position),
+        ActiveRouteUiState(trip = trips.state.value.committed, startPosition = feature.currentFix.value?.position),
     )
 
     /**
@@ -120,9 +120,9 @@ class CommittedTripViewModel(
         viewModelScope.launch {
             val result = replanCommittedTrip(ReplanCommittedTripInteractor.Params(from, socPercent)).getOrNull()
             events.value = when (result) {
-                is TripPlanResult.Planned -> CommittedTripEvent.Replanned
-                TripPlanResult.NoVehicle -> CommittedTripEvent.VehicleMissing
-                else -> CommittedTripEvent.ReplanFailed(result?.unreachable() ?: UnreachableTrip.NoConnection)
+                is TripPlanResult.Planned -> ActiveRouteEvent.Replanned
+                TripPlanResult.NoVehicle -> ActiveRouteEvent.VehicleMissing
+                else -> ActiveRouteEvent.ReplanFailed(result?.unreachable() ?: UnreachableTrip.NoConnection)
             }
         }
     }
@@ -131,7 +131,7 @@ class CommittedTripViewModel(
         selection.value = SectionSelection()
         viewModelScope.launch {
             endTrip.invoke()
-            events.value = CommittedTripEvent.Ended
+            events.value = ActiveRouteEvent.Ended
         }
     }
 

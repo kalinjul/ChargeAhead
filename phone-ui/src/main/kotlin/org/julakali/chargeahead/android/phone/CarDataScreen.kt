@@ -52,16 +52,16 @@ import org.julakali.chargeahead.shared.resources.value_unknown
  * recorded by [org.julakali.chargeahead.android.car.CarHardwareDebugRecorder].
  */
 @Composable
-fun CarDataDebugRoute(
+fun CarDataRoute(
     modifier: Modifier = Modifier,
     viewModel: CarDataViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    CarDataDebugScreen(uiState = uiState, modifier = modifier)
+    CarDataScreen(uiState = uiState, modifier = modifier)
 }
 
 @Composable
-fun CarDataDebugScreen(
+fun CarDataScreen(
     uiState: CarDataUiState,
     modifier: Modifier = Modifier,
 ) {

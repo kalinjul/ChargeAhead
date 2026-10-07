@@ -16,10 +16,10 @@ import org.julakali.chargeahead.android.phone.AddCarScreen
 import org.julakali.chargeahead.android.phone.components.ChargeLevelKind
 import org.julakali.chargeahead.android.phone.components.ChargeLevelSheetContent
 import org.jetbrains.compose.resources.stringResource
-import org.julakali.chargeahead.android.phone.CarDataDebugScreen
+import org.julakali.chargeahead.android.phone.CarDataScreen
 import org.julakali.chargeahead.android.phone.GarageScreen
-import org.julakali.chargeahead.android.phone.VehicleSettingsActions
-import org.julakali.chargeahead.android.phone.VehicleSettingsScreen
+import org.julakali.chargeahead.android.phone.VehicleEditActions
+import org.julakali.chargeahead.android.phone.VehicleEditScreen
 import org.julakali.chargeahead.android.phone.FieldEditor
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.VehiclePreset
@@ -27,7 +27,7 @@ import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.ui.AddCarUiState
 import org.julakali.chargeahead.shared.ui.CarDataUiState
 import org.julakali.chargeahead.shared.ui.GarageUiState
-import org.julakali.chargeahead.shared.ui.VehicleSettingsUiState
+import org.julakali.chargeahead.shared.ui.VehicleEditUiState
 import org.julakali.chargeahead.shared.ui.VehicleEditor
 import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.garage_arrival_sheet_hint
@@ -166,10 +166,10 @@ fun TripStartLevelSheetEmpty() = SheetFrame {
 }
 
 @Composable
-private fun Vehicle(state: VehicleSettingsUiState) = PageFrame { VehicleSettingsScreen(uiState = state, actions = VehicleSettingsActions()) }
+private fun Vehicle(state: VehicleEditUiState) = PageFrame { VehicleEditScreen(uiState = state, actions = VehicleEditActions()) }
 
 private val CatalogId3 = VehiclePreset("id3", "VW ID.3 Pro S (2023)", 77.0, 15.9, 175.0, setOf(ConnectorType.CCS2, ConnectorType.TYPE2))
-private val vehiclePage = VehicleSettingsUiState(vehicle = Id3, catalog = CatalogId3)
+private val vehiclePage = VehicleEditUiState(vehicle = Id3, catalog = CatalogId3)
 
 @PreviewTest
 @Preview(locale = "de", showBackground = true, widthDp = 411, heightDp = 640)
@@ -184,7 +184,7 @@ fun VehiclePageDark() = Vehicle(vehiclePage)
 @PreviewTest
 @Preview(locale = "de", showBackground = true, widthDp = 411, heightDp = 640)
 @Composable
-fun VehiclePageOwnCar() = Vehicle(VehicleSettingsUiState(vehicle = Id3.copy(modelId = null, displayName = "Fiat 500e")))
+fun VehiclePageOwnCar() = Vehicle(VehicleEditUiState(vehicle = Id3.copy(modelId = null, displayName = "Fiat 500e")))
 
 @PreviewTest
 @Preview(locale = "de", showBackground = true, widthDp = 411, heightDp = 640)
@@ -234,7 +234,7 @@ fun AddCarNoHitsDark() = AddCar(AddCarUiState(query = "Fiat 500e"))
 
 @Composable
 private fun CarData() = PageFrame {
-    CarDataDebugScreen(
+    CarDataScreen(
         // No hardware check: its age is measured from now, which no golden can hold still.
         CarDataUiState(socPercent = 64.0),
     )

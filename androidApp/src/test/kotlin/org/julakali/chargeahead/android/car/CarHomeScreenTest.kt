@@ -88,7 +88,7 @@ class CarHomeScreenTest {
 
         assertEquals(string(Res.string.car_home_active_route), tiles.first().title.toString())
         assertEquals("München", tiles.first().text.toString())
-        assertTrue(graph.screens.screensPushed.single() is RouteScreen)
+        assertTrue(graph.screens.screensPushed.single() is CarRouteScreen)
     }
 
     @Test
@@ -97,7 +97,7 @@ class CarHomeScreenTest {
 
         click(graph.tiles()[1])
 
-        assertTrue(graph.screens.screensPushed.last() is ChargeNowScreen)
+        assertTrue(graph.screens.screensPushed.last() is CarChargeNowScreen)
     }
 
     @Test

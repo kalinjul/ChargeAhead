@@ -39,7 +39,7 @@ import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.julakali.chargeahead.shared.ui.PhoneAppViewModel
 import org.julakali.chargeahead.shared.ui.TripEvent
 import org.julakali.chargeahead.shared.ui.TripUiState
-import org.julakali.chargeahead.shared.ui.CommittedTripViewModel
+import org.julakali.chargeahead.shared.ui.ActiveRouteViewModel
 import org.julakali.chargeahead.shared.ui.TripViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -72,13 +72,13 @@ fun PhoneApp(librariesRes: Int) {
     val homeViewModel: HomeViewModel = koinViewModel()
     val tripViewModel: TripViewModel = koinViewModel()
     val searchViewModel: SearchViewModel = koinViewModel()
-    val committedTripViewModel: CommittedTripViewModel = koinViewModel()
+    val activeRouteViewModel: ActiveRouteViewModel = koinViewModel()
 
     val phoneAppUi by phoneAppViewModel.uiState.collectAsStateWithLifecycle()
     val drawerUi by drawerViewModel.uiState.collectAsStateWithLifecycle()
     val tripUi by tripViewModel.uiState.collectAsStateWithLifecycle()
     val searchUi by searchViewModel.uiState.collectAsStateWithLifecycle()
-    val committedUi by committedTripViewModel.uiState.collectAsStateWithLifecycle()
+    val committedUi by activeRouteViewModel.uiState.collectAsStateWithLifecycle()
     val sheet = tripUi as? TripUiState.Sheet
     val planned = sheet as? TripUiState.Planned
     // Kept past "Navigieren beenden", so the page keeps its name while it slides out.

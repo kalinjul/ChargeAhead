@@ -24,7 +24,7 @@ import org.jetbrains.compose.resources.StringResource
 
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
-class ChargeNowScreenTest {
+class CarChargeNowScreenTest {
 
     private lateinit var graph: CarTestGraph
 
@@ -39,7 +39,7 @@ class ChargeNowScreenTest {
 
     private fun string(resource: StringResource, vararg args: Any) = Texts.string(resource, *args)
 
-    private fun screen(): ChargeNowScreen = ChargeNowScreen(graph.carContext, graph.session).also { settle() }
+    private fun screen(): CarChargeNowScreen = CarChargeNowScreen(graph.carContext, graph.session).also { settle() }
 
     /** Roughly [index] kilometres north of the fix, inside the charge-now radius. */
     private fun site(index: Int) = CarTestGraph.site(index).copy(position = hamburg.copy(lat = hamburg.lat + index * 0.009))
@@ -84,6 +84,6 @@ class ChargeNowScreenTest {
 
         click(template.itemList!!.items.first() as Row)
 
-        assertTrue(graph.screens.screensPushed.last() is SiteDetailScreen)
+        assertTrue(graph.screens.screensPushed.last() is CarSiteDetailScreen)
     }
 }

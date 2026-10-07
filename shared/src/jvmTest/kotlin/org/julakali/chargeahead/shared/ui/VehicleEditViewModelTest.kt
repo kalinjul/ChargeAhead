@@ -27,7 +27,7 @@ import kotlin.test.assertTrue
 
 /** "Fahrzeug anpassen": one row per value, each edited on its own and applied or thrown away. */
 @OptIn(ExperimentalCoroutinesApi::class)
-class VehicleSettingsViewModelTest {
+class VehicleEditViewModelTest {
 
     private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
     private val catalog = FakeVehicleCatalog()
@@ -43,9 +43,9 @@ class VehicleSettingsViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private suspend fun viewModel(keep: Boolean = false): VehicleSettingsViewModel {
+    private suspend fun viewModel(keep: Boolean = false): VehicleEditViewModel {
         if (!keep) vehicles.setVehicle(preset.toProfile())
-        return VehicleSettingsViewModel(
+        return VehicleEditViewModel(
             vehicles,
             catalog,
             EditVehicleInteractor(vehicles, catalog),
@@ -149,7 +149,7 @@ class VehicleSettingsViewModelTest {
         assertTrue(viewModel().uiState.await { it.vehicle != null }.catalog != null)
 
         vehicles.setVehicle(customVehicle("Eigenbau"))
-        val own = VehicleSettingsViewModel(
+        val own = VehicleEditViewModel(
             vehicles, catalog, EditVehicleInteractor(vehicles, catalog), RestoreCatalogValuesInteractor(vehicles, catalog), RemoveVehicleInteractor(vehicles),
         )
 

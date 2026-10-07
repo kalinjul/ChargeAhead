@@ -121,11 +121,11 @@ class CarHomeScreen(
             .build()
 
     private fun searchTile(): GridItem = tile(Texts.string(Res.string.car_home_enter_destination), R.drawable.ic_search) {
-        screenManager.push(DestinationSearchScreen(carContext, session, permissions))
+        screenManager.push(CarDestinationSearchScreen(carContext, session, permissions))
     }
 
     private fun chargeNowTile(): GridItem = tile(Texts.string(Res.string.car_home_charge_now), R.drawable.ic_bolt) {
-        screenManager.push(ChargeNowScreen(carContext, session))
+        screenManager.push(CarChargeNowScreen(carContext, session))
     }
 
     /** The level as a battery drawn to it, in steps of ten; empty when nothing is known. */
@@ -135,7 +135,7 @@ class CarHomeScreen(
         text = socPercent?.let { Texts.string(Res.string.car_home_soc_percent, it) }
             ?: Texts.string(Res.string.car_home_soc_unset),
     ) {
-        screenManager.push(SoCScreen(carContext, session, permissions))
+        screenManager.push(CarSoCScreen(carContext, session, permissions))
     }
 
     private fun batteryIcon(socPercent: Int?): Int {
@@ -149,7 +149,7 @@ class CarHomeScreen(
         }
 
     private fun openRoute(destination: Destination) {
-        screenManager.push(RouteScreen(carContext, session, destination, activeRoute = true, permissions = permissions))
+        screenManager.push(CarRouteScreen(carContext, session, destination, activeRoute = true, permissions = permissions))
     }
 
     /** In projection, the driver confirms the permission on the phone, so it sits behind a button. */

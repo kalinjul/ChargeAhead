@@ -60,7 +60,7 @@ fun NetworksRoute(
         onDispose { viewModel.onLeave() }
     }
 
-    NetworkSettingsScreen(
+    NetworksScreen(
         uiState = uiState,
         onSearchChange = viewModel::onSearchChanged,
         onNetworkToggled = viewModel::onNetworkToggled,
@@ -69,7 +69,7 @@ fun NetworksRoute(
 }
 
 @Composable
-fun NetworkSettingsScreen(
+fun NetworksScreen(
     uiState: NetworksUiState,
     onSearchChange: (String) -> Unit,
     onNetworkToggled: (String) -> Unit,

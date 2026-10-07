@@ -35,7 +35,7 @@ import org.jetbrains.compose.resources.StringResource
  * The best fast chargers around the current position on the host's map,
  * numbered in ranking order, cheap and near first. A row opens the detail.
  */
-class ChargeNowScreen(
+class CarChargeNowScreen(
     carContext: CarContext,
     private val session: Scope,
 ) : Screen(carContext) {
@@ -106,7 +106,7 @@ class ChargeNowScreen(
         .addText(ChargeStopFormatter.chargeNowSecondaryLine(candidate))
         .setMetadata(placeMetadata(candidate.site.position, ordinal.toString()))
         .setBrowsable(true)
-        .setOnClickListener { screenManager.push(SiteDetailScreen(carContext, session, candidate.site)) }
+        .setOnClickListener { screenManager.push(CarSiteDetailScreen(carContext, session, candidate.site)) }
         .build()
 
     private fun relaxedRow(result: ChargeNowResult): Row? {
