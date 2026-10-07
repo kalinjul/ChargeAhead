@@ -107,7 +107,7 @@ fun PhoneNavDisplay(
 
             entry<VehicleEdit> {
                 Page(title = stringResource(Res.string.vehicle_title), onBack = navigator::back) { pagePadding ->
-                    VehicleSettingsRoute(onRemoved = navigator::back, modifier = Modifier.fillMaxSize().padding(pagePadding))
+                    VehicleEditRoute(onRemoved = navigator::back, modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
@@ -123,7 +123,7 @@ fun PhoneNavDisplay(
 
             entry<CarData> {
                 Page(title = stringResource(Res.string.cardata_title), onBack = navigator::back) { pagePadding ->
-                    CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                    CarDataRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 

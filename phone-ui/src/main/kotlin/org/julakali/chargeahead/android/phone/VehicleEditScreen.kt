@@ -42,8 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.julakali.chargeahead.android.phone.components.SettingRow
 import org.julakali.chargeahead.android.phone.components.SettingsCard
-import org.julakali.chargeahead.shared.ui.VehicleSettingsUiState
-import org.julakali.chargeahead.shared.ui.VehicleSettingsViewModel
+import org.julakali.chargeahead.shared.ui.VehicleEditUiState
+import org.julakali.chargeahead.shared.ui.VehicleEditViewModel
 import org.julakali.chargeahead.shared.ui.VehicleEditor
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
@@ -75,16 +75,16 @@ import org.julakali.chargeahead.shared.resources.vehicle_restore_customized
 import org.julakali.chargeahead.shared.resources.vehicle_restore_unavailable
 
 @Composable
-fun VehicleSettingsRoute(
+fun VehicleEditRoute(
     onRemoved: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: VehicleSettingsViewModel = koinViewModel(),
+    viewModel: VehicleEditViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // Pop only once stored: popping clears the ViewModel mid-write.
     LaunchedEffect(uiState.removed) { if (uiState.removed) onRemoved() }
     val actions = remember(viewModel) {
-        VehicleSettingsActions(
+        VehicleEditActions(
             onNameOpen = viewModel::onNameEditOpened,
             onConsumptionOpen = viewModel::onConsumptionEditOpened,
             onBatteryOpen = viewModel::onBatteryEditOpened,
@@ -98,10 +98,10 @@ fun VehicleSettingsRoute(
             onRemoveCancel = viewModel::onVehicleRemoveCancelled,
         )
     }
-    VehicleSettingsScreen(uiState = uiState, actions = actions, modifier = modifier)
+    VehicleEditScreen(uiState = uiState, actions = actions, modifier = modifier)
 }
 
-class VehicleSettingsActions(
+class VehicleEditActions(
     val onNameOpen: () -> Unit = {},
     val onConsumptionOpen: () -> Unit = {},
     val onBatteryOpen: () -> Unit = {},
@@ -116,9 +116,9 @@ class VehicleSettingsActions(
 )
 
 @Composable
-fun VehicleSettingsScreen(
-    uiState: VehicleSettingsUiState,
-    actions: VehicleSettingsActions,
+fun VehicleEditScreen(
+    uiState: VehicleEditUiState,
+    actions: VehicleEditActions,
     modifier: Modifier = Modifier,
 ) {
     val vehicle = uiState.vehicle ?: return
@@ -249,7 +249,7 @@ private fun FieldDialog(
     input: String,
     unit: String?,
     applicable: Boolean,
-    actions: VehicleSettingsActions,
+    actions: VehicleEditActions,
     catalogValue: String? = null,
 ) {
     AlertDialog(

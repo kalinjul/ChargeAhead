@@ -21,9 +21,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -71,31 +68,11 @@ import org.julakali.chargeahead.shared.resources.about_dataset_places
 import org.julakali.chargeahead.shared.resources.about_dataset_routing
 import org.julakali.chargeahead.shared.resources.about_dataset_sites
 import org.julakali.chargeahead.shared.resources.about_dataset_status
-import org.julakali.chargeahead.shared.resources.about_legal_imprint
-import org.julakali.chargeahead.shared.resources.about_legal_imprint_body
-import org.julakali.chargeahead.shared.resources.about_legal_privacy
 import org.julakali.chargeahead.shared.resources.about_licenses_back_to_top
 import org.julakali.chargeahead.shared.resources.about_licenses_data_sources
 import org.julakali.chargeahead.shared.resources.about_licenses_intro
 import org.julakali.chargeahead.shared.resources.about_licenses_libraries
 import org.julakali.chargeahead.shared.resources.app_name
-
-/** Imprint (§ 5 DDG) and privacy policy. The privacy policy follows. */
-@Composable
-fun LegalScreen(modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-    ) {
-        SectionLabel(stringResource(Res.string.about_legal_imprint))
-        SelectionContainer {
-            Text(stringResource(Res.string.about_legal_imprint_body), style = MaterialTheme.typography.bodyMedium)
-        }
-        SectionLabel(stringResource(Res.string.about_legal_privacy), modifier = Modifier.padding(top = 24.dp))
-    }
-}
 
 /**
  * The data sources, then the open-source libraries, each collapsible, all in
