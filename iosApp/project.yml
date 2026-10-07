@@ -29,11 +29,8 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     DEVELOPMENT_TEAM: "" # fill in before the first build in the Xcode project
-    # Empty by default, so the project builds without them; the app itself
-    # does not start. Overridden in a local, non-checked-in
-    # Secrets.xcconfig (see README.md).
-    CHARGEAHEAD_BASE_URL: ""
-    CHARGEAHEAD_TOKEN: ""
+    # CHARGEAHEAD_BASE_URL and CHARGEAHEAD_TOKEN come only from Secrets.xcconfig:
+    # a value here, even an empty one, would override the xcconfig.
 
 configFiles:
   # If the file doesn't exist, XcodeGen ignores the entry — the build then
