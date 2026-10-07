@@ -62,6 +62,8 @@ struct HomeMapView: View {
     @StateObject private var session = PhoneSession()
     @State private var showPlanSheet = false
     @State private var showChargeNow = false
+    @State private var showGarage = false
+    @State private var planFailure: TripPlanOutcome.TripPlanFailure?
     @State private var plan: TripPlan?
     @State private var planFailureText: String?
     @State private var planningInProgress = false
@@ -93,6 +95,14 @@ struct HomeMapView: View {
                                     .font(.footnote)
                                     .foregroundStyle(.red)
                                     .padding(.top, 8)
+                            }
+                            if planFailure == .noVehicle {
+                                Button {
+                                    showGarage = true
+                                } label: {
+                                    Label(localized("garage_add_title"), systemImage: "car")
+                                }
+                                .buttonStyle(.bordered)
                             }
                         }
                         .padding(.top, 8)
@@ -146,12 +156,26 @@ struct HomeMapView: View {
             .navigationTitle(localized("app_name"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                NavigationLink(localized("ios_home_diagnostics")) {
-                    ContentView()
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showGarage = true
+                    } label: {
+                        Image(systemName: "car")
+                    }
+                    .accessibilityLabel(localized("garage_title"))
+                    .accessibilityIdentifier("garage")
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(localized("ios_home_diagnostics")) {
+                        ContentView()
+                    }
                 }
             }
             .sheet(isPresented: $showChargeNow) {
                 ChargeNowView(feature: session.feature)
+            }
+            .sheet(isPresented: $showGarage, onDismiss: { planFailure = nil; planFailureText = nil }) {
+                GarageView(feature: session.feature)
             }
         }
         .collect(flow: home.uiState) { state in
@@ -169,12 +193,14 @@ struct HomeMapView: View {
         }
         planningInProgress = true
         planFailureText = nil
+        planFailure = nil
         Task { @MainActor in
             let outcome = try? await session.planner.planTrip(from: position, destination: destination)
             planningInProgress = false
             if let planned = outcome?.plan {
                 plan = planned
             } else {
+                planFailure = outcome?.failure
                 planFailureText = failureText(outcome?.failure)
             }
         }

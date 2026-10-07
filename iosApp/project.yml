@@ -23,7 +23,7 @@ options:
   bundleIdPrefix: org.julakali
   developmentLanguage: en
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
 
 settings:
   base:
@@ -42,7 +42,7 @@ targets:
   ChargeAhead:
     type: application
     platform: iOS
-    deploymentTarget: "16.0"
+    deploymentTarget: "17.0"
     sources:
       - path: ChargeAhead
     # No `info:` block: XcodeGen would REGENERATE the plist and silently

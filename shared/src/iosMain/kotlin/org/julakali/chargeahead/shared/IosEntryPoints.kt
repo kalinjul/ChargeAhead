@@ -15,7 +15,9 @@ import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.julakali.chargeahead.shared.settings.createTripDataStore
 import org.julakali.chargeahead.shared.settings.settingsModule
+import org.julakali.chargeahead.shared.ui.AddCarViewModel
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
+import org.julakali.chargeahead.shared.ui.GarageViewModel
 import org.julakali.chargeahead.shared.ui.CorridorViewModel
 import org.julakali.chargeahead.shared.ui.HomeViewModel
 import org.julakali.chargeahead.shared.ui.SearchViewModel
@@ -126,6 +128,10 @@ class PhoneViewModels(private val feature: ChargeStopsFeature) {
     fun chargeNow(): ChargeNowViewModel = host.get { session.get<ChargeNowViewModel>() }
 
     fun search(): SearchViewModel = host.get { session.get<SearchViewModel> { parametersOf(SavedStateHandle()) } }
+
+    fun garage(): GarageViewModel = host.get { session.get<GarageViewModel>() }
+
+    fun addCar(): AddCarViewModel = host.get { session.get<AddCarViewModel>() }
 
     fun clear() {
         host.clear()
