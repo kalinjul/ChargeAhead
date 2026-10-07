@@ -17,7 +17,7 @@ fun sharedUiModule(): Module = module {
     viewModel { HomeViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::PhoneAppViewModel)
     viewModelOf(::TripViewModel)
-    viewModelOf(::CommittedTripViewModel)
+    viewModelOf(::ActiveRouteViewModel)
     viewModelOf(::SearchViewModel)
     viewModelOf(::ChargeNowViewModel)
     viewModelOf(::DrawerViewModel)

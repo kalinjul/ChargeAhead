@@ -48,7 +48,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class CommittedTripViewModelTest {
+class ActiveRouteViewModelTest {
 
     @BeforeTest
     fun setUpMainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
@@ -106,7 +106,7 @@ class CommittedTripViewModelTest {
 
     private val feature = feature()
 
-    private fun viewModel(feature: ChargeStopsFeature = this.feature) = CommittedTripViewModel(
+    private fun viewModel(feature: ChargeStopsFeature = this.feature) = ActiveRouteViewModel(
         vehicles = vehicles,
         feature = feature,
         replanCommittedTrip = ReplanCommittedTripInteractor(
@@ -155,7 +155,7 @@ class CommittedTripViewModelTest {
         // Planning hops to Dispatchers.Default, so the outcome arrives a little later.
         val event = withTimeout(5_000) { viewModel.event.first { it != null } }
 
-        assertEquals(CommittedTripEvent.Replanned, event)
+        assertEquals(ActiveRouteEvent.Replanned, event)
         assertEquals(hannover, plannedFrom)
         val stored = trips.state.value.committed!!
         assertEquals(plan(hannover), stored.plan)
@@ -173,22 +173,22 @@ class CommittedTripViewModelTest {
 
         outcome = { TripPlanResult.NoChargerInReach(afterKm = 0.0) }
         viewModel.replan(socPercent = 5.0)
-        assertEquals(CommittedTripEvent.ReplanFailed(UnreachableTrip.NoCharger(afterKm = 0.0)), withTimeout(5_000) { viewModel.event.first { it != null } })
+        assertEquals(ActiveRouteEvent.ReplanFailed(UnreachableTrip.NoCharger(afterKm = 0.0)), withTimeout(5_000) { viewModel.event.first { it != null } })
         viewModel.onEventHandled()
 
         outcome = { TripPlanResult.NoRoute }
         viewModel.replan()
-        assertEquals(CommittedTripEvent.ReplanFailed(UnreachableTrip.NoRoute), withTimeout(5_000) { viewModel.event.first { it != null } })
+        assertEquals(ActiveRouteEvent.ReplanFailed(UnreachableTrip.NoRoute), withTimeout(5_000) { viewModel.event.first { it != null } })
         viewModel.onEventHandled()
 
         outcome = { TripPlanResult.NoConnection }
         viewModel.replan()
-        assertEquals(CommittedTripEvent.ReplanFailed(UnreachableTrip.NoConnection), withTimeout(5_000) { viewModel.event.first { it != null } })
+        assertEquals(ActiveRouteEvent.ReplanFailed(UnreachableTrip.NoConnection), withTimeout(5_000) { viewModel.event.first { it != null } })
         viewModel.onEventHandled()
 
         vehicles.setVehicle(null)
         viewModel.replan()
-        assertEquals(CommittedTripEvent.VehicleMissing, withTimeout(5_000) { viewModel.event.first { it != null } })
+        assertEquals(ActiveRouteEvent.VehicleMissing, withTimeout(5_000) { viewModel.event.first { it != null } })
 
         assertEquals(plan(hamburg), trips.state.value.committed?.plan)
     }
@@ -202,7 +202,7 @@ class CommittedTripViewModelTest {
         viewModel.endTrip()
 
         assertNull(trips.state.value.committed)
-        assertEquals(CommittedTripEvent.Ended, viewModel.event.value)
+        assertEquals(ActiveRouteEvent.Ended, viewModel.event.value)
     }
 
     @Test

@@ -44,8 +44,8 @@ import org.julakali.chargeahead.android.phone.components.ChargeLevelSheet
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
-import org.julakali.chargeahead.shared.ui.CommittedTripEvent
-import org.julakali.chargeahead.shared.ui.CommittedTripViewModel
+import org.julakali.chargeahead.shared.ui.ActiveRouteEvent
+import org.julakali.chargeahead.shared.ui.ActiveRouteViewModel
 import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.koin.androidx.compose.koinViewModel
@@ -69,7 +69,7 @@ fun ActiveRouteRoute(
     onEnded: () -> Unit,
     onOpenGarage: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: CommittedTripViewModel = koinViewModel(),
+    viewModel: ActiveRouteViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val event by viewModel.event.collectAsStateWithLifecycle()
@@ -79,15 +79,15 @@ fun ActiveRouteRoute(
     LaunchedEffect(event) {
         when (val current = event) {
             null -> return@LaunchedEffect
-            CommittedTripEvent.Replanned -> scope.launch { snackbar.showSnackbar(getString(Res.string.active_route_replanned)) }
-            is CommittedTripEvent.ReplanFailed -> scope.launch { snackbar.showSnackbar(current.why.loadMessage()) }
-            CommittedTripEvent.VehicleMissing -> scope.launch {
+            ActiveRouteEvent.Replanned -> scope.launch { snackbar.showSnackbar(getString(Res.string.active_route_replanned)) }
+            is ActiveRouteEvent.ReplanFailed -> scope.launch { snackbar.showSnackbar(current.why.loadMessage()) }
+            ActiveRouteEvent.VehicleMissing -> scope.launch {
                 val result = snackbar.showSnackbar(
                     garageActionVisuals(getString(Res.string.plan_vehicle_missing), getString(Res.string.plan_vehicle_missing_action)),
                 )
                 if (result == SnackbarResult.ActionPerformed) onOpenGarage()
             }
-            CommittedTripEvent.Ended -> onEnded()
+            ActiveRouteEvent.Ended -> onEnded()
         }
         viewModel.onEventHandled()
     }
