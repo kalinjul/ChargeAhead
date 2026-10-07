@@ -19,7 +19,6 @@ final class PhoneSession: ObservableObject {
     let feature: ChargeStopsFeature
     let viewModels: PhoneViewModels
     let planner: TripPlanner
-    private var viewportCentre: LatLon?
 
     init() {
         feature = SharedEntry.newFeature()
@@ -30,18 +29,6 @@ final class PhoneSession: ObservableObject {
     deinit {
         viewModels.clear()
         feature.close()
-    }
-
-    /// The placeholder map is centered on the position, so its viewport follows it.
-    /// Small moves keep the viewport, or every fix would refill the markers.
-    func follow(_ position: LatLon?, on home: HomeViewModel) {
-        guard let position = position else { return }
-        if let centre = viewportCentre,
-           MapPlaceholderView.distanceKm(centre, position) < MapPlaceholderView.radiusKm / 5 {
-            return
-        }
-        viewportCentre = position
-        home.onViewportChanged(viewport: MapPlaceholderView.viewport(around: position))
     }
 }
 
@@ -56,7 +43,6 @@ extension HomeUiState {
 }
 
 /// The phone home: the map is the screen, actions float on top.
-/// TODO the map is still a placeholder drawing; pick a map SDK
 struct HomeMapView: View {
 
     @StateObject private var session = PhoneSession()
@@ -73,14 +59,20 @@ struct HomeMapView: View {
         NavigationStack {
             Observing(home.uiState) { state in
                 ZStack {
-                    MapPlaceholderView(position: state.position, chargers: state.chargers)
-                        .ignoresSafeArea(edges: .bottom)
+                    ChargerMapView(position: state.position, chargers: state.chargers) { viewport in
+                        home.onViewportChanged(viewport: viewport)
+                    }
+                    .ignoresSafeArea(edges: .bottom)
 
                     VStack {
                         VStack(spacing: 2) {
-                            Text(localized("ios_home_map_placeholder"))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            if state.belowMinZoom {
+                                Text(localized("map_zoom_hint"))
+                                    .font(.footnote)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(.regularMaterial, in: Capsule())
+                            }
                             if let status = state.statusText {
                                 Text(status)
                                     .font(.footnote)
@@ -178,9 +170,6 @@ struct HomeMapView: View {
                 GarageView(feature: session.feature)
             }
         }
-        .collect(flow: home.uiState) { state in
-            session.follow(state.position, on: home)
-        }
         .onAppear {
             home.onLocationPermissionGranted()
         }
@@ -212,77 +201,6 @@ struct HomeMapView: View {
         case .noChargerInReach: return localized("ios_plan_failed_no_charger")
         case .noConnection: return localized("plan_failed_no_connection")
         default: return localized("plan_failed_no_route")
-        }
-    }
-}
-
-/// Placeholder map: light ground, faint grid, pins, own position.
-struct MapPlaceholderView: View {
-    let position: LatLon?
-    let chargers: [MapCharger]
-
-    static let radiusKm = 25.0
-    private static let kmPerDegLat = 111.19
-
-    private static func kmPerDegLon(at lat: Double) -> Double {
-        kmPerDegLat * cos(lat * .pi / 180)
-    }
-
-    /// The area the drawing shows around `center`.
-    static func viewport(around center: LatLon) -> BoundingBox {
-        let latSpan = radiusKm / kmPerDegLat
-        let lonSpan = radiusKm / kmPerDegLon(at: center.lat)
-        return BoundingBox(
-            south: center.lat - latSpan,
-            west: center.lon - lonSpan,
-            north: center.lat + latSpan,
-            east: center.lon + lonSpan
-        )
-    }
-
-    static func distanceKm(_ a: LatLon, _ b: LatLon) -> Double {
-        let dx = (b.lon - a.lon) * kmPerDegLon(at: a.lat)
-        let dy = (b.lat - a.lat) * kmPerDegLat
-        return (dx * dx + dy * dy).squareRoot()
-    }
-
-    var body: some View {
-        Canvas { context, size in
-            context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Color(red: 0.94, green: 0.93, blue: 0.89)))
-
-            let grid = Color(red: 0.89, green: 0.88, blue: 0.84)
-            var x: CGFloat = 40
-            while x < size.width {
-                context.stroke(Path { $0.move(to: CGPoint(x: x, y: 0)); $0.addLine(to: CGPoint(x: x, y: size.height)) }, with: .color(grid), lineWidth: 1.5)
-                x += 56
-            }
-            var y: CGFloat = 40
-            while y < size.height {
-                context.stroke(Path { $0.move(to: CGPoint(x: 0, y: y)); $0.addLine(to: CGPoint(x: size.width, y: y)) }, with: .color(grid), lineWidth: 1.5)
-                y += 56
-            }
-
-            guard let center = position else { return }
-            let pxPerKm = min(size.width, size.height) / (Self.radiusKm * 2)
-            let kmPerDegLat = Self.kmPerDegLat
-            let kmPerDegLon = Self.kmPerDegLon(at: center.lat)
-
-            func project(_ point: LatLon) -> CGPoint {
-                let dx = (point.lon - center.lon) * kmPerDegLon * pxPerKm
-                let dy = (point.lat - center.lat) * kmPerDegLat * pxPerKm
-                return CGPoint(x: size.width / 2 + dx, y: size.height / 2 - dy)
-            }
-
-            for charger in chargers {
-                let at = project(charger.site.position)
-                context.fill(Path(ellipseIn: CGRect(x: at.x - 8, y: at.y - 8, width: 16, height: 16)), with: .color(.white))
-                context.fill(Path(ellipseIn: CGRect(x: at.x - 6, y: at.y - 6, width: 12, height: 12)), with: .color(.blue))
-            }
-
-            let own = project(center)
-            context.fill(Path(ellipseIn: CGRect(x: own.x - 18, y: own.y - 18, width: 36, height: 36)), with: .color(.blue.opacity(0.15)))
-            context.fill(Path(ellipseIn: CGRect(x: own.x - 9, y: own.y - 9, width: 18, height: 18)), with: .color(.white))
-            context.fill(Path(ellipseIn: CGRect(x: own.x - 6, y: own.y - 6, width: 12, height: 12)), with: .color(.blue))
         }
     }
 }
