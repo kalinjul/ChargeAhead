@@ -59,15 +59,12 @@ import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -77,37 +74,34 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * `Dispatchers.setMain(Unconfined)` provides the Main dispatcher
- * `viewModelScope` needs and keeps writes in order.
+ * [TestMain] provides the Main dispatcher `viewModelScope` needs and keeps
+ * writes in order.
  *
  * `uiState` only produces while someone collects; [await] subscribes and
  * waits for the first matching state.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class PhoneViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() {
-        Dispatchers.setMain(Dispatchers.Unconfined)
-    }
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() {
-        Dispatchers.resetMain()
-    }
+    fun tearDownMainDispatcher() = main.tearDown()
 
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
         val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
         val catalog = FakeVehicleCatalog()
-        val addCar = AddCarViewModel(VehiclePresetsObserver(catalog, vehicles, testDispatchers), SelectVehicleInteractor(vehicles))
-        val garage = GarageViewModel(
+        val addCar = main.track(AddCarViewModel(VehiclePresetsObserver(catalog, vehicles, testDispatchers), SelectVehicleInteractor(vehicles)))
+        val garage = main.track(GarageViewModel(
             vehicles,
             GarageObserver(vehicles, catalog),
             SelectVehicleInteractor(vehicles),
             UpdateArrivalSocInteractor(vehicles),
             UpdateManualSocInteractor(vehicles),
-        )
+        ))
 
         val preset = addCar.uiState.await { it.matches.isNotEmpty() }.matches.first()
         addCar.onPresetAdded(preset)
@@ -236,7 +230,7 @@ class PhoneViewModelTest {
     ): HomeViewModel {
         val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })
-        return HomeViewModel(
+        return main.track(HomeViewModel(
             stubFeature(),
             MapChargersObserver(repository, statuses, preferences, testDispatchers),
             RefreshMapChargersInteractor(repository, preferences),
@@ -246,7 +240,7 @@ class PhoneViewModelTest {
             preferences,
             SetChargeModeInteractor(preferences, UpdateChargeFiltersInteractor(preferences), UpdateNetworksInteractor(preferences)),
             locationTimeoutMillis,
-        )
+        ))
     }
 
     /** The map says which mode is on, and its pill switches that mode off again. */
@@ -278,11 +272,11 @@ class PhoneViewModelTest {
             parentScope = CoroutineScope(Dispatchers.Unconfined),
         )
         val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
-        val viewModel = CorridorViewModel(
+        val viewModel = main.track(CorridorViewModel(
             feature,
             ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), FakeVehicleCatalog(), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
             RefreshChargeStopsInteractor(repository, DataStorePreferencesRepository(InMemoryPreferencesDataStore())),
-        )
+        ))
 
         viewModel.uiState.await { it.phase == ChargeStopsState.Phase.WAITING_FOR_LOCATION }
         feature.start()

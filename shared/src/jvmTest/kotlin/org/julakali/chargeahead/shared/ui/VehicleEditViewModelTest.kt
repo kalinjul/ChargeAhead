@@ -1,13 +1,9 @@
 package org.julakali.chargeahead.shared.ui
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.customVehicle
@@ -26,32 +22,29 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** "Fahrzeug anpassen": one row per value, each edited on its own and applied or thrown away. */
-@OptIn(ExperimentalCoroutinesApi::class)
 class VehicleEditViewModelTest {
+
+    private val main = TestMain()
 
     private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
     private val catalog = FakeVehicleCatalog()
     private val preset = testPresets.first()
 
     @BeforeTest
-    fun setUpMainDispatcher() {
-        Dispatchers.setMain(Dispatchers.Unconfined)
-    }
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() {
-        Dispatchers.resetMain()
-    }
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private suspend fun viewModel(keep: Boolean = false): VehicleEditViewModel {
         if (!keep) vehicles.setVehicle(preset.toProfile())
-        return VehicleEditViewModel(
+        return main.track(VehicleEditViewModel(
             vehicles,
             catalog,
             EditVehicleInteractor(vehicles, catalog),
             RestoreCatalogValuesInteractor(vehicles, catalog),
             RemoveVehicleInteractor(vehicles),
-        ).also { it.uiState.await { state -> state.vehicle != null } }
+        )).also { it.uiState.await { state -> state.vehicle != null } }
     }
 
     @Test
@@ -149,9 +142,9 @@ class VehicleEditViewModelTest {
         assertTrue(viewModel().uiState.await { it.vehicle != null }.catalog != null)
 
         vehicles.setVehicle(customVehicle("Eigenbau"))
-        val own = VehicleEditViewModel(
+        val own = main.track(VehicleEditViewModel(
             vehicles, catalog, EditVehicleInteractor(vehicles, catalog), RestoreCatalogValuesInteractor(vehicles, catalog), RemoveVehicleInteractor(vehicles),
-        )
+        ))
 
         assertFalse(own.uiState.await { it.vehicle?.displayName == "Eigenbau" }.catalog != null)
     }

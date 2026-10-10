@@ -15,14 +15,11 @@ import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -32,14 +29,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() = Dispatchers.resetMain()
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private val hamburg = Destination("Hamburg", LatLon(53.55, 9.99), "Hamburg")
     private val berlin = Place(
@@ -138,7 +136,7 @@ class SearchViewModelTest {
     }
 
     private fun searchViewModel(savedState: SavedStateHandle = SavedStateHandle()) =
-        SearchViewModel(stubFeature(), DestinationSearchObserver(NoGeocoder, NoLocation), vehicles(), history(), savedState)
+        main.track(SearchViewModel(stubFeature(), DestinationSearchObserver(NoGeocoder, NoLocation), vehicles(), history(), savedState))
 
     private fun vehicles() = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
 

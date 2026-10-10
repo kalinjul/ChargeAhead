@@ -1,13 +1,9 @@
 package org.julakali.chargeahead.shared.ui
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
@@ -25,30 +21,27 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /** The garage page's own state: which car, and the arrival level's sheet. */
-@OptIn(ExperimentalCoroutinesApi::class)
 class GarageViewModelTest {
+
+    private val main = TestMain()
 
     private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
     private val viewModel by lazy {
         val catalog = FakeVehicleCatalog()
-        GarageViewModel(
+        main.track(GarageViewModel(
             vehicles,
             GarageObserver(vehicles, catalog),
             SelectVehicleInteractor(vehicles),
             UpdateArrivalSocInteractor(vehicles),
             UpdateManualSocInteractor(vehicles),
-        )
+        ))
     }
 
     @BeforeTest
-    fun setUpMainDispatcher() {
-        Dispatchers.setMain(Dispatchers.Unconfined)
-    }
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() {
-        Dispatchers.resetMain()
-    }
+    fun tearDownMainDispatcher() = main.tearDown()
 
     @Test
     fun `the arrival sheet opens on the level in force and applies the dragged one`() = runBlocking<Unit> {

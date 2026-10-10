@@ -1,12 +1,8 @@
 package org.julakali.chargeahead.shared.ui
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.domain.DataSource
 import org.julakali.chargeahead.shared.domain.DataSourceDirectory
@@ -16,24 +12,21 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class LicensesViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() {
-        Dispatchers.setMain(Dispatchers.Unconfined)
-    }
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() {
-        Dispatchers.resetMain()
-    }
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private val osm = DataSource("osm", "OpenStreetMap", url = null, datasets = emptyList())
 
     @Test
     fun `the sources load on open`() = runBlocking<Unit> {
-        val vm = LicensesViewModel(LoadDataSourcesInteractor(directory { listOf(osm) }))
+        val vm = main.track(LicensesViewModel(LoadDataSourcesInteractor(directory { listOf(osm) })))
 
         val state = vm.uiState.await { it.dataSources is DataSourcesState.Loaded }
 
@@ -43,8 +36,8 @@ class LicensesViewModelTest {
     @Test
     fun `a failed load can be retried`() = runBlocking<Unit> {
         var fail = true
-        val vm = LicensesViewModel(
-            LoadDataSourcesInteractor(directory { if (fail) error("offline") else listOf(osm) }),
+        val vm = main.track(
+            LicensesViewModel(LoadDataSourcesInteractor(directory { if (fail) error("offline") else listOf(osm) })),
         )
         vm.uiState.await { it.dataSources == DataSourcesState.Failed }
 

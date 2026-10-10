@@ -1,5 +1,6 @@
 package org.julakali.chargeahead.shared.ui.car
 
+import org.julakali.chargeahead.shared.ui.TestMain
 import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
@@ -37,15 +38,12 @@ import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -55,14 +53,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class CarRedesignViewModelsTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() = Dispatchers.setMain(Dispatchers.Unconfined)
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() = Dispatchers.resetMain()
+    fun tearDownMainDispatcher() = main.tearDown()
 
     private val settings = InMemoryPreferencesDataStore()
     private val vehicles = DataStoreVehicleRepository(settings)
@@ -77,7 +76,7 @@ class CarRedesignViewModelsTest {
     fun `the home tiles show the charge level the feature knows`() = runBlocking<Unit> {
         val energy = MutableStateFlow<EnergyState?>(null)
         val feature = feature(energy, SoCSourceKind.MANUAL)
-        val viewModel = CarHomeViewModel(feature, trips)
+        val viewModel = main.track(CarHomeViewModel(feature, trips))
         assertNull(viewModel.uiState.await { true }.socPercent)
 
         energy.value = EnergyState(63.4, SoCSourceKind.MANUAL, 0L)
@@ -134,7 +133,7 @@ class CarRedesignViewModelsTest {
             override suspend fun refresh(ids: Collection<String>) = Unit
         }
         val feature = feature(MutableStateFlow(null), SoCSourceKind.MANUAL)
-        val viewModel = CarSiteDetailViewModel(feature, site.copy(liveStatusId = "live:1"), LiveConnectorsObserver(repository))
+        val viewModel = main.track(CarSiteDetailViewModel(feature, site.copy(liveStatusId = "live:1"), LiveConnectorsObserver(repository)))
 
         val state = viewModel.uiState.await { it.distanceKm != null && it.live != null }
 
@@ -176,7 +175,7 @@ class CarRedesignViewModelsTest {
                 return TripPlanResult.Planned(plan)
             }
         }
-        return CarRouteViewModel(
+        return main.track(CarRouteViewModel(
             feature = feature,
             destination = plan.destination,
             activeRoute = activeRoute,
@@ -184,7 +183,7 @@ class CarRedesignViewModelsTest {
             replanCommittedTrip = ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, trips, UpdateManualSocInteractor(vehicles), time, dispatchers),
             commitTrip = CommitTripInteractor(trips, time),
             trips = trips,
-        )
+        ))
     }
 
     private companion object {

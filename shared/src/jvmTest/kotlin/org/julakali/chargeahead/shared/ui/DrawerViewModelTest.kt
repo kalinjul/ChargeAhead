@@ -9,31 +9,24 @@ import org.julakali.chargeahead.shared.domain.ChargeMode
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class DrawerViewModelTest {
 
+    private val main = TestMain()
+
     @BeforeTest
-    fun setUpMainDispatcher() {
-        Dispatchers.setMain(Dispatchers.Unconfined)
-    }
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() {
-        Dispatchers.resetMain()
-    }
+    fun tearDownMainDispatcher() = main.tearDown()
 
     @Test
     fun `the count includes selected keys the network list does not know`() = runBlocking<Unit> {
@@ -69,11 +62,13 @@ class DrawerViewModelTest {
         assertEquals(ChargeMode.NORMAL, vm.uiState.await { it.mode == ChargeMode.NORMAL }.mode)
     }
 
-    private fun viewModel(preferences: DataStorePreferencesRepository) = DrawerViewModel(
-        DataStoreVehicleRepository(InMemoryPreferencesDataStore()),
-        preferences,
-        UpdateChargeFiltersInteractor(preferences),
-        SetChargeModeInteractor(preferences, UpdateChargeFiltersInteractor(preferences), UpdateNetworksInteractor(preferences)),
+    private fun viewModel(preferences: DataStorePreferencesRepository) = main.track(
+        DrawerViewModel(
+            DataStoreVehicleRepository(InMemoryPreferencesDataStore()),
+            preferences,
+            UpdateChargeFiltersInteractor(preferences),
+            SetChargeModeInteractor(preferences, UpdateChargeFiltersInteractor(preferences), UpdateNetworksInteractor(preferences)),
+        ),
     )
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T =

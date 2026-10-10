@@ -2,13 +2,10 @@ package org.julakali.chargeahead.shared.ui
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.ChargeStopsFeature
 import org.julakali.chargeahead.shared.domain.Fix
@@ -24,8 +21,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 
 /** The debug page: what the car delivered, and the charge level the planner starts from. */
-@OptIn(ExperimentalCoroutinesApi::class)
 class CarDataViewModelTest {
+
+    private val main = TestMain()
 
     private val diagnostics = DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore())
     private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
@@ -38,14 +36,10 @@ class CarDataViewModelTest {
     )
 
     @BeforeTest
-    fun setUpMainDispatcher() {
-        Dispatchers.setMain(Dispatchers.Unconfined)
-    }
+    fun setUpMainDispatcher() = main.setUp()
 
     @AfterTest
-    fun tearDownMainDispatcher() {
-        Dispatchers.resetMain()
-    }
+    fun tearDownMainDispatcher() = main.tearDown()
 
     @Test
     fun `the stored charge level and the last hardware check show up`() = runBlocking<Unit> {
@@ -54,7 +48,7 @@ class CarDataViewModelTest {
         vehicles.setManualSocPercent(64.0)
 
         val state = withTimeout(5_000) {
-            CarDataViewModel(diagnostics, vehicles, feature).uiState.first { it.socPercent != null && it.socDiagnostics != null }
+            main.track(CarDataViewModel(diagnostics, vehicles, feature)).uiState.first { it.socPercent != null && it.socDiagnostics != null }
         }
 
         assertEquals(64.0, state.socPercent)
