@@ -11,7 +11,7 @@ Every user-visible word on the phone, in Android Auto and on iOS/CarPlay comes f
 - **One source: Compose Multiplatform Resources in `:shared`, all of it in one PR (#183).** Spike on `spike/compose-resources` showed it builds for android/jvm/iosArm64/iosSimulatorArm64 on AGP 9.4 and reaches all three surfaces.
 - **UI text lives in the app.** The backend only localises its own payload (place names) from an `Accept-Language` header; it never sends finished sentences.
 - **Typography:** percent hugs the number in both languages (`42%`); counted nouns are plurals in both; arrival/departure are spelled out (`Ankunft`/`Arrival`, `Abfahrt`/`Departure`); *charge point* over *charging point*.
-- **Later, not now:** a build-time generator that renders the one source into native `strings.xml` and `.xcstrings` (noted in `plans/technical-debts.md`).
+- **Later, not now:** a build-time generator that renders the one source into native `strings.xml` and `.xcstrings` (#194).
 
 ## Defaults (confirmed)
 
