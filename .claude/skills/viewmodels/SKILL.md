@@ -230,9 +230,11 @@ no Compose — see `PhoneViewModelTest`:
   and waits for their scopes before resetting Main; an untracked one keeps
   `uiState`'s 5 s stop timeout running, which later touches Main from another
   thread and fails whichever test is setting it at that moment.
-- `DataStoreVehicleRepository(InMemoryPreferencesDataStore())` (and the other
-  `DataStore…Repository` classes) is the real repository on in-memory
-  storage — no fake needed.
+- `testVehicleRepository()` and the `DataStore…Repository` classes over
+  `InMemoryPreferencesDataStore()` are the real repositories on in-memory
+  storage — no fake needed. The garage sits in Room, so a write is not
+  visible synchronously: wait for the state instead of asserting right after
+  the call.
 - `uiState` only produces while something collects, so assert with
   `withTimeout(5_000) { viewModel.uiState.first { <condition> } }` instead
   of reading `.value`.

@@ -6,6 +6,8 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.testDatabase
+import org.julakali.chargeahead.shared.testVehicleRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -25,7 +27,7 @@ class SettingsRepositoriesTest {
 
     @Test
     fun aNewStore_hasNeitherProfileNorChargeLevel() = runBlocking {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
 
         assertNull(store.vehicle.first())
         assertNull(store.manualSocPercent.first())
@@ -34,35 +36,37 @@ class SettingsRepositoriesTest {
     @Test
     fun aSavedProfile_survivesARestart() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        DataStoreVehicleRepository(storage).setVehicle(vehicle)
+        val database = testDatabase()
+        testVehicleRepository(storage, database).setVehicle(vehicle)
 
         // A new instance on the same storage = an app restart.
-        assertEquals(vehicle, DataStoreVehicleRepository(storage).vehicle.first())
+        assertEquals(vehicle, testVehicleRepository(storage, database).vehicle.first())
     }
 
     @Test
     fun aSavedChargeLevel_survivesARestart() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        DataStoreVehicleRepository(storage).setManualSocPercent(64.0)
+        testVehicleRepository(storage).setManualSocPercent(64.0)
 
-        assertEquals(64.0, DataStoreVehicleRepository(storage).manualSocPercent.first())
+        assertEquals(64.0, testVehicleRepository(storage).manualSocPercent.first())
     }
 
     @Test
     fun deletingTheProfile_clearsTheStorage() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        val store = DataStoreVehicleRepository(storage)
+        val database = testDatabase()
+        val store = testVehicleRepository(storage, database)
         store.setVehicle(vehicle)
 
         store.setVehicle(null)
 
         assertNull(store.vehicle.first())
-        assertNull(DataStoreVehicleRepository(storage).vehicle.first())
+        assertNull(testVehicleRepository(storage, database).vehicle.first())
     }
 
     @Test
     fun chargeLevelIsClampedBetweenZeroAndHundred() = runBlocking {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
 
         store.setManualSocPercent(140.0)
         assertEquals(100.0, store.manualSocPercent.first())
@@ -72,60 +76,16 @@ class SettingsRepositoriesTest {
     }
 
     @Test
-    fun aHalfProfileInStorage_countsAsNone() = runBlocking {
-        // A partial profile is treated as no profile.
-        val batteryOnly = InMemoryPreferencesDataStore(
-            mapOf("vehicle.usableBatteryKwh" to "77.0", "vehicle.displayName" to "Halb"),
-        )
-
-        assertNull(DataStoreVehicleRepository(batteryOnly).vehicle.first())
-    }
-
-    @Test
-    fun nonsensicalValuesInStorage_countAsNoProfile() = runBlocking {
-        val broken = InMemoryPreferencesDataStore(
-            mapOf(
-                "vehicle.usableBatteryKwh" to "keine Zahl",
-                "vehicle.consumptionKwhPer100Km" to "18.0",
-            ),
-        )
-        val zeroBattery = InMemoryPreferencesDataStore(
-            mapOf(
-                "vehicle.usableBatteryKwh" to "0",
-                "vehicle.consumptionKwhPer100Km" to "18.0",
-            ),
-        )
-
-        assertNull(DataStoreVehicleRepository(broken).vehicle.first())
-        assertNull(DataStoreVehicleRepository(zeroBattery).vehicle.first())
-    }
-
-    @Test
-    fun anUnknownConnectorTypeInStorage_doesNotCostTheWholeProfile() = runBlocking {
-        // Unknown connector names are skipped.
-        val storage = InMemoryPreferencesDataStore(
-            mapOf(
-                "vehicle.usableBatteryKwh" to "77.0",
-                "vehicle.consumptionKwhPer100Km" to "18.0",
-                "vehicle.acceptedConnectors" to "CCS2,STECKER_AUS_DER_ZUKUNFT,TYPE2",
-            ),
-        )
-
-        val loaded = DataStoreVehicleRepository(storage).vehicle.first()
-
-        assertEquals(setOf(ConnectorType.CCS2, ConnectorType.TYPE2), loaded?.acceptedConnectors)
-    }
-
-    @Test
     fun theConnectorListFullySurvives() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
-        DataStoreVehicleRepository(storage).setVehicle(
+        val database = testDatabase()
+        testVehicleRepository(storage, database).setVehicle(
             vehicle.copy(acceptedConnectors = setOf(ConnectorType.CCS2, ConnectorType.CHADEMO)),
         )
 
         assertEquals(
             setOf(ConnectorType.CCS2, ConnectorType.CHADEMO),
-            DataStoreVehicleRepository(storage).vehicle.first()?.acceptedConnectors,
+            testVehicleRepository(storage, database).vehicle.first()?.acceptedConnectors,
         )
     }
 
@@ -247,12 +207,13 @@ class SettingsRepositoriesTest {
     @Test
     fun repositoriesOnOneFile_keepEachOthersValues() = runBlocking {
         val storage = InMemoryPreferencesDataStore()
+        val vehicles = testVehicleRepository(storage)
 
-        DataStoreVehicleRepository(storage).setVehicle(vehicle)
+        vehicles.setVehicle(vehicle)
         DataStorePreferencesRepository(storage).setNetworks(NetworkPreferences(onlyPreferred = false))
         DataStoreDestinationHistory(storage).addRecentDestination(munich)
 
-        assertEquals(vehicle, DataStoreVehicleRepository(storage).vehicle.first())
+        assertEquals(vehicle, vehicles.vehicle.first())
         assertFalse(DataStorePreferencesRepository(storage).networks.first().onlyPreferred)
         assertEquals(listOf(munich), DataStoreDestinationHistory(storage).recentDestinations.first())
     }

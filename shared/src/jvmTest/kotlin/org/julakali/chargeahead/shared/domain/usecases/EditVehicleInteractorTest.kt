@@ -6,8 +6,7 @@ import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.EditVehicleInteractor.Edit
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
-import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.testPresets
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -18,7 +17,7 @@ import kotlin.test.assertTrue
 /** One edit on the garage's detail page, applied to the selected car. */
 class EditVehicleInteractorTest {
 
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val edit = EditVehicleInteractor(vehicles, FakeVehicleCatalog())
     private val preset = testPresets.first()
 

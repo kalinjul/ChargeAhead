@@ -41,11 +41,11 @@ import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.distanceKmTo
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import org.julakali.chargeahead.shared.settings.settingsModule
 import org.julakali.chargeahead.shared.ui.sharedUiModule
 import org.julakali.chargeahead.uitests.Fixtures
 import org.julakali.chargeahead.uitests.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.uitests.InMemoryVehicleRepository
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
@@ -82,9 +82,12 @@ class PhoneAppHarness {
             Manifest.permission.ACCESS_COARSE_LOCATION,
         )
         stubCameraUpdates()
-        val settingsFile = InMemoryPreferencesDataStore()
+        startKoin {
+            androidContext(app)
+            allowOverride(true)
+            modules(settingsModule { InMemoryPreferencesDataStore() }, chargeStopsModule(), sharedUiModule(), fakes(sites + nearby))
+        }
         if (withVehicle) runBlocking {
-            val vehicles = DataStoreVehicleRepository(settingsFile)
             vehicles.setVehicle(
                 VehicleProfile(
                     displayName = "Test-EV",
@@ -94,11 +97,6 @@ class PhoneAppHarness {
                 ),
             )
             vehicles.setManualSocPercent(80.0)
-        }
-        startKoin {
-            androidContext(app)
-            allowOverride(true)
-            modules(settingsModule { settingsFile }, chargeStopsModule(), sharedUiModule(), fakes(sites + nearby))
         }
     }
 
@@ -113,6 +111,7 @@ class PhoneAppHarness {
         single<DataSourceDirectory> { NoDataSources }
         single<NetworkRepository> { NoNetworks }
         single<VehicleCatalogRepository> { OnePresetCatalog }
+        single<VehicleRepository> { InMemoryVehicleRepository() }
         single<TripStorage> { TripStorage.None }
         single { BackendConfig("http://localhost", "token") }
         single { DatabaseFactory(androidContext()) }

@@ -1,8 +1,11 @@
-package org.julakali.chargeahead.shared.settings
+package org.julakali.chargeahead.shared.data
 
-import org.julakali.chargeahead.shared.domain.ChargeFilters
+import org.julakali.chargeahead.shared.db.GarageVehicleEntity
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.shared.testDatabase
+import org.julakali.chargeahead.shared.testVehicleRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -10,7 +13,12 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class GarageSettingsTest {
+class RoomVehicleRepositoryTest {
+
+    private val storage = InMemoryPreferencesDataStore()
+    private val database = testDatabase()
+
+    private fun reopened() = testVehicleRepository(storage, database)
 
     private fun profile(name: String) = VehicleProfile(
         displayName = name,
@@ -22,7 +30,7 @@ class GarageSettingsTest {
 
     @Test
     fun `selecting a vehicle adds it to the garage`() = runBlocking<Unit> {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
         store.setVehicle(profile("ID.4"))
         store.setVehicle(profile("Model 3"))
 
@@ -32,29 +40,27 @@ class GarageSettingsTest {
 
     @Test
     fun `the model id survives a restart, in the garage and as the selected car`() = runBlocking<Unit> {
-        val storage = InMemoryPreferencesDataStore()
-        DataStoreVehicleRepository(storage).setVehicle(profile("ID.4").copy(modelId = "a-model-id"))
-        DataStoreVehicleRepository(storage).setVehicle(profile("Eigenbau"))
+        reopened().setVehicle(profile("ID.4").copy(modelId = "a-model-id"))
+        reopened().setVehicle(profile("Eigenbau"))
 
-        val reopened = DataStoreVehicleRepository(storage)
+        val reopened = reopened()
         assertEquals(listOf("a-model-id", null), reopened.vehicles.first().map { it.modelId })
         reopened.setVehicle(reopened.vehicles.first().first())
-        assertEquals("a-model-id", DataStoreVehicleRepository(storage).vehicle.first()?.modelId)
+        assertEquals("a-model-id", reopened().vehicle.first()?.modelId)
     }
 
     @Test
     fun `an own name survives a restart, in the garage and as the selected car`() = runBlocking<Unit> {
-        val storage = InMemoryPreferencesDataStore()
-        DataStoreVehicleRepository(storage).setVehicle(profile("Familienkutsche").copy(modelId = "a-model-id", ownName = true))
+        reopened().setVehicle(profile("Familienkutsche").copy(modelId = "a-model-id", ownName = true))
 
-        val reopened = DataStoreVehicleRepository(storage)
+        val reopened = reopened()
         assertTrue(reopened.vehicles.first().single().ownName)
         assertTrue(reopened.vehicle.first()!!.ownName)
     }
 
     @Test
     fun `re-selecting a vehicle keeps its place in the garage`() = runBlocking<Unit> {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
         val id4 = profile("ID.4")
         store.setVehicle(id4)
         store.setVehicle(profile("Model 3"))
@@ -68,7 +74,7 @@ class GarageSettingsTest {
 
     @Test
     fun `editing a vehicle updates it in place`() = runBlocking<Unit> {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
         val id4 = profile("ID.4")
         store.setVehicle(id4)
         store.setVehicle(profile("Model 3"))
@@ -81,7 +87,7 @@ class GarageSettingsTest {
 
     @Test
     fun `renaming a vehicle keeps it in its slot`() = runBlocking<Unit> {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
         val eigenbau = profile("E")
         store.setVehicle(eigenbau)
         store.setVehicle(profile("Model 3"))
@@ -95,7 +101,7 @@ class GarageSettingsTest {
 
     @Test
     fun `two cars with the same name are two cars`() = runBlocking<Unit> {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
         store.setVehicle(profile("ID.4"))
         store.setVehicle(profile("ID.4").copy(modelId = "id4"))
 
@@ -104,13 +110,12 @@ class GarageSettingsTest {
 
     @Test
     fun `garage survives the process - selection included`() = runBlocking<Unit> {
-        val storage = InMemoryPreferencesDataStore()
-        DataStoreVehicleRepository(storage).apply {
+        reopened().apply {
             setVehicle(profile("ID.4"))
             setVehicle(profile("Model 3"))
         }
 
-        val reloaded = DataStoreVehicleRepository(storage)
+        val reloaded = reopened()
         assertEquals(2, reloaded.vehicles.first().size)
         assertEquals("Model 3", reloaded.vehicle.first()?.displayName)
         assertEquals(135.0, reloaded.vehicle.first()?.dcPeakPowerKw)
@@ -118,7 +123,7 @@ class GarageSettingsTest {
 
     @Test
     fun `removing the selected vehicle promotes the next one`() = runBlocking<Unit> {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
         val model3 = profile("Model 3")
         store.setVehicle(profile("ID.4"))
         store.setVehicle(model3)
@@ -130,60 +135,36 @@ class GarageSettingsTest {
     }
 
     @Test
+    fun `only the selected car's id is written to the settings`() = runBlocking<Unit> {
+        val id4 = profile("ID.4")
+        reopened().setVehicle(id4)
+
+        assertEquals(mapOf("vehicle.id" to id4.id), storage.data.first().asMap().entries.associate { it.key.name to it.value })
+    }
+
+    @Test
+    fun `an unknown connector name in the database does not cost the car`() = runBlocking<Unit> {
+        database.garageVehicles().upsert(
+            listOf(
+                GarageVehicleEntity(
+                    id = "a", displayName = "ID.4", usableBatteryKwh = 77.0, consumptionKwhPer100Km = 18.0,
+                    connectors = setOf("CCS2", "STECKER_AUS_DER_ZUKUNFT", "TYPE2"), dcPeakPowerKw = null,
+                    modelId = null, customized = false, ownConsumption = false, ownName = false,
+                ),
+            ),
+        )
+
+        assertEquals(setOf(ConnectorType.CCS2, ConnectorType.TYPE2), reopened().vehicles.first().single().acceptedConnectors)
+    }
+
+    @Test
     fun `removing the last vehicle leaves an honest nothing`() = runBlocking<Unit> {
-        val store = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val store = testVehicleRepository()
         val id4 = profile("ID.4")
         store.setVehicle(id4)
         store.removeVehicle(id4.id)
 
         assertNull(store.vehicle.first())
         assertTrue(store.vehicles.first().isEmpty())
-    }
-
-    @Test
-    fun `a pre-garage install keeps its single vehicle visible`() = runBlocking<Unit> {
-        // Written by an app version that only knew the legacy keys.
-        val storage = InMemoryPreferencesDataStore(
-            mapOf(
-                "vehicle.displayName" to "Alt-Auto",
-                "vehicle.usableBatteryKwh" to "58.0",
-                "vehicle.consumptionKwhPer100Km" to "16.0",
-            ),
-        )
-
-        val store = DataStoreVehicleRepository(storage)
-        assertEquals(listOf("Alt-Auto"), store.vehicles.first().map { it.displayName })
-    }
-
-    @Test
-    fun `cars stored without an id keep one stable id, in the garage and as the selection`() = runBlocking<Unit> {
-        val storage = InMemoryPreferencesDataStore(
-            mapOf(
-                "vehicle.displayName" to "Alt-Auto",
-                "vehicle.usableBatteryKwh" to "58.0",
-                "vehicle.consumptionKwhPer100Km" to "16.0",
-                "vehicle.garage" to """[{"name":"Erstes","batteryKwh":40.0,"consumption":15.0},""" +
-                    """{"name":"Alt-Auto","batteryKwh":58.0,"consumption":16.0}]""",
-            ),
-        )
-        val store = DataStoreVehicleRepository(storage)
-        val selected = store.vehicle.first()!!
-
-        store.setVehicle(selected.copy(consumptionKwhPer100Km = 17.0))
-
-        assertEquals(listOf("Erstes", "Alt-Auto"), store.vehicles.first().map { it.displayName })
-        assertEquals(17.0, store.vehicles.first().last().consumptionKwhPer100Km)
-        assertEquals(store.vehicles.first().last().id, DataStoreVehicleRepository(storage).vehicle.first()?.id)
-    }
-
-    @Test
-    fun `filters round-trip`() = runBlocking<Unit> {
-        val storage = InMemoryPreferencesDataStore()
-        DataStorePreferencesRepository(storage).apply {
-            setChargeFilters(ChargeFilters(minPowerKw = 300.0))
-        }
-
-        val reloaded = DataStorePreferencesRepository(storage)
-        assertEquals(300.0, reloaded.chargeFilters.first().minPowerKw)
     }
 }

@@ -57,11 +57,11 @@ import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import org.julakali.chargeahead.shared.settings.settingsModule
 import org.julakali.chargeahead.shared.ui.car.carSession
 import org.julakali.chargeahead.shared.ui.car.carUiModule
 import org.koin.android.ext.koin.androidContext
+import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.startKoin
 import org.koin.core.context.stopKoin
@@ -118,12 +118,13 @@ class CarTestGraph(
         single<SiteRepository> { sites }
         single<NetworkRepository> { NoNetworks }
         single<VehicleCatalogRepository> { NoCatalog }
+        single<VehicleRepository> { InMemoryVehicleRepository() }
         single { BackendConfig("http://localhost", "token") }
         single { DatabaseFactory(androidContext()) }
     }
 
     fun withVehicle() = runBlocking {
-        DataStoreVehicleRepository(settingsFile).setVehicle(
+        GlobalContext.get().get<VehicleRepository>().setVehicle(
             VehicleProfile("Test-EV", usableBatteryKwh = 75.0, consumptionKwhPer100Km = 18.0, acceptedConnectors = setOf(ConnectorType.CCS2)),
         )
     }

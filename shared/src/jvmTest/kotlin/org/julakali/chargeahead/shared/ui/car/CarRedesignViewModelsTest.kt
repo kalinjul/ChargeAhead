@@ -34,7 +34,7 @@ import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripIntera
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlin.test.AfterTest
@@ -64,11 +65,11 @@ class CarRedesignViewModelsTest {
     fun tearDownMainDispatcher() = main.tearDown()
 
     private val settings = InMemoryPreferencesDataStore()
-    private val vehicles = DataStoreVehicleRepository(settings)
+    private val vehicles = testVehicleRepository(settings)
     private val trips = TripRepository(DataStoreTripStorage(InMemoryPreferencesDataStore()))
     private val time = TimeProvider { 1_700_000_000_000L }
     private val dispatchers = AppCoroutineDispatchers(Dispatchers.Unconfined, Dispatchers.Unconfined, Dispatchers.Unconfined)
-    private val plannedWith = mutableListOf<Double>()
+    private val plannedWith = MutableStateFlow(emptyList<Double>())
 
     private suspend fun <T> StateFlow<T>.await(matching: (T) -> Boolean): T = withTimeout(5_000) { first(matching) }
 
@@ -91,13 +92,13 @@ class CarRedesignViewModelsTest {
         manual.uiState.await { it is CarRouteUiState.Ready }
 
         assertFalse(manual.onReplanRequested())
-        assertTrue(plannedWith.isEmpty())
+        assertTrue(plannedWith.value.isEmpty())
 
         val car = routeViewModel(feature(MutableStateFlow(EnergyState(42.0, SoCSourceKind.CAR_HARDWARE, 0L)), SoCSourceKind.CAR_HARDWARE))
         car.uiState.await { it is CarRouteUiState.Ready }
 
         assertTrue(car.onReplanRequested())
-        assertEquals(listOf(42.0), plannedWith)
+        assertEquals(listOf(42.0), plannedWith.await { it.isNotEmpty() })
     }
 
     @Test
@@ -121,8 +122,8 @@ class CarRedesignViewModelsTest {
 
         viewModel.onReplanWith(30)
 
-        assertEquals(listOf(30.0), plannedWith)
-        assertEquals(30.0, vehicles.manualSocPercent.first())
+        assertEquals(listOf(30.0), plannedWith.await { it.isNotEmpty() })
+        assertEquals(30.0, withTimeout(5_000) { vehicles.manualSocPercent.first { it != null } })
     }
 
     @Test
@@ -171,7 +172,7 @@ class CarRedesignViewModelsTest {
                 filters: ChargeFilters,
                 networks: NetworkPreferences,
             ): TripPlanResult {
-                plannedWith += startSocPercent
+                plannedWith.update { it + startSocPercent }
                 return TripPlanResult.Planned(plan)
             }
         }

@@ -10,8 +10,7 @@ import org.julakali.chargeahead.shared.domain.customVehicle
 import org.julakali.chargeahead.shared.domain.usecases.EditVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
-import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.testPresets
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -26,7 +25,7 @@ class VehicleEditViewModelTest {
 
     private val main = TestMain()
 
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val catalog = FakeVehicleCatalog()
     private val preset = testPresets.first()
 

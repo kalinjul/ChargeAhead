@@ -4,8 +4,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.FakeVehicleCatalog
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
-import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.testPresets
 import kotlin.test.Test
@@ -15,7 +14,7 @@ import kotlin.test.assertTrue
 /** The add-car list: the catalog minus what is in the garage, narrowed by the query. */
 class VehiclePresetsObserverTest {
 
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
 
     private fun observer(query: String, catalog: FakeVehicleCatalog = FakeVehicleCatalog()) =
         VehiclePresetsObserver(catalog, vehicles, testDispatchers).also { it(VehiclePresetsObserver.Params(query)) }

@@ -12,7 +12,7 @@ import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.SoCDiagnostics
 import org.julakali.chargeahead.shared.settings.DataStoreCarDiagnosticsRepository
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -26,7 +26,7 @@ class CarDataViewModelTest {
     private val main = TestMain()
 
     private val diagnostics = DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore())
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val feature = ChargeStopsFeature(
         locationSource = object : LocationSource {
             override suspend fun currentFix(): Fix? = null

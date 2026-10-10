@@ -36,7 +36,7 @@ import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripIntera
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -57,7 +57,7 @@ class ActiveRouteViewModelTest {
     private val hamburg = LatLon(53.55, 9.99)
     private val hannover = LatLon(52.37, 9.73)
     private val muenchen = Destination("München", LatLon(48.137, 11.575))
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val trips = TripRepository()
     private var plannedFrom: LatLon? = null
     private var plannedSoc: Double? = null
