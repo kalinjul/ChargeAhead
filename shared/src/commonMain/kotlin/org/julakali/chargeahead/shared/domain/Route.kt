@@ -35,6 +35,32 @@ data class Route(
     }
 }
 
+/** A charge site beside a route. */
+data class RouteSite(
+    val site: ChargeSite,
+    val kmFromStart: Double,
+    /** Straight line to the route, not the detour. */
+    val distanceFromRouteKm: Double,
+)
+
+data class RouteWithSites(val route: Route, val sites: List<RouteSite>)
+
+/** Calculates a route together with the charge sites along it. */
+interface RouteSiteSource {
+    /**
+     * Throws on network or server errors; returns `null` when there's no road
+     * connection. The sites ascend by [RouteSite.kmFromStart]; [minPowerKw]
+     * counts a site's strongest connector of any type.
+     */
+    suspend fun routeWithSites(
+        from: LatLon,
+        to: LatLon,
+        bufferKm: Double,
+        networkKeys: Set<String>,
+        minPowerKw: Double,
+    ): RouteWithSites?
+}
+
 /** Calculates routes. */
 interface RouteEngine {
     /** Throws on network or server errors; returns `null` when there's no road connection. */

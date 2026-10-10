@@ -63,9 +63,9 @@ private fun SearchArea.toDto(): AreaDto = when (this) {
     )
 }
 
-private fun LatLon.toDto() = LatLonDto(lat = lat, lon = lon)
+internal fun LatLon.toDto() = LatLonDto(lat = lat, lon = lon)
 
-private fun ChargeSiteDto.toDomain() = ChargeSite(
+internal fun ChargeSiteDto.toDomain() = ChargeSite(
     id = id,
     name = name,
     operator = operator,

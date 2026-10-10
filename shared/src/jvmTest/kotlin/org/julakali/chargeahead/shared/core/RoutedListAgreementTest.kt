@@ -1,13 +1,5 @@
 package org.julakali.chargeahead.shared.core
 
-import kotlinx.coroutines.flow.flowOf
-
-import kotlinx.coroutines.flow.Flow
-
-import org.julakali.chargeahead.shared.domain.MapFilter
-
-import org.julakali.chargeahead.shared.domain.BoundingBox
-
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.Connector
@@ -17,10 +9,7 @@ import org.julakali.chargeahead.shared.domain.EnergyState
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.Route
-import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteSegment
-import org.julakali.chargeahead.shared.domain.SearchArea
-import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.interpolate
@@ -68,17 +57,8 @@ class RoutedListAgreementTest {
 
     @Test
     fun `the car list shows the arrival level the trip plan computes`() = runBlocking<Unit> {
-        val engine = object : RouteEngine {
-            override suspend fun route(from: LatLon, to: LatLon): Route = route
-        }
-        val repository = object : SiteRepository {
-            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
-            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
-            override suspend fun invalidate() {}
-            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = sites
-        }
         val plan = assertIs<TripPlanResult.Planned>(
-            TripPlanner(engine, repository).plan(start, Destination("München", end), id4, startSocPercent = 90.0),
+            TripPlanner(FakeRouteSiteSource(route, sites)).plan(start, Destination("München", end), id4, startSocPercent = 90.0),
         ).plan
         val firstStop = plan.stops.first()
 

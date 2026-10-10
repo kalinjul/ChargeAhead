@@ -11,7 +11,6 @@ import io.ktor.client.request.setBody
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
-import org.julakali.chargeahead.api.LatLonDto
 import org.julakali.chargeahead.api.RouteRequest
 import org.julakali.chargeahead.api.RouteResponse
 
@@ -33,26 +32,7 @@ class BackendRouteEngine(
         // 204: no road connection.
         if (response.status == HttpStatusCode.NoContent) return null
 
-        val route: RouteResponse = response.body()
-        // `points` is the fallback for servers without the encoded line.
-        val points = route.encodedPolyline?.let(::decodePolyline)?.takeIf { it.size >= 2 }
-            ?: route.points.map { LatLon(it.lat, it.lon) }
-        if (points.size < 2) return null
-
-        return Route(
-            points = points,
-            distanceKm = route.distanceKm,
-            durationMinutes = route.durationMinutes,
-            segments = route.segments.map {
-                RouteSegment(
-                    fromKm = it.fromKm,
-                    distanceKm = it.distanceKm,
-                    durationMinutes = it.durationMinutes,
-                    ascentM = requireNotNull(it.ascentM) { "Route segment at ${it.fromKm} km without its ascent" },
-                    descentM = requireNotNull(it.descentM) { "Route segment at ${it.fromKm} km without its descent" },
-                )
-            },
-        )
+        return response.body<RouteResponse>().toDomain()
     }
 
     private companion object {
@@ -60,4 +40,25 @@ class BackendRouteEngine(
     }
 }
 
-private fun LatLon.toDto() = LatLonDto(lat = lat, lon = lon)
+/** `null` when the response carries less than a line. */
+internal fun RouteResponse.toDomain(): Route? {
+    // `points` is the fallback for servers without the encoded line.
+    val line = encodedPolyline?.let(::decodePolyline)?.takeIf { it.size >= 2 }
+        ?: points.map { LatLon(it.lat, it.lon) }
+    if (line.size < 2) return null
+
+    return Route(
+        points = line,
+        distanceKm = distanceKm,
+        durationMinutes = durationMinutes,
+        segments = segments.map {
+            RouteSegment(
+                fromKm = it.fromKm,
+                distanceKm = it.distanceKm,
+                durationMinutes = it.durationMinutes,
+                ascentM = requireNotNull(it.ascentM) { "Route segment at ${it.fromKm} km without its ascent" },
+                descentM = requireNotNull(it.descentM) { "Route segment at ${it.fromKm} km without its descent" },
+            )
+        },
+    )
+}

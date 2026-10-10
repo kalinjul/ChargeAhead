@@ -31,6 +31,12 @@ fun interface ChargePointStatusSource { suspend fun status(siteIds: List<String>
 interface SoCSource { val kind: SoCSourceKind; val energy: Flow<EnergyState?> }
 
 interface RouteEngine { suspend fun route(from: LatLon, to: LatLon): Route? }
+// The route plus the sites within bufferKm of it, each with its kilometre from
+// the start. One backend call that `TripPlanner` plans on; nothing of it is
+// stored, so every plan needs a connection.
+interface RouteSiteSource {
+    suspend fun routeWithSites(from: LatLon, to: LatLon, bufferKm: Double, networkKeys: Set<String>, minPowerKw: Double): RouteWithSites?
+}
 interface Geocoder    { suspend fun search(query: String, near: LatLon?, limit: Int): List<Place> }
 fun interface TimeProvider { fun nowMillis(): Long }
 ```
@@ -144,3 +150,6 @@ Each source's mapping is checked twice:
   ```bash
   CHARGEAHEAD_LIVE=1 ./gradlew :shared:jvmTest --tests '*BackendChargeSiteLiveContractTest'
   ```
+
+`BackendRouteSiteSource` has the same pair, `BackendRouteSiteSourceTest` and
+`BackendRouteSiteLiveContractTest`.
