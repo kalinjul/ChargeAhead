@@ -92,7 +92,7 @@ diff, commit the PNG.
 (`chargeStopsModule`, `sharedUiModule`) with every world-facing data source replaced
 in `PhoneAppHarness`: in-memory settings with a test vehicle, one fixed
 location in Hamburg, a geocoder that knows München, a straight-line route
-engine, three charge sites along that line, empty live status and network
+with three charge sites along it, empty live status and network
 lists. Nothing reaches a server. Room runs for real on the bundled SQLite
 driver.
 

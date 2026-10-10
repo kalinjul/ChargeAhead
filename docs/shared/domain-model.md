@@ -104,8 +104,9 @@ data class Route(val points: List<LatLon>, val distanceKm: Double, val durationM
 
 **The route is computed once per destination, not once per location
 update.** A planned or committed trip brings its route along
-(`TripRepository`), so `ChargeStopsObserver` only asks the `RouteEngine`
-when there is no plan to the destination. `PolylineArea.aheadOf()` trims it
-at the front as the drive progresses. `RoutedRouteProvider` falls back to the
-corridor when the driver leaves the route or reaches the destination;
-otherwise the list would sit empty at the end of every drive.
+(`TripRepository`), and `ChargeStopsObserver` searches along it; a
+destination without such a trip is searched in the direction of travel.
+`PolylineArea.aheadOf()` trims the route at the front as the drive
+progresses. `RoutedRouteProvider` falls back to the corridor when the driver
+leaves the route or reaches the destination; otherwise the list would sit
+empty at the end of every drive.

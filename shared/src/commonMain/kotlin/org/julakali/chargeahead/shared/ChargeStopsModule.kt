@@ -8,7 +8,6 @@ import org.julakali.chargeahead.shared.data.BackendChargeSiteSource
 import org.julakali.chargeahead.shared.data.BackendDataSourceDirectory
 import org.julakali.chargeahead.shared.data.BackendGeocoder
 import org.julakali.chargeahead.shared.data.BackendNetworkListSource
-import org.julakali.chargeahead.shared.data.BackendRouteEngine
 import org.julakali.chargeahead.shared.data.BackendRouteSiteSource
 import org.julakali.chargeahead.shared.data.CombinedSoCSource
 import org.julakali.chargeahead.shared.data.ManualSoCSource
@@ -52,7 +51,6 @@ import org.julakali.chargeahead.shared.domain.usecases.EditVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ResetVehicleValueInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
-import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteSiteSource
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
@@ -118,7 +116,6 @@ fun chargeStopsModule(): Module = module {
         )
     }
 
-    single<RouteEngine> { BackendRouteEngine(get()) }
 
     single<Geocoder> { BackendGeocoder(get()) }
 
@@ -150,7 +147,7 @@ fun chargeStopsModule(): Module = module {
     factory { UpdateChargeFiltersInteractor(get()) }
     factory { UpdateNetworksInteractor(get()) }
     factory { SetChargeModeInteractor(get(), get(), get()) }
-    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     factory { SelectableNetworksObserver(get(), get(), get()) }
     factory { GarageObserver(get<VehicleRepository>(), get()) }

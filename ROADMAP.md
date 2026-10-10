@@ -18,7 +18,7 @@ As of: 2026-09-14
 | **M3** ✅ | BNetzA source, dedup/merge, offline tile cache | Both sources run merged, the local store survives process end (verified on-device in airplane mode). At the same location, the nearest charging stop moved from 16 km to 2.4 km, because the registry knows charging parks that OpenChargeMap is missing. |
 | **M4** | Network filter, detail view, navigation hand-off, consumption learning | ready for everyday use. **Detail view, navigation hand-off, and network filter are in place and verified in the car**; consumption learning is still missing — it requires reliable SoC measurements and has no data basis with manual entry. |
 | **M6** | Vehicle list as a preset, elevation profile and wind in the consumption model | estimate becomes robust instead of rough |
-| **M5** | GoingElectric, Mobilithek, own routing backend | more sources, no more third-party demo server |
+| **M5** | GoingElectric, Mobilithek. The own routing backend is in place. | more sources |
 
 **To be started in parallel and immediately, because externally
 blocked:** apply for the CarPlay entitlement with Apple · register the OCM
@@ -65,7 +65,7 @@ Still open:
   placeholder; the Maps iOS SDK needs SPM wiring and a key in
   `Secrets.xcconfig`, and is the next iOS step.
 - **What the map shows.** Charging stops as markers is obvious. Whether
-  the corridor sector, the OSRM route line, and the reachability colors
+  the corridor sector, the route line, and the reachability colors
   belong on it is not.
 - **Price data.** The app shows no prices at all. It used to compare
   tariffs per site against a built-in demo table, every quote labeled an
@@ -146,25 +146,34 @@ Still open:
    maintained in the backend admin area, so a correction or a new model
    needs no app release. The price is still maintenance: a wrong preset
    value is worse than none, because nobody checks it.
-5. **Server: yes, planned.** Decided when route planning was moved up. A
-   dedicated routing server (OSRM or Valhalla) will later also handle the
-   API key proxy and, if needed, BNetzA preprocessing.
+5. **Server: in place.** Routes, destination search, charge sites, live
+   status and the vehicle catalog all come from the ChargeAhead backend. The
+   app carries no routing engine of its own and talks to no third-party
+   service for any of them; the provider keys live in the backend.
 
-   **Until then the app runs against `router.project-osrm.org`** — the
-   OSRM project's public demo server. That's explicitly not meant for
-   production use and comes with no guarantee. It sits behind the
-   `RouteEngine` interface and is swappable for a dedicated instance without
-   changing anything else. **It must be replaced before any release.**
-   It carries no speed profile: turning steps into segments lives in the
-   backend only (#56), so without a backend, planning uses the average speed.
+   **The app no longer runs against `router.project-osrm.org`.** Which
+   router answers is the backend's configuration: OSRM, a self-hosted
+   GraphHopper, or Google Routes. The backend's default is still the OSRM
+   project's public demo server, which is explicitly not meant for
+   production use and comes with no guarantee. The app can't plan against
+   it anyway: OSRM carries no elevation, and the app rejects a route segment
+   without ascent and descent. **A deployed backend must run GraphHopper or
+   Google before any release** — that is a backend setting, nothing in the
+   app changes with it.
 
-6. **Destination search via Nominatim.** Chosen because it's the easiest to
-   replace with a dedicated instance — its interface is identical to the
-   public one, so the switch is a one-line base URL change. The public
-   instance requires an identifiable user agent and at most one request per
-   second; honored, because the search only runs on a destination entry.
-   OpenStreetMap's data (ODbL) must be credited — the same applies to the
-   routes from OSRM.
+6. **Destination search via the backend.** The app asks the ChargeAhead
+   backend (`GET /v1/places`) and no geocoder directly; the `Geocoder`
+   interface has that one implementation. Behind it the backend runs Photon,
+   with no alternative provider.
+
+   The backend's default is komoot's public Photon instance, which is fair
+   use and not meant for operation. **A deployed backend needs its own
+   Photon instance before any release** — a backend setting, like the router
+   in item 5. Photon needs several GB of memory and a search index in the
+   tens of GB, so it's a hosting question rather than a code change.
+
+   OpenStreetMap's data (ODbL) must be credited — the same applies to
+   routes computed on it.
 
 7. **Charging-network operator logos.** Making Ionity, EnBW, Aral pulse and
    the rest recognizable by their mark would be a real win in the car: a
