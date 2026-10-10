@@ -35,7 +35,11 @@ import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.domain.Route
+import org.julakali.chargeahead.shared.core.RouteMeasure
 import org.julakali.chargeahead.shared.domain.RouteEngine
+import org.julakali.chargeahead.shared.domain.RouteSite
+import org.julakali.chargeahead.shared.domain.RouteSiteSource
+import org.julakali.chargeahead.shared.domain.RouteWithSites
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.VehicleProfile
@@ -106,6 +110,7 @@ class PhoneAppHarness {
         single<LocationSource> { FakeLocationSource(fix) }
         single<Geocoder> { FakeGeocoder(Place("München", "München, Bayern", muenchen)) }
         single<RouteEngine> { StraightLineRouteEngine() }
+        single<RouteSiteSource> { StraightLineRouteSiteSource(allSites) }
         single<SiteRepository> { FakeSiteRepository(allSites) }
         single<ChargePointStatusRepository> { NoStatuses }
         single<DataSourceDirectory> { NoDataSources }
@@ -155,6 +160,26 @@ private class StraightLineRouteEngine : RouteEngine {
     override suspend fun route(from: LatLon, to: LatLon): Route {
         val distanceKm = from.distanceKmTo(to)
         return Route(points = listOf(from, to), distanceKm = distanceKm, durationMinutes = distanceKm / 100 * 60)
+    }
+}
+
+private class StraightLineRouteSiteSource(private val sites: List<ChargeSite>) : RouteSiteSource {
+    override suspend fun routeWithSites(
+        from: LatLon,
+        to: LatLon,
+        bufferKm: Double,
+        networkKeys: Set<String>,
+        minPowerKw: Double,
+    ): RouteWithSites {
+        val route = StraightLineRouteEngine().route(from, to)
+        val measure = RouteMeasure(route)
+        return RouteWithSites(
+            route = route,
+            sites = sites
+                .map { site -> measure.project(site.position).let { RouteSite(site, it.kmFromStart, it.distanceKm) } }
+                .filter { it.distanceFromRouteKm <= bufferKm }
+                .sortedBy { it.kmFromStart },
+        )
     }
 }
 

@@ -10,10 +10,9 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.PlannedStop
-import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.Route
-import org.julakali.chargeahead.shared.domain.RouteEngine
-import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.RouteSite
+import org.julakali.chargeahead.shared.domain.RouteSiteSource
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripPlanResult
@@ -30,8 +29,7 @@ import org.julakali.chargeahead.shared.domain.cancellableRunCatching
  * so no leg is ever starved by a preference.
  */
 class TripPlanner(
-    private val routeEngine: RouteEngine,
-    private val repository: SiteRepository,
+    private val source: RouteSiteSource,
 ) : TripPlanning {
 
     override suspend fun plan(
@@ -43,11 +41,14 @@ class TripPlanner(
         filters: ChargeFilters,
         networks: NetworkPreferences,
     ): TripPlanResult {
-        val route = cancellableRunCatching { routeEngine.route(from, destination.position) }
+        val alongRoute = cancellableRunCatching {
+            source.routeWithSites(from, destination.position, STOP_BUFFER_KM, networks.selectedKeys(), MIN_DC_POWER_KW)
+        }
             .getOrElse { return TripPlanResult.NoConnection }
             ?: return TripPlanResult.NoRoute
+        val route = alongRoute.route
 
-        val candidates = candidatesAlong(route, vehicle, networks) ?: return TripPlanResult.NoConnection
+        val candidates = candidates(alongRoute.sites, vehicle)
         val consumption = RoadLoadConsumption(vehicle)
         val totalKm = route.distanceKm
 
@@ -153,48 +154,22 @@ class TripPlanner(
         val detourKm: Double,
     )
 
-    /** Fetched in chunks, not as one polyline: the sources query radially with a result cap. */
-    /** `null` when not one stretch of the route could be loaded. */
-    private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate>? {
-        val measure = RouteMeasure(route)
-        val cumulative = measure.cumulativeKm
+    private fun candidates(sites: List<RouteSite>, vehicle: VehicleProfile): List<Candidate> {
         // Stops are planned at DC sites only, whatever AC inlets the car also has.
         val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }.filterTo(HashSet()) { it.isDc }
-        val seen = LinkedHashMap<String, Candidate>()
-        var loadedAny = false
-
-        var startIndex = 0
-        while (startIndex < route.points.size - 1) {
-            var endIndex = startIndex + 1
-            while (endIndex < route.points.size - 1 &&
-                cumulative[endIndex] - cumulative[startIndex] < SEGMENT_FETCH_KM
-            ) {
-                endIndex++
-            }
-            val area = PolylineArea(route.points.subList(startIndex, endIndex + 1), bufferKm = STOP_BUFFER_KM)
-            val sites = cancellableRunCatching { repository.load(area, networks.selectedKeys()) }
-                .onSuccess { loadedAny = true }
-                .getOrDefault(emptyList())
-            for (site in sites) {
-                if (site.id in seen) continue
-                val power = site.connectors
-                    .filter { it.type in usable }
-                    .maxOfOrNull { it.maxPowerKw }
-                    ?: continue
-                if (power < MIN_DC_POWER_KW) continue
-                val projection = measure.project(site.position, startIndex, endIndex)
-                if (projection.distanceKm > STOP_BUFFER_KM) continue
-                seen[site.id] = Candidate(
-                    site = site,
-                    kmFromStart = projection.kmFromStart,
-                    maxPowerKw = power,
-                    detourKm = projection.distanceKm,
-                )
-            }
-            startIndex = endIndex
+        return sites.mapNotNull { beside ->
+            val power = beside.site.connectors
+                .filter { it.type in usable }
+                .maxOfOrNull { it.maxPowerKw }
+                ?.takeIf { it >= MIN_DC_POWER_KW }
+                ?: return@mapNotNull null
+            Candidate(
+                site = beside.site,
+                kmFromStart = beside.kmFromStart,
+                maxPowerKw = power,
+                detourKm = beside.distanceFromRouteKm,
+            )
         }
-        if (!loadedAny) return null
-        return seen.values.sortedBy { it.kmFromStart }
     }
 
     private fun socNeeded(
@@ -265,8 +240,5 @@ class TripPlanner(
 
         /** Max straight-line distance from the route. */
         const val STOP_BUFFER_KM = 3.0
-
-        /** Candidate-fetch chunk length. */
-        const val SEGMENT_FETCH_KM = 80.0
     }
 }

@@ -1,13 +1,5 @@
 package org.julakali.chargeahead.shared.core
 
-import kotlinx.coroutines.flow.flowOf
-
-import kotlinx.coroutines.flow.Flow
-
-import org.julakali.chargeahead.shared.domain.MapFilter
-
-import org.julakali.chargeahead.shared.domain.BoundingBox
-
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.ChargeFilters
@@ -19,9 +11,8 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteSegment
-import org.julakali.chargeahead.shared.domain.RouteEngine
-import org.julakali.chargeahead.shared.domain.SearchArea
-import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.RouteSiteSource
+import org.julakali.chargeahead.shared.domain.RouteWithSites
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.interpolate
 import kotlinx.coroutines.runBlocking
@@ -51,10 +42,6 @@ class TripPlannerTest {
         return Route(points = points, distanceKm = km, durationMinutes = km / averageSpeedKmh * 60.0)
     }
 
-    private fun engineReturning(route: Route?): RouteEngine = object : RouteEngine {
-        override suspend fun route(from: LatLon, to: LatLon): Route? = route
-    }
-
     /** Fast chargers every ~55 km along the route, directly on it. */
     private fun sitesAlong(route: Route, powerKw: Double = 300.0, everyKm: Double = 55.0): List<ChargeSite> {
         val totalKm = route.distanceKm
@@ -82,15 +69,17 @@ class TripPlannerTest {
         connectors = listOf(Connector(ConnectorType.CCS2, powerKw, 4)),
     )
 
-    private fun repositoryWith(sites: List<ChargeSite>): SiteRepository = object : SiteRepository {
-        override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
-        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
-        override suspend fun invalidate() {}
-        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = sites
-    }
+    private fun planner(route: Route?, sites: List<ChargeSite>) = TripPlanner(FakeRouteSiteSource(route, sites))
 
-    private fun planner(route: Route?, sites: List<ChargeSite>) =
-        TripPlanner(engineReturning(route), repositoryWith(sites))
+    private fun sourceThrowing(failure: Throwable) = object : RouteSiteSource {
+        override suspend fun routeWithSites(
+            from: LatLon,
+            to: LatLon,
+            bufferKm: Double,
+            networkKeys: Set<String>,
+            minPowerKw: Double,
+        ): RouteWithSites? = throw failure
+    }
 
     @Test
     fun `plans a long trip with stops that reach the destination`() = runBlocking<Unit> {
@@ -162,31 +151,18 @@ class TripPlannerTest {
     }
 
     @Test
-    fun `a route server that fails is no connection, not no route`() = runBlocking<Unit> {
-        val failing = object : RouteEngine {
-            override suspend fun route(from: LatLon, to: LatLon): Route? = throw java.io.IOException("offline")
-        }
-        val result = TripPlanner(failing, repositoryWith(emptyList())).plan(start, destination, id4, startSocPercent = 90.0)
+    fun `a call that fails is no connection, not no route`() = runBlocking<Unit> {
+        val result = TripPlanner(sourceThrowing(java.io.IOException("offline")))
+            .plan(start, destination, id4, startSocPercent = 90.0)
         assertIs<TripPlanResult.NoConnection>(result)
     }
 
     @Test
     fun `a cancelled plan stays cancelled`() = runBlocking<Unit> {
-        val cancelled = object : RouteEngine {
-            override suspend fun route(from: LatLon, to: LatLon): Route? = throw kotlinx.coroutines.CancellationException("gone")
-        }
         assertFailsWith<kotlinx.coroutines.CancellationException> {
-            TripPlanner(cancelled, repositoryWith(emptyList())).plan(start, destination, id4, startSocPercent = 90.0)
+            TripPlanner(sourceThrowing(kotlinx.coroutines.CancellationException("gone")))
+                .plan(start, destination, id4, startSocPercent = 90.0)
         }
-    }
-
-    @Test
-    fun `chargers that cannot be loaded are no connection, not no charger`() = runBlocking<Unit> {
-        val offline = object : SiteRepository by repositoryWith(emptyList()) {
-            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = throw java.io.IOException("offline")
-        }
-        val result = TripPlanner(engineReturning(straightRoute()), offline).plan(start, destination, id4, startSocPercent = 90.0)
-        assertIs<TripPlanResult.NoConnection>(result)
     }
 
     @Test
@@ -526,56 +502,39 @@ class TripPlannerTest {
         assertEquals(fasterCharge - stop.chargeMinutes, stop.savesMinutes!!, 1e-6)
     }
 
+    /** Issue #190: route and sites come from one request. */
     @Test
-    fun `candidates are fetched in source-sized segments and not one giant area`() = runBlocking<Unit> {
+    fun `a trip is planned with a single call for route and sites`() = runBlocking<Unit> {
         val route = straightRoute()
-        val queriedRadii = mutableListOf<Double>()
-        val repository = object : SiteRepository {
-            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
-            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
-            override suspend fun invalidate() {}
-            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
-                queriedRadii += area.radiusKm
-                return sitesAlong(route)
-            }
-        }
-        val result = TripPlanner(engineReturning(route), repository)
-            .plan(start, destination, id4, startSocPercent = 90.0)
+        val source = FakeRouteSiteSource(route, sitesAlong(route))
 
-        assertIs<TripPlanResult.Planned>(result)
-        assertTrue(queriedRadii.size > 1, "a 660 km route must not be one query")
-        assertTrue(
-            queriedRadii.all { it < 150.0 },
-            "every query must stay at corridor scale, got: $queriedRadii",
-        )
+        assertIs<TripPlanResult.Planned>(TripPlanner(source).plan(start, destination, id4, startSocPercent = 90.0))
+
+        assertEquals(listOf(FakeRouteSiteSource.Request(bufferKm = 3.0, networkKeys = emptySet(), minPowerKw = 50.0)), source.requests)
     }
 
     @Test
-    fun `an active network filter is forwarded to the repository and not applied on-device`() = runBlocking<Unit> {
+    fun `an active network filter is sent along and not applied on-device`() = runBlocking<Unit> {
         val route = straightRoute()
-        val capturedNetworks = mutableListOf<Set<String>>()
-        val repository = object : SiteRepository {
-            override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
-            override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
-            override suspend fun invalidate() {}
-            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
-                capturedNetworks += networkKeys
-                return sitesAlong(route)
-            }
-        }
+        val source = FakeRouteSiteSource(route, sitesAlong(route))
         val activeFilter = NetworkPreferences(onlyPreferred = true, preferredOperators = setOf("ionity"))
-        TripPlanner(engineReturning(route), repository)
-            .plan(start, destination, id4, startSocPercent = 90.0, networks = activeFilter)
 
-        assertTrue(capturedNetworks.isNotEmpty(), "repository must have been queried")
-        assertTrue(
-            capturedNetworks.all { it.isNotEmpty() },
-            "every segment query must carry the resolved network selection",
-        )
-        assertTrue(
-            capturedNetworks.all { "ionity" in it },
-            "the Ionity network must be in every query",
-        )
+        TripPlanner(source).plan(start, destination, id4, startSocPercent = 90.0, networks = activeFilter)
+
+        assertEquals(setOf("ionity"), source.requests.single().networkKeys)
+    }
+
+    /** The backend's power filter counts any connector; the car's inlet is checked here. */
+    @Test
+    fun `a site whose fast connector does not fit the car is no stop`() = runBlocking<Unit> {
+        val route = straightRoute()
+        val chademoOnly = sitesAlong(route).map {
+            it.copy(connectors = listOf(Connector(ConnectorType.CHADEMO, 100.0, 2), Connector(ConnectorType.CCS2, 20.0, 1)))
+        }
+
+        val result = planner(route, chademoOnly).plan(start, destination, id4, startSocPercent = 90.0)
+
+        assertIs<TripPlanResult.NoChargerInReach>(result)
     }
 
     private class Scenario(
@@ -629,7 +588,7 @@ class TripPlannerTest {
         for (scenario in scenarios()) {
             fun plan(result: TripPlanResult) = assertIs<TripPlanResult.Planned>(result, scenario.name).plan
             val greedy = plan(
-                LegacyGreedyPlanner(engineReturning(scenario.route), repositoryWith(scenario.sites))
+                LegacyGreedyPlanner(FakeRouteSiteSource(scenario.route, scenario.sites))
                     .plan(start, destination, scenario.vehicle, scenario.startSoc, scenario.arrivalSoc, filters),
             )
             val optimal = plan(

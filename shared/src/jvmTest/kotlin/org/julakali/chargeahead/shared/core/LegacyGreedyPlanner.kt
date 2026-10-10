@@ -13,10 +13,9 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MIN_DC_POWER_KW
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
-import org.julakali.chargeahead.shared.domain.PolylineArea
 import org.julakali.chargeahead.shared.domain.Route
-import org.julakali.chargeahead.shared.domain.RouteEngine
-import org.julakali.chargeahead.shared.domain.SiteRepository
+import org.julakali.chargeahead.shared.domain.RouteSite
+import org.julakali.chargeahead.shared.domain.RouteSiteSource
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 
 /**
@@ -24,8 +23,7 @@ import org.julakali.chargeahead.shared.domain.VehicleProfile
  * 68021d6 — kept only as the benchmark the optimal planner must never lose to.
  */
 class LegacyGreedyPlanner(
-    private val routeEngine: RouteEngine,
-    private val repository: SiteRepository,
+    private val source: RouteSiteSource,
 ) {
 
     suspend fun plan(
@@ -37,13 +35,14 @@ class LegacyGreedyPlanner(
         filters: ChargeFilters = ChargeFilters(),
         networks: NetworkPreferences = NetworkPreferences(),
     ): TripPlanResult {
-        val route = try {
-            routeEngine.route(from, destination.position)
+        val alongRoute = try {
+            source.routeWithSites(from, destination.position, STOP_BUFFER_KM, networks.selectedKeys(), MIN_DC_POWER_KW)
         } catch (failure: Exception) {
             null
         } ?: return TripPlanResult.NoRoute
+        val route = alongRoute.route
 
-        val candidates = candidatesAlong(route, vehicle, networks)
+        val candidates = candidates(alongRoute.sites, vehicle)
 
         val consumption = RoadLoadConsumption(vehicle)
         val totalKm = route.distanceKm
@@ -133,46 +132,21 @@ class LegacyGreedyPlanner(
         val operator: String?,
     )
 
-    /** Fetched in chunks, not as one polyline: the sources query radially with a result cap. */
-    private suspend fun candidatesAlong(route: Route, vehicle: VehicleProfile, networks: NetworkPreferences): List<Candidate> {
-        val measure = RouteMeasure(route)
-        val cumulative = measure.cumulativeKm
+    private fun candidates(sites: List<RouteSite>, vehicle: VehicleProfile): List<Candidate> {
         val usable = vehicle.acceptedConnectors.ifEmpty { setOf(ConnectorType.CCS2) }
-        val seen = LinkedHashMap<String, Candidate>()
-
-        var startIndex = 0
-        while (startIndex < route.points.size - 1) {
-            var endIndex = startIndex + 1
-            while (endIndex < route.points.size - 1 &&
-                cumulative[endIndex] - cumulative[startIndex] < SEGMENT_FETCH_KM
-            ) {
-                endIndex++
-            }
-            val area = PolylineArea(route.points.subList(startIndex, endIndex + 1), bufferKm = STOP_BUFFER_KM)
-            val sites = try {
-                repository.load(area, networks.selectedKeys())
-            } catch (failure: Exception) {
-                emptyList()
-            }
-            for (site in sites) {
-                if (site.id in seen) continue
-                val power = site.connectors
-                    .filter { it.type in usable }
-                    .maxOfOrNull { it.maxPowerKw }
-                    ?: continue
-                if (power < MIN_DC_POWER_KW) continue
-                val projection = measure.project(site.position, startIndex, endIndex)
-                if (projection.distanceKm > STOP_BUFFER_KM) continue
-                seen[site.id] = Candidate(
-                    site = site,
-                    kmFromStart = projection.kmFromStart,
-                    maxPowerKw = power,
-                    operator = site.operator,
-                )
-            }
-            startIndex = endIndex
+        return sites.mapNotNull { beside ->
+            val power = beside.site.connectors
+                .filter { it.type in usable }
+                .maxOfOrNull { it.maxPowerKw }
+                ?.takeIf { it >= MIN_DC_POWER_KW }
+                ?: return@mapNotNull null
+            Candidate(
+                site = beside.site,
+                kmFromStart = beside.kmFromStart,
+                maxPowerKw = power,
+                operator = beside.site.operator,
+            )
         }
-        return seen.values.sortedBy { it.kmFromStart }
     }
 
     /**
@@ -350,9 +324,6 @@ class LegacyGreedyPlanner(
 
         /** Max straight-line distance from the route. */
         private const val STOP_BUFFER_KM = 3.0
-
-        /** Candidate-fetch chunk length. */
-        private const val SEGMENT_FETCH_KM = 80.0
 
         /** Don't burn a stop in the first minutes of a leg. */
         private const val MIN_LEG_KM = 40.0

@@ -9,6 +9,7 @@ import org.julakali.chargeahead.shared.data.BackendDataSourceDirectory
 import org.julakali.chargeahead.shared.data.BackendGeocoder
 import org.julakali.chargeahead.shared.data.BackendNetworkListSource
 import org.julakali.chargeahead.shared.data.BackendRouteEngine
+import org.julakali.chargeahead.shared.data.BackendRouteSiteSource
 import org.julakali.chargeahead.shared.data.CombinedSoCSource
 import org.julakali.chargeahead.shared.data.ManualSoCSource
 import org.julakali.chargeahead.shared.data.MergingSiteRepository
@@ -51,6 +52,7 @@ import org.julakali.chargeahead.shared.domain.usecases.EditVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.RouteEngine
+import org.julakali.chargeahead.shared.domain.RouteSiteSource
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SoCSource
@@ -119,7 +121,8 @@ fun chargeStopsModule(): Module = module {
 
     single<Geocoder> { BackendGeocoder(get()) }
 
-    single<TripPlanning> { TripPlanner(get(), get()) }
+    single<RouteSiteSource> { BackendRouteSiteSource(get()) }
+    single<TripPlanning> { TripPlanner(get()) }
     single { TripRepository(get()) }
     single<CorridorPlanning> { CorridorPlanner() }
     single<ChargePointStatusRepository> { CachingChargePointStatusRepository(BackendChargePointStatusSource(get()), get()) }
