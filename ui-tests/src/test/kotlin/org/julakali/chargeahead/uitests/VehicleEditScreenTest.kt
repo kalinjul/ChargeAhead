@@ -34,6 +34,7 @@ import org.julakali.chargeahead.shared.resources.vehicle_number_invalid
 import org.julakali.chargeahead.shared.resources.vehicle_remove
 import org.julakali.chargeahead.shared.resources.vehicle_remove_confirm
 import org.julakali.chargeahead.shared.resources.vehicle_remove_title
+import org.julakali.chargeahead.shared.resources.vehicle_reset_to_catalog
 import org.julakali.chargeahead.shared.resources.vehicle_restore_unavailable
 
 @RunWith(RobolectricTestRunner::class)
@@ -50,6 +51,7 @@ class VehicleEditScreenTest {
     private var removed = false
     private var removeConfirmed = false
     private var dismissed = false
+    private var reset = false
 
     private fun page(state: VehicleEditUiState) = compose.setThemedContent {
         VehicleEditScreen(
@@ -59,6 +61,7 @@ class VehicleEditScreenTest {
                 onRestoreCatalogValues = { restored = true },
                 onRemove = { removed = true },
                 onDismiss = { dismissed = true },
+                onReset = { reset = true },
                 onRemoveConfirm = { removeConfirmed = true },
             ),
         )
@@ -123,6 +126,29 @@ class VehicleEditScreenTest {
         compose.onNodeWithText(compose.string(Res.string.soc_dialog_cancel)).performClick()
 
         assertTrue(dismissed)
+    }
+
+    @Test
+    fun `a value's dialog resets that value to the catalog's`() {
+        page(VehicleEditUiState(vehicle = id3.copy(usableBatteryKwh = 70.0), catalog = catalogId3, editor = VehicleEditor.Battery("70")))
+
+        compose.onNodeWithText(compose.string(Res.string.vehicle_reset_to_catalog)).performClick()
+
+        assertTrue(reset)
+    }
+
+    @Test
+    fun `a value on the catalog's shows the reset disabled`() {
+        page(VehicleEditUiState(vehicle = id3, catalog = catalogId3, editor = VehicleEditor.Battery("77")))
+
+        compose.onNodeWithText(compose.string(Res.string.vehicle_reset_to_catalog)).assertIsNotEnabled()
+    }
+
+    @Test
+    fun `an own car's dialog offers no reset`() {
+        page(VehicleEditUiState(vehicle = id3.copy(modelId = null), editor = VehicleEditor.Battery("77")))
+
+        compose.onNodeWithText(compose.string(Res.string.vehicle_reset_to_catalog)).assertDoesNotExist()
     }
 
     @Test

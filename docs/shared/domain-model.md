@@ -67,7 +67,9 @@ removes cars by it, never by name.
 is not `customized` takes the catalog's current values, name included
 (`followingCatalog()`). Editing a linked car on the advanced vehicle screen
 sets `customized`; from then on it keeps its values until the driver chooses
-"Katalogwerte übernehmen" (`RestoreCatalogValuesInteractor`). The garage's
+"Katalogwerte übernehmen" (`RestoreCatalogValuesInteractor`) or resets the
+last own battery or power value in its dialog (`ResetVehicleValueInteractor`).
+The garage's
 consumption slider does not count as customizing: it sets `ownConsumption`,
 and that one value survives catalog updates. The planner reads `roadLoad`
 through `modelId` alone.

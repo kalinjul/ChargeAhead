@@ -108,4 +108,50 @@ class CatalogFollowingTest {
 
         assertEquals(testPresets.drop(1), matches)
     }
+
+    private suspend fun reset(value: ResetVehicleValueInteractor.Value) =
+        ResetVehicleValueInteractor(vehicles, catalog)(ResetVehicleValueInteractor.Params(value)).getOrThrow()
+
+    @Test
+    fun `resetting the name gives the car the catalog's and leaves the values alone`() = runBlocking {
+        val own = original.toProfile().copy(displayName = "Knutschkugel", ownName = true, usableBatteryKwh = 35.0, customized = true)
+        vehicles.setVehicle(own)
+
+        reset(ResetVehicleValueInteractor.Value.NAME)
+
+        assertEquals(own.copy(displayName = original.name, ownName = false), vehicles.vehicle.first())
+    }
+
+    @Test
+    fun `resetting the consumption leaves the name and the battery alone`() = runBlocking {
+        val own = original.toProfile().copy(
+            displayName = "Knutschkugel", ownName = true, usableBatteryKwh = 35.0, customized = true, consumptionKwhPer100Km = 18.5, ownConsumption = true,
+        )
+        vehicles.setVehicle(own)
+
+        reset(ResetVehicleValueInteractor.Value.CONSUMPTION)
+
+        assertEquals(own.copy(consumptionKwhPer100Km = original.consumptionKwhPer100Km, ownConsumption = false), vehicles.vehicle.first())
+    }
+
+    @Test
+    fun `the car follows the catalog again once its last own battery or power value is reset`() = runBlocking {
+        vehicles.setVehicle(original.toProfile().copy(usableBatteryKwh = 35.0, dcPeakPowerKw = 50.0, customized = true))
+
+        reset(ResetVehicleValueInteractor.Value.BATTERY)
+        assertEquals(true, vehicles.vehicle.first()!!.customized)
+        reset(ResetVehicleValueInteractor.Value.DC_PEAK)
+
+        assertEquals(original.toProfile().copy(id = vehicles.vehicle.first()!!.id), vehicles.vehicle.first())
+    }
+
+    @Test
+    fun `a car typed in by hand has nothing to reset to`() = runBlocking {
+        val own = VehicleProfile("Eigenbau", 40.0, 16.0, setOf(ConnectorType.CCS2))
+        vehicles.setVehicle(own)
+
+        reset(ResetVehicleValueInteractor.Value.BATTERY)
+
+        assertEquals(own, vehicles.vehicle.first())
+    }
 }
