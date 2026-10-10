@@ -34,6 +34,8 @@ import org.julakali.chargeahead.shared.resources.car_debug_source_cloud
 import org.julakali.chargeahead.shared.resources.car_debug_source_manual
 import org.julakali.chargeahead.shared.resources.cardata_age
 import org.julakali.chargeahead.shared.resources.cardata_kind_battery
+import org.julakali.chargeahead.shared.resources.cardata_kind_charge_port_connected
+import org.julakali.chargeahead.shared.resources.cardata_kind_charge_port_open
 import org.julakali.chargeahead.shared.resources.cardata_kind_energy_low
 import org.julakali.chargeahead.shared.resources.cardata_kind_energy_profile
 import org.julakali.chargeahead.shared.resources.cardata_kind_model
@@ -157,6 +159,8 @@ class CarDebugScreen(
         CarDataKind.BATTERY_PERCENT -> Res.string.cardata_kind_battery
         CarDataKind.RANGE -> Res.string.cardata_kind_range
         CarDataKind.ENERGY_IS_LOW -> Res.string.cardata_kind_energy_low
+        CarDataKind.CHARGE_PORT_OPEN -> Res.string.cardata_kind_charge_port_open
+        CarDataKind.CHARGE_PORT_CONNECTED -> Res.string.cardata_kind_charge_port_connected
         CarDataKind.SPEED -> Res.string.cardata_kind_speed
         CarDataKind.ODOMETER -> Res.string.cardata_kind_odometer
     }
@@ -168,6 +172,8 @@ private val KINDS_IN_ORDER = listOf(
     CarDataKind.SPEED,
     CarDataKind.RANGE,
     CarDataKind.ENERGY_IS_LOW,
+    CarDataKind.CHARGE_PORT_CONNECTED,
+    CarDataKind.CHARGE_PORT_OPEN,
     CarDataKind.ODOMETER,
     CarDataKind.MODEL,
     CarDataKind.ENERGY_PROFILE,

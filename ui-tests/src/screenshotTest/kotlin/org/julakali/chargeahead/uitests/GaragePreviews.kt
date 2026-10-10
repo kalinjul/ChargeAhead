@@ -234,18 +234,16 @@ fun AddCarNoHitsDark() = AddCar(AddCarUiState(query = "Fiat 500e"))
 
 @Composable
 private fun CarData() = PageFrame {
-    CarDataScreen(
-        // No hardware check: its age is measured from now, which no golden can hold still.
-        CarDataUiState(socPercent = 64.0),
-    )
+    // No recorded points: their age is measured from now, which no golden can hold still.
+    CarDataScreen(CarDataUiState())
 }
 
 @PreviewTest
 @Preview(locale = "de", showBackground = true, widthDp = 411, heightDp = 640)
 @Composable
-fun CarDataWithChargeLevel() = CarData()
+fun CarDataNeverReceived() = CarData()
 
 @PreviewTest
 @Preview(locale = "de", showBackground = true, widthDp = 411, heightDp = 640, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun CarDataWithChargeLevelDark() = CarData()
+fun CarDataNeverReceivedDark() = CarData()

@@ -15,6 +15,8 @@ enum class CarDataKind {
     BATTERY_PERCENT,
     RANGE,
     ENERGY_IS_LOW,
+    CHARGE_PORT_OPEN,
+    CHARGE_PORT_CONNECTED,
     SPEED,
     ODOMETER,
 }

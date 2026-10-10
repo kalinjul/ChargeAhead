@@ -1,12 +1,15 @@
 package org.julakali.chargeahead.android.car
 
+import androidx.annotation.OptIn
 import androidx.car.app.CarContext
+import androidx.car.app.annotations.ExperimentalCarApi
 import androidx.car.app.hardware.CarHardwareManager
 import androidx.car.app.hardware.common.CarValue
 import androidx.car.app.hardware.common.OnCarDataAvailableListener
 import androidx.car.app.hardware.info.CarInfo
 import androidx.car.app.hardware.info.EnergyLevel
 import androidx.car.app.hardware.info.EnergyProfile
+import androidx.car.app.hardware.info.EvStatus
 import androidx.car.app.hardware.info.Mileage
 import androidx.car.app.hardware.info.Model
 import androidx.car.app.hardware.info.Speed
@@ -26,6 +29,7 @@ import java.util.concurrent.Executor
 import kotlin.math.roundToInt
 
 /** Captures everything the car hardware offers and persists it for the phone's debug view. */
+@OptIn(ExperimentalCarApi::class)
 class CarHardwareDebugRecorder(
     private val carContext: CarContext,
     private val time: TimeProvider,
@@ -41,6 +45,7 @@ class CarHardwareDebugRecorder(
     private var carInfo: CarInfo? = null
     private var speedListener: OnCarDataAvailableListener<Speed>? = null
     private var mileageListener: OnCarDataAvailableListener<Mileage>? = null
+    private var evStatusListener: OnCarDataAvailableListener<EvStatus>? = null
 
     // Writes go here, off the host's main-thread callbacks; cancelled in stop().
     private var scope: CoroutineScope? = null
@@ -67,6 +72,8 @@ class CarHardwareDebugRecorder(
             energyLevels.readings.collect(::recordEnergy)
         }
 
+        evStatusListener = listenForEvStatus(info, executor)
+
         // Re-register on every permission change.
         newScope.launch(dispatchers.main) {
             combine(permissions.granted(PERMISSION_SPEED), permissions.granted(PERMISSION_MILEAGE)) { _, _ -> }
@@ -75,7 +82,11 @@ class CarHardwareDebugRecorder(
     }
 
     fun stop() {
-        carInfo?.let(::unregisterListeners)
+        carInfo?.let { info ->
+            unregisterListeners(info)
+            evStatusListener?.let(info::removeEvStatusListener)
+        }
+        evStatusListener = null
         scope?.cancel()
         scope = null
     }
@@ -96,7 +107,7 @@ class CarHardwareDebugRecorder(
                     CarDataKind.RANGE,
                     level.rangeRemainingMeters.toPoint { "${(it / 1000.0).roundToInt()} km" },
                 )
-                record(CarDataKind.ENERGY_IS_LOW, level.energyIsLow.toPoint { if (it) "ja" else "nein" })
+                record(CarDataKind.ENERGY_IS_LOW, level.energyIsLow.toPoint(::yesNo))
             }
         }
     }
@@ -127,6 +138,22 @@ class CarHardwareDebugRecorder(
                     mileage.odometerMeters.toPoint { "${(it / 1000.0).roundToInt()} km" },
                 )
             }.also { info.addMileageListener(executor, it) }
+        }
+    }
+
+    /** The projected host names no permission for it; a host that wants one refuses the registration. */
+    private fun listenForEvStatus(info: CarInfo, executor: Executor): OnCarDataAvailableListener<EvStatus>? {
+        val listener = OnCarDataAvailableListener<EvStatus> { status ->
+            record(CarDataKind.CHARGE_PORT_OPEN, status.evChargePortOpen.toPoint(::yesNo))
+            record(CarDataKind.CHARGE_PORT_CONNECTED, status.evChargePortConnected.toPoint(::yesNo))
+        }
+        return try {
+            info.addEvStatusListener(executor, listener)
+            listener
+        } catch (denied: SecurityException) {
+            record(CarDataKind.CHARGE_PORT_OPEN, CarDataStatus.NO_PERMISSION)
+            record(CarDataKind.CHARGE_PORT_CONNECTED, CarDataStatus.NO_PERMISSION)
+            null
         }
     }
 
@@ -196,6 +223,8 @@ class CarHardwareDebugRecorder(
         // The repository serializes the write.
         scope?.launch { diagnostics.recordCarDataPoint(point.copy(kind = kind)) }
     }
+
+    private fun yesNo(value: Boolean): String = if (value) "ja" else "nein"
 
     private fun connectorName(type: Int): String = when (type) {
         EnergyProfile.EVCONNECTOR_TYPE_COMBO_1 -> "CCS1"
