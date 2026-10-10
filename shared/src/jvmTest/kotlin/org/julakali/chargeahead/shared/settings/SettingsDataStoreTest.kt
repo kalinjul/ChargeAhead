@@ -2,6 +2,9 @@ package org.julakali.chargeahead.shared.settings
 
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.VehicleProfile
+import org.julakali.chargeahead.shared.domain.VehicleRepository
+import org.julakali.chargeahead.shared.testDatabase
+import org.julakali.chargeahead.shared.testVehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,6 +23,7 @@ class SettingsDataStoreTest {
 
     private val directory = createTempDirectory("settings").toFile()
     private val file = File(directory, SETTINGS_DATASTORE_FILE)
+    private val database = testDatabase()
 
     private val vehicle = VehicleProfile(
         displayName = "Testwagen",
@@ -37,12 +41,12 @@ class SettingsDataStoreTest {
     // the first one before opening the next.
     private fun <T> withStore(
         migrations: List<KeyValueMigration> = emptyList(),
-        block: suspend (DataStoreVehicleRepository) -> T,
+        block: suspend (VehicleRepository) -> T,
     ): T = runBlocking {
         val job = SupervisorJob()
         try {
             val dataStore = createSettingsDataStore(file.absolutePath, CoroutineScope(Dispatchers.IO + job), migrations)
-            block(DataStoreVehicleRepository(dataStore))
+            block(testVehicleRepository(dataStore, database))
         } finally {
             job.cancelAndJoin()
         }
@@ -65,24 +69,21 @@ class SettingsDataStoreTest {
     @Test
     fun theOldKeyValueEntries_areTakenOverOnce_andRemovedThere() {
         val old = mutableMapOf(
-            "vehicle.displayName" to "Testwagen",
-            "vehicle.usableBatteryKwh" to "77.0",
-            "vehicle.consumptionKwhPer100Km" to "18.0",
-            "vehicle.acceptedConnectors" to "CCS2",
+            "energy.arrivalSocPercent" to "25.0",
             "energy.manualSocPercent" to "64.0",
             "unrelated" to "stays",
         )
         val migration = KeyValueMigration(SettingsKeys.ALL, old::get, { old.remove(it) })
 
-        val (migratedVehicle, migratedSoc) = withStore(listOf(migration)) {
-            it.vehicle.first() to it.manualSocPercent.first()
+        val (migratedArrival, migratedSoc) = withStore(listOf(migration)) {
+            it.arrivalSocPercent.first() to it.manualSocPercent.first()
         }
 
-        assertEquals(vehicle.copy(id = "name:Testwagen"), migratedVehicle)
+        assertEquals(25.0, migratedArrival)
         assertEquals(64.0, migratedSoc)
         assertEquals(mapOf("unrelated" to "stays"), old)
         // Without the old entries, the next start reads DataStore alone.
-        assertEquals(vehicle.copy(id = "name:Testwagen"), withStore(listOf(migration)) { it.vehicle.first() })
+        assertEquals(25.0, withStore(listOf(migration)) { it.arrivalSocPercent.first() })
     }
 
     @Test

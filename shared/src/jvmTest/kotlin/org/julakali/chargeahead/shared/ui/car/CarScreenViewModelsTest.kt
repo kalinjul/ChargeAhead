@@ -39,7 +39,7 @@ import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.settings.DataStoreCarDiagnosticsRepository
 import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import kotlin.test.AfterTest
@@ -60,7 +60,7 @@ class CarScreenViewModelsTest {
     fun tearDownMainDispatcher() = main.tearDown()
 
     private val here = LatLon(48.0, 11.0)
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
     private val history = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
     private val diagnostics = DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore())

@@ -32,7 +32,7 @@ import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -69,7 +69,7 @@ class ObserveChargeStopsTest {
         acceptedConnectors = setOf(ConnectorType.CCS2),
     )
 
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
 
     private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
     private val trips = TripRepository()

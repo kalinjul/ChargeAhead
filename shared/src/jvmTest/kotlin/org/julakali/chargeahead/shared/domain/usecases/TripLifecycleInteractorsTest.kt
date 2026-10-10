@@ -20,7 +20,7 @@ import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripState
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -135,7 +135,7 @@ class TripLifecycleInteractorsTest {
 
     private fun replanInteractor(planner: TripPlanning): ReplanCommittedTripInteractor {
         val settings = InMemoryPreferencesDataStore()
-        val vehicles = DataStoreVehicleRepository(settings)
+        val vehicles = testVehicleRepository(settings)
         runBlocking {
             vehicles.setVehicle(VehicleProfile("Test-EV", 75.0, 18.0, setOf(ConnectorType.CCS2)))
             vehicles.setManualSocPercent(80.0)

@@ -7,8 +7,7 @@ import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
-import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.testDispatchers
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -21,7 +20,7 @@ class AddCarViewModelTest {
 
     private val main = TestMain()
 
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val viewModel by lazy {
         main.track(AddCarViewModel(VehiclePresetsObserver(FakeVehicleCatalog(), vehicles, testDispatchers), SelectVehicleInteractor(vehicles)))
     }

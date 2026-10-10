@@ -11,8 +11,7 @@ import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.DEFAULT_ASSUMED_SOC_PERCENT
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
-import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.shared.testVehicleRepository
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -25,7 +24,7 @@ class GarageViewModelTest {
 
     private val main = TestMain()
 
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val viewModel by lazy {
         val catalog = FakeVehicleCatalog()
         main.track(GarageViewModel(

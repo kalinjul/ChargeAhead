@@ -6,8 +6,7 @@ import kotlinx.coroutines.withTimeout
 import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.VehicleProfile
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
-import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.testPresets
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -17,7 +16,7 @@ import kotlin.test.assertTrue
 /** What the garage shows about the selected car beyond its profile: range and the catalog's consumption. */
 class GarageObserverTest {
 
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
 
     private fun observer() = GarageObserver(vehicles, FakeVehicleCatalog()).also { it(GarageObserver.Params()) }
 

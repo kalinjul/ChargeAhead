@@ -7,8 +7,7 @@ import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.invoke
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
-import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.testPresets
 import kotlin.test.Test
@@ -18,7 +17,7 @@ import kotlin.test.assertFalse
 /** Catalog cars follow the catalog until the driver changes their values. */
 class CatalogFollowingTest {
 
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val original = testPresets.first()
     private val revised = original.copy(name = "Fiat 500e (2024)", usableBatteryKwh = 38.0, consumptionKwhPer100Km = 14.2)
     private val catalog = FakeVehicleCatalog(refreshed = listOf(revised) + testPresets.drop(1))
