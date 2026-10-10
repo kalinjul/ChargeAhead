@@ -9,6 +9,7 @@ import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.domain.customVehicle
 import org.julakali.chargeahead.shared.domain.usecases.EditVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ResetVehicleValueInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.testPresets
@@ -41,6 +42,7 @@ class VehicleEditViewModelTest {
             vehicles,
             catalog,
             EditVehicleInteractor(vehicles, catalog),
+            ResetVehicleValueInteractor(vehicles, catalog),
             RestoreCatalogValuesInteractor(vehicles, catalog),
             RemoveVehicleInteractor(vehicles),
         )).also { it.uiState.await { state -> state.vehicle != null } }
@@ -142,7 +144,7 @@ class VehicleEditViewModelTest {
 
         vehicles.setVehicle(customVehicle("Eigenbau"))
         val own = main.track(VehicleEditViewModel(
-            vehicles, catalog, EditVehicleInteractor(vehicles, catalog), RestoreCatalogValuesInteractor(vehicles, catalog), RemoveVehicleInteractor(vehicles),
+            vehicles, catalog, EditVehicleInteractor(vehicles, catalog), ResetVehicleValueInteractor(vehicles, catalog), RestoreCatalogValuesInteractor(vehicles, catalog), RemoveVehicleInteractor(vehicles),
         ))
 
         assertFalse(own.uiState.await { it.vehicle?.displayName == "Eigenbau" }.catalog != null)
@@ -179,6 +181,34 @@ class VehicleEditViewModelTest {
         viewModel.onCatalogValuesRestored()
 
         assertEquals(preset.usableBatteryKwh, viewModel.uiState.await { !it.canRestoreCatalogValues }.vehicle?.usableBatteryKwh)
+    }
+
+    @Test
+    fun `resetting an editor puts that one value back on the catalog's and keeps the others`() = runBlocking<Unit> {
+        vehicles.setVehicle(preset.toProfile().copy(usableBatteryKwh = 30.0, dcPeakPowerKw = 50.0, customized = true))
+        val viewModel = viewModel(keep = true)
+
+        viewModel.onBatteryEditOpened()
+        assertTrue(viewModel.uiState.await { it.editor != null }.canResetEditor)
+        viewModel.onEditorInputChanged("12")
+        viewModel.onEditorReset()
+
+        val stored = vehicles.vehicle.awaitValue { it?.usableBatteryKwh == preset.usableBatteryKwh }!!
+        assertNull(viewModel.uiState.await { it.editor == null }.editor)
+        assertEquals(50.0, stored.dcPeakPowerKw)
+        assertTrue(stored.customized)
+    }
+
+    @Test
+    fun `a value on the catalog's has nothing to reset, nor has a car typed in by hand`() = runBlocking<Unit> {
+        val viewModel = viewModel()
+        viewModel.onNameEditOpened()
+        assertFalse(viewModel.uiState.await { it.editor != null }.canResetEditor)
+
+        vehicles.setVehicle(customVehicle("Eigenbau"))
+        viewModel.uiState.await { it.vehicle?.displayName == "Eigenbau" }
+        viewModel.onNameEditOpened()
+        assertFalse(viewModel.uiState.await { it.editor == VehicleEditor.Name("Eigenbau") }.canResetEditor)
     }
 
     @Test

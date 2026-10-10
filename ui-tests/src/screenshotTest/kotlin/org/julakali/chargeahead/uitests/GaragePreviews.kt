@@ -20,7 +20,9 @@ import org.julakali.chargeahead.android.phone.CarDataScreen
 import org.julakali.chargeahead.android.phone.GarageScreen
 import org.julakali.chargeahead.android.phone.VehicleEditActions
 import org.julakali.chargeahead.android.phone.VehicleEditScreen
+import org.julakali.chargeahead.android.phone.FieldDialogBody
 import org.julakali.chargeahead.android.phone.FieldEditor
+import org.julakali.chargeahead.android.phone.FieldReset
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.VehicleProfile
@@ -216,6 +218,28 @@ fun VehicleConsumptionFieldDark() = Field("Verbrauch", "16,5", "kWh/100 km", app
 @Preview(locale = "de", showBackground = true, widthDp = 320, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun VehicleNameFieldDark() = Field("Name", "VW ID.3 Pro S", null, applicable = true)
+
+@Composable
+private fun ResettableField(label: String, input: String, unit: String?, reset: FieldReset, catalog: String) = PreviewScaffold {
+    Box(Modifier.padding(24.dp)) {
+        FieldDialogBody(label = label, initial = input, unit = unit, applicable = true, reset = reset, onValueChange = {}, onReset = {}, catalogValue = catalog)
+    }
+}
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true, widthDp = 320)
+@Composable
+fun VehicleBatteryFieldReset() = ResettableField("Akku nutzbar", "70", "kWh", FieldReset.OFFERED, catalog = "77 kWh")
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true, widthDp = 320, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun VehicleBatteryFieldResetDark() = ResettableField("Akku nutzbar", "70", "kWh", FieldReset.OFFERED, catalog = "77 kWh")
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true, widthDp = 320)
+@Composable
+fun VehicleNameFieldOnCatalog() = ResettableField("Name", "VW ID.3 Pro S (2023)", null, FieldReset.ON_CATALOG, catalog = "VW ID.3 Pro S (2023)")
 
 private val Ioniq = VehiclePreset("ioniq5", "Hyundai Ioniq 5 77 kWh", 74.0, 17.9, 230.0, setOf(ConnectorType.CCS2, ConnectorType.TYPE2))
 

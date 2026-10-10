@@ -4,8 +4,8 @@ import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
-import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.VehicleRepository
+import org.julakali.chargeahead.shared.domain.customizedAgainst
 import org.julakali.chargeahead.shared.domain.presetOf
 
 class EditVehicleInteractor(
@@ -27,8 +27,8 @@ class EditVehicleInteractor(
         val catalog = catalog.presets.first().presetOf(car)?.toProfile()
         val edited = when (val edit = params.edit) {
             is Edit.Name -> edit.name.trim().let { name -> car.copy(displayName = name, ownName = catalog != null && name != catalog.displayName) }
-            is Edit.Battery -> car.copy(usableBatteryKwh = edit.usableKwh).withCustomizedAgainst(catalog)
-            is Edit.DcPeak -> car.copy(dcPeakPowerKw = edit.kw).withCustomizedAgainst(catalog)
+            is Edit.Battery -> car.copy(usableBatteryKwh = edit.usableKwh).customizedAgainst(catalog)
+            is Edit.DcPeak -> car.copy(dcPeakPowerKw = edit.kw).customizedAgainst(catalog)
             is Edit.Consumption -> {
                 val datasheet = catalog?.consumptionKwhPer100Km
                 // The slider works in Float; within a hair of the datasheet it is the datasheet.
@@ -41,10 +41,6 @@ class EditVehicleInteractor(
         }
         if (edited != car) vehicles.setVehicle(edited)
     }
-
-    /** An own battery or power value takes the car off catalog updates; the catalog's value puts it back. */
-    private fun VehicleProfile.withCustomizedAgainst(catalog: VehicleProfile?): VehicleProfile =
-        copy(customized = catalog != null && (usableBatteryKwh != catalog.usableBatteryKwh || dcPeakPowerKw != catalog.dcPeakPowerKw))
 
     private companion object {
         /** Far below the slider's half-kWh steps, far above Float's rounding. */

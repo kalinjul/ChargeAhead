@@ -17,6 +17,8 @@ import org.julakali.chargeahead.shared.domain.presetOf
 import org.julakali.chargeahead.shared.domain.usecases.EditVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EditVehicleInteractor.Edit
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ResetVehicleValueInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ResetVehicleValueInteractor.Value
 import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import kotlin.math.abs
 import kotlin.math.round
@@ -50,12 +52,27 @@ data class VehicleEditUiState(
     val editor: VehicleEditor? = null,
     val confirmingRemoval: Boolean = false,
     val removed: Boolean = false,
-)
+) {
+    /** The open editor's stored value is not the catalog's; `false` for a car typed in by hand. */
+    val canResetEditor: Boolean
+        get() {
+            val car = vehicle ?: return false
+            val catalog = catalog?.toProfile() ?: return false
+            return when (editor) {
+                is VehicleEditor.Name -> car.displayName != catalog.displayName
+                is VehicleEditor.Battery -> car.usableBatteryKwh != catalog.usableBatteryKwh
+                is VehicleEditor.DcPeak -> car.dcPeakPowerKw != catalog.dcPeakPowerKw
+                is VehicleEditor.Consumption -> car.consumptionKwhPer100Km != catalog.consumptionKwhPer100Km
+                null -> false
+            }
+        }
+}
 
 class VehicleEditViewModel(
     vehicles: VehicleRepository,
     catalog: VehicleCatalogRepository,
     private val editVehicle: EditVehicleInteractor,
+    private val resetVehicleValue: ResetVehicleValueInteractor,
     private val restoreCatalogValues: RestoreCatalogValuesInteractor,
     private val removeVehicle: RemoveVehicleInteractor,
 ) : ViewModel() {
@@ -113,6 +130,18 @@ class VehicleEditViewModel(
 
     fun onEditorDismissed() {
         editor.value = null
+    }
+
+    /** Throws the typed input away with it. */
+    fun onEditorReset() {
+        val value = when (editor.value ?: return) {
+            is VehicleEditor.Name -> Value.NAME
+            is VehicleEditor.Battery -> Value.BATTERY
+            is VehicleEditor.DcPeak -> Value.DC_PEAK
+            is VehicleEditor.Consumption -> Value.CONSUMPTION
+        }
+        editor.value = null
+        viewModelScope.launch { resetVehicleValue(ResetVehicleValueInteractor.Params(value)) }
     }
 
     /** Drops the driver's changes; the car follows the catalog again. */
