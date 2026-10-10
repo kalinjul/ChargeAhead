@@ -12,7 +12,7 @@ import org.julakali.chargeahead.shared.domain.usecases.DestinationSearchObserver
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -132,13 +132,13 @@ class SearchViewModelTest {
     fun `an open panel comes back after process death`() = runBlocking<Unit> {
         val savedState = SavedStateHandle()
         searchViewModel(savedState).onOpened()
-        assertTrue(searchViewModel(savedState).uiState.await { true }.expanded)
+        assertTrue(searchViewModel(savedState).uiState.await { it.expanded }.expanded)
     }
 
     private fun searchViewModel(savedState: SavedStateHandle = SavedStateHandle()) =
         main.track(SearchViewModel(stubFeature(), DestinationSearchObserver(NoGeocoder, NoLocation), vehicles(), history(), savedState))
 
-    private fun vehicles() = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private fun vehicles() = testVehicleRepository()
 
     private fun history() = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
 

@@ -18,7 +18,7 @@ import org.julakali.chargeahead.shared.domain.DEFAULT_ASSUMED_SOC_PERCENT
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import kotlin.test.Test
@@ -34,7 +34,7 @@ class PlanTripTest {
     private val from = LatLon(49.45, 11.08)
     private val munich = Destination("München", LatLon(48.14, 11.58))
     private val vehicle = VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2))
-    private val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+    private val vehicles = testVehicleRepository()
     private val preferences = DataStorePreferencesRepository(InMemoryPreferencesDataStore())
     private val history = DataStoreDestinationHistory(InMemoryPreferencesDataStore())
     private val trips = TripRepository()

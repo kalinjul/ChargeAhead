@@ -61,6 +61,8 @@ interface ChargePointStatusRepository { val statuses: Flow<Map<String, List<Char
 
 // The driver's settings, one repository per kind of data, all over one
 // DataStore file. Depend only on the one you use.
+// VehicleRepository keeps the garage in the database (garageVehicle) and
+// only the selected car's id and the charge levels in the file.
 interface VehicleRepository {
     val vehicle: Flow<VehicleProfile?>
     val vehicles: Flow<List<VehicleProfile>>      // the garage; setVehicle selects AND adds
@@ -102,6 +104,12 @@ instance on it. `settingsModule { … }` opens it once and declares each
 repository as a singleton; the platform module passes in how to open the
 file. In Android Auto, the phone and car UI run in the same process and
 share them.
+
+**The garage is in the database.** `RoomVehicleRepository` stores the cars
+in the `garageVehicle` table of `ChargeSiteDatabase` and the selected car's
+id under `vehicle.id` in the settings file. The database still falls back to
+a destructive migration, so a schema bump empties the garage along with the
+caches.
 
 ## The ChargeAhead backend
 

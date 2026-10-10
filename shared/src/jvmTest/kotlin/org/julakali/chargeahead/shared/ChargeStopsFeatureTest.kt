@@ -10,8 +10,6 @@ import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.SoCSourceKind
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.destination
-import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -133,7 +131,7 @@ class ChargeStopsFeatureTest {
 
     @Test
     fun `the charge prefers the car over the driver`() = runBlocking {
-        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val vehicles = testVehicleRepository()
         vehicles.setManualSocPercent(50.0)
         val hardware = ControllableHardwareSoC()
         val feature = feature(

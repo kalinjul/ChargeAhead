@@ -56,7 +56,7 @@ import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -92,7 +92,7 @@ class PhoneViewModelTest {
 
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
-        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
+        val vehicles = testVehicleRepository()
         val catalog = FakeVehicleCatalog()
         val addCar = main.track(AddCarViewModel(VehiclePresetsObserver(catalog, vehicles, testDispatchers), SelectVehicleInteractor(vehicles)))
         val garage = main.track(GarageViewModel(
@@ -274,7 +274,7 @@ class PhoneViewModelTest {
         val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
         val viewModel = main.track(CorridorViewModel(
             feature,
-            ChargeStopsObserver(repository, DataStoreVehicleRepository(InMemoryPreferencesDataStore()), FakeVehicleCatalog(), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
+            ChargeStopsObserver(repository, testVehicleRepository(), FakeVehicleCatalog(), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
             RefreshChargeStopsInteractor(repository, DataStorePreferencesRepository(InMemoryPreferencesDataStore())),
         ))
 

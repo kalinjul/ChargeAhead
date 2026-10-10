@@ -8,7 +8,7 @@ import org.julakali.chargeahead.shared.domain.usecases.SetChargeModeInteractor
 import org.julakali.chargeahead.shared.domain.ChargeMode
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
-import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
+import org.julakali.chargeahead.shared.testVehicleRepository
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -64,7 +64,7 @@ class DrawerViewModelTest {
 
     private fun viewModel(preferences: DataStorePreferencesRepository) = main.track(
         DrawerViewModel(
-            DataStoreVehicleRepository(InMemoryPreferencesDataStore()),
+            testVehicleRepository(),
             preferences,
             UpdateChargeFiltersInteractor(preferences),
             SetChargeModeInteractor(preferences, UpdateChargeFiltersInteractor(preferences), UpdateNetworksInteractor(preferences)),

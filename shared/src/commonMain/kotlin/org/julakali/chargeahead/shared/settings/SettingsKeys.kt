@@ -15,17 +15,7 @@ internal object SettingsKeys {
     const val SOC_DIAGNOSTICS = "energy.socDiagnostics"
     const val ONLY_PREFERRED = "networks.onlyPreferred"
     const val PREFERRED_NETWORKS = "networks.preferred"
-    const val ID = "vehicle.id"
-    const val NAME = "vehicle.displayName"
-    const val BATTERY_KWH = "vehicle.usableBatteryKwh"
-    const val CONSUMPTION = "vehicle.consumptionKwhPer100Km"
-    const val CONNECTORS = "vehicle.acceptedConnectors"
-    const val DC_PEAK = "vehicle.dcPeakPowerKw"
-    const val MODEL_ID = "vehicle.modelId"
-    const val CUSTOMIZED = "vehicle.customized"
-    const val OWN_CONSUMPTION = "vehicle.ownConsumption"
-    const val OWN_NAME = "vehicle.ownName"
-    const val GARAGE = "vehicle.garage"
+    const val SELECTED_VEHICLE = "vehicle.id"
     const val MANUAL_SOC = "energy.manualSocPercent"
     const val ARRIVAL_SOC = "energy.arrivalSocPercent"
     const val CHARGE_FILTERS = "filters.charge"
@@ -35,7 +25,6 @@ internal object SettingsKeys {
     /** Every key ever written to the settings; what a migration copies. */
     val ALL: Set<String> = setOf(
         DESTINATIONS, SOC_DIAGNOSTICS, ONLY_PREFERRED, PREFERRED_NETWORKS,
-        NAME, BATTERY_KWH, CONSUMPTION, CONNECTORS, DC_PEAK, GARAGE,
         MANUAL_SOC, ARRIVAL_SOC, CHARGE_FILTERS, COMMITTED_TRIP, CAR_DEBUG,
     )
 }
