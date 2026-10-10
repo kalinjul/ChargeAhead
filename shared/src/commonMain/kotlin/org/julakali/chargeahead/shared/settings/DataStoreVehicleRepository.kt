@@ -23,6 +23,7 @@ import org.julakali.chargeahead.shared.settings.SettingsKeys.MANUAL_SOC
 import org.julakali.chargeahead.shared.settings.SettingsKeys.MODEL_ID
 import org.julakali.chargeahead.shared.settings.SettingsKeys.NAME
 import org.julakali.chargeahead.shared.settings.SettingsKeys.OWN_CONSUMPTION
+import org.julakali.chargeahead.shared.settings.SettingsKeys.OWN_NAME
 
 /** A corrupt profile is treated as "no profile". */
 class DataStoreVehicleRepository(
@@ -96,6 +97,7 @@ class DataStoreVehicleRepository(
         putString(MODEL_ID, profile?.modelId)
         putString(CUSTOMIZED, profile?.customized?.takeIf { it }?.toString())
         putString(OWN_CONSUMPTION, profile?.ownConsumption?.takeIf { it }?.toString())
+        putString(OWN_NAME, profile?.ownName?.takeIf { it }?.toString())
     }
 
     private fun MutablePreferences.writeGarage(vehicles: List<VehicleProfile>) {
@@ -112,6 +114,7 @@ class DataStoreVehicleRepository(
                     modelId = it.modelId,
                     customized = it.customized,
                     ownConsumption = it.ownConsumption,
+                    ownName = it.ownName,
                 )
             },
         )
@@ -145,6 +148,7 @@ class DataStoreVehicleRepository(
             modelId = modelId,
             customized = getStringOrNull(CUSTOMIZED) == "true",
             ownConsumption = getStringOrNull(OWN_CONSUMPTION) == "true",
+            ownName = getStringOrNull(OWN_NAME) == "true",
         )
     }
 
@@ -159,6 +163,7 @@ class DataStoreVehicleRepository(
         val modelId: String? = null,
         val customized: Boolean = false,
         val ownConsumption: Boolean = false,
+        val ownName: Boolean = false,
     ) {
         /** Broken numbers cost the entry, not the garage. */
         fun toProfileOrNull(): VehicleProfile? {
@@ -175,6 +180,7 @@ class DataStoreVehicleRepository(
                 modelId = modelId,
                 customized = customized,
                 ownConsumption = ownConsumption,
+                ownName = ownName,
             )
         }
     }

@@ -75,9 +75,17 @@ class SearchViewModelTest {
 
     @Test
     fun `km labels round the way the list expects`() {
-        assertEquals("< 1", 0.4.asKmLabel())
-        assertEquals("4,2", 4.24.asKmLabel())
-        assertEquals("42", 41.6.asKmLabel())
+        val saved = java.util.Locale.getDefault()
+        try {
+            java.util.Locale.setDefault(java.util.Locale.GERMANY)
+            assertEquals("< 1", 0.4.asKmLabel())
+            assertEquals("4,2", 4.24.asKmLabel())
+            assertEquals("42", 41.6.asKmLabel())
+            java.util.Locale.setDefault(java.util.Locale.US)
+            assertEquals("4.2", 4.24.asKmLabel())
+        } finally {
+            java.util.Locale.setDefault(saved)
+        }
     }
 
     /** "Neu planen" reopens the search on the current destination as a pick; typing discards it. */

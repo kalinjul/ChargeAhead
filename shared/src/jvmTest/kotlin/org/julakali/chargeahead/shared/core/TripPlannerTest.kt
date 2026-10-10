@@ -27,6 +27,7 @@ import org.julakali.chargeahead.shared.domain.interpolate
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -158,6 +159,34 @@ class TripPlannerTest {
         val result = planner(route = null, sites = emptyList())
             .plan(start, destination, id4, startSocPercent = 90.0)
         assertIs<TripPlanResult.NoRoute>(result)
+    }
+
+    @Test
+    fun `a route server that fails is no connection, not no route`() = runBlocking<Unit> {
+        val failing = object : RouteEngine {
+            override suspend fun route(from: LatLon, to: LatLon): Route? = throw java.io.IOException("offline")
+        }
+        val result = TripPlanner(failing, repositoryWith(emptyList())).plan(start, destination, id4, startSocPercent = 90.0)
+        assertIs<TripPlanResult.NoConnection>(result)
+    }
+
+    @Test
+    fun `a cancelled plan stays cancelled`() = runBlocking<Unit> {
+        val cancelled = object : RouteEngine {
+            override suspend fun route(from: LatLon, to: LatLon): Route? = throw kotlinx.coroutines.CancellationException("gone")
+        }
+        assertFailsWith<kotlinx.coroutines.CancellationException> {
+            TripPlanner(cancelled, repositoryWith(emptyList())).plan(start, destination, id4, startSocPercent = 90.0)
+        }
+    }
+
+    @Test
+    fun `chargers that cannot be loaded are no connection, not no charger`() = runBlocking<Unit> {
+        val offline = object : SiteRepository by repositoryWith(emptyList()) {
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = throw java.io.IOException("offline")
+        }
+        val result = TripPlanner(engineReturning(straightRoute()), offline).plan(start, destination, id4, startSocPercent = 90.0)
+        assertIs<TripPlanResult.NoConnection>(result)
     }
 
     @Test

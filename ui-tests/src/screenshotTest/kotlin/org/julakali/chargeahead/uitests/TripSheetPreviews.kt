@@ -14,6 +14,11 @@ import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.julakali.chargeahead.android.phone.SocEditing
 import org.julakali.chargeahead.android.phone.TripSheetContent
 import org.julakali.chargeahead.android.phone.TripSummary
+import org.julakali.chargeahead.android.phone.UnreachableTripContent
+import org.julakali.chargeahead.android.phone.UnreachableTripSummary
+import org.julakali.chargeahead.shared.domain.UnreachableTrip
+import org.julakali.chargeahead.shared.ui.TripUiState
+import androidx.compose.foundation.layout.Column
 import org.julakali.chargeahead.android.phone.headerLine
 import org.julakali.chargeahead.shared.domain.SectionSelection
 
@@ -49,6 +54,11 @@ fun TripSheetListSectionPicked() = Sheet(TripListLayout.LIST, SectionSelection(s
 @Preview(locale = "de", showBackground = true)
 @Composable
 fun TripSheetTiles() = Sheet(TripListLayout.TILES)
+
+@PreviewTest
+@Preview(locale = "en", showBackground = true)
+@Composable
+fun TripSheetTilesEnglish() = Sheet(TripListLayout.TILES)
 
 @PreviewTest
 @Preview(locale = "de", showBackground = true, fontScale = 1.5f)
@@ -117,6 +127,56 @@ fun DestinationHeaderNarrowLongTrip() {
     PreviewScaffold {
         Box(Modifier.width(260.dp).padding(8.dp)) {
             DestinationHeader(title = "Kiel", subtitle = "873 km · 11h 16m", onClear = {}, onTitleClick = {})
+        }
+    }
+}
+
+@Composable
+private fun UnreachableSheet(why: UnreachableTrip) {
+    SheetBox {
+        Column {
+            UnreachableTripSummary(onReplan = {})
+            UnreachableTripContent(
+                trip = TripUiState.Unreachable(SamplePlan.destination, why, startSocPercent = 6.0),
+                socEditing = SocEditing(null, null, false, {}, {}, {}, {}, {}, {}, {}, {}),
+            )
+        }
+    }
+}
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true)
+@Composable
+fun TripSheetNoChargerInReach() = UnreachableSheet(UnreachableTrip.NoCharger(afterKm = 0.0))
+
+@PreviewTest
+@Preview(locale = "en", showBackground = true)
+@Composable
+fun TripSheetNoChargerAfterKmEnglish() = UnreachableSheet(UnreachableTrip.NoCharger(afterKm = 120.0))
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true)
+@Composable
+fun TripSheetNoConnection() = UnreachableSheet(UnreachableTrip.NoConnection)
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true, fontScale = 1.5f)
+@Composable
+fun TripSheetNoRouteLargeFont() = UnreachableSheet(UnreachableTrip.NoRoute)
+
+@PreviewTest
+@Preview(locale = "de", showBackground = true, backgroundColor = 0xFF121212, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun TripSheetNoChargerInReachDark() = UnreachableSheet(UnreachableTrip.NoCharger(afterKm = 0.0))
+
+/** No plan reached the destination: the header keeps its name, without a route line. */
+@PreviewTest
+@Preview(locale = "de", showBackground = true)
+@Composable
+fun DestinationHeaderWithoutPlan() {
+    PreviewScaffold {
+        Box(Modifier.width(400.dp).padding(8.dp)) {
+            DestinationHeader(title = SamplePlan.destination.name, subtitle = null, onClear = {}, onTitleClick = {})
         }
     }
 }

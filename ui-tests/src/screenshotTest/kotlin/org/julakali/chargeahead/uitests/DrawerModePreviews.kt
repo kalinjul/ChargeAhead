@@ -67,6 +67,7 @@ private fun Map(mode: ChargeMode) {
                 uiState = HomeUiState(mode = mode),
                 search = SearchUiState(),
                 trip = null,
+                destination = null,
                 hasPermission = true,
                 planningInProgress = false,
                 mapBottomInset = 0.dp,

@@ -9,7 +9,6 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.ChargeNowSheetContent
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.AppSheet
 import org.julakali.chargeahead.shared.domain.ChargeNowCandidate
 import org.julakali.chargeahead.shared.domain.ChargeNowResult
@@ -20,6 +19,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.cn_navigate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @RunWith(RobolectricTestRunner::class)
@@ -40,7 +41,7 @@ class ChargeNowSheetLazinessTest {
     )
 
     private fun composedCards() = compose.onAllNodesWithContentDescription(
-        compose.string(R.string.cn_navigate, ""),
+        compose.string(Res.string.cn_navigate, ""),
         substring = true,
     ).fetchSemanticsNodes().size
 
@@ -72,7 +73,7 @@ class ChargeNowSheetLazinessTest {
         compose.waitForIdle()
 
         val composed = compose.onAllNodesWithContentDescription(
-            compose.string(R.string.cn_navigate, ""),
+            compose.string(Res.string.cn_navigate, ""),
             substring = true,
         ).fetchSemanticsNodes().size
         assertTrue("composed $composed cards for a 600dp sheet", composed < 30)

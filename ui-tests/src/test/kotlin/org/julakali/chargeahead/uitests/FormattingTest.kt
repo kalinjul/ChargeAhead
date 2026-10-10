@@ -6,7 +6,6 @@ import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import org.julakali.chargeahead.android.phone.DrawerContent
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.etaText
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.ui.DrawerUiState
@@ -16,6 +15,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.drawer_power_step
 
 /** Numbers and clock times follow the device locale; the suite runs German, like the app. */
 @RunWith(RobolectricTestRunner::class)
@@ -41,7 +42,7 @@ class FormattingTest {
     fun `power steps come from resources`() {
         drawer(ChargeFilters())
         listOf(50, 150, 300).forEach {
-            compose.onNodeWithText(compose.string(R.string.drawer_power_step, it)).assertIsDisplayed()
+            compose.onNodeWithText(compose.string(Res.string.drawer_power_step, it)).assertIsDisplayed()
         }
     }
 }

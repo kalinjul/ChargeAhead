@@ -16,7 +16,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SnackbarHost
+import org.julakali.chargeahead.android.phone.components.AppSnackbarHost
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing_action
+import org.julakali.chargeahead.shared.resources.plan_vehicle_missing
+import androidx.compose.material3.SnackbarResult
+import org.julakali.chargeahead.android.phone.components.garageActionVisuals
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,21 +33,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.getString
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.julakali.chargeahead.android.phone.components.AppCard
-import org.julakali.chargeahead.android.phone.components.SocEditDialog
+import org.julakali.chargeahead.android.phone.components.ChargeLevelKind
+import org.julakali.chargeahead.android.phone.components.ChargeLevelSheet
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
-import org.julakali.chargeahead.shared.ui.CommittedTripEvent
-import org.julakali.chargeahead.shared.ui.CommittedTripViewModel
+import org.julakali.chargeahead.shared.ui.ActiveRouteEvent
+import org.julakali.chargeahead.shared.ui.ActiveRouteViewModel
 import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.active_route_end
+import org.julakali.chargeahead.shared.resources.active_route_replanned
+import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
+import org.julakali.chargeahead.shared.resources.soc_dialog_title
+import org.julakali.chargeahead.shared.resources.trip_arr
+import org.julakali.chargeahead.shared.resources.trip_replan
+import org.julakali.chargeahead.shared.resources.trip_soc_confirm
+import org.julakali.chargeahead.shared.resources.trip_summary_distance
+import org.julakali.chargeahead.shared.resources.trip_summary_stops
 
 /** The committed trip's page. Leaves via [onEnded] once the trip is gone. */
 @Composable
@@ -49,20 +67,27 @@ fun ActiveRouteRoute(
     onOpenStop: (PlannedStop) -> Unit,
     onSendToMaps: (String) -> Unit,
     onEnded: () -> Unit,
+    onOpenGarage: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: CommittedTripViewModel = koinViewModel(),
+    viewModel: ActiveRouteViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val event by viewModel.event.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
-    val context = LocalContext.current
-
+    // Outlives the effect: consuming the event restarts it, which would cancel the message.
+    val scope = rememberCoroutineScope()
     LaunchedEffect(event) {
-        when (event) {
+        when (val current = event) {
             null -> return@LaunchedEffect
-            CommittedTripEvent.Replanned -> snackbar.showSnackbar(context.getString(R.string.active_route_replanned))
-            CommittedTripEvent.NoRoute -> snackbar.showSnackbar(context.getString(R.string.plan_failed_no_route))
-            CommittedTripEvent.Ended -> onEnded()
+            ActiveRouteEvent.Replanned -> scope.launch { snackbar.showSnackbar(getString(Res.string.active_route_replanned)) }
+            is ActiveRouteEvent.ReplanFailed -> scope.launch { snackbar.showSnackbar(current.why.loadMessage()) }
+            ActiveRouteEvent.VehicleMissing -> scope.launch {
+                val result = snackbar.showSnackbar(
+                    garageActionVisuals(getString(Res.string.plan_vehicle_missing), getString(Res.string.plan_vehicle_missing_action)),
+                )
+                if (result == SnackbarResult.ActionPerformed) onOpenGarage()
+            }
+            ActiveRouteEvent.Ended -> onEnded()
         }
         viewModel.onEventHandled()
     }
@@ -87,7 +112,7 @@ fun ActiveRouteRoute(
             onSocDismiss = viewModel::onSocEditDismissed,
             modifier = Modifier.fillMaxSize(),
         )
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
+        AppSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
     }
 }
 
@@ -120,14 +145,15 @@ fun ActiveRouteScreen(
     val plan = trip.plan
     // Without a car reading, "Neu planen" asks for the level first.
     socInput?.let { input ->
-        SocEditDialog(
-            value = input,
-            title = stringResource(R.string.soc_dialog_title),
-            confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = onSocInputChange,
+        ChargeLevelSheet(
+            title = stringResource(Res.string.soc_dialog_title),
+            subtitle = stringResource(Res.string.soc_dialog_car_silent),
+            kind = ChargeLevelKind.NOW,
+            percent = input.toIntOrNull(),
+            onChange = { onSocInputChange(it.toString()) },
             onConfirm = onSocConfirm,
             onDismiss = onSocDismiss,
-            supportingText = stringResource(R.string.soc_dialog_car_silent),
+            confirmLabel = stringResource(Res.string.trip_soc_confirm),
         )
     }
     Column(modifier) {
@@ -136,15 +162,15 @@ fun ActiveRouteScreen(
             Column(Modifier.padding(16.dp)) {
                 Text(
                     listOf(
-                        stringResource(R.string.trip_summary_distance, plan.route.distanceKm.roundToInt()),
+                        stringResource(Res.string.trip_summary_distance, plan.route.distanceKm.roundToInt()),
                         minutesText(plan.totalMinutes),
-                        pluralStringResource(R.plurals.trip_summary_stops, plan.stops.size, plan.stops.size),
+                        pluralStringResource(Res.plurals.trip_summary_stops, plan.stops.size, plan.stops.size),
                     ).joinToString(" · "),
                     style = MaterialTheme.typography.titleMedium.tabular,
                     maxLines = 1,
                 )
                 Text(
-                    stringResource(R.string.trip_arr, etaText(LocalContext.current, plan.totalMinutes, LocalNow.current()), plan.arrivalSocPercent.roundToInt()),
+                    stringResource(Res.string.trip_arr, etaText(LocalContext.current, plan.totalMinutes, LocalNow.current()), plan.arrivalSocPercent.roundToInt()),
                     style = MaterialTheme.typography.bodyMedium.tabular,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -167,7 +193,7 @@ fun ActiveRouteScreen(
                         } else {
                             Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                         }
-                        Text(stringResource(R.string.trip_replan), maxLines = 1, modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
+                        Text(stringResource(Res.string.trip_replan), maxLines = 1, modifier = Modifier.padding(start = ButtonDefaults.IconSpacing))
                     }
                     OutlinedButton(
                         onClick = onEnd,
@@ -176,7 +202,7 @@ fun ActiveRouteScreen(
                         contentPadding = CARD_BUTTON_PADDING,
                         modifier = Modifier.weight(1f),
                     ) {
-                        Text(stringResource(R.string.active_route_end), maxLines = 1)
+                        Text(stringResource(Res.string.active_route_end), maxLines = 1)
                     }
                 }
             }

@@ -20,6 +20,12 @@ import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.SearchRow
 import java.time.LocalTime
+import org.jetbrains.compose.resources.StringResource
+import org.julakali.chargeahead.shared.Texts
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 
 /** Hamburg → München with three stops; the numbers are round so the rows read predictably. */
 object Fixtures {
@@ -107,4 +113,16 @@ fun ComposeRule.setThemedContent(content: @Composable () -> Unit) {
     }
 }
 
-fun ComposeRule.string(id: Int, vararg args: Any): String = activity.getString(id, *args)
+@Suppress("UnusedReceiverParameter") // keeps the call sites reading compose.string(…)
+fun ComposeRule.string(resource: StringResource, vararg args: Any): String = Texts.string(resource, *args)
+
+/** Nodes whose text is [resource] with any value in each of its [placeholders] — for times and counts a test can't predict. */
+fun ComposeRule.textsMatching(resource: StringResource, placeholders: Int): List<SemanticsNode> {
+    val marks = List(placeholders) { "\u0000$it\u0000" }
+    val pattern = Regex(
+        Texts.string(resource, *marks.toTypedArray()).split(Regex("\u0000\\d+\u0000")).joinToString(".+") { Regex.escape(it) },
+    )
+    return onAllNodes(SemanticsMatcher("text matches $pattern") { node ->
+        node.config.getOrNull(SemanticsProperties.Text).orEmpty().any { pattern.matches(it.text) }
+    }).fetchSemanticsNodes()
+}

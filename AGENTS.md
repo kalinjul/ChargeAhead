@@ -84,10 +84,14 @@ Dependency direction: `androidApp` → `phone-ui` → `shared`, `ui-tests` → `
   Test comments follow the same rules: state the rule the test pins down
   ("Unrecognised sites are hidden when a filter is active"), not the
   regression narrative. An issue number as the KDoc of a test is fine.
-- **User-visible text: German**, and exclusively from resources
-  (`strings.xml`, `Localizable.strings`) — never as a literal in code. This
-  is a deliberate product decision for the German market; it does not extend
-  to code, comments, or documentation.
+- **User-visible text: English and German**, exclusively from
+  `shared/src/commonMain/composeResources` (`values/` English, the fallback;
+  `values-de/` German) — never as a literal in code. Compose reads
+  `stringResource(Res.string.x)`; car screens, the formatter and Swift
+  (`localized("x")`) go through `Texts`. A new string gets both languages,
+  `StringParityTest` fails otherwise. Write `%` and `'` plainly: Compose
+  Resources doesn't unescape `%%` or `\'`. The only native strings are
+  `app_name` for the manifest and the iOS permission text in `InfoPlist.strings`.
 - **No secrets in the code or in the repository** — no API keys, tokens, or
   credentials, not even as an example value that looks real. See "API keys"
   below for where they actually go.
@@ -279,8 +283,9 @@ The short version, for the cases where the skill isn't loaded:
 - `remember { mutableStateOf(...) }` in a composable is for state that dies
   with the gesture. Anything that should survive a rotation is ViewModel
   state.
-- No user-visible text in a `UiState` — `shared` has no resources. States
-  and reasons are types; the wording comes from `strings.xml`.
+- No user-visible text in a `UiState`: a ViewModel outlives a language
+  switch, so resolved words would go stale. States and reasons are types;
+  the words are resolved at the edge.
 - ViewModels take the settings repositories they read (`VehicleRepository`,
   `PreferencesRepository`, …), `ChargeStopsFeature` and domain use
   cases — never a `Context`, never a `CoroutineScope`.
@@ -380,6 +385,13 @@ depends on its shape stays unverified: whether Kotlin `object`s show up as
 `.shared`, whether `operator` becomes `operator_`, what Kotlin `enum`s are
 called in Swift.
 
+### On a Mac with Xcode — the whole app builds
+
+There the framework links and Swift compiles against the real header, so
+everything above that stays unverified on Linux gets checked: `xcodegen
+generate`, then the `xcodebuild` command from `iosApp/README.md`. It
+replaces `tools/check-swift.sh`.
+
 ## Before reporting something as done
 
 1. `./gradlew :androidApp:assembleDebug` completes — show the output, don't
@@ -394,7 +406,8 @@ called in Swift.
    `shared/` was touched. This is mandatory, not optional: otherwise
    `commonMain` is only checked against JVM and Android, and Kotlin/Native
    is stricter.
-4. `tools/check-swift.sh` completes, if Swift files were touched. If
+4. `tools/check-swift.sh` completes, if Swift files were touched (on a
+   Mac: the `xcodebuild` from `iosApp/README.md`). If
    `swiftc` isn't installed, the script exits with code 127 — then the
    Swift files are **also not** syntactically checked, and that must be
    reported as such.

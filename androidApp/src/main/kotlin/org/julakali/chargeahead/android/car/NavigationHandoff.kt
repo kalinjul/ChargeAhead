@@ -5,8 +5,10 @@ import android.content.Intent
 import android.net.Uri
 import androidx.car.app.CarContext
 import androidx.car.app.CarToast
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.car_no_navigation_app
+import org.julakali.chargeahead.shared.Texts
 
 /**
  * Hands one charging site off to the host's navigation app, as `geo:` with
@@ -22,7 +24,7 @@ internal fun navigateTo(carContext: CarContext, name: String, position: LatLon) 
         // Without a navigation app.
         CarToast.makeText(
             carContext,
-            carContext.getString(R.string.car_no_navigation_app),
+            Texts.string(Res.string.car_no_navigation_app),
             CarToast.LENGTH_LONG,
         ).show()
     }

@@ -91,7 +91,7 @@ class CarHardwareDebugRecorder(
 
             is CarEnergyLevels.Reading.Level -> {
                 val level = reading.level
-                record(CarDataKind.BATTERY_PERCENT, level.batteryPercent.toPoint { "${it.roundToInt()} %" })
+                record(CarDataKind.BATTERY_PERCENT, level.batteryPercent.toPoint { "${it.roundToInt()}%" })
                 record(
                     CarDataKind.RANGE,
                     level.rangeRemainingMeters.toPoint { "${(it / 1000.0).roundToInt()} km" },

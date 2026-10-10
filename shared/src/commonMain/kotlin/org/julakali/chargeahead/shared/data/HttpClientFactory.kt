@@ -5,7 +5,10 @@ import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.plugins.DefaultRequest
 import io.ktor.client.plugins.HttpRequestRetry
 import io.ktor.client.request.bearerAuth
+import io.ktor.client.request.header
+import io.ktor.http.HttpHeaders
 import org.julakali.chargeahead.shared.BackendConfig
+import org.julakali.chargeahead.shared.currentLanguageTag
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
@@ -28,6 +31,8 @@ fun createHttpClient(engine: HttpClientEngine = defaultHttpEngine(), backend: Ba
             // A trailing slash, or a relative path would replace the last segment.
             url(backend.baseUrl.trimEnd('/') + "/")
             bearerAuth(backend.token)
+            // Evaluated per request, so a language switch reaches the next call; place names come back in it.
+            header(HttpHeaders.AcceptLanguage, currentLanguageTag())
         }
 
         install(HttpRequestRetry) {

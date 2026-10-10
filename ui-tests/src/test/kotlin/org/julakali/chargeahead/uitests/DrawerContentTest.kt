@@ -10,7 +10,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.DrawerContent
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.ChargeMode
 import org.julakali.chargeahead.shared.ui.DrawerUiState
 import org.junit.Assert.assertEquals
@@ -18,6 +17,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.drawer_mode_ac
+import org.julakali.chargeahead.shared.resources.drawer_mode_info
+import org.julakali.chargeahead.shared.resources.drawer_mode_tooltip
+import org.julakali.chargeahead.shared.resources.mode_browse
 
 @RunWith(RobolectricTestRunner::class)
 class DrawerContentTest {
@@ -35,8 +39,8 @@ class DrawerContentTest {
         )
     }
 
-    private fun ac() = compose.onNodeWithText(compose.string(R.string.drawer_mode_ac))
-    private fun browse() = compose.onNodeWithText(compose.string(R.string.mode_browse))
+    private fun ac() = compose.onNodeWithText(compose.string(Res.string.drawer_mode_ac))
+    private fun browse() = compose.onNodeWithText(compose.string(Res.string.mode_browse))
 
     @Test
     fun `both modes are on offer and neither is on`() {
@@ -78,24 +82,24 @@ class DrawerContentTest {
     @Test
     fun `the info icon explains both modes`() {
         drawer()
-        compose.onNodeWithContentDescription(compose.string(R.string.drawer_mode_info)).performClick()
-        compose.onNodeWithText(compose.string(R.string.drawer_mode_tooltip), substring = true).assertIsDisplayed()
+        compose.onNodeWithContentDescription(compose.string(Res.string.drawer_mode_info)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.drawer_mode_tooltip), substring = true).assertIsDisplayed()
     }
 
     @Test
     fun `tapping the info icon again closes the explanation`() {
         drawer()
-        val info = compose.onNodeWithContentDescription(compose.string(R.string.drawer_mode_info))
+        val info = compose.onNodeWithContentDescription(compose.string(Res.string.drawer_mode_info))
         info.performClick()
         info.performClick()
-        compose.onNodeWithText(compose.string(R.string.drawer_mode_tooltip), substring = true).assertDoesNotExist()
+        compose.onNodeWithText(compose.string(Res.string.drawer_mode_tooltip), substring = true).assertDoesNotExist()
     }
 
     @Test
     fun `the explanation opens again as often as asked`() {
         drawer()
-        val info = compose.onNodeWithContentDescription(compose.string(R.string.drawer_mode_info))
+        val info = compose.onNodeWithContentDescription(compose.string(Res.string.drawer_mode_info))
         repeat(3) { info.performClick() }
-        compose.onNodeWithText(compose.string(R.string.drawer_mode_tooltip), substring = true).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.drawer_mode_tooltip), substring = true).assertIsDisplayed()
     }
 }

@@ -54,6 +54,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.findRootCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.graphics.RectangleShape
@@ -62,7 +66,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -84,6 +88,18 @@ import org.julakali.chargeahead.shared.ui.SearchRow
 import org.julakali.chargeahead.shared.ui.SearchUiState
 import org.julakali.chargeahead.shared.ui.SearchViewModel
 import org.koin.androidx.compose.koinViewModel
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.home_mode_off
+import org.julakali.chargeahead.shared.resources.home_pill_active_route
+import org.julakali.chargeahead.shared.resources.home_pill_charge_now
+import org.julakali.chargeahead.shared.resources.home_settings
+import org.julakali.chargeahead.shared.resources.map_my_location
+import org.julakali.chargeahead.shared.resources.mode_ac
+import org.julakali.chargeahead.shared.resources.mode_browse
+import org.julakali.chargeahead.shared.resources.phone_permission_action
+import org.julakali.chargeahead.shared.resources.phone_permission_message
+import org.julakali.chargeahead.shared.resources.phone_status_location_unavailable
+import org.julakali.chargeahead.shared.resources.plan_planning
 
 private enum class HomeMode { BROWSING, SEARCHING, TRIP }
 
@@ -93,8 +109,10 @@ fun HomeRoute(
     /** `null` until the platform has been asked. */
     hasPermission: Boolean?,
     planningInProgress: Boolean,
-    /** The planned trip: its route replaces the browsing markers, its destination the search bar. */
+    /** The planned trip: its route replaces the browsing markers. */
     trip: TripPlan?,
+    /** Replaces the search bar; there even when no plan reached it. */
+    destination: Destination?,
     /** The trip sheet's peek, so the route fits above it. */
     mapBottomInset: Dp,
     onRequestPermission: () -> Unit,
@@ -112,6 +130,10 @@ fun HomeRoute(
     /** A search hit was picked; the search has closed by then. */
     onPick: (Destination) -> Unit,
     onClearTrip: () -> Unit,
+    /** A link for the navigation app, from a charger's detail sheet. */
+    onOpenMaps: (String) -> Unit,
+    /** How far the floating buttons reach up from the bottom edge, 0 while none are shown. */
+    onFloatingControlsHeight: (Dp) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = koinViewModel(),
     searchViewModel: SearchViewModel = koinViewModel(),
@@ -128,6 +150,7 @@ fun HomeRoute(
         uiState = uiState,
         search = searchUi,
         trip = trip,
+        destination = destination,
         hasPermission = hasPermission,
         planningInProgress = planningInProgress,
         mapBottomInset = mapBottomInset,
@@ -148,6 +171,7 @@ fun HomeRoute(
             onPick(row.destination)
         },
         onClearTrip = onClearTrip,
+        onFloatingControlsHeight = onFloatingControlsHeight,
         modifier = modifier,
     )
 
@@ -156,6 +180,7 @@ fun HomeRoute(
             stop = stop,
             live = uiState.selectedStopLive,
             onDismiss = viewModel::onSelectedStopDismissed,
+            onOpenMaps = onOpenMaps,
             tripLine = tripLineFor(stop),
         )
     }
@@ -166,6 +191,7 @@ fun HomeScreen(
     uiState: HomeUiState,
     search: SearchUiState,
     trip: TripPlan?,
+    destination: Destination?,
     hasPermission: Boolean?,
     planningInProgress: Boolean,
     mapBottomInset: Dp,
@@ -185,6 +211,7 @@ fun HomeScreen(
     onPick: (SearchRow) -> Unit,
     onClearTrip: () -> Unit,
     modifier: Modifier = Modifier,
+    onFloatingControlsHeight: (Dp) -> Unit = {},
 ) {
     val homeMode = when {
         search.expanded -> HomeMode.SEARCHING
@@ -254,7 +281,7 @@ fun HomeScreen(
                         searching -> Unit
                         // Location is running and getting nowhere.
                         uiState.locationUnavailable -> HintChip(
-                            stringResource(R.string.phone_status_location_unavailable),
+                            stringResource(Res.string.phone_status_location_unavailable),
                             MaterialTheme.colorScheme.error,
                         )
                     }
@@ -263,7 +290,7 @@ fun HomeScreen(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.width(46.dp),
+                        modifier = Modifier.width(ROUND_BUTTON_SIZE),
                     ) {
                         val bearing = camera.position.bearing
                         if (bearing != 0f) {
@@ -293,7 +320,7 @@ fun HomeScreen(
                     RoundIconButton(onClick = onSettings) {
                         Icon(
                             Icons.Outlined.Menu,
-                            contentDescription = stringResource(R.string.home_settings),
+                            contentDescription = stringResource(Res.string.home_settings),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(22.dp),
                         )
@@ -302,6 +329,7 @@ fun HomeScreen(
                 HomeTopBar(
                     search = search,
                     trip = trip,
+                    destination = destination,
                     onExpandedChange = onSearchExpandedChange,
                     onQueryChange = onQueryChange,
                     onPick = onPick,
@@ -328,7 +356,7 @@ fun HomeScreen(
                         } else {
                             Icon(
                                 Icons.Filled.MyLocation,
-                                contentDescription = stringResource(R.string.map_my_location),
+                                contentDescription = stringResource(Res.string.map_my_location),
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -351,13 +379,13 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
-                        stringResource(R.string.phone_permission_message),
+                        stringResource(Res.string.phone_permission_message),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         textAlign = TextAlign.Center,
                     )
                     Button(onClick = onRequestPermission) {
-                        Text(stringResource(R.string.phone_permission_action))
+                        Text(stringResource(Res.string.phone_permission_action))
                     }
                 }
             }
@@ -375,26 +403,33 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
                 ) {
                     CircularProgressIndicator(modifier = Modifier.padding(end = 12.dp))
-                    Text(stringResource(R.string.plan_planning))
+                    Text(stringResource(Res.string.plan_planning))
                 }
             }
         }
 
         if (homeMode == HomeMode.BROWSING) {
+            val density = LocalDensity.current
+            DisposableEffect(Unit) { onDispose { onFloatingControlsHeight(0.dp) } }
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(24.dp),
-                modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = 24.dp)
+                    .onGloballyPositioned { buttons ->
+                        val screenHeight = buttons.findRootCoordinates().size.height
+                        onFloatingControlsHeight(with(density) { (screenHeight - buttons.boundsInRoot().top).toDp() })
+                    },
             ) {
                 if (uiState.belowMinZoom) {
                     // Tapping the hint lands on full markers, not on the dot tier.
-                    HintChip(stringResource(R.string.map_zoom_hint)) {
-                        scope.launch { camera.animate(CameraUpdateFactory.zoomTo(PILL_ZOOM)) }
-                    }
+                    ZoomHintChip { scope.launch { camera.animate(CameraUpdateFactory.zoomTo(PILL_ZOOM)) } }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                     HomePill(
-                        text = stringResource(R.string.home_pill_charge_now),
+                        text = stringResource(Res.string.home_pill_charge_now),
                         icon = painterResource(R.drawable.ic_battery),
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -402,7 +437,7 @@ fun HomeScreen(
                         onClick = onChargeNow,
                     )
                     HomePill(
-                        text = stringResource(R.string.home_pill_active_route),
+                        text = stringResource(Res.string.home_pill_active_route),
                         icon = painterResource(R.drawable.ic_route),
                         containerColor = MaterialTheme.colorScheme.surface,
                         contentColor = MaterialTheme.colorScheme.onSurface,
@@ -463,12 +498,12 @@ private fun ModeFlag(mode: ChargeMode, onDismiss: () -> Unit, modifier: Modifier
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 8.dp)) {
             Text(
-                stringResource(if (mode == ChargeMode.AC) R.string.mode_ac else R.string.mode_browse),
+                stringResource(if (mode == ChargeMode.AC) Res.string.mode_ac else Res.string.mode_browse),
                 style = MaterialTheme.typography.labelMedium,
             )
             Icon(
                 Icons.Default.Close,
-                contentDescription = stringResource(R.string.home_mode_off),
+                contentDescription = stringResource(Res.string.home_mode_off),
                 modifier = Modifier.padding(start = 4.dp).size(14.dp),
             )
         }
@@ -513,14 +548,19 @@ private fun SideButton(
             shrinkHorizontally(ChargeAheadMotion.spatial(), shrinkTowards = towards, clip = false),
     ) {
         Row(modifier, verticalAlignment = Alignment.CenterVertically) {
-            if (edge == ScreenEdge.END) Spacer(Modifier.width(10.dp))
+            if (edge == ScreenEdge.END) Spacer(Modifier.width(SIDE_BUTTON_GAP))
             content()
-            if (edge == ScreenEdge.START) Spacer(Modifier.width(10.dp))
+            if (edge == ScreenEdge.START) Spacer(Modifier.width(SIDE_BUTTON_GAP))
         }
     }
 }
 
-private val SCREEN_MARGIN = 16.dp
+internal val SCREEN_MARGIN = 16.dp
+
+private val SIDE_BUTTON_GAP = 10.dp
+
+/** From the screen edge to the closed search bar, past the round button beside it. */
+internal val SEARCH_BAR_INSET = SCREEN_MARGIN + ROUND_BUTTON_SIZE + SIDE_BUTTON_GAP
 
 @Composable
 private fun HomePreview(
@@ -534,6 +574,7 @@ private fun HomePreview(
             uiState = uiState,
             search = SearchUiState(),
             trip = null,
+            destination = null,
             hasPermission = hasPermission,
             planningInProgress = planningInProgress,
             mapBottomInset = 0.dp,

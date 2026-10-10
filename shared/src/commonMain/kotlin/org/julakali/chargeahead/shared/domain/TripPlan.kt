@@ -50,11 +50,30 @@ sealed interface TripPlanResult {
 
     data object NoVehicle : TripPlanResult
 
-    /** No road connection, or the route service failed. */
+    /** No road connection to the destination. */
     data object NoRoute : TripPlanResult
+
+    /** The route server could not be reached or failed. */
+    data object NoConnection : TripPlanResult
 
     /** A leg has no reachable fast charger. */
     data class NoChargerInReach(val afterKm: Double) : TripPlanResult
+}
+
+/** Why no plan reached the destination. */
+sealed interface UnreachableTrip {
+    /** [afterKm] is how far along the route any plan got, 0 when not even the first charger is in reach. */
+    data class NoCharger(val afterKm: Double) : UnreachableTrip
+    data object NoRoute : UnreachableTrip
+    data object NoConnection : UnreachableTrip
+}
+
+/** Why this is no plan; `null` for a plan, and for a missing car, which is not about the trip. */
+fun TripPlanResult.unreachable(): UnreachableTrip? = when (this) {
+    is TripPlanResult.Planned, TripPlanResult.NoVehicle -> null
+    is TripPlanResult.NoChargerInReach -> UnreachableTrip.NoCharger(afterKm)
+    TripPlanResult.NoRoute -> UnreachableTrip.NoRoute
+    TripPlanResult.NoConnection -> UnreachableTrip.NoConnection
 }
 
 /** Finds the charging stops for a trip. */
@@ -72,6 +91,9 @@ interface TripPlanning {
 
 /** Assumed start charge when the driver never entered one. */
 const val DEFAULT_ASSUMED_SOC_PERCENT = 80.0
+
+/** A start level the driver can enter; an empty battery plans nothing. */
+val SOC_RANGE = 1..100
 
 /**
  * Plans with the selected vehicle and the stored preferences. A null

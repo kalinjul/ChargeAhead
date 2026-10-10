@@ -19,6 +19,8 @@ data class VehicleProfile(
     val customized: Boolean = false,
     /** The driver set the consumption to their own driving; the catalog keeps it. */
     val ownConsumption: Boolean = false,
+    /** Named by the driver; catalog updates keep it. */
+    val ownName: Boolean = false,
     /** The car's place in the garage; stays the same through every edit. */
     val id: String = newVehicleId(),
 ) {
@@ -27,6 +29,14 @@ data class VehicleProfile(
         require(consumptionKwhPer100Km > 0.0) { "consumptionKwhPer100Km must be positive" }
     }
 }
+
+/** CCS and Type 2: what every car sold in Europe takes. */
+fun customVehicle(name: String): VehicleProfile = VehicleProfile(
+    displayName = name.trim(),
+    usableBatteryKwh = 60.0,
+    consumptionKwhPer100Km = 18.0,
+    acceptedConnectors = setOf(ConnectorType.CCS2, ConnectorType.TYPE2),
+)
 
 /**
  * A model from the backend's vehicle catalog. Only a starting point: the
@@ -87,8 +97,8 @@ const val MAX_ARRIVAL_SOC_PERCENT = 80.0
 data class Garage(
     val vehicles: List<VehicleProfile> = emptyList(),
     val selected: VehicleProfile? = null,
-    /** The selected car's range on a full battery, down to 0 %. */
-    val selectedFullRangeKm: Double? = null,
+    /** Each car's range on a full battery, down to 0 %, by [VehicleProfile.id]. */
+    val fullRangeKm: Map<String, Double> = emptyMap(),
     /** The catalog consumption, when the selected car was added from a preset. */
     val selectedPresetConsumption: Double? = null,
 )
@@ -121,7 +131,20 @@ fun newVehicleId(): String = Uuid.random().toString()
 fun VehicleProfile.followingCatalog(presets: List<VehiclePreset>): VehicleProfile {
     if (customized) return this
     val current = presets.presetOf(this)?.toProfile()?.copy(id = id) ?: return this
-    return if (ownConsumption) current.copy(consumptionKwhPer100Km = consumptionKwhPer100Km, ownConsumption = true) else current
+    return current.keepingOwn(this, consumption = ownConsumption)
+}
+
+internal fun VehicleProfile.keepingOwn(driver: VehicleProfile, consumption: Boolean): VehicleProfile {
+    val named = if (driver.ownName) copy(displayName = driver.displayName, ownName = true) else this
+    return if (consumption) named.copy(consumptionKwhPer100Km = driver.consumptionKwhPer100Km, ownConsumption = true) else named
+}
+
+/** The name doesn't count: it is the driver's, not the catalog's. */
+fun VehicleProfile.differsFrom(preset: VehiclePreset): Boolean {
+    val catalog = preset.toProfile()
+    return usableBatteryKwh != catalog.usableBatteryKwh ||
+        dcPeakPowerKw != catalog.dcPeakPowerKw ||
+        consumptionKwhPer100Km != catalog.consumptionKwhPer100Km
 }
 
 /** The catalog model [vehicle] is linked to. */

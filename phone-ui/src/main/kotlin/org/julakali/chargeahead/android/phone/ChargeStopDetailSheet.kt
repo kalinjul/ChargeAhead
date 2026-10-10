@@ -17,9 +17,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.theme.tabular
@@ -31,6 +30,11 @@ import org.julakali.chargeahead.shared.ChargeStopFormatter
 import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.phone_detail_connectors
+import org.julakali.chargeahead.shared.resources.phone_detail_navigate
+import org.julakali.chargeahead.shared.resources.phone_detail_source
+import org.julakali.chargeahead.shared.resources.phone_detail_unknown_connectors
 
 /**
  * Charging stop details as a bottom sheet over the map. With [live] charge
@@ -42,10 +46,10 @@ fun ChargeStopDetailSheet(
     stop: ChargeStop,
     live: List<LiveConnectorGroup>?,
     onDismiss: () -> Unit,
+    onOpenMaps: (String) -> Unit,
     /** Arrival and departure when the site is a planned stop. */
     tripLine: String? = null,
 ) {
-    val context = LocalContext.current
 
     AppSheet(onDismissRequest = onDismiss) {
         Column {
@@ -90,7 +94,7 @@ fun ChargeStopDetailSheet(
         Column {
             // Live points replace the site's connectors: the two often disagree on count and power.
             val liveGroups = live.orEmpty()
-            SectionLabel(stringResource(R.string.phone_detail_connectors))
+            SectionLabel(stringResource(Res.string.phone_detail_connectors))
             val connectorLines = if (liveGroups.isNotEmpty()) {
                 ChargeStopFormatter.liveConnectorLines(liveGroups)
             } else {
@@ -98,7 +102,7 @@ fun ChargeStopDetailSheet(
             }
             if (connectorLines.isEmpty()) {
                 Text(
-                    stringResource(R.string.phone_detail_unknown_connectors),
+                    stringResource(Res.string.phone_detail_unknown_connectors),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -114,12 +118,12 @@ fun ChargeStopDetailSheet(
         }
 
         ChargeStopFormatter.sourceLine(stop)?.let { source ->
-            Fineprint(stringResource(R.string.phone_detail_source, source))
+            Fineprint(stringResource(Res.string.phone_detail_source, source))
         }
 
         Button(
             onClick = {
-                context.openMapsLink(MapsHandoff.geoUri(stop.site.position, stop.site.name))
+                onOpenMaps(MapsHandoff.geoUri(stop.site.position, stop.site.name))
                 onDismiss()
             },
             shape = MaterialTheme.shapes.medium,
@@ -132,7 +136,7 @@ fun ChargeStopDetailSheet(
                 modifier = Modifier.size(15.dp),
             )
             Spacer(Modifier.width(7.dp))
-            Text(stringResource(R.string.phone_detail_navigate))
+            Text(stringResource(Res.string.phone_detail_navigate))
         }
     }
 }

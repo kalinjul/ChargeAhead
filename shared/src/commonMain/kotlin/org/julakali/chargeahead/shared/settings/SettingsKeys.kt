@@ -24,6 +24,7 @@ internal object SettingsKeys {
     const val MODEL_ID = "vehicle.modelId"
     const val CUSTOMIZED = "vehicle.customized"
     const val OWN_CONSUMPTION = "vehicle.ownConsumption"
+    const val OWN_NAME = "vehicle.ownName"
     const val GARAGE = "vehicle.garage"
     const val MANUAL_SOC = "energy.manualSocPercent"
     const val ARRIVAL_SOC = "energy.arrivalSocPercent"

@@ -33,16 +33,23 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.ViewWeek
+import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import org.julakali.chargeahead.android.phone.components.AppCard
@@ -60,25 +67,57 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.RankBadge
-import org.julakali.chargeahead.android.phone.components.SocEditDialog
+import org.julakali.chargeahead.android.phone.components.ChargeLevelKind
+import org.julakali.chargeahead.android.phone.components.ChargeLevelSheet
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
-import org.julakali.chargeahead.shared.ui.ARRIVAL_SOC_RANGE
 import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.trip_unreachable_summary
+import org.julakali.chargeahead.shared.ui.TripUiState
+import org.julakali.chargeahead.shared.resources.garage_arrival_sheet_hint
+import org.julakali.chargeahead.shared.resources.garage_arrival_title
+import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
+import org.julakali.chargeahead.shared.resources.soc_dialog_title
+import org.julakali.chargeahead.shared.resources.trip_arr
+import org.julakali.chargeahead.shared.resources.trip_arrival_soc_edit
+import org.julakali.chargeahead.shared.resources.trip_dep_now
+import org.julakali.chargeahead.shared.resources.trip_dep_now_unknown
+import org.julakali.chargeahead.shared.resources.trip_duration_hours_minutes
+import org.julakali.chargeahead.shared.resources.trip_duration_minutes
+import org.julakali.chargeahead.shared.resources.trip_layout_list
+import org.julakali.chargeahead.shared.resources.trip_layout_tiles
+import org.julakali.chargeahead.shared.resources.trip_replan
+import org.julakali.chargeahead.shared.resources.trip_section_hint
+import org.julakali.chargeahead.shared.resources.trip_section_hint_second
+import org.julakali.chargeahead.shared.resources.trip_select_cancel
+import org.julakali.chargeahead.shared.resources.trip_select_section
+import org.julakali.chargeahead.shared.resources.trip_send_maps
+import org.julakali.chargeahead.shared.resources.trip_soc_confirm
+import org.julakali.chargeahead.shared.resources.trip_soc_edit
+import org.julakali.chargeahead.shared.resources.trip_start
+import org.julakali.chargeahead.shared.resources.trip_stop_charge
+import org.julakali.chargeahead.shared.resources.trip_stop_times
+import org.julakali.chargeahead.shared.resources.trip_summary_charging
+import org.julakali.chargeahead.shared.resources.trip_summary_distance
+import org.julakali.chargeahead.shared.resources.trip_summary_stops
+import org.julakali.chargeahead.shared.resources.trip_tile_arrival
+import org.julakali.chargeahead.shared.resources.trip_tile_charge
+import org.julakali.chargeahead.shared.forUi
 
 /** The charge-level editors behind the trip's start and destination rows. */
 class SocEditing(
@@ -125,40 +164,16 @@ fun TripSheetContent(
     val selectionA = selection.a
     val selectionB = selection.b
 
-    // The quick charge-level entry behind the start row. Confirming it re-plans.
-    socEditing?.socInput?.let { input ->
-        SocEditDialog(
-            value = input,
-            title = stringResource(R.string.soc_dialog_title),
-            confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = socEditing.onSocInputChange,
-            onConfirm = socEditing.onSocConfirm,
-            onDismiss = socEditing.onSocDismiss,
-            supportingText = if (socEditing.askedForReplan) stringResource(R.string.soc_dialog_car_silent) else null,
-        )
-    }
-
-    // The level to arrive with, edited on the destination row. Confirming re-plans.
-    socEditing?.arrivalSocInput?.let { input ->
-        SocEditDialog(
-            value = input,
-            title = stringResource(R.string.garage_arrival_title),
-            confirmLabel = stringResource(R.string.trip_soc_confirm),
-            onValueChange = socEditing.onArrivalSocInputChange,
-            onConfirm = socEditing.onArrivalSocConfirm,
-            onDismiss = socEditing.onArrivalSocDismiss,
-            valueRange = ARRIVAL_SOC_RANGE.first.toFloat()..ARRIVAL_SOC_RANGE.last.toFloat(),
-        )
-    }
+    socEditing?.let { SocEditors(it) }
 
     Column(modifier = modifier.fillMaxWidth()) {
         if (selecting) {
             val sectionOutline = ChargeAheadColors.sectionOutline
             val bothPicked = selectionA != null && selectionB != null
             val hint = if (selectionA != null && !bothPicked) {
-                stringResource(R.string.trip_section_hint_second)
+                stringResource(Res.string.trip_section_hint_second)
             } else {
-                stringResource(R.string.trip_section_hint)
+                stringResource(Res.string.trip_section_hint)
             }
             Box(
                 Modifier
@@ -203,7 +218,7 @@ fun TripSheetContent(
                         modifier = Modifier.size(15.dp),
                     )
                     Text(
-                        stringResource(R.string.trip_send_maps),
+                        stringResource(Res.string.trip_send_maps),
                         maxLines = 1,
                         modifier = Modifier.padding(start = 6.dp),
                     )
@@ -221,7 +236,7 @@ fun TripSheetContent(
                 ) {
                     Text(
                         stringResource(
-                            if (selecting) R.string.trip_select_cancel else R.string.trip_select_section,
+                            if (selecting) Res.string.trip_select_cancel else Res.string.trip_select_section,
                         ),
                     )
                 }
@@ -266,6 +281,36 @@ fun TripSheetContent(
     }
 }
 
+/** The charge-level sheets behind the start and destination rows; confirming either re-plans. */
+@Composable
+private fun SocEditors(socEditing: SocEditing) {
+    socEditing.socInput?.let { input ->
+        ChargeLevelSheet(
+            title = stringResource(Res.string.soc_dialog_title),
+            subtitle = if (socEditing.askedForReplan) stringResource(Res.string.soc_dialog_car_silent) else null,
+            kind = ChargeLevelKind.NOW,
+            percent = input.toIntOrNull(),
+            onChange = { socEditing.onSocInputChange(it.toString()) },
+            onConfirm = socEditing.onSocConfirm,
+            onDismiss = socEditing.onSocDismiss,
+            confirmLabel = stringResource(Res.string.trip_soc_confirm),
+        )
+    }
+
+    socEditing.arrivalSocInput?.let { input ->
+        ChargeLevelSheet(
+            title = stringResource(Res.string.garage_arrival_title),
+            subtitle = stringResource(Res.string.garage_arrival_sheet_hint),
+            kind = ChargeLevelKind.ARRIVAL,
+            percent = input.toIntOrNull(),
+            onChange = { socEditing.onArrivalSocInputChange(it.toString()) },
+            onConfirm = socEditing.onArrivalSocConfirm,
+            onDismiss = socEditing.onArrivalSocDismiss,
+            confirmLabel = stringResource(Res.string.trip_soc_confirm),
+        )
+    }
+}
+
 
 /** Start, stops and destination on one vertical line. */
 @Composable
@@ -294,12 +339,12 @@ private fun StopRail(
                 onClick = { if (selecting) onPickPoint(0) else socEditing?.onEditStartSoc?.invoke() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
                 trailing = pen,
-                trailingDescription = stringResource(R.string.trip_soc_edit),
+                trailingDescription = stringResource(Res.string.trip_soc_edit),
             ) {
-                Text(stringResource(R.string.trip_start), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(Res.string.trip_start), style = MaterialTheme.typography.titleSmall)
                 MetaLine(
-                    startSocPercent?.let { stringResource(R.string.trip_dep_now, it.roundToInt()) }
-                        ?: stringResource(R.string.trip_dep_now_unknown),
+                    startSocPercent?.let { stringResource(Res.string.trip_dep_now, it.roundToInt()) }
+                        ?: stringResource(Res.string.trip_dep_now_unknown),
                 )
             }
         }
@@ -321,7 +366,7 @@ private fun StopRail(
                 )
                 MetaLine(
                     stringResource(
-                        R.string.trip_stop_charge,
+                        Res.string.trip_stop_charge,
                         stop.maxPowerKw.roundToInt(),
                         stop.arrivalSocPercent.roundToInt(),
                         stop.departureSocPercent.roundToInt(),
@@ -329,7 +374,7 @@ private fun StopRail(
                 )
                 MetaLine(
                     stringResource(
-                        R.string.trip_stop_times,
+                        Res.string.trip_stop_times,
                         etaText(context, stop.arrivalMinutesFromStart, now),
                         etaText(context, stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
                     ),
@@ -345,7 +390,7 @@ private fun StopRail(
                 onClick = { if (selecting) onPickPoint(last) else socEditing?.onEditArrivalSoc?.invoke() },
                 dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
                 trailing = pen,
-                trailingDescription = stringResource(R.string.trip_arrival_soc_edit),
+                trailingDescription = stringResource(Res.string.trip_arrival_soc_edit),
             ) {
                 Text(
                     plan.destination.name,
@@ -354,7 +399,7 @@ private fun StopRail(
                     overflow = TextOverflow.Ellipsis,
                 )
                 MetaLine(
-                    stringResource(R.string.trip_arr, etaText(context, plan.totalMinutes, now), plan.arrivalSocPercent.roundToInt()),
+                    stringResource(Res.string.trip_arr, etaText(context, plan.totalMinutes, now), plan.arrivalSocPercent.roundToInt()),
                 )
             }
         }
@@ -366,13 +411,15 @@ private fun StopRail(
 private fun RailRow(
     index: Int,
     last: Int,
-    selected: Boolean,
-    /** Rounded only where the picked span begins or ends. */
-    selectionShape: Shape,
-    onClick: () -> Unit,
+    onClick: (() -> Unit)?,
     dot: @Composable () -> Unit,
+    selected: Boolean = false,
+    /** Rounded only where the picked span begins or ends. */
+    selectionShape: Shape = RectangleShape,
     trailing: androidx.compose.ui.graphics.painter.Painter? = null,
     trailingDescription: String? = null,
+    /** Body text beside an icon: centred on it, where a title sits on the dot by its line height. */
+    centerOnDot: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val lineColor = MaterialTheme.colorScheme.outlineVariant
@@ -385,7 +432,7 @@ private fun RailRow(
             .then(
                 if (selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer, selectionShape) else Modifier,
             )
-            .clickable(onClick = onClick),
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
     ) {
         Box(
             Modifier
@@ -409,8 +456,12 @@ private fun RailRow(
         }
         Column(Modifier.weight(1f)) {
             Column(
-                Modifier.padding(top = ROW_PADDING, bottom = ROW_PADDING, end = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                if (centerOnDot) {
+                    Modifier.padding(top = DOT_TOP, bottom = ROW_PADDING, end = 8.dp).heightIn(min = DOT_SIZE)
+                } else {
+                    Modifier.padding(top = ROW_PADDING, bottom = ROW_PADDING, end = 8.dp)
+                },
+                verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
             ) {
                 content()
             }
@@ -480,8 +531,8 @@ private fun StopTiles(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        MetaLine(stringResource(R.string.trip_tile_charge, stop.maxPowerKw.roundToInt(), stop.chargeMinutes.roundToInt()))
-                        MetaLine(stringResource(R.string.trip_tile_arrival, etaText(context, stop.arrivalMinutesFromStart, now)))
+                        MetaLine(stringResource(Res.string.trip_tile_charge, stop.maxPowerKw.roundToInt(), stop.chargeMinutes.roundToInt()))
+                        MetaLine(stringResource(Res.string.trip_tile_arrival, etaText(context, stop.arrivalMinutesFromStart, now)))
                     }
                 }
             }
@@ -502,37 +553,19 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
         ) {
             Text(
                 listOf(
-                    pluralStringResource(R.plurals.trip_summary_stops, plan.stops.size, plan.stops.size),
-                    stringResource(R.string.trip_summary_charging, minutesText(plan.chargeMinutes)),
+                    pluralStringResource(Res.plurals.trip_summary_stops, plan.stops.size, plan.stops.size),
+                    stringResource(Res.string.trip_summary_charging, minutesText(plan.chargeMinutes)),
                 ).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall.tabular,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.weight(1f))
-            // The search reopens with the same destination typed in.
-            Surface(
-                onClick = onReplan,
-                shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.surfaceVariant,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                ) {
-                    Icon(
-                        painterResource(R.drawable.ic_route),
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                    )
-                    Text(stringResource(R.string.trip_replan), style = MaterialTheme.typography.labelMedium)
-                }
-            }
+            ReplanChip(onReplan)
             IconButton(onClick = onToggleLayout) {
                 Icon(
                     if (layout == TripListLayout.LIST) Icons.Outlined.ViewWeek else Icons.AutoMirrored.Outlined.FormatListBulleted,
                     contentDescription = stringResource(
-                        if (layout == TripListLayout.LIST) R.string.trip_layout_tiles else R.string.trip_layout_list,
+                        if (layout == TripListLayout.LIST) Res.string.trip_layout_tiles else Res.string.trip_layout_list,
                     ),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     // ViewWeek fills its grid edge to edge; a touch smaller matches the list glyph's weight.
@@ -544,10 +577,99 @@ fun TripSummary(plan: TripPlan, layout: TripListLayout, onToggleLayout: () -> Un
     }
 }
 
+@Composable
+private fun ReplanChip(onReplan: () -> Unit) {
+    AssistChip(
+        onClick = onReplan,
+        label = { Text(stringResource(Res.string.trip_replan)) },
+        leadingIcon = {
+            Icon(painterResource(R.drawable.ic_route), contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize))
+        },
+        shape = MaterialTheme.shapes.small,
+        colors = AssistChipDefaults.assistChipColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        border = null,
+    )
+}
+
+/** The summary row when no plan came out: the reason in short, and the way to try again. */
+@Composable
+fun UnreachableTripSummary(onReplan: () -> Unit) {
+    Column {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                // The planned summary's height, which its layout button sets.
+                .heightIn(min = LocalMinimumInteractiveComponentSize.current)
+                .padding(start = 16.dp, end = 10.dp, top = 2.dp, bottom = 2.dp)
+                .fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(Res.string.trip_unreachable_summary),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+            Spacer(Modifier.weight(1f))
+            ReplanChip(onReplan)
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    }
+}
+
+/**
+ * Start and destination with the reason in between, both levels still editable:
+ * the way out of "no charger in reach" is a different level.
+ */
+@Composable
+fun UnreachableTripContent(trip: TripUiState.Unreachable, socEditing: SocEditing, modifier: Modifier = Modifier) {
+    SocEditors(socEditing)
+    val pen = painterResource(R.drawable.ic_pen)
+    // The sheet stays at its peek here, so a large font scrolls instead of cutting the destination off.
+    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+        RailRow(
+            index = 0,
+            last = 2,
+            onClick = socEditing.onEditStartSoc,
+            dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
+            trailing = pen,
+            trailingDescription = stringResource(Res.string.trip_soc_edit),
+        ) {
+            Text(stringResource(Res.string.trip_start), style = MaterialTheme.typography.titleSmall)
+            MetaLine(
+                trip.startSocPercent?.let { stringResource(Res.string.trip_dep_now, it.roundToInt()) }
+                    ?: stringResource(Res.string.trip_dep_now_unknown),
+            )
+        }
+        RailRow(
+            index = 1,
+            last = 2,
+            onClick = null,
+            dot = { Icon(Icons.Outlined.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
+            centerOnDot = true,
+        ) {
+            Text(trip.why.message(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+        }
+        RailRow(
+            index = 2,
+            last = 2,
+            onClick = socEditing.onEditArrivalSoc,
+            dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
+            trailing = pen,
+            trailingDescription = stringResource(Res.string.trip_arrival_soc_edit),
+        ) {
+            Text(
+                trip.destination.name,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
 /** "312 km · 3h 10m" for the destination header. */
 @Composable
 fun TripPlan.headerLine(): String = listOf(
-    stringResource(R.string.trip_summary_distance, route.distanceKm.roundToInt()),
+    stringResource(Res.string.trip_summary_distance, route.distanceKm.roundToInt()),
     minutesText(totalMinutes),
 ).joinToString(" · ")
 
@@ -558,9 +680,9 @@ fun minutesText(minutes: Double): String {
     val hours = total / 60
     val rest = total % 60
     return if (hours > 0) {
-        stringResource(R.string.trip_duration_hours_minutes, hours, rest)
+        stringResource(Res.string.trip_duration_hours_minutes, hours, rest)
     } else {
-        stringResource(R.string.trip_duration_minutes, rest)
+        stringResource(Res.string.trip_duration_minutes, rest)
     }
 }
 
@@ -569,7 +691,7 @@ val LocalNow = staticCompositionLocalOf<() -> LocalTime> { { LocalTime.now() } }
 
 /** Wall-clock arrival, from [now] plus the ETA offset, in the device's 12h/24h style. */
 fun etaText(context: Context, minutesFromStart: Double, now: LocalTime): String {
-    val locale = context.resources.configuration.locales[0]
+    val locale = context.resources.configuration.locales[0].forUi()
     // "j" lets ICU pick the locale's hour cycle; DateFormat.is24HourFormat would ask Locale.getDefault() instead.
     val skeleton = when (Settings.System.getString(context.contentResolver, Settings.System.TIME_12_24)) {
         "24" -> "Hm"

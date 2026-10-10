@@ -1,12 +1,5 @@
 package org.julakali.chargeahead.android.phone
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,19 +19,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.android.phone.components.AppCard
 import org.julakali.chargeahead.android.phone.components.SectionLabel
+import org.julakali.chargeahead.android.phone.components.SkeletonBar
+import org.julakali.chargeahead.android.phone.components.rememberShimmerBrush
 import org.julakali.chargeahead.android.phone.components.StationCard
 import org.julakali.chargeahead.android.phone.components.sheetListPadding
 import org.julakali.chargeahead.shared.ChargeStopFormatter
@@ -47,6 +39,15 @@ import org.julakali.chargeahead.shared.ui.ChargeNowUiState
 import org.julakali.chargeahead.shared.ui.ChargeNowViewModel
 import org.koin.androidx.compose.koinViewModel
 import kotlin.math.roundToInt
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.cn_distance_power
+import org.julakali.chargeahead.shared.resources.cn_empty
+import org.julakali.chargeahead.shared.resources.cn_more
+import org.julakali.chargeahead.shared.resources.cn_navigate
+import org.julakali.chargeahead.shared.resources.cn_relaxed
+import org.julakali.chargeahead.shared.resources.cn_subtitle
+import org.julakali.chargeahead.shared.resources.cn_title
+import org.julakali.chargeahead.shared.resources.home_no_position
 
 @Composable
 fun ChargeNowRoute(
@@ -73,11 +74,11 @@ fun ChargeNowSheetContent(
     // than half the screen, and it measures that on the first frame. A list that is sometimes
     // shorter would open the sheet expanded at content height instead.
     Column(modifier = modifier.fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.cn_title), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.cn_title), style = MaterialTheme.typography.titleMedium)
 
         when (uiState) {
             ChargeNowUiState.NoPosition -> Text(
-                stringResource(R.string.home_no_position),
+                stringResource(Res.string.home_no_position),
                 modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
             )
 
@@ -103,14 +104,14 @@ fun ChargeNowSheetContent(
                 val result = uiState.result
                 if (result.candidates.isEmpty()) {
                     Text(
-                        stringResource(R.string.cn_empty),
+                        stringResource(Res.string.cn_empty),
                         modifier = Modifier.navigationBarsPadding().padding(bottom = 24.dp),
                     )
                     return@Column
                 }
                 // Relaxed filters are context, not an error: same line, same tone.
                 Text(
-                    stringResource(if (result.relaxed.isEmpty()) R.string.cn_subtitle else R.string.cn_relaxed),
+                    stringResource(if (result.relaxed.isEmpty()) Res.string.cn_subtitle else Res.string.cn_relaxed),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -123,7 +124,7 @@ fun ChargeNowSheetContent(
                         ChargeNowCard(rank = index + 1, candidate = candidate, onNavigate = onNavigate, onOpen = onOpen)
                     }
                     if (result.more.isNotEmpty()) {
-                        item { SectionLabel(stringResource(R.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
+                        item { SectionLabel(stringResource(Res.string.cn_more), modifier = Modifier.padding(top = 8.dp)) }
                         itemsIndexed(result.more, key = { _, c -> "more-${c.site.id}" }) { index, candidate ->
                             ChargeNowCard(
                                 rank = result.candidates.size + index + 1,
@@ -150,10 +151,10 @@ private fun ChargeNowCard(
         rank = rank,
         badgeColor = operatorColor(candidate.site),
         title = candidate.site.operator ?: candidate.site.name,
-        metaLine = stringResource(R.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
+        metaLine = stringResource(Res.string.cn_distance_power, candidate.distanceKm.oneDecimal(), candidate.maxPowerKw.roundToInt()),
         address = ChargeStopFormatter.addressLine(candidate.site),
         onSend = { onNavigate(candidate) },
-        sendContentDescription = stringResource(R.string.cn_navigate, candidate.site.name),
+        sendContentDescription = stringResource(Res.string.cn_navigate, candidate.site.name),
         onClick = { onOpen(candidate) },
     )
 }
@@ -177,30 +178,3 @@ private fun ChargeNowSkeletonCard(shimmer: Brush) {
         }
     }
 }
-
-/** One placeholder bar, painted with the shared sweeping [shimmer] brush. */
-@Composable
-private fun SkeletonBar(shimmer: Brush, modifier: Modifier = Modifier, shape: Shape = RoundedCornerShape(6.dp)) {
-    Box(modifier.background(shimmer, shape))
-}
-
-/** A light band sweeping left-to-right across the placeholders; one brush drives every bar. */
-@Composable
-private fun rememberShimmerBrush(): Brush {
-    val base = MaterialTheme.colorScheme.surfaceVariant
-    val highlight = MaterialTheme.colorScheme.surface
-    val x by rememberInfiniteTransition(label = "shimmer").animateFloat(
-        initialValue = -SHIMMER_WIDTH,
-        targetValue = SHIMMER_WIDTH * 2,
-        animationSpec = infiniteRepeatable(tween(1200, easing = LinearEasing), RepeatMode.Restart),
-        label = "shimmerX",
-    )
-    return Brush.linearGradient(
-        colors = listOf(base, highlight, base),
-        start = Offset(x, 0f),
-        end = Offset(x + SHIMMER_WIDTH, 0f),
-    )
-}
-
-/** Sweep-band width in px. */
-private const val SHIMMER_WIDTH = 280f

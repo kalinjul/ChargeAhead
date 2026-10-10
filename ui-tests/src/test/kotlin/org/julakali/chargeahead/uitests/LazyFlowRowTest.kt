@@ -27,7 +27,7 @@ class LazyFlowRowTest {
     @Test
     fun `every item stays visible after the list reorders without changing size`() {
         // Alternating narrow and wide items, so reordering actually moves where lines
-        // break — mirrors NetworkSettingsScreen's pills, whose widths vary by name.
+        // break — mirrors NetworksScreen's pills, whose widths vary by name.
         val widths = mapOf("a" to 40.dp, "b" to 40.dp, "c" to 40.dp, "d" to 40.dp, "e" to 40.dp, "f" to 200.dp)
         val order = mutableStateOf(listOf("a", "b", "c", "d", "e", "f"))
 
@@ -94,7 +94,7 @@ class LazyFlowRowTest {
     fun `an item redraws when its content changes but its key does not`() {
         // The network picker's case: tapping a pill changes only how that pill draws,
         // while the list keeps the same items in the same order, so no key changes.
-        // The labels arrive as a parameter, as NetworkSettingsScreen takes its ui state,
+        // The labels arrive as a parameter, as NetworksScreen takes its ui state,
         // so only the caller recomposes — the item itself reads no state of its own.
         val selected = mutableStateOf(setOf<String>())
 

@@ -7,7 +7,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.HomeTopBar
-import org.julakali.chargeahead.android.phone.R
+import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.ui.SearchUiState
@@ -17,6 +17,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.home_search_hint
+import org.julakali.chargeahead.shared.resources.home_trip_clear
 
 @RunWith(RobolectricTestRunner::class)
 class HomeTopBarTest {
@@ -26,6 +29,7 @@ class HomeTopBarTest {
     private fun topBar(
         search: SearchUiState = SearchUiState(),
         trip: TripPlan? = null,
+        destination: Destination? = trip?.destination,
         onClearTrip: () -> Unit = {},
         onFlyTo: (LatLon) -> Unit = {},
     ) = compose.setThemedContent {
@@ -37,10 +41,11 @@ class HomeTopBarTest {
             onPick = {},
             onClearTrip = onClearTrip,
             onFlyTo = onFlyTo,
+            destination = destination,
         )
     }
 
-    private val hint get() = compose.onNodeWithText(compose.string(R.string.home_search_hint))
+    private val hint get() = compose.onNodeWithText(compose.string(Res.string.home_search_hint))
     private val header get() = compose.onNodeWithText(Fixtures.plan.destination.name)
 
     @Test
@@ -48,6 +53,13 @@ class HomeTopBarTest {
         topBar()
         hint.assertIsDisplayed()
         header.assertDoesNotExist()
+    }
+
+    @Test
+    fun `a destination no plan reached still replaces the bar`() {
+        topBar(destination = Fixtures.plan.destination)
+        header.assertIsDisplayed()
+        hint.assertDoesNotExist()
     }
 
     @Test
@@ -75,7 +87,7 @@ class HomeTopBarTest {
     fun `the header's x clears the trip`() {
         var cleared = false
         topBar(trip = Fixtures.plan, onClearTrip = { cleared = true })
-        compose.onNodeWithContentDescription(compose.string(R.string.home_trip_clear)).performClick()
+        compose.onNodeWithContentDescription(compose.string(Res.string.home_trip_clear)).performClick()
         assertTrue(cleared)
     }
 }

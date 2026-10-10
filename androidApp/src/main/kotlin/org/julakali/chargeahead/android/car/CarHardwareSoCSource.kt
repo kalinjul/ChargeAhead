@@ -55,7 +55,7 @@ class CarHardwareSoCSource(
                 val diagnostics = if (state == null) {
                     SoCDiagnostics(now, SoCDiagnostics.Outcome.NO_DATA, statusName(reading.level.batteryPercent.status))
                 } else {
-                    SoCDiagnostics(now, SoCDiagnostics.Outcome.AVAILABLE, "${state.socPercent.toInt()} %")
+                    SoCDiagnostics(now, SoCDiagnostics.Outcome.AVAILABLE, "${state.socPercent.toInt()}%")
                 }
                 state to diagnostics
             }

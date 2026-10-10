@@ -1,0 +1,376 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PowerTrip</string>
+    <!-- Android Auto -->
+
+    <string name="car_permission_message">Chargers ahead need your location. Allow access on your phone.</string>
+    <string name="car_permission_action">Allow location</string>
+    <string name="car_waiting_for_location">Finding your location…</string>
+
+    <string name="car_home_enter_destination">Enter destination</string>
+    <string name="car_home_charge_now">Charge now</string>
+    <string name="car_home_active_route">Active route</string>
+    <string name="car_home_soc">Battery</string>
+    <string name="car_home_soc_unset">–</string>
+    <string name="car_home_soc_percent">%1$d%</string>
+    <string name="car_debug_energy">Battery level as the app sees it</string>
+    <string name="car_debug_energy_value">%1$d% · %2$s</string>
+    <string name="car_debug_source_manual">entered</string>
+    <string name="car_debug_source_car">from the car</string>
+    <string name="car_debug_source_cloud">from the manufacturer cloud</string>
+    <string name="car_debug_fix">Position</string>
+    <string name="car_debug_fix_value">%1$s · %2$s km/h · %3$s°</string>
+    <string name="car_debug_just_now">just now</string>
+
+    <string name="car_search_empty">No results. Try including a town, e.g. “Kiel station”.</string>
+    <string name="car_search_submit_hint">To search, press the magnifier on the keyboard.</string>
+
+    <string name="car_route_planning">Planning route…</string>
+    <string name="car_route_send_all">Send whole route to Maps</string>
+    <string name="car_route_send_all_hint">Only with the phone in hand</string>
+    <string name="car_route_open_phone">Open PowerTrip on your phone so the route can be sent to Maps.</string>
+    <string name="car_route_next_stop_only">Next charging stop only</string>
+    <string name="car_route_navigate">Start navigation</string>
+    <string name="car_route_replan">Replan</string>
+    <string name="car_route_charge">charge to %1$d%</string>
+    <string name="car_detail_navigate">Navigate</string>
+    <string name="car_detail_back">Back</string>
+    <string name="car_detail_charge">%1$d → %2$d% in %3$s</string>
+    <string name="car_route_no_vehicle">No car profile. Add one in the garage on your phone.</string>
+    <string name="car_route_no_route">No route to the destination found.</string>
+    <string name="car_route_no_charger">No reachable fast charger on the route after %1$s.</string>
+    <string name="car_route_direct">No charging stops needed — you can reach the destination without charging.</string>
+
+    <string name="car_now_loading">Looking for chargers…</string>
+    <string name="car_now_empty">No fast charger found nearby.</string>
+    <string name="car_now_relaxed">Without filter: %1$s</string>
+    <string name="car_relax_networks">Networks</string>
+
+    <string name="car_no_navigation_app">No navigation app found</string>
+
+    <string name="car_soc_title">Enter battery level</string>
+    <string name="car_soc_current">Current: %1$s%</string>
+    <string name="car_soc_unset">Not entered yet</string>
+    <string name="car_soc_percent">%1$d%</string>
+
+    <string name="car_soc_carhardware_ask">Share car data</string>
+    <string name="car_soc_carhardware_asking">Confirm on your phone</string>
+    <string name="car_soc_carhardware_available">Battery level comes from the car: %1$s</string>
+    <string name="car_soc_carhardware_none">The car doesn't report its battery level</string>
+
+    <!-- Phone UI -->
+    <string name="phone_hint_car_ui">PowerTrip is meant to be used in Android Auto while driving. This view is only for checking things on your phone.</string>
+    <string name="phone_platform_label">Platform</string>
+    <string name="phone_stops_heading">Charging stops ahead</string>
+    <string name="phone_action_refresh">Refresh</string>
+    <string name="phone_permission_message">Your location is needed to show your position on the map and to plan routes.</string>
+    <string name="phone_permission_action">Allow location</string>
+    <string name="phone_status_waiting">Finding your location…</string>
+    <string name="phone_status_loading">Looking for chargers…</string>
+    <string name="phone_status_no_stops">No chargers found in your direction of travel.</string>
+    <string name="phone_status_location_unavailable">No location. Turn on location and check the permission.</string>
+    <string name="phone_status_sites_unavailable">Charger data is unavailable right now.</string>
+    <string name="phone_status_stale">This list is out of date.</string>
+
+    <!-- Settings -->
+    <string name="phone_action_settings">Car</string>
+    <string name="phone_field_soc">Battery level in percent</string>
+    <string name="phone_action_restore_catalog_values">Use catalog values</string>
+    <string name="phone_soc_source_car">Battery level comes from the car</string>
+    <string name="phone_soc_source_stored">The car doesn't report its battery level. This is the value you last entered when planning.</string>
+
+    <!-- Destination -->
+    <string name="phone_action_destination">Destination</string>
+    <string name="phone_destination_title">Destination</string>
+    <string name="phone_destination_intro">With a destination, chargers are searched along the route instead of just in your direction of travel. Without one, the search stays on the area ahead.</string>
+    <string name="phone_destination_hint">You also need to enter the destination in your navigation app — other apps can't read the route running in Google Maps.</string>
+    <string name="phone_destination_field">Place, address or name</string>
+    <string name="phone_destination_search">Search</string>
+    <string name="phone_destination_searching">Searching…</string>
+    <string name="phone_destination_no_hits">Nothing found. Try a different spelling.</string>
+    <string name="phone_destination_failed">Destination search is unavailable.</string>
+    <string name="phone_destination_current">Current destination</string>
+    <string name="phone_destination_recent">Recent</string>
+    <string name="phone_destination_clear">Clear destination</string>
+    <string name="phone_destination_none">No destination set</string>
+    <string name="phone_route_active">Along the route to %1$s</string>
+    <string name="phone_route_calculating">Calculating route…</string>
+    <string name="phone_route_unavailable">No route to %1$s — searching in your direction of travel.</string>
+    <string name="phone_detail_connectors">Connectors</string>
+    <string name="phone_detail_source">Data from: %1$s</string>
+    <string name="phone_detail_navigate">Start navigation</string>
+    <string name="phone_detail_no_navigation">No navigation app found.</string>
+    <string name="phone_detail_unknown_connectors">Connectors unknown</string>
+    <!-- Charging networks -->
+    <string name="phone_title_stops">Charging stops</string>
+    <string name="phone_action_networks">Networks</string>
+    <string name="phone_networks_title">Charging networks</string>
+    <string name="phone_networks_intro">With nothing selected, all chargers are shown. Tap the networks you charge with and only their chargers will load.</string>
+    <string name="phone_networks_mine">My networks</string>
+    <string name="phone_networks_search">Search networks</string>
+    <string name="phone_search_clear">Clear search</string>
+    <string name="phone_networks_no_match">No network matches “%1$s”.</string>
+
+    <!-- Charge level from the vehicle -->
+    <string name="phone_carhardware_title">Battery level from the car</string>
+    <string name="phone_carhardware_intro">Android Auto can get the battery level from your car. Whether it does is up to the car's display unit — very few share the data. This can only be checked in the car; the result of the last connection is shown here.</string>
+    <string name="phone_carhardware_never">Never checked. The app hasn't been connected to Android Auto yet.</string>
+    <string name="phone_carhardware_checked">Last checked %1$s ago</string>
+    <string name="phone_carhardware_available">The car reports its battery level (%1$s). It takes priority over what you enter.</string>
+    <string name="phone_carhardware_no_data">The car's display unit doesn't report a battery level (%1$s). The value you entered is used.</string>
+    <string name="phone_carhardware_no_permission">Permission for car data is missing. It can only be granted in the car.</string>
+    <string name="phone_carhardware_no_hardware">This car's display unit doesn't offer any car data.</string>
+    <plurals name="phone_duration_minutes">
+        <item quantity="one">%1$d minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
+    <plurals name="phone_duration_hours">
+        <item quantity="one">%1$d hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="phone_duration_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+
+    <string name="phone_attribution">Routing and place search: © OpenStreetMap contributors (ODbL). Chargers: OpenChargeMap and Bundesnetzagentur.</string>
+
+    <!-- Phone: map home -->
+    <string name="common_back">Back</string>
+    <string name="value_unknown">—</string>
+    <string name="home_pill_charge_now">Charge now</string>
+    <string name="home_pill_active_route">Active route</string>
+    <string name="active_route_title">Active route</string>
+    <string name="active_route_end">End navigation</string>
+    <string name="active_route_ended">Navigation ended</string>
+    <string name="active_route_replanned">Route replanned from here</string>
+    <string name="soc_dialog_car_silent">Your car isn't reporting its battery level. Pick the current value to replan the route from here.</string>
+    <string name="home_settings">Settings</string>
+    <string name="home_search_hint">Where to?</string>
+    <string name="home_search_clear">Clear search</string>
+    <string name="home_search_back">Close search</string>
+    <string name="home_trip_clear">Discard route</string>
+    <string name="plan_vehicle_missing_action">Add car</string>
+    <string name="home_no_position">No location — check location and permission</string>
+    <string name="map_my_location">Center on my location</string>
+    <string name="map_compass">Point map north</string>
+    <string name="map_missing_key">No map: no Google Maps key is configured.</string>
+    <string name="map_loading_sites">Loading charging stations</string>
+    <string name="map_out_of_order">Out of order</string>
+    <string name="map_zoom_hint">Zoom in to see chargers</string>
+    <string name="mode_ac">AC</string>
+    <string name="mode_browse">Explore</string>
+    <string name="drawer_mode_ac">AC charging</string>
+    <string name="home_mode_off">Turn off mode</string>
+
+    <!-- Phone: car data debug view -->
+    <string name="drawer_debug">Debug</string>
+    <string name="drawer_cardata">Car data (Android Auto)</string>
+    <string name="cardata_title">Car data</string>
+    <string name="cardata_intro">Everything the car last reported through Android Auto. Data is only recorded while connected to the car; most display units report nothing for most values — which is exactly what this view shows.</string>
+    <string name="cardata_never">never received</string>
+    <string name="cardata_age">%1$s ago</string>
+    <string name="cardata_no_permission">no permission</string>
+    <string name="cardata_no_data">no data from the car</string>
+    <string name="cardata_no_hardware">no car access on this device</string>
+    <string name="cardata_kind_model">Model</string>
+    <string name="cardata_kind_energy_profile">Charging ports (according to the car)</string>
+    <string name="cardata_kind_battery">Battery level</string>
+    <string name="cardata_kind_range">Range</string>
+    <string name="cardata_kind_energy_low">Low battery</string>
+    <string name="cardata_kind_speed">Speed</string>
+    <string name="cardata_kind_odometer">Odometer</string>
+
+    <!-- Phone: drawer -->
+    <string name="drawer_preferences">Settings</string>
+    <string name="drawer_car">Car</string>
+    <string name="drawer_networks">Networks</string>
+    <string name="drawer_mode">Mode</string>
+    <string name="drawer_mode_info">What do the modes do?</string>
+    <string name="drawer_mode_tooltip">Explore mode shows every charging network on the map and uses all of them for route planning.\n\nAC charging mode ignores all filters and shows chargers below 50 kW.\n\nBoth modes change the suggestions in Charge now.</string>
+    <string name="drawer_min_power">Minimum power</string>
+    <string name="drawer_power_step">%1$d kW</string>
+    <string name="drawer_about">About PowerTrip</string>
+    <string name="drawer_legal">Legal notice &amp; privacy</string>
+    <string name="drawer_licenses">Licenses</string>
+    <string name="drawer_car_none">No car added</string>
+
+    <!-- Phone: about -->
+    <string name="about_legal_imprint">Legal notice</string>
+    <string name="about_legal_imprint_body">Information pursuant to § 5 DDG (German Digital Services Act)\n\nJulian Kalinowski\nWismarstraße 2\n24226 Heikendorf\nGermany\n\nEmail: email@provider.tld</string>
+    <string name="about_legal_privacy">Privacy</string>
+    <string name="about_licenses_intro">%1$s uses several sources for static and live charging station data, as well as various open-source components under the license terms listed.</string>
+    <string name="about_licenses_libraries">Open-source libraries</string>
+    <string name="about_licenses_data_sources">Data sources</string>
+    <string name="about_licenses_back_to_top">Back to top</string>
+    <string name="about_data_sources_failed">Couldn't load data sources.</string>
+    <string name="about_data_sources_retry">Try again</string>
+    <string name="about_data_sources_open_dataset">Open dataset</string>
+    <string name="about_dataset_sites">Charging stations</string>
+    <string name="about_dataset_status">Live availability</string>
+    <string name="about_dataset_routing">Routing</string>
+    <string name="about_dataset_places">Place search</string>
+    <string name="about_dataset_other">Other data</string>
+
+    <!-- Phone: plan sheet -->
+    <string name="plan_search_hint">Search destination</string>
+    <string name="plan_no_results">No results</string>
+    <string name="plan_search_failed">Destination search unavailable</string>
+    <string name="plan_vehicle_missing">No car in your garage yet.</string>
+    <string name="plan_planning">Planning route…</string>
+    <string name="plan_failed_no_route">No route found.</string>
+    <string name="plan_failed_no_connection">No connection to the server.</string>
+    <string name="plan_failed_no_charger">No fast charger in reach after km %1$d.</string>
+    <string name="plan_failed_no_charger_at_start">No fast charger in reach with this battery level.</string>
+
+    <!-- Phone: trip plan -->
+    <string name="trip_summary_distance">%1$d km</string>
+    <string name="trip_duration_hours_minutes">%1$dh %2$dm</string>
+    <string name="trip_duration_minutes">%1$d min</string>
+    <string name="trip_stop_charge">%1$d kW | %2$d% - %3$d%</string>
+    <string name="trip_stop_times">Arrival %1$s | Departure %2$s</string>
+    <string name="trip_tile_charge">%1$d kW · %2$d min</string>
+    <string name="trip_tile_arrival">Arrival %1$s</string>
+    <string name="trip_layout_tiles">Show as tiles</string>
+    <string name="trip_layout_list">Show as list</string>
+    <string name="trip_send_maps">Send to Maps</string>
+    <string name="trip_select_section">Select section</string>
+    <string name="trip_select_cancel">Cancel</string>
+    <string name="trip_section_hint">Tap the start and end of the section</string>
+    <string name="trip_dep_now">Battery: %1$d%</string>
+    <string name="trip_dep_now_unknown">Battery level unknown</string>
+    <string name="trip_arr">Arrival %1$s · %2$d%</string>
+    <string name="trip_send_stop">Send %1$s to Maps</string>
+    <string name="trip_summary_charging">%1$s charging</string>
+    <string name="trip_section_hint_second">Now tap the end point</string>
+    <string name="trip_start">Start</string>
+    <string name="trip_destination">Destination</string>
+    <string name="trip_maps_sent">Sent to Google Maps</string>
+    <string name="trip_replan">Replan</string>
+    <string name="trip_unreachable_summary">Couldn't plan this trip</string>
+    <string name="trip_soc_edit">Change starting battery level</string>
+    <string name="trip_arrival_soc_edit">Change arrival battery level</string>
+    <string name="trip_soc_confirm">Replan</string>
+
+    <!-- Phone: charge-level dialog, shared by the plan sheet and the trip screen -->
+    <string name="soc_dialog_title">Battery level now</string>
+    <string name="soc_dialog_cancel">Cancel</string>
+    <string name="soc_dialog_apply">Apply</string>
+
+    <!-- Phone: charge now -->
+    <string name="cn_title">Charge now</string>
+    <string name="cn_subtitle">Best chargers by distance and filters</string>
+    <string name="cn_relaxed">Few chargers matched, so the filters were relaxed.</string>
+    <string name="cn_empty">No fast chargers found nearby.</string>
+    <string name="cn_loading">Looking for chargers…</string>
+    <string name="cn_distance_power">%1$s km · %2$d kW</string>
+    <string name="plan_result_distance">%1$s km</string>
+    <string name="cn_navigate">Start navigation to %1$s</string>
+    <string name="cn_more">More nearby</string>
+
+    <!-- Phone: garage -->
+    <string name="garage_title">Garage</string>
+    <string name="garage_search">Search cars</string>
+    <string name="garage_added">%1$s is now in your garage</string>
+    <string name="garage_add_title">Add car</string>
+    <string name="garage_preset_line">%1$s kWh · %2$s kWh/100 km · %3$d kW DC</string>
+    <string name="garage_arrival_title">Arrival battery level</string>
+    <string name="garage_range_number">≈ %1$d</string>
+    <string name="garage_range_unit">km</string>
+    <string name="garage_range_caption">at your average consumption</string>
+    <string name="garage_stat_battery">Battery</string>
+    <string name="garage_stat_dc">Max charging</string>
+    <string name="garage_stat_consumption">Consumption</string>
+    <string name="garage_kwh">%1$s kWh</string>
+    <string name="garage_kw">%1$d kW</string>
+    <string name="garage_kwh_per_100">%1$s kWh/100 km</string>
+    <string name="garage_unit_kwh">kWh</string>
+    <string name="garage_unit_kw">kW</string>
+    <string name="garage_unit_kwh_per_100">kWh/100 km</string>
+    <string name="garage_percent">%1$d%</string>
+    <string name="garage_vehicle_row">Edit car</string>
+    <string name="garage_vehicle_row_hint">Change the specs of your car</string>
+    <string name="garage_arrival_row_hint">Battery left at your destination</string>
+    <string name="garage_arrival_sheet_hint">How much charge you want left when you arrive.</string>
+    <string name="garage_soc_title">Current battery level</string>
+    <string name="garage_soc_row_hint">Used if the car doesn't communicate</string>
+    <string name="garage_soc_sheet_hint">How full the battery is right now.</string>
+    <string name="garage_empty_title">No car yet</string>
+    <string name="garage_empty_text">Pick your model from the catalog. Battery, consumption and charging power come with it.</string>
+    <string name="vehicle_title">Edit car</string>
+    <string name="vehicle_model">Car</string>
+    <string name="vehicle_model_own">Custom car</string>
+    <string name="vehicle_catalog_value">Catalog: %1$s</string>
+    <string name="vehicle_name">Name</string>
+    <string name="vehicle_consumption">Consumption</string>
+    <string name="vehicle_battery">Usable battery</string>
+    <string name="vehicle_dc">Max charging</string>
+    <string name="vehicle_dc_unknown">unknown</string>
+    <string name="vehicle_number_invalid">Enter a number greater than 0</string>
+    <string name="vehicle_remove">Remove car from garage</string>
+    <string name="vehicle_restore_customized">Your values differ from the catalog</string>
+    <string name="vehicle_restore_current">Matches the catalog</string>
+    <string name="vehicle_restore_unavailable">Not available for custom cars</string>
+    <string name="vehicle_remove_title">Remove “%1$s”?</string>
+    <string name="vehicle_remove_text">The car leaves the garage, along with your custom values.</string>
+    <string name="vehicle_remove_confirm">Remove</string>
+    <string name="addcar_custom_named">Add “%1$s” manually</string>
+    <string name="addcar_custom">Add a custom car</string>
+    <string name="addcar_custom_hint">Not in the catalog? You'll enter the values next.</string>
+    <string name="addcar_custom_default_name">My car</string>
+
+    <!-- Phone: trip top bar -->
+    <plurals name="trip_summary_stops">
+        <item quantity="one">%1$d stop</item>
+        <item quantity="other">%1$d stops</item>
+    </plurals>
+    <string name="detail_stop_x_of_y">Stop %1$d of %2$d</string>
+
+    <!-- Phone: drawer networks summary -->
+    <string name="drawer_networks_all">all on</string>
+    <string name="drawer_networks_selected">%1$d selected</string>
+
+    <!-- Phone: stop detail -->
+    <string name="detail_title">Charging stop</string>
+    <string name="detail_kv_connectors">Connectors</string>
+    <string name="detail_kv_charge">Planned stop</string>
+    <string name="detail_kv_charge_value">%1$d min · %2$d → %3$d%</string>
+    <string name="detail_kv_arrival">Arrival</string>
+    <string name="detail_kv_arrival_value">%1$s at %2$d%</string>
+    <string name="detail_kv_energy">Energy</string>
+    <string name="detail_kv_energy_value">≈ %1$d kWh</string>
+    <string name="detail_connector_value">%1$d× CCS · %2$d kW</string>
+    <string name="detail_navigate_maps">Navigate in Google Maps</string>
+
+
+    <!-- Shared formatter: car rows, phone sheets, CarPlay -->
+    <string name="fmt_arrival_about">Arrival ~%1$s%</string>
+    <string name="fmt_reachable">Reachable</string>
+    <string name="fmt_marginal">Tight</string>
+    <string name="fmt_unreachable">Out of range</string>
+    <string name="fmt_charge_points_unknown">Charge points unknown</string>
+    <string name="fmt_charge_point">Charge point</string>
+    <string name="fmt_status_unknown">Status unknown</string>
+    <string name="fmt_available_of">%1$d of %2$d free</string>
+    <string name="fmt_out_of_order">%1$d out of order</string>
+    <string name="fmt_planned_stop_detail">After %1$s · %2$s kW · %3$s → %4$s% in %5$s</string>
+    <string name="fmt_charge_to">%1$s charging to %2$s%</string>
+    <string name="fmt_connector_type2">Type 2</string>
+    <string name="fmt_connector_unknown">Unknown</string>
+    <plurals name="fmt_charge_points">
+        <item quantity="one">%1$d charge point</item>
+        <item quantity="other">%1$d charge points</item>
+    </plurals>
+
+    <!-- iOS only: wording that differs from Android (CarPlay, no drawer) -->
+    <string name="ios_home_pill_plan">Plan</string>
+    <string name="ios_done">Done</string>
+    <string name="ios_home_diagnostics">Info</string>
+    <string name="ios_plan_title">Plan route</string>
+    <string name="ios_plan_vehicle_missing">No car added.</string>
+    <string name="ios_plan_failed_no_charger">No reachable fast charger on the route.</string>
+    <string name="ios_trip_summary_time">%1$s on the road · %2$s of it charging</string>
+    <string name="ios_trip_summary_arrival">Arrive with %1$d%</string>
+    <string name="ios_cn_relaxed_note">Filters too strict — they were relaxed.</string>
+    <string name="ios_hint_car_ui">PowerTrip is meant to be used in CarPlay while driving. This view is only for checking things on your phone.</string>
+</resources>

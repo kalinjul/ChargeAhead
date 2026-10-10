@@ -68,9 +68,10 @@ cancel the write.
    no upstream flow at all (see `ChargeNowViewModel`).
 3. **`WhileUiSubscribed`, not `Eagerly` or `Lazily`.** It is defined once in
    `UiStateSharing.kt`; use it, don't spell out `WhileSubscribed(5_000)`.
-4. **No user-visible text in a UiState.** `shared` has no resources. A
-   reason travels as a type (`TripEvent.NoRoute`), the wording comes from
-   `strings.xml`. Same rule as everywhere else in this repository.
+4. **No user-visible text in a UiState.** A ViewModel outlives a language
+   switch, so resolved words would go stale. A reason travels as a type
+   (`TripEvent.NoRoute`), the screen turns it into words from `Res.string`.
+   Same rule as everywhere else in this repository.
 5. **Events are methods named `on…`** — `onQueryChanged(query)`,
    `onVehicleRemoved(name)`. They return `Unit`, launch into
    `viewModelScope`, and never hand state back.
@@ -205,7 +206,7 @@ LaunchedEffect(tripEvent) {
     when (val event = tripEvent) {
         null -> return@LaunchedEffect
         TripEvent.PlanReady -> page = Page.TRIP
-        TripEvent.NoRoute -> snackbar.show(scope, getString(R.string.plan_failed_no_route))
+        TripEvent.NoRoute -> snackbar.show(scope, getString(Res.string.plan_failed_no_route))
         // ...
     }
     tripViewModel.onEventHandled()

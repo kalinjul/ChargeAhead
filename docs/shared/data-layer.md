@@ -92,7 +92,7 @@ interface CarDiagnosticsRepository {              // what the car last reported,
 // Destination, planned trip (on the map) and committed trip (sent to Maps),
 // one per process, in its own DataStore file. Every transition is one write
 // of the whole state; only the trip interactors call update().
-data class TripState(val destination: Destination?, val planned: TripPlan?, val committed: CommittedTrip?)
+data class TripState(val destination: Destination?, val planned: TripPlan?, val committed: CommittedTrip?, val unreachable: UnreachableTrip?)
 class TripRepository(storage: TripStorage) { val state: StateFlow<TripState>; suspend fun restore() }
 ```
 

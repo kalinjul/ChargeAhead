@@ -13,10 +13,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ZoomIn
+import androidx.compose.material3.AssistChipDefaults
+import androidx.compose.material3.ElevatedAssistChip
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,9 +27,14 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.map_compass
+import org.julakali.chargeahead.shared.resources.map_zoom_hint
 
 /** The bar's height: Material's search field is 56dp; the destination header matches it. */
 val SEARCH_BAR_HEIGHT = 56.dp
+
+val ROUND_BUTTON_SIZE = 46.dp
 
 /** 46dp floating circle: the bar may be taller, the buttons stay light. */
 @Composable
@@ -40,7 +48,7 @@ fun RoundIconButton(
         shape = CircleShape,
         color = MaterialTheme.colorScheme.surface,
         shadowElevation = 6.dp,
-        modifier = modifier.size(46.dp),
+        modifier = modifier.size(ROUND_BUTTON_SIZE),
     ) {
         Box(contentAlignment = Alignment.Center) { content() }
     }
@@ -51,11 +59,10 @@ fun RoundIcon(icon: Painter, contentDescription: String, tint: Color = MaterialT
     Icon(icon, contentDescription = contentDescription, tint = tint, modifier = Modifier.size(20.dp))
 }
 
+/** A status line floating over the map; not tappable, an action gets a chip. */
 @Composable
-fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface, onClick: (() -> Unit)? = null) {
-    val shape = MaterialTheme.shapes.small
-    val surface = MaterialTheme.colorScheme.surface
-    val content: @Composable () -> Unit = {
+fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface) {
+    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surface, shadowElevation = 2.dp) {
         Text(
             text,
             style = MaterialTheme.typography.labelSmall,
@@ -64,11 +71,16 @@ fun HintChip(text: String, color: Color = MaterialTheme.colorScheme.onSurface, o
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
         )
     }
-    if (onClick != null) {
-        Surface(onClick = onClick, shape = shape, color = surface, shadowElevation = 2.dp) { content() }
-    } else {
-        Surface(shape = shape, color = surface, shadowElevation = 2.dp) { content() }
-    }
+}
+
+/** Too far out for the chargers to load; tapping zooms in to where they show. */
+@Composable
+fun ZoomHintChip(onClick: () -> Unit) {
+    ElevatedAssistChip(
+        onClick = onClick,
+        label = { Text(stringResource(Res.string.map_zoom_hint)) },
+        leadingIcon = { Icon(Icons.Outlined.ZoomIn, contentDescription = null, modifier = Modifier.size(AssistChipDefaults.IconSize)) },
+    )
 }
 
 /** Fully round, floating pill. */
@@ -111,7 +123,7 @@ fun CompassButton(bearing: () -> Float, onClick: () -> Unit) {
     RoundIconButton(onClick = onClick) {
         Icon(
             imageVector = Icons.Filled.Navigation,
-            contentDescription = stringResource(R.string.map_compass),
+            contentDescription = stringResource(Res.string.map_compass),
             tint = CompassRed,
             // graphicsLayer, so a turning map only invalidates the draw.
             modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = -bearing() },

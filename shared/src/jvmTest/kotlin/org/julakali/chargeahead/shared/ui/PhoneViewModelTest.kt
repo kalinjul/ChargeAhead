@@ -1,7 +1,6 @@
 package org.julakali.chargeahead.shared.ui
 
 import org.julakali.chargeahead.shared.FakeVehicleCatalog
-import org.julakali.chargeahead.shared.testPresets
 import org.julakali.chargeahead.shared.testAppScope
 import org.julakali.chargeahead.shared.testDispatchers
 import org.julakali.chargeahead.shared.ChargeStopsFeature
@@ -43,12 +42,11 @@ import org.julakali.chargeahead.shared.domain.usecases.RefreshLiveConnectorsInte
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargeStopsInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshChargerAvailabilityInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
-import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
-import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
 import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
+import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.Place
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteEngine
@@ -57,7 +55,6 @@ import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.settings.InMemoryPreferencesDataStore
-import org.julakali.chargeahead.shared.settings.DataStoreCarDiagnosticsRepository
 import org.julakali.chargeahead.shared.settings.DataStorePreferencesRepository
 import org.julakali.chargeahead.shared.settings.DataStoreVehicleRepository
 import kotlinx.coroutines.CoroutineScope
@@ -93,92 +90,6 @@ class PhoneViewModelTest {
     @AfterTest
     fun tearDownMainDispatcher() = main.tearDown()
 
-    /** Typing the comma in "17,8" must not be swallowed by the stored profile. */
-    @Test
-    fun `the form keeps what was typed while the store takes what parses`() = runBlocking<Unit> {
-        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val viewModel = vehicleSettingsViewModel(vehicles)
-
-        viewModel.onNameChanged("Testwagen")
-        viewModel.onBatteryChanged("77")
-        viewModel.onConsumptionChanged("17,")
-
-        val state = viewModel.uiState.await { it.name == "Testwagen" }
-        assertEquals("77", state.battery)
-        assertEquals("17,", state.consumption, "the comma must survive being written through")
-        // The profile is written from a coroutine.
-        assertEquals(17.0, vehicles.vehicle.awaitValue { it != null }?.consumptionKwhPer100Km)
-
-        viewModel.onConsumptionChanged("17,8")
-        assertEquals("17,8", viewModel.uiState.await { it.consumption == "17,8" }.consumption)
-        assertEquals(
-            17.8,
-            vehicles.vehicle.awaitValue { it?.consumptionKwhPer100Km != 17.0 }?.consumptionKwhPer100Km,
-        )
-    }
-
-    @Test
-    fun `adjusting a preset car keeps its model id and DC peak`() = runBlocking<Unit> {
-        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val preset = testPresets.first()
-        vehicles.setVehicle(preset.toProfile())
-        val viewModel = vehicleSettingsViewModel(vehicles)
-        viewModel.uiState.await { it.name == preset.name }
-
-        viewModel.onConsumptionChanged("16")
-
-        val stored = vehicles.vehicle.awaitValue { it?.consumptionKwhPer100Km == 16.0 }
-        assertEquals(preset.id, stored?.modelId)
-        assertEquals(preset.dcPeakPowerKw, stored?.dcPeakPowerKw)
-        assertTrue(viewModel.uiState.await { it.canRestoreCatalogValues }.canRestoreCatalogValues)
-
-        viewModel.onCatalogValuesRestored()
-
-        assertEquals(preset.toProfile().copy(id = stored!!.id), vehicles.vehicle.awaitValue { it?.customized == false })
-        assertEquals(preset.consumptionKwhPer100Km.asInput(), viewModel.uiState.await { !it.canRestoreCatalogValues }.consumption)
-    }
-
-    private fun vehicleSettingsViewModel(vehicles: DataStoreVehicleRepository): VehicleSettingsViewModel {
-        val catalog = FakeVehicleCatalog()
-        return main.track(VehicleSettingsViewModel(
-            vehicles,
-            catalog,
-            DataStoreCarDiagnosticsRepository(InMemoryPreferencesDataStore()),
-            stubFeature(),
-            SelectVehicleInteractor(vehicles),
-            RestoreCatalogValuesInteractor(vehicles, catalog),
-        ))
-    }
-
-    @Test
-    fun `typing a new car's name keeps it one car in the garage`() = runBlocking<Unit> {
-        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val viewModel = vehicleSettingsViewModel(vehicles)
-        viewModel.onBatteryChanged("77")
-        viewModel.onConsumptionChanged("18")
-
-        viewModel.onNameChanged("E")
-        viewModel.onNameChanged("Ei")
-        viewModel.onNameChanged("Eigenbau")
-
-        vehicles.vehicle.awaitValue { it?.displayName == "Eigenbau" }
-        assertEquals(listOf("Eigenbau"), vehicles.vehicles.first().map { it.displayName })
-    }
-
-    /** Without a usable capacity, no profile is stored at all. */
-    @Test
-    fun `an unparseable capacity stores no profile`() = runBlocking<Unit> {
-        val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
-        val viewModel = vehicleSettingsViewModel(vehicles)
-
-        viewModel.onNameChanged("Testwagen")
-        viewModel.onConsumptionChanged("17,8")
-        viewModel.onBatteryChanged("sieben")
-
-        assertTrue(viewModel.uiState.await { it.battery == "sieben" }.batteryInvalid)
-        assertNull(vehicles.vehicle.first())
-    }
-
     @Test
     fun `the garage reports what the settings hold`() = runBlocking<Unit> {
         val vehicles = DataStoreVehicleRepository(InMemoryPreferencesDataStore())
@@ -188,8 +99,8 @@ class PhoneViewModelTest {
             vehicles,
             GarageObserver(vehicles, catalog),
             SelectVehicleInteractor(vehicles),
-            RemoveVehicleInteractor(vehicles),
             UpdateArrivalSocInteractor(vehicles),
+            UpdateManualSocInteractor(vehicles),
         ))
 
         val preset = addCar.uiState.await { it.matches.isNotEmpty() }.matches.first()
@@ -198,8 +109,7 @@ class PhoneViewModelTest {
         val state = garage.uiState.await { it.selected != null }
         assertEquals(preset.name, state.selected?.displayName)
         assertEquals(listOf(preset.name), state.vehicles.map { it.displayName })
-        assertEquals(preset.consumptionKwhPer100Km, state.selectedPresetConsumption)
-        assertEquals(preset.usableBatteryKwh / preset.consumptionKwhPer100Km * 100, state.selectedFullRangeKm!!, 0.5)
+        assertEquals(preset.usableBatteryKwh / preset.consumptionKwhPer100Km * 100, state.fullRangeKm.getValue(state.selected!!.id), 0.5)
         // Already owned, so the add screen stops offering it.
         assertTrue(addCar.uiState.await { preset !in it.matches }.matches.none { it.name == preset.name })
     }

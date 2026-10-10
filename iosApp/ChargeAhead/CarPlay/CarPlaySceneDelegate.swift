@@ -43,10 +43,10 @@ class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
 
     private func makeListTemplate() -> CPListTemplate {
         let template = CPListTemplate(
-            title: NSLocalizedString("car_list_title", comment: ""),
+            title: localized("phone_title_stops"),
             sections: [makeSection()]
         )
-        template.emptyViewTitleVariants = [NSLocalizedString("car_list_title", comment: "")]
+        template.emptyViewTitleVariants = [localized("phone_title_stops")]
         template.emptyViewSubtitleVariants = [viewModel.statusText]
         return template
     }
@@ -57,7 +57,7 @@ class CarPlaySceneDelegate: NSObject, CPTemplateApplicationSceneDelegate {
         let stops = Array(viewModel.stops.prefix(maxRows))
 
         let items = stops.map { stop -> CPListItem in
-            let title = [stop.site.name, stop.site.operator_]
+            let title = [stop.site.name, stop.site.`operator`]
                 .compactMap { $0 }
                 .joined(separator: " · ")
             let primaryLine = ChargeStopFormatter.shared.primaryLine(stop: stop)

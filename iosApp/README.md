@@ -6,10 +6,11 @@ assistant (as of M1 — see [../ARCHITECTURE.md](../ARCHITECTURE.md) and
 
 ```
 ChargeAhead/
-├── AppDelegate.swift              Scene routing: phone vs. CarPlay; SharedEntry creates features
+├── AppDelegate.swift              Scene routing: phone vs. CarPlay; SharedEntry starts the graph at launch and creates features
 ├── Info.plist                     UIApplicationSceneManifest, permission texts
 ├── ChargeAhead.entitlements       com.apple.developer.carplay-charging
-├── de.lproj/Localizable.strings   German text for the phone UI and CarPlay
+├── Localized.swift                localized("key"): text from shared's composeResources
+├── {en,de}.lproj/InfoPlist.strings location permission text, the one native string
 ├── CarPlay/
 │   ├── CarPlaySceneDelegate.swift CPTemplateApplicationSceneDelegate, CPListTemplate
 │   └── ChargeStopsViewModel.swift corridor list for CarPlay (ChargeStopsWatcher)
@@ -21,56 +22,36 @@ ChargeAhead/
 project.yml                        XcodeGen spec for the Xcode project
 ```
 
-## Important: the Swift part is unverified
+## Building
 
-This code was written on Linux. The two halves of the iOS side are checked
-to different degrees, and the distinction matters:
-
-**`shared/src/iosMain` (Kotlin) compiles.** Kotlin/Native builds the Apple
-targets on Linux too:
+To build it and run it in the simulator in one go (see the `ios-simulator`
+skill for restart, screenshots, logs and location):
 
 ```bash
-./gradlew :shared:compileKotlinIosSimulatorArm64
+tools/ios-sim.sh run
 ```
 
-That means `CoreLocationSource.kt`, `IosEntryPoints.kt`, `Time.ios.kt`,
-`HttpClientFactory.ios.kt`, and `Platform.ios.kt` are checked against the
-**real** cinterop bindings of CoreLocation, Foundation, and UIKit. What's
-skipped on Linux is linking (`linkDebugFrameworkIos*`) — so no
-`Shared.framework` and no Objective-C header are produced.
+By hand, the app compiles and links against the real `Shared.framework` (SKIE
+included) on a Mac with Xcode. Without a simulator runtime installed, build
+for the simulator SDK directly:
 
-**The Swift part in this directory is checked syntactically, nothing more.**
-With Swift 6.1.3 installed, all five files pass `tools/check-swift.sh`
-(`swiftc -parse`) cleanly. That finds typos and unbalanced brackets —
-**not** type errors, wrong API signatures, or missing symbols. `import
-CarPlay`, `import UIKit`, `import SwiftUI`, and `import Shared` can't be
-resolved here.
+```bash
+cd iosApp
+xcodegen generate
+xcodebuild -project ChargeAhead.xcodeproj -target ChargeAhead \
+  -configuration Debug -sdk iphonesimulator -arch arm64 \
+  CODE_SIGNING_ALLOWED=NO \
+  JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" build
+```
 
-The following spots in particular are candidates for correction once a Mac
-with Xcode is available — they all depend on the shape of the Objective-C
-header, which doesn't get produced here:
+`JAVA_HOME` goes in as a build setting because Xcode's script phase that runs
+Gradle doesn't inherit it from the shell.
 
-- `AppDelegate.swift`: `UISceneSession.Role.carTemplateApplication` — the
-  name of this static member for
-  `CPTemplateApplicationSceneSessionRoleApplication` comes from memory of
-  Apple's documentation, not from a locally verified source.
-- **SKIE's Swift layer.** The shared framework is built with SKIE, which
-  generates Swift on top of the Objective-C header at link time, so none of
-  it exists on Linux. Unverified: that `uiState` arrives as a flow `Observing`
-  and `.collect` accept, that Kotlin enums (`ChargeStopsState.Phase`) and
-  `onEnum(of:)` for sealed types (`ChargeNowUiState`) switch as written, and
-  that `TripPlanner.planTrip` is `async throws`.
-- **`ChargeStopFormatter.shared`** and whether `operator` (a Kotlin property
-  on `ChargeSite`) becomes `operator_` in the Swift header — both depend on
-  the specific Kotlin/Native export run.
-
-`CoreLocationSource.kt` is **no longer** on this list: the cinterop
-signatures have been confirmed by the Kotlin/Native run. What stays
-unverified there is only runtime behavior — above all, whether
-`flowOn(Dispatchers.Main)` is enough. `CLLocationManager` only delivers its
-callbacks to a thread with a running run loop; without that, the stream
-would stay silent forever with no error anywhere. That only shows up on a
-device.
+Still unverified, because it only shows up at runtime on a device:
+`CLLocationManager` delivers its callbacks only to a thread with a running
+run loop, so whether `flowOn(Dispatchers.Main)` in `CoreLocationSource.kt`
+is enough decides between a working location stream and one that stays
+silent with no error anywhere.
 
 ## Backend
 

@@ -26,6 +26,7 @@ import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripRepository
+import org.julakali.chargeahead.shared.domain.UnreachableTrip
 import org.julakali.chargeahead.shared.domain.VehicleProfile
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.DismissPlannedTripInteractor
@@ -61,6 +62,7 @@ class TripViewModelTest {
     private val trips = TripRepository()
     private var plannedSoc: Double? = null
     private var plans = 0
+    private var outcome: () -> TripPlanResult = { TripPlanResult.Planned(plan()) }
 
     private fun plan() = TripPlan(
         route = Route(listOf(hamburg, muenchen.position), distanceKm = 776.0, durationMinutes = 470.0),
@@ -83,7 +85,7 @@ class TripViewModelTest {
         ): TripPlanResult {
             plans++
             plannedSoc = startSocPercent
-            return TripPlanResult.Planned(plan())
+            return outcome()
         }
     }
 
@@ -150,7 +152,51 @@ class TripViewModelTest {
         viewModel.onReplanRequested()
 
         val state = withTimeout(5_000) { viewModel.uiState.first { it is TripUiState.Planned && plans == before + 1 } }
-        assertEquals(TripEvent.PlanReady, viewModel.event.value)
+        assertEquals(TripEvent.SheetReady, viewModel.event.value)
         assertNull((state as TripUiState.Planned).socInput)
+    }
+
+    @Test
+    fun `no charger in reach keeps the sheet on the destination, start level still editable`() = runBlocking {
+        outcome = { TripPlanResult.NoChargerInReach(afterKm = 0.0) }
+        val feature = feature(carSoc = null)
+        vehicles.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))
+        vehicles.setManualSocPercent(5.0)
+        feature.start()
+        feature.locate()
+        val viewModel = viewModel(feature)
+
+        viewModel.plan(muenchen)
+
+        val state = withTimeout(5_000) { viewModel.uiState.first { it is TripUiState.Unreachable } } as TripUiState.Unreachable
+        assertEquals(muenchen, state.destination)
+        assertEquals(UnreachableTrip.NoCharger(afterKm = 0.0), state.why)
+        assertEquals(5.0, state.startSocPercent)
+
+        viewModel.onStartSocEditRequested()
+        withTimeout(5_000) { viewModel.uiState.first { (it as? TripUiState.Unreachable)?.socInput == "5" } }
+        outcome = { TripPlanResult.Planned(plan()) }
+        viewModel.onStartSocInputChanged("60")
+        viewModel.onStartSocConfirmed()
+
+        withTimeout(5_000) { viewModel.uiState.first { it is TripUiState.Planned } }
+        assertEquals(60.0, plannedSoc)
+    }
+
+    @Test
+    fun `closing an unreachable trip goes back to browsing`() = runBlocking {
+        outcome = { TripPlanResult.NoChargerInReach(afterKm = 0.0) }
+        val feature = feature(carSoc = null)
+        vehicles.setVehicle(VehicleProfile("Testwagen", 77.0, 18.0, setOf(ConnectorType.CCS2)))
+        feature.start()
+        feature.locate()
+        val viewModel = viewModel(feature)
+        viewModel.plan(muenchen)
+        withTimeout(5_000) { viewModel.uiState.first { it is TripUiState.Unreachable } }
+
+        viewModel.clear()
+
+        withTimeout(5_000) { viewModel.uiState.first { it == TripUiState.NoPlan } }
+        assertNull(trips.state.value.unreachable)
     }
 }

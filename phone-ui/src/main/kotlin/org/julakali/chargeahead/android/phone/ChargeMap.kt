@@ -26,7 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,6 +50,8 @@ import org.julakali.chargeahead.android.phone.R
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.MapCharger
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.map_missing_key
 
 /** Without a `googleMapsApiKey` in `local.properties` the callers show [MissingMapsKeyNotice] instead of a map. */
 val hasGoogleMapsKey: Boolean get() = BuildConfig.HAS_GOOGLE_MAPS_KEY
@@ -61,7 +63,7 @@ fun MissingMapsKeyNotice(modifier: Modifier = Modifier) {
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            stringResource(R.string.map_missing_key),
+            stringResource(Res.string.map_missing_key),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

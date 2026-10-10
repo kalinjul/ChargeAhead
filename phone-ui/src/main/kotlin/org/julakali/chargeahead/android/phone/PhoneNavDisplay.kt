@@ -1,8 +1,8 @@
 package org.julakali.chargeahead.android.phone
 
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -14,7 +14,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import org.jetbrains.compose.resources.stringResource
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
@@ -25,6 +25,15 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.ChargeSite
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.VehiclePreset
+import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.active_route_title
+import org.julakali.chargeahead.shared.resources.cardata_title
+import org.julakali.chargeahead.shared.resources.drawer_legal
+import org.julakali.chargeahead.shared.resources.drawer_licenses
+import org.julakali.chargeahead.shared.resources.garage_add_title
+import org.julakali.chargeahead.shared.resources.garage_title
+import org.julakali.chargeahead.shared.resources.phone_networks_title
+import org.julakali.chargeahead.shared.resources.vehicle_title
 
 /**
  * Everything the navigator can open: full-screen pages, and the sheets that
@@ -60,7 +69,8 @@ fun PhoneNavDisplay(
         // the list changes, and strategies compare by identity.
         sceneStrategies = remember { listOf(SheetSceneStrategy()) },
         transitionSpec = {
-            slideInHorizontally(ChargeAheadMotion.page()) { it } togetherWith fadeOut(ChargeAheadMotion.page())
+            // The page underneath stays opaque; below it the map and drawer would show through.
+            slideInHorizontally(ChargeAheadMotion.page()) { it } togetherWith ExitTransition.KeepUntilTransitionsFinished
         },
         popTransitionSpec = { pageSlideOut() },
         // Navigation 3 scales and fades on a back gesture by default; the page should just slide, as on a tap.
@@ -69,9 +79,9 @@ fun PhoneNavDisplay(
             entry<Home> { }
 
             entry<Garage> {
-                Page(title = stringResource(R.string.garage_title), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.garage_title), onBack = navigator::back) { pagePadding ->
                     GarageRoute(
-                        onOpenAdvanced = { navigator.open(VehicleEdit) },
+                        onOpenVehicle = { navigator.open(VehicleEdit) },
                         onOpenAdd = { navigator.open(AddCar) },
                         modifier = Modifier.fillMaxSize().padding(pagePadding),
                     )
@@ -79,11 +89,16 @@ fun PhoneNavDisplay(
             }
 
             entry<AddCar> {
-                Page(title = stringResource(R.string.garage_add_title), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.garage_add_title), onBack = navigator::back) { pagePadding ->
                     AddCarRoute(
                         onAdded = { preset ->
                             navigator.back()
                             onCarAdded(preset)
+                        },
+                        // Back from its values lands in the garage, not the search.
+                        onCustomCreated = {
+                            navigator.back()
+                            navigator.open(VehicleEdit)
                         },
                         modifier = Modifier.fillMaxSize().padding(pagePadding),
                     )
@@ -91,14 +106,14 @@ fun PhoneNavDisplay(
             }
 
             entry<VehicleEdit> {
-                Page(title = stringResource(R.string.phone_settings_title), onBack = navigator::back) { pagePadding ->
-                    VehicleSettingsRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                Page(title = stringResource(Res.string.vehicle_title), onBack = navigator::back) { pagePadding ->
+                    VehicleEditRoute(onRemoved = navigator::back, modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<Networks> {
                 Page(
-                    title = stringResource(R.string.phone_networks_title),
+                    title = stringResource(Res.string.phone_networks_title),
                     subtitle = networksSummary(preferredNetworkCount),
                     onBack = navigator::back,
                 ) { pagePadding ->
@@ -107,13 +122,13 @@ fun PhoneNavDisplay(
             }
 
             entry<CarData> {
-                Page(title = stringResource(R.string.cardata_title), onBack = navigator::back) { pagePadding ->
-                    CarDataDebugRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
+                Page(title = stringResource(Res.string.cardata_title), onBack = navigator::back) { pagePadding ->
+                    CarDataRoute(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<ActiveRoute> {
-                Page(title = activeRouteTitle ?: stringResource(R.string.active_route_title), onBack = navigator::back) { pagePadding ->
+                Page(title = activeRouteTitle ?: stringResource(Res.string.active_route_title), onBack = navigator::back) { pagePadding ->
                     ActiveRouteRoute(
                         onOpenStop = onOpenStop,
                         onSendToMaps = onSendToMaps,
@@ -121,19 +136,20 @@ fun PhoneNavDisplay(
                             navigator.back()
                             onTripEnded()
                         },
+                        onOpenGarage = { navigator.open(Garage) },
                         modifier = Modifier.fillMaxSize().padding(pagePadding),
                     )
                 }
             }
 
             entry<Legal> {
-                Page(title = stringResource(R.string.drawer_legal), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.drawer_legal), onBack = navigator::back) { pagePadding ->
                     LegalScreen(modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
 
             entry<Licenses> {
-                Page(title = stringResource(R.string.drawer_licenses), onBack = navigator::back) { pagePadding ->
+                Page(title = stringResource(Res.string.drawer_licenses), onBack = navigator::back) { pagePadding ->
                     LicensesRoute(librariesRes = librariesRes, modifier = Modifier.fillMaxSize().padding(pagePadding))
                 }
             }
@@ -169,6 +185,6 @@ private fun Page(
     )
 }
 
-/** The page slides off to the right while what was under it shows again. */
+/** The page slides off to the right, uncovering the one under it. */
 private fun pageSlideOut(): ContentTransform =
-    fadeIn(ChargeAheadMotion.page()) togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }
+    EnterTransition.None togetherWith slideOutHorizontally(ChargeAheadMotion.page()) { it }
