@@ -47,7 +47,24 @@ class BackendRouteSiteLiveContractTest {
             route.distanceKm > straightLine && route.distanceKm < straightLine * 1.6,
             "${route.distanceKm} km against ${straightLine.toInt()} km straight line",
         )
-        assertTrue(route.segments.isNotEmpty(), "A route without segments")
+        assertTrue(route.durationMinutes in 30.0..150.0, "${route.durationMinutes} minutes")
+        assertTrue(from.distanceKmTo(route.points.first()) < 2.0, "Start is off the requested point")
+        assertTrue(to.distanceKmTo(route.points.last()) < 2.0, "End is off the requested point")
+    }
+
+    /** Ingolstadt lies about 60 m above Nürnberg; the A9 between them rolls over the Jura. */
+    @Test
+    fun everySegmentCarriesAPlausibleElevation() {
+        if (skip()) return
+
+        val segments = found().route.segments
+
+        assertTrue(segments.isNotEmpty(), "A route without segments")
+        val ascent = segments.sumOf { it.ascentM }
+        val descent = segments.sumOf { it.descentM }
+        assertTrue(segments.all { it.ascentM >= 0.0 && it.descentM >= 0.0 }, "Negative elevation in $segments")
+        assertTrue(ascent in 50.0..1500.0, "$ascent m up")
+        assertTrue(descent - ascent in -100.0..250.0, "$ascent m up, $descent m down")
     }
 
     @Test

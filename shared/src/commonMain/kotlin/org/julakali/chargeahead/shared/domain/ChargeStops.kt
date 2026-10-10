@@ -19,12 +19,9 @@ enum class RouteStatus {
     /** No destination set — the corridor along the direction of travel applies. */
     NONE,
 
-    /** Destination set, route is being computed. */
-    CALCULATING,
-
     /** The search runs along the route. */
     ACTIVE,
 
-    /** Destination set, but no route could be obtained; the search falls back to the direction of travel. */
+    /** Destination set, but no trip to it is planned; the search falls back to the direction of travel. */
     UNAVAILABLE,
 }

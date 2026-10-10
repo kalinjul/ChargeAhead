@@ -60,9 +60,3 @@ interface RouteSiteSource {
         minPowerKw: Double,
     ): RouteWithSites?
 }
-
-/** Calculates routes. */
-interface RouteEngine {
-    /** Throws on network or server errors; returns `null` when there's no road connection. */
-    suspend fun route(from: LatLon, to: LatLon): Route?
-}

@@ -43,7 +43,14 @@ class BackendRouteSiteSourceTest {
     private suspend fun BackendRouteSiteSource.query(networkKeys: Set<String> = emptySet()) =
         routeWithSites(from, to, bufferKm = 3.0, networkKeys = networkKeys, minPowerKw = 50.0)
 
-    private fun response(points: String = """[{"lat": 48.9, "lon": 11.4}, {"lat": 49.1, "lon": 11.6}]""") =
+    private val oneSegment =
+        """"segments": [{"fromKm": 0.0, "distanceKm": 94.2, "durationMinutes": 63.0, "ascentM": 120.0, "descentM": 210.0}]"""
+
+    /** [extra] is the route's optional fields, comma-separated; empty for none. */
+    private fun response(
+        points: String = """[{"lat": 48.9, "lon": 11.4}, {"lat": 49.1, "lon": 11.6}]""",
+        extra: String = oneSegment,
+    ) =
         """
         {
           "route": {
@@ -51,10 +58,7 @@ class BackendRouteSiteSourceTest {
             "distanceKm": 94.2,
             "durationMinutes": 63.0,
             "provider": "osm",
-            "attribution": "OpenStreetMap",
-            "segments": [
-              {"fromKm": 0.0, "distanceKm": 94.2, "durationMinutes": 63.0, "ascentM": 120.0, "descentM": 210.0}
-            ]
+            "attribution": "OpenStreetMap"${if (extra.isEmpty()) "" else ", $extra"}
           },
           "sites": [
             {
@@ -101,6 +105,81 @@ class BackendRouteSiteSourceTest {
         assertEquals(150.0, first.site.connectors.single().maxPowerKw)
     }
 
+    /** The backend builds the segments; the client only carries them across. */
+    @Test
+    fun theSpeedProfileIsCarriedAcross() = runBlocking {
+        val source = sourceRespondingWith(
+            response(
+                extra = """
+                    "segments": [
+                      {"fromKm": 0.0, "distanceKm": 8.2, "durationMinutes": 12.0, "ascentM": 41.0, "descentM": 3.5},
+                      {"fromKm": 8.2, "distanceKm": 86.0, "durationMinutes": 51.0, "ascentM": 120.0, "descentM": 210.0}
+                    ]
+                """.trimIndent(),
+            ),
+        )
+
+        val segments = assertNotNull(source.query()).route.segments
+
+        assertEquals(2, segments.size)
+        assertEquals(0.0, segments[0].fromKm)
+        assertEquals(8.2, segments[0].distanceKm)
+        assertEquals(12.0, segments[0].durationMinutes)
+        assertEquals(41.0, segments[0].ascentM)
+        assertEquals(3.5, segments[0].descentM)
+        assertEquals(8.2, segments[1].fromKm)
+        assertEquals(210.0, segments[1].descentM)
+        assertTrue(segments[1].averageSpeedKmh > segments[0].averageSpeedKmh)
+    }
+
+    @Test
+    fun aSegmentWithoutElevationIsRejected() {
+        val source = sourceRespondingWith(
+            response(extra = """"segments": [{"fromKm": 0.0, "distanceKm": 94.2, "durationMinutes": 63.0}]"""),
+        )
+
+        assertFailsWith<IllegalArgumentException> { runBlocking { source.query() } }
+    }
+
+    @Test
+    fun aRouteWithoutAProfileStillMaps() = runBlocking {
+        val route = assertNotNull(sourceRespondingWith(response(extra = "")).query()).route
+
+        assertTrue(route.segments.isEmpty())
+        assertEquals(94.2, route.distanceKm)
+    }
+
+    @Test
+    fun theEncodedLineWinsOverThePoints() = runBlocking {
+        val source = sourceRespondingWith(response(extra = """"encodedPolyline": "_p~iF~ps|U_ulLnnqC_mqNvxq`@""""))
+
+        val points = assertNotNull(source.query()).route.points
+
+        assertEquals(3, points.size)
+        assertEquals(38.5, points.first().lat, 1e-9)
+        assertEquals(-126.453, points.last().lon, 1e-9)
+    }
+
+    /** A line that decodes to less than a route must not throw away the usable points. */
+    @Test
+    fun anUnusableEncodedLineFallsBackToThePoints() = runBlocking {
+        val source = sourceRespondingWith(response(extra = """"encodedPolyline": "_p~iF""""))
+
+        assertEquals(listOf(LatLon(48.9, 11.4), LatLon(49.1, 11.6)), assertNotNull(source.query()).route.points)
+    }
+
+    @Test
+    fun theTokenGoesInTheAuthorizationHeader() = runBlocking {
+        var header: String? = null
+        val source = sourceRespondingWith("", status = HttpStatusCode.NoContent) {
+            header = it.headers[HttpHeaders.Authorization]
+        }
+
+        source.query()
+
+        assertEquals("Bearer test-token", header)
+    }
+
     @Test
     fun theFiltersTravelInTheBody() = runBlocking {
         var sent = ""
@@ -114,6 +193,7 @@ class BackendRouteSiteSourceTest {
 
         assertTrue(url.endsWith("/v1/route/charge-sites"), url)
         assertTrue(""""lat":48.9""" in sent, sent)
+        assertTrue("48.9" !in url, url)
         assertTrue(""""bufferKm":3.0""" in sent, sent)
         assertTrue(""""minPowerKw":50.0""" in sent, sent)
         assertTrue(""""networks":[{"key":"ionity"}]""" in sent, sent)

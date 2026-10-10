@@ -36,7 +36,6 @@ import org.julakali.chargeahead.shared.domain.TripRepository
 import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.core.RouteMeasure
-import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteSite
 import org.julakali.chargeahead.shared.domain.RouteSiteSource
 import org.julakali.chargeahead.shared.domain.RouteWithSites
@@ -109,7 +108,6 @@ class PhoneAppHarness {
     private fun fakes(allSites: List<ChargeSite>) = module {
         single<LocationSource> { FakeLocationSource(fix) }
         single<Geocoder> { FakeGeocoder(Place("München", "München, Bayern", muenchen)) }
-        single<RouteEngine> { StraightLineRouteEngine() }
         single<RouteSiteSource> { StraightLineRouteSiteSource(allSites) }
         single<SiteRepository> { FakeSiteRepository(allSites) }
         single<ChargePointStatusRepository> { NoStatuses }
@@ -156,11 +154,9 @@ private class FakeGeocoder(private val hit: Place) : Geocoder {
         if (query.contains("münch", ignoreCase = true)) listOf(hit) else emptyList()
 }
 
-private class StraightLineRouteEngine : RouteEngine {
-    override suspend fun route(from: LatLon, to: LatLon): Route {
-        val distanceKm = from.distanceKmTo(to)
-        return Route(points = listOf(from, to), distanceKm = distanceKm, durationMinutes = distanceKm / 100 * 60)
-    }
+private fun straightLine(from: LatLon, to: LatLon): Route {
+    val distanceKm = from.distanceKmTo(to)
+    return Route(points = listOf(from, to), distanceKm = distanceKm, durationMinutes = distanceKm / 100 * 60)
 }
 
 private class StraightLineRouteSiteSource(private val sites: List<ChargeSite>) : RouteSiteSource {
@@ -171,7 +167,7 @@ private class StraightLineRouteSiteSource(private val sites: List<ChargeSite>) :
         networkKeys: Set<String>,
         minPowerKw: Double,
     ): RouteWithSites {
-        val route = StraightLineRouteEngine().route(from, to)
+        val route = straightLine(from, to)
         val measure = RouteMeasure(route)
         return RouteWithSites(
             route = route,

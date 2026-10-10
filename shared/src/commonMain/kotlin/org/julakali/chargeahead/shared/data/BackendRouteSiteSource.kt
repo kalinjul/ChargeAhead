@@ -1,6 +1,8 @@
 package org.julakali.chargeahead.shared.data
 
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.Route
+import org.julakali.chargeahead.shared.domain.RouteSegment
 import org.julakali.chargeahead.shared.domain.RouteSite
 import org.julakali.chargeahead.shared.domain.RouteSiteSource
 import org.julakali.chargeahead.shared.domain.RouteWithSites
@@ -14,6 +16,7 @@ import io.ktor.http.contentType
 import org.julakali.chargeahead.api.NetworkFilterDto
 import org.julakali.chargeahead.api.RouteChargeSitesRequest
 import org.julakali.chargeahead.api.RouteChargeSitesResponse
+import org.julakali.chargeahead.api.RouteResponse
 
 class BackendRouteSiteSource(
     private val httpClient: HttpClient,
@@ -59,4 +62,27 @@ class BackendRouteSiteSource(
     private companion object {
         const val PATH = "v1/route/charge-sites"
     }
+}
+
+/** `null` when the response carries less than a line. */
+internal fun RouteResponse.toDomain(): Route? {
+    // `points` is the fallback for servers without the encoded line.
+    val line = encodedPolyline?.let(::decodePolyline)?.takeIf { it.size >= 2 }
+        ?: points.map { LatLon(it.lat, it.lon) }
+    if (line.size < 2) return null
+
+    return Route(
+        points = line,
+        distanceKm = distanceKm,
+        durationMinutes = durationMinutes,
+        segments = segments.map {
+            RouteSegment(
+                fromKm = it.fromKm,
+                distanceKm = it.distanceKm,
+                durationMinutes = it.durationMinutes,
+                ascentM = requireNotNull(it.ascentM) { "Route segment at ${it.fromKm} km without its ascent" },
+                descentM = requireNotNull(it.descentM) { "Route segment at ${it.fromKm} km without its descent" },
+            )
+        },
+    )
 }
