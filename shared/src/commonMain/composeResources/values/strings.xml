@@ -74,10 +74,7 @@
 
     <!-- Settings -->
     <string name="phone_action_settings">Car</string>
-    <string name="phone_field_soc">Battery level in percent</string>
     <string name="phone_action_restore_catalog_values">Use catalog values</string>
-    <string name="phone_soc_source_car">Battery level comes from the car</string>
-    <string name="phone_soc_source_stored">The car doesn't report its battery level. This is the value you last entered when planning.</string>
 
     <!-- Destination -->
     <string name="phone_action_destination">Destination</string>
@@ -111,15 +108,7 @@
     <string name="phone_search_clear">Clear search</string>
     <string name="phone_networks_no_match">No network matches “%1$s”.</string>
 
-    <!-- Charge level from the vehicle -->
-    <string name="phone_carhardware_title">Battery level from the car</string>
-    <string name="phone_carhardware_intro">Android Auto can get the battery level from your car. Whether it does is up to the car's display unit — very few share the data. This can only be checked in the car; the result of the last connection is shown here.</string>
-    <string name="phone_carhardware_never">Never checked. The app hasn't been connected to Android Auto yet.</string>
-    <string name="phone_carhardware_checked">Last checked %1$s ago</string>
-    <string name="phone_carhardware_available">The car reports its battery level (%1$s). It takes priority over what you enter.</string>
-    <string name="phone_carhardware_no_data">The car's display unit doesn't report a battery level (%1$s). The value you entered is used.</string>
-    <string name="phone_carhardware_no_permission">Permission for car data is missing. It can only be granted in the car.</string>
-    <string name="phone_carhardware_no_hardware">This car's display unit doesn't offer any car data.</string>
+    <!-- Durations -->
     <plurals name="phone_duration_minutes">
         <item quantity="one">%1$d minute</item>
         <item quantity="other">%1$d minutes</item>
@@ -167,7 +156,7 @@
     <string name="drawer_debug">Debug</string>
     <string name="drawer_cardata">Car data (Android Auto)</string>
     <string name="cardata_title">Car data</string>
-    <string name="cardata_intro">Everything the car last reported through Android Auto. Data is only recorded while connected to the car; most display units report nothing for most values — which is exactly what this view shows.</string>
+    <string name="cardata_intro">Data the car last reported through Android Auto</string>
     <string name="cardata_never">never received</string>
     <string name="cardata_age">%1$s ago</string>
     <string name="cardata_no_permission">no permission</string>
@@ -178,6 +167,8 @@
     <string name="cardata_kind_battery">Battery level</string>
     <string name="cardata_kind_range">Range</string>
     <string name="cardata_kind_energy_low">Low battery</string>
+    <string name="cardata_kind_charge_port_open">Charge port open</string>
+    <string name="cardata_kind_charge_port_connected">Charging cable plugged in</string>
     <string name="cardata_kind_speed">Speed</string>
     <string name="cardata_kind_odometer">Odometer</string>
 

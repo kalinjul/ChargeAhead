@@ -1,6 +1,5 @@
 package org.julakali.chargeahead.android.phone
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,12 +24,13 @@ import org.julakali.chargeahead.shared.domain.CarDataPoint
 import org.julakali.chargeahead.shared.domain.CarDataStatus
 import org.julakali.chargeahead.shared.ui.CarDataUiState
 import org.julakali.chargeahead.shared.ui.CarDataViewModel
-import kotlin.math.roundToInt
 import org.koin.androidx.compose.koinViewModel
 import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.cardata_age
 import org.julakali.chargeahead.shared.resources.cardata_intro
 import org.julakali.chargeahead.shared.resources.cardata_kind_battery
+import org.julakali.chargeahead.shared.resources.cardata_kind_charge_port_connected
+import org.julakali.chargeahead.shared.resources.cardata_kind_charge_port_open
 import org.julakali.chargeahead.shared.resources.cardata_kind_energy_low
 import org.julakali.chargeahead.shared.resources.cardata_kind_energy_profile
 import org.julakali.chargeahead.shared.resources.cardata_kind_model
@@ -41,10 +41,6 @@ import org.julakali.chargeahead.shared.resources.cardata_never
 import org.julakali.chargeahead.shared.resources.cardata_no_data
 import org.julakali.chargeahead.shared.resources.cardata_no_hardware
 import org.julakali.chargeahead.shared.resources.cardata_no_permission
-import org.julakali.chargeahead.shared.resources.garage_percent
-import org.julakali.chargeahead.shared.resources.phone_field_soc
-import org.julakali.chargeahead.shared.resources.phone_soc_source_car
-import org.julakali.chargeahead.shared.resources.phone_soc_source_stored
 import org.julakali.chargeahead.shared.resources.value_unknown
 
 /**
@@ -73,24 +69,6 @@ fun CarDataScreen(
             modifier = Modifier.padding(16.dp),
         )
         LazyColumn {
-            item(key = "soc") {
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                    Row(Modifier.fillMaxWidth()) {
-                        Text(stringResource(Res.string.phone_field_soc), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        Text(
-                            uiState.socPercent?.let { stringResource(Res.string.garage_percent, it.roundToInt()) } ?: stringResource(Res.string.value_unknown),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    Text(
-                        stringResource(if (uiState.socFromCar) Res.string.phone_soc_source_car else Res.string.phone_soc_source_stored),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    CarHardwareStatus(diagnostics = uiState.socDiagnostics, modifier = Modifier.padding(top = 16.dp))
-                }
-                HorizontalDivider()
-            }
             items(CarDataKind.entries, key = { it.name }) { kind ->
                 val point = byKind[kind]
                 Row(
@@ -128,6 +106,8 @@ private fun CarDataKind.label(): String = stringResource(
         CarDataKind.BATTERY_PERCENT -> Res.string.cardata_kind_battery
         CarDataKind.RANGE -> Res.string.cardata_kind_range
         CarDataKind.ENERGY_IS_LOW -> Res.string.cardata_kind_energy_low
+        CarDataKind.CHARGE_PORT_OPEN -> Res.string.cardata_kind_charge_port_open
+        CarDataKind.CHARGE_PORT_CONNECTED -> Res.string.cardata_kind_charge_port_connected
         CarDataKind.SPEED -> Res.string.cardata_kind_speed
         CarDataKind.ODOMETER -> Res.string.cardata_kind_odometer
     },

@@ -74,10 +74,7 @@
 
     <!-- Settings -->
     <string name="phone_action_settings">Fahrzeug</string>
-    <string name="phone_field_soc">Ladestand in Prozent</string>
     <string name="phone_action_restore_catalog_values">Katalogwerte übernehmen</string>
-    <string name="phone_soc_source_car">Ladestand kommt aus dem Fahrzeug</string>
-    <string name="phone_soc_source_stored">Kein Ladestand vom Fahrzeug. Der Wert stammt aus der letzten Eingabe beim Planen.</string>
 
     <!-- Destination -->
     <string name="phone_action_destination">Ziel</string>
@@ -113,15 +110,7 @@
     <string name="phone_search_clear">Suche löschen</string>
     <string name="phone_networks_no_match">Kein Ladenetz passt zu „%1$s”.</string>
 
-    <!-- Charge level from the vehicle -->
-    <string name="phone_carhardware_title">Ladestand aus dem Fahrzeug</string>
-    <string name="phone_carhardware_intro">Android Auto kann den Ladestand vom Fahrzeug liefern. Ob es das tut, entscheidet das Head-Unit — die wenigsten geben die Daten heraus. Geprüft werden kann das nur im Auto; das Ergebnis der letzten Verbindung steht hier.</string>
-    <string name="phone_carhardware_never">Noch nie geprüft. Die App war noch nicht mit Android Auto verbunden.</string>
-    <string name="phone_carhardware_checked">Zuletzt geprüft vor %1$s</string>
-    <string name="phone_carhardware_available">Das Fahrzeug liefert den Ladestand (%1$s). Er hat Vorrang vor der Eingabe.</string>
-    <string name="phone_carhardware_no_data">Das Head-Unit liefert keinen Ladestand (%1$s). Es gilt der eingetippte Wert.</string>
-    <string name="phone_carhardware_no_permission">Die Berechtigung für Fahrzeugdaten fehlt. Sie lässt sich nur im Auto erteilen.</string>
-    <string name="phone_carhardware_no_hardware">Dieses Head-Unit bietet keine Fahrzeugdaten an.</string>
+    <!-- Durations -->
     <plurals name="phone_duration_minutes">
         <item quantity="one">%1$d Minute</item>
         <item quantity="other">%1$d Minuten</item>
@@ -169,7 +158,7 @@
     <string name="drawer_debug">Debug</string>
     <string name="drawer_cardata">Fahrzeugdaten (Android Auto)</string>
     <string name="cardata_title">Fahrzeugdaten</string>
-    <string name="cardata_intro">Alles, was das Fahrzeug über Android Auto zuletzt geliefert hat. Aufgezeichnet wird nur während einer Verbindung mit dem Auto; die meisten Head-Units liefern für die meisten Werte nichts — genau das zeigt diese Ansicht.</string>
+    <string name="cardata_intro">Daten, die das Fahrzeug über Android Auto zuletzt geliefert hat</string>
     <string name="cardata_never">noch nie empfangen</string>
     <string name="cardata_age">vor %1$s</string>
     <string name="cardata_no_permission">keine Berechtigung</string>
@@ -180,6 +169,8 @@
     <string name="cardata_kind_battery">Ladestand</string>
     <string name="cardata_kind_range">Restreichweite</string>
     <string name="cardata_kind_energy_low">Energiestand niedrig</string>
+    <string name="cardata_kind_charge_port_open">Ladeklappe offen</string>
+    <string name="cardata_kind_charge_port_connected">Ladekabel eingesteckt</string>
     <string name="cardata_kind_speed">Geschwindigkeit</string>
     <string name="cardata_kind_odometer">Kilometerstand</string>
 
