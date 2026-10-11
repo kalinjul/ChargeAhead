@@ -5,6 +5,7 @@ import org.julakali.chargeahead.shared.BackendConfig
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PolylineArea
+import org.julakali.chargeahead.shared.domain.PriceKind
 import org.julakali.chargeahead.shared.domain.SectorArea
 import org.julakali.chargeahead.shared.domain.distanceKmTo
 import kotlinx.coroutines.runBlocking
@@ -87,6 +88,22 @@ class BackendChargeSiteLiveContractTest {
         assertTrue(
             connectors.count { it.type != ConnectorType.UNKNOWN } > connectors.size * 0.8,
             "Too many unrecognized connector types — the enum mapping has drifted",
+        )
+    }
+
+    @Test
+    fun adHocTariffsArriveUsable() {
+        if (skip()) return
+
+        val tariffs = runBlocking { source().query(area, emptySet()) }.flatMap { it.adHocTariffs }
+        val components = tariffs.flatMap { it.components }
+
+        assertTrue(tariffs.isNotEmpty(), "No site in the area publishes an ad-hoc price")
+        assertTrue(tariffs.all { it.components.isNotEmpty() }, "A tariff without a price")
+        assertTrue(components.all { it.price >= 0.0 }, "A negative price")
+        assertTrue(
+            components.count { it.kind != PriceKind.OTHER } > components.size * 0.8,
+            "Too many unrecognized price types — the type mapping has drifted",
         )
     }
 

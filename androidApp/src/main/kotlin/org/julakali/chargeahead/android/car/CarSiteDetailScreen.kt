@@ -30,6 +30,7 @@ import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.car_detail_back
 import org.julakali.chargeahead.shared.resources.car_detail_charge
 import org.julakali.chargeahead.shared.resources.car_detail_navigate
+import org.julakali.chargeahead.shared.resources.fmt_adhoc_price
 import org.julakali.chargeahead.shared.Texts
 
 /**
@@ -84,7 +85,7 @@ class CarSiteDetailScreen(
             .build()
     }
 
-    /** Address, distance with the charge, the charge points (live when known). The title names the site. */
+    /** Address, distance with the charge, the charge points (live when known), the ad-hoc price. The title names the site. */
     private fun rows(distanceKm: Double?, live: List<LiveConnectorGroup>?): List<Row> {
         val rows = mutableListOf<Row>()
         ChargeStopFormatter.addressLine(site)?.let { rows += Row.Builder().setTitle(it).build() }
@@ -107,6 +108,14 @@ class CarSiteDetailScreen(
         }
         connectorLines.firstOrNull()?.let { first ->
             rows += Row.Builder().setTitle(first).apply { connectorLines.drop(1).take(2).forEach(::addText) }.build()
+        }
+
+        val tariffLines = ChargeStopFormatter.adHocTariffLines(site)
+        if (tariffLines.isNotEmpty()) {
+            rows += Row.Builder()
+                .setTitle(Texts.string(Res.string.fmt_adhoc_price))
+                .apply { tariffLines.take(2).forEach(::addText) }
+                .build()
         }
 
         return rows

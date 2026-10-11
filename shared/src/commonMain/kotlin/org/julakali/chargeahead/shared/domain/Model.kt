@@ -29,6 +29,36 @@ data class Address(
     val isEmpty: Boolean get() = street == null && postalCode == null && town == null
 }
 
+enum class PriceKind { PER_KWH, PER_MINUTE, SESSION, OTHER }
+
+enum class Weekday { MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY }
+
+@Serializable
+data class PriceComponent(
+    val kind: PriceKind,
+    /** Gross, in the tariff's currency. */
+    val price: Double,
+    /** Minutes into the session; `null` means from its start. */
+    val fromMinute: Int? = null,
+    /** Minutes into the session; `null` means until its end. */
+    val toMinute: Int? = null,
+    /** ISO-8601 time of day as the operator sends it, e.g. "08:00:00+01:00"; `null` means all day. */
+    val startTime: String? = null,
+    val endTime: String? = null,
+    /** Empty means every day. */
+    val days: Set<Weekday> = emptySet(),
+)
+
+/** What charging costs without a contract. The [components] add up. */
+@Serializable
+data class Tariff(
+    /** ISO 4217. */
+    val currency: String,
+    val components: List<PriceComponent>,
+    /** The connector types the tariff applies to; empty when the backend doesn't say. */
+    val connectors: List<ConnectorType> = emptyList(),
+)
+
 // Stored in Room and inside the saved trip: a new field needs a default.
 @Serializable
 data class ChargeSite(
@@ -46,6 +76,8 @@ data class ChargeSite(
     val liveStatusId: String? = null,
     /** The backend's key for the site's network; `null` without a known operator. */
     val networkKey: String? = null,
+    /** One entry per distinct tariff; empty when the operator publishes none. */
+    val adHocTariffs: List<Tariff> = emptyList(),
 )
 
 data class ChargeStop(

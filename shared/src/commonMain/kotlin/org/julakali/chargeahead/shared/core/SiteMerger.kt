@@ -85,6 +85,7 @@ object SiteMerger {
             address = leading.address ?: cluster.firstNotNullOfOrNull { it.address },
             sources = cluster.flatMapTo(mutableSetOf()) { it.sources },
             liveStatusId = leading.liveStatusId ?: cluster.firstNotNullOfOrNull { it.liveStatusId },
+            adHocTariffs = leading.adHocTariffs.ifEmpty { cluster.firstOrNull { it.adHocTariffs.isNotEmpty() }?.adHocTariffs.orEmpty() },
         )
     }
 

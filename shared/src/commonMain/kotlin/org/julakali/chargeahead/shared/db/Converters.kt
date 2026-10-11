@@ -3,9 +3,10 @@ package org.julakali.chargeahead.shared.db
 import androidx.room.TypeConverter
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.Tariff
 import org.julakali.chargeahead.shared.persistenceJson
 
-/** Stores connectors, source ids and route points as JSON columns. */
+/** Stores connectors, tariffs, source ids and route points as JSON columns. */
 class Converters {
 
     @TypeConverter
@@ -13,6 +14,12 @@ class Converters {
 
     @TypeConverter
     fun connectorsFromJson(value: String): List<Connector> = persistenceJson.decodeFromString(value)
+
+    @TypeConverter
+    fun tariffsToJson(tariffs: List<Tariff>): String = persistenceJson.encodeToString(tariffs)
+
+    @TypeConverter
+    fun tariffsFromJson(value: String): List<Tariff> = persistenceJson.decodeFromString(value)
 
     @TypeConverter
     fun stringsToJson(values: Set<String>): String = persistenceJson.encodeToString(values)

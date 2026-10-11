@@ -31,6 +31,7 @@ import org.julakali.chargeahead.shared.domain.MapsHandoff
 import org.julakali.chargeahead.shared.domain.ChargeStop
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.resources.Res
+import org.julakali.chargeahead.shared.resources.fmt_adhoc_price
 import org.julakali.chargeahead.shared.resources.phone_detail_connectors
 import org.julakali.chargeahead.shared.resources.phone_detail_navigate
 import org.julakali.chargeahead.shared.resources.phone_detail_source
@@ -111,6 +112,20 @@ fun ChargeStopDetailSheet(
                     Text(
                         it,
                         style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+
+        val tariffLines = ChargeStopFormatter.adHocTariffLines(stop.site)
+        if (tariffLines.isNotEmpty()) {
+            Column {
+                SectionLabel(stringResource(Res.string.fmt_adhoc_price))
+                tariffLines.forEach {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall.tabular,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
