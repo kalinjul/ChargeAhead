@@ -163,14 +163,13 @@ class CarTestGraph(
         }
     }
 
-    /** Stored sites are whatever [stored] holds; [load] returns them too and counts. */
+    /** Stored sites are whatever [stored] holds; [load] only counts. */
     class FakeSiteRepository : SiteRepository {
         val stored = MutableStateFlow<List<ChargeSite>>(emptyList())
         var loads = 0
 
-        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
             loads += 1
-            return stored.value
         }
 
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = stored

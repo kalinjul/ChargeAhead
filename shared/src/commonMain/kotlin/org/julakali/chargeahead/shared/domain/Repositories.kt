@@ -8,8 +8,11 @@ import kotlinx.coroutines.flow.map
  * from this stock and replenishes it in the background.
  */
 interface SiteRepository {
-    /** Empty [networkKeys] means every network. */
-    suspend fun load(area: SearchArea, networkKeys: Set<String> = emptySet()): List<ChargeSite>
+    /**
+     * Refills the stock for [area]; the sites themselves are read from the
+     * `storedSitesIn` flows. Empty [networkKeys] means every network.
+     */
+    suspend fun load(area: SearchArea, networkKeys: Set<String> = emptySet())
 
     /**
      * The stored sites in [box] that pass [filter] — no fetch, no coverage

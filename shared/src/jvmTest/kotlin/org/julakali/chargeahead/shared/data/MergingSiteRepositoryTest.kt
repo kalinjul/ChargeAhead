@@ -33,15 +33,14 @@ class MergingSiteRepositoryTest {
 
     private class FixedSiteRepository(private val sites: List<ChargeSite>) : SiteRepository {
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
-        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
+        override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(sites)
         var queries = 0
             private set
         var invalidations = 0
             private set
 
-        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
             queries++
-            return sites
         }
 
         override suspend fun invalidate() {
@@ -55,9 +54,8 @@ class MergingSiteRepositoryTest {
         var recordedNetworks: Set<String>? = null
             private set
 
-        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
             recordedNetworks = networkKeys
-            return sites
         }
 
         override suspend fun invalidate() {
@@ -68,8 +66,9 @@ class MergingSiteRepositoryTest {
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
         override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
         override suspend fun invalidate() {}
-        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> =
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
             throw IllegalStateException(reason)
+        }
     }
 
     private fun site(id: String, offsetKm: Double = 0.0) = ChargeSite(
@@ -86,18 +85,17 @@ class MergingSiteRepositoryTest {
         val ocm = FixedSiteRepository(listOf(site("ocm:1", offsetKm = 5.0)))
         val bnetza = FixedSiteRepository(listOf(site("bnetza:2", offsetKm = 10.0)))
 
-        val sites = MergingSiteRepository(listOf(ocm, bnetza)).load(area)
+        MergingSiteRepository(listOf(ocm, bnetza)).load(area)
 
         assertEquals(1, ocm.queries)
         assertEquals(1, bnetza.queries)
-        assertEquals(2, sites.size)
     }
 
     @Test
     fun theSameLocation_appearsOnlyOnce() = runBlocking {
         val sites = MergingSiteRepository(
             listOf(FixedSiteRepository(listOf(site("ocm:1"))), FixedSiteRepository(listOf(site("bnetza:2")))),
-        ).load(area)
+        ).storedSitesIn(area).first()
 
         assertEquals(1, sites.size)
         assertEquals(setOf("ocm", "bnetza"), sites.single().sources)
@@ -105,21 +103,20 @@ class MergingSiteRepositoryTest {
 
     @Test
     fun ifOneSourceFails_theOthersStillCount() = runBlocking {
-        // One failing source must not empty the list.
-        val sites = MergingSiteRepository(
-            listOf(FixedSiteRepository(listOf(site("ocm:1"))), BrokenSiteRepository()),
-        ).load(area)
+        val working = FixedSiteRepository(listOf(site("ocm:1")))
 
-        assertEquals(listOf("ocm:1"), sites.map { it.id })
+        MergingSiteRepository(listOf(working, BrokenSiteRepository())).load(area)
+
+        assertEquals(1, working.queries)
     }
 
     @Test
     fun ifTheOtherSourceFails_sameApplies() = runBlocking {
-        val sites = MergingSiteRepository(
-            listOf(BrokenSiteRepository(), FixedSiteRepository(listOf(site("bnetza:2")))),
-        ).load(area)
+        val working = FixedSiteRepository(listOf(site("bnetza:2")))
 
-        assertEquals(listOf("bnetza:2"), sites.map { it.id })
+        MergingSiteRepository(listOf(BrokenSiteRepository(), working)).load(area)
+
+        assertEquals(1, working.queries)
     }
 
     @Test
@@ -173,7 +170,7 @@ class MergingSiteRepositoryTest {
     fun `stored sites are merged on the computation dispatcher`() = runBlocking<Unit> {
         var collectedOn: String? = null
         val source = object : SiteRepository {
-            override suspend fun load(area: SearchArea, networkKeys: Set<String>) = emptyList<ChargeSite>()
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>) {}
             override suspend fun invalidate() {}
             override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> =
                 flowOf(emptyList<ChargeSite>()).onEach { collectedOn = Thread.currentThread().name }
@@ -191,7 +188,7 @@ class MergingSiteRepositoryTest {
     fun `nearest sites are merged across stocks and capped`() = runBlocking {
         val here = LatLon(48.0, 11.0)
         fun stock(vararg sites: ChargeSite) = object : SiteRepository {
-            override suspend fun load(area: SearchArea, networkKeys: Set<String>) = emptyList<ChargeSite>()
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>) {}
             override suspend fun invalidate() {}
             override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(sites.toList())
             override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(sites.toList())

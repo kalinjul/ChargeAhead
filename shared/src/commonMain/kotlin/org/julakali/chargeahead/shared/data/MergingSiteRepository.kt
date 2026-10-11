@@ -36,20 +36,14 @@ class MergingSiteRepository(
         require(repositories.isNotEmpty()) { "Without a source there's nothing to merge" }
     }
 
-    override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> = coroutineScope {
-        val results = repositories
-            .map { repository -> async { runCatching { repository.load(area, networkKeys) } } }
+    override suspend fun load(area: SearchArea, networkKeys: Set<String>): Unit = coroutineScope {
+        val failures = repositories
+            .map { repository -> async { runCatching { repository.load(area, networkKeys) }.exceptionOrNull() } }
             .awaitAll()
+            .filterNotNull()
 
-        results.forEach { result ->
-            result.exceptionOrNull()?.let { logWarning("A source failed", it) }
-        }
-        val successful = results.mapNotNull { it.getOrNull() }
-        if (successful.isEmpty()) {
-            throw results.firstNotNullOf { it.exceptionOrNull() }
-        }
-
-        SiteMerger.merge(successful.flatten(), maxDistanceMeters)
+        failures.forEach { logWarning("A source failed", it) }
+        if (failures.size == repositories.size) throw failures.first()
     }
 
     override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> =

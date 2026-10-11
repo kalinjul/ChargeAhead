@@ -1,5 +1,8 @@
 package org.julakali.chargeahead.shared.domain
 
+import kotlin.math.ceil
+import kotlin.math.max
+
 /**
  * A [bufferKm]-wide tube around a route's path — the search area used once a
  * destination is set.
@@ -104,11 +107,46 @@ data class PolylineArea(
         }
     }
 
+    /**
+     * The strip as a chain of boxes, one per stretch of at most [stretchKm].
+     * Together they enclose the strip in far less area than [boundingBox]
+     * when the route runs diagonally.
+     */
+    fun boxCover(stretchKm: Double = max(BOX_STRETCH_KM, lengthKm / MAX_BOXES)): List<BoundingBox> {
+        require(stretchKm > 0.0) { "Stretch length must be positive" }
+
+        val boxes = mutableListOf<BoundingBox>()
+        var stretch = mutableListOf(points.first())
+        var accumulated = 0.0
+
+        points.zipWithNext().forEach { (start, end) ->
+            // A segment longer than a stretch is cut, or its box would be the route's.
+            val parts = ceil(start.distanceKmTo(end) / stretchKm).toInt().coerceAtLeast(1)
+            for (part in 1..parts) {
+                val point = if (part == parts) end else interpolate(start, end, part.toDouble() / parts)
+                accumulated += stretch.last().distanceKmTo(point)
+                stretch += point
+                if (accumulated >= stretchKm) {
+                    boxes += BoundingBox.enclosing(stretch).expandedBy(bufferKm)
+                    stretch = mutableListOf(point)
+                    accumulated = 0.0
+                }
+            }
+        }
+        if (stretch.size >= 2 || boxes.isEmpty()) boxes += BoundingBox.enclosing(stretch).expandedBy(bufferKm)
+        return boxes
+    }
+
     companion object {
         /** Below this, the destination is reached. */
         private const val MINIMUM_REMAINING_KM = 0.05
 
         /** Segment length for [radialCover]; small enough that a source's result cap doesn't kick in. */
         const val DEFAULT_SEGMENT_KM = 40.0
+
+        private const val BOX_STRETCH_KM = 10.0
+
+        /** Keeps the store's query for a long route bounded. */
+        private const val MAX_BOXES = 100
     }
 }

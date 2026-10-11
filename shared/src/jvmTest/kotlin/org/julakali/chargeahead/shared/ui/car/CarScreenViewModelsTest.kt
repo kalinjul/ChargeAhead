@@ -88,9 +88,8 @@ class CarScreenViewModelsTest {
         val repository = object : SiteRepository {
             override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
             override suspend fun invalidate() {}
-            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
                 store.update { listOf(nearby) }
-                return listOf(nearby)
             }
 
             override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = store

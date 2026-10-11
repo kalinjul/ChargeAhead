@@ -50,10 +50,9 @@ class ObserveChargeNowTest {
     private val repository = object : SiteRepository {
         override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
         override suspend fun invalidate() {}
-        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
             fetches += area to networkKeys
             store.update { it + fetched }
-            return fetched
         }
 
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> =

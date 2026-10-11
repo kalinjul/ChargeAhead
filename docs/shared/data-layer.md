@@ -46,10 +46,11 @@ corridor without a destination, the route strip with one.
 ## Repositories
 
 ```kotlin
-// TiledSiteRepository (Room). load() refills the stock; the storedSitesIn
-// flows emit again whenever the stock changes.
+// TiledSiteRepository (Room). load() refills the stock and returns nothing;
+// the storedSitesIn flows are the only read, and emit again when the stock
+// changes. A route is read through PolylineArea.boxCover(), not its one box.
 interface SiteRepository {
-    suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite>
+    suspend fun load(area: SearchArea, networkKeys: Set<String>)
     fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>>
     fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>>
     suspend fun invalidate()
