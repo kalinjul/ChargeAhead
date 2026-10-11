@@ -33,10 +33,9 @@ class RefreshMapChargersTest {
             override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
             override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
             override suspend fun invalidate() {}
-            override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+            override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
                 fetchedAreas += area
                 fetchedNetworks += networkKeys
-                return emptyList()
             }
         },
         preferences = preferences,
@@ -78,8 +77,9 @@ class RefreshMapChargersTest {
                 override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
                 override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
                 override suspend fun invalidate() {}
-                override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> =
+                override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
                     error("offline")
+                }
             },
             preferences = preferences,
         )

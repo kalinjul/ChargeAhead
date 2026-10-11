@@ -26,6 +26,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.job
@@ -57,10 +58,10 @@ class TiledSiteRepository(
     private val dao = database.chargeSites()
 
     // De-duplicates identical in-flight fetches.
-    private val inFlight = mutableMapOf<String, Deferred<List<ChargeSite>>>()
+    private val inFlight = mutableMapOf<String, Deferred<Unit>>()
     private val inFlightGuard = Mutex()
 
-    override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+    override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
         val key = requestKey(area, networkKeys)
         val deferred = inFlightGuard.withLock {
             inFlight[key] ?: scope.async {
@@ -77,23 +78,18 @@ class TiledSiteRepository(
             }.also { fetch -> inFlight[key] = fetch }
         }
         // await() outside the guard.
-        return deferred.await()
+        deferred.await()
     }
 
-    private suspend fun loadSites(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+    private suspend fun loadSites(area: SearchArea, networkKeys: Set<String>) {
         val keys = networkKeys.ifEmpty { setOf(ALL_NETWORKS) }
         val missing = keys.filterNot { isCovered(area, it) }
-        if (missing.isNotEmpty()) {
-            val toFetch = if (networkKeys.isEmpty()) emptySet() else missing.toSet()
-            val fetchFailure = runCatching { fetchAndStore(area, toFetch, missing) }.exceptionOrNull()
-            if (fetchFailure != null) {
-                logWarning("Source '${source.id}' did not respond", fetchFailure)
-                val stored = readStored(area)
-                if (stored.isEmpty()) throw fetchFailure
-                return stored
-            }
-        }
-        return readStored(area)
+        if (missing.isEmpty()) return
+        val toFetch = if (networkKeys.isEmpty()) emptySet() else missing.toSet()
+        val fetchFailure = runCatching { fetchAndStore(area, toFetch, missing) }.exceptionOrNull() ?: return
+        logWarning("Source '${source.id}' did not respond", fetchFailure)
+        val box = area.boundingBox
+        if (!dao.hasSitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)) throw fetchFailure
     }
 
     /** Discards coverage, not the sites themselves: the store stays readable. */
@@ -240,16 +236,12 @@ class TiledSiteRepository(
     }
 
     override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> {
-        val box = area.boundingBox
-        return dao.observeSitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)
+        val boxes = if (area is PolylineArea) area.boxCover() else listOf(area.boundingBox)
+        return dao.observeSitesInBoxes(boxes)
             .map { entities -> entities.map(ChargeSiteEntity::toDomain).filter { it.position in area } }
+            // The table changes on every fetch anywhere, mostly without touching this area.
+            .distinctUntilChanged()
             .flowOn(computation)
-    }
-
-    private suspend fun readStored(area: SearchArea): List<ChargeSite> {
-        val box = area.boundingBox
-        return dao.sitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)
-            .map(ChargeSiteEntity::toDomain)
     }
 
     companion object {

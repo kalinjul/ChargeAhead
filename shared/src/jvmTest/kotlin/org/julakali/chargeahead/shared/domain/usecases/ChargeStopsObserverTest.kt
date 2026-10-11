@@ -87,11 +87,10 @@ class ObserveChargeStopsTest {
         var broken = false
         var invalidations = 0
 
-        override suspend fun load(area: SearchArea, networkKeys: Set<String>): List<ChargeSite> {
+        override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
             fetched += area to networkKeys
             if (broken) throw IllegalStateException("Funkloch")
             store.update { (it + sites).distinctBy(ChargeSite::id) }
-            return sites
         }
 
         override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> =

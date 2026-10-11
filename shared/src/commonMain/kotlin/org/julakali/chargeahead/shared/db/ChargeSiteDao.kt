@@ -4,25 +4,45 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
+import androidx.room.RoomRawQuery
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
+import org.julakali.chargeahead.shared.domain.BoundingBox
 
 data class TileIndex(val tileLat: Long, val tileLon: Long)
 
 @Dao
 interface ChargeSiteDao {
 
-    @Query("SELECT * FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east")
-    suspend fun sitesInBox(south: Double, north: Double, west: Double, east: Double): List<ChargeSiteEntity>
+    @Query("SELECT EXISTS(SELECT 1 FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east)")
+    suspend fun hasSitesInBox(south: Double, north: Double, west: Double, east: Double): Boolean
+
+    @RawQuery(observedEntities = [ChargeSiteEntity::class])
+    fun observeSites(query: RoomRawQuery): Flow<List<ChargeSiteEntity>>
+
+    /** Every site in at least one of [boxes], each site once. */
+    fun observeSitesInBoxes(boxes: List<BoundingBox>): Flow<List<ChargeSiteEntity>> {
+        require(boxes.isNotEmpty()) { "A query needs at least one box" }
+        val where = boxes.joinToString(" OR ") { "(lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?)" }
+        return observeSites(
+            RoomRawQuery("SELECT * FROM chargeSite WHERE $where") { statement ->
+                boxes.forEachIndexed { index, box ->
+                    val first = index * 4 + 1
+                    statement.bindDouble(first, box.south)
+                    statement.bindDouble(first + 1, box.north)
+                    statement.bindDouble(first + 2, box.west)
+                    statement.bindDouble(first + 3, box.east)
+                }
+            },
+        )
+    }
 
     /**
      * Slow mode: every site whose strongest connector is below [slowBelowKw].
      * Otherwise: DC sites from [minPowerKw] up, restricted to [networkKeys]
      * when [filterNetworks] is set.
      */
-    @Query("SELECT * FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east")
-    fun observeSitesInBox(south: Double, north: Double, west: Double, east: Double): Flow<List<ChargeSiteEntity>>
-
     @Query(
         "SELECT * FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east " +
             "AND ((:slowMode AND maxPowerKw < :slowBelowKw) " +

@@ -77,6 +77,12 @@ class TiledSiteRepositoryTest {
 
     private fun area(radiusKm: Double = 40.0) = SectorArea.circle(start, radiusKm)
 
+    /** Refills [area], then reads it back from the store. */
+    private suspend fun TiledSiteRepository.loaded(area: SearchArea): List<ChargeSite> {
+        load(area)
+        return storedSitesIn(area).first()
+    }
+
     private val everyDcSite = MapFilter(NetworkPreferences(onlyPreferred = false), minPowerKw = 0.0, slowMode = false)
 
     private val aroundStart = BoundingBox(south = 48.0, west = 10.0, north = 50.0, east = 13.0)
@@ -122,7 +128,8 @@ class TiledSiteRepositoryTest {
         val expected = setOf(Triple("ionity", "ionity", 11L), Triple("enbw", "enbw", 22L))
         fun List<ChargeSite>.networks() = map { Triple(it.id, it.networkKey, it.operatorId) }.toSet()
 
-        assertEquals(expected, repository.load(area()).networks())
+        repository.load(area())
+
         assertEquals(expected, repository.storedSitesIn(area()).first().networks())
         assertEquals(expected, repository.storedSitesIn(aroundStart, everyDcSite).first().networks())
         assertEquals(expected, repository.storedSitesNearest(start, aroundStart, everyDcSite, limit = 5).first().networks())
@@ -188,7 +195,7 @@ class TiledSiteRepositoryTest {
         val source = ControllableSource(listOf(site("a", 0.0, 10.0)))
         val repository = TiledSiteRepository(source, database(), ControllableClock(), testAppScope, testDispatchers.computation)
 
-        assertEquals(listOf("a"), repository.load(area()).map { it.id })
+        assertEquals(listOf("a"), repository.loaded(area()).map { it.id })
         assertEquals(1, source.queries)
     }
 
@@ -211,7 +218,7 @@ class TiledSiteRepositoryTest {
 
         // A new repository on the same database = an app restart.
         val secondSource = ControllableSource(emptyList())
-        val afterRestart = TiledSiteRepository(secondSource, db, ControllableClock(), testAppScope, testDispatchers.computation).load(area())
+        val afterRestart = TiledSiteRepository(secondSource, db, ControllableClock(), testAppScope, testDispatchers.computation).loaded(area())
 
         assertEquals(listOf("a"), afterRestart.map { it.id })
         assertEquals(0, secondSource.queries, "A fresh local store needs no network")
@@ -226,7 +233,7 @@ class TiledSiteRepositoryTest {
         // Drove on, new area, no network.
         source.broken = true
         val newArea = SectorArea.circle(start.destination(0.0, 5.0), radiusKm = 40.0)
-        val list = TiledSiteRepository(source, db, ControllableClock(), testAppScope, testDispatchers.computation).load(newArea)
+        val list = TiledSiteRepository(source, db, ControllableClock(), testAppScope, testDispatchers.computation).loaded(newArea)
 
         assertEquals(listOf("a"), list.map { it.id }, "The list must not go empty in a tunnel")
     }
@@ -276,7 +283,7 @@ class TiledSiteRepositoryTest {
         source.broken = true
 
         // Reloading fails, but the cache is still there.
-        assertEquals(listOf("a"), repository.load(area()).map { it.id })
+        assertEquals(listOf("a"), repository.loaded(area()).map { it.id })
         assertEquals(2, source.queries)
     }
 
@@ -286,7 +293,7 @@ class TiledSiteRepositoryTest {
         val source = ControllableSource(listOf(site("nah", 0.0, 10.0), site("fern", 0.0, 300.0)))
         TiledSiteRepository(source, db, ControllableClock(), testAppScope, testDispatchers.computation).load(SectorArea.circle(start, 400.0))
 
-        val smallArea = TiledSiteRepository(source, db, ControllableClock(), testAppScope, testDispatchers.computation).load(area(40.0))
+        val smallArea = TiledSiteRepository(source, db, ControllableClock(), testAppScope, testDispatchers.computation).loaded(area(40.0))
 
         assertEquals(listOf("nah"), smallArea.map { it.id })
     }
@@ -301,7 +308,7 @@ class TiledSiteRepositoryTest {
 
         source.sites = listOf(site("a", 0.0, 10.0).copy(name = "Renamed"))
         clock.now = 1_001L
-        val list = repository.load(area())
+        val list = repository.loaded(area())
 
         assertEquals(1, list.size)
         assertEquals("Renamed", list.single().name)
@@ -320,7 +327,7 @@ class TiledSiteRepositoryTest {
             .load(area())
 
         val loaded = TiledSiteRepository(ControllableSource(), db, ControllableClock(), testAppScope, testDispatchers.computation)
-            .load(area())
+            .loaded(area())
             .single()
 
         assertEquals(2, loaded.connectors.size)
@@ -338,7 +345,7 @@ class TiledSiteRepositoryTest {
         TiledSiteRepository(ControllableSource(listOf(withoutConnectors)), db, ControllableClock(), testAppScope, testDispatchers.computation).load(area())
 
         val loaded = TiledSiteRepository(ControllableSource(), db, ControllableClock(), testAppScope, testDispatchers.computation)
-            .load(area()).single()
+            .loaded(area()).single()
 
         assertTrue(loaded.connectors.isEmpty())
     }
@@ -531,8 +538,9 @@ class TiledSiteRepositoryTest {
         yield() // let the second reach the de-dup
         gate.complete(Unit)
 
-        assertEquals(listOf("a"), first.await().map { it.id })
-        assertEquals(listOf("a"), second.await().map { it.id })
+        first.await()
+        second.await()
+        assertEquals(listOf("a"), repository.storedSitesIn(a).first().map { it.id })
         assertEquals(1, source.queries, "the identical concurrent fetch was de-duplicated")
     }
 
@@ -567,7 +575,7 @@ class TiledSiteRepositoryTest {
         val route = PolylineArea(listOf(start, start.destination(135.0, 80.0)), bufferKm = 3.0)
 
         repository.load(route)
-        val nearby = repository.load(SectorArea.circle(offCorridor, 3.0))
+        val nearby = repository.loaded(SectorArea.circle(offCorridor, 3.0))
 
         assertEquals(listOf("off"), nearby.map { it.id }, "The route's box was recorded as checked")
     }
@@ -583,8 +591,40 @@ class TiledSiteRepositoryTest {
 
         repository.load(PolylineArea(route, bufferKm = 2.0))
         val wider = PolylineArea(route, bufferKm = 3.0)
-        val found = repository.load(wider).filter { it.position in wider }
+        val found = repository.loaded(wider)
 
         assertEquals(listOf("between"), found.map { it.id }, "The 2 km fetch was recorded as covering the 3 km buffer")
+    }
+
+    @Test
+    fun aFailedRefill_isSwallowedOnlyWhileSomethingIsStored() = runBlocking<Unit> {
+        val source = ControllableSource(listOf(site("a", 0.0, 10.0)))
+        val repository = TiledSiteRepository(source, database(), ControllableClock(), testAppScope, testDispatchers.computation)
+        repository.load(area())
+        source.broken = true
+
+        repository.load(SectorArea.circle(start.destination(0.0, 5.0), radiusKm = 40.0))
+        assertFailsWith<IllegalStateException> { repository.load(SectorArea.circle(LatLon(52.5, 13.4), radiusKm = 40.0)) }
+    }
+
+    @Test
+    fun aRoutesStoredSites_areThoseWithinItsBuffer() = runBlocking {
+        val route = PolylineArea(
+            listOf(start, start.destination(135.0, 80.0), start.destination(180.0, 140.0)),
+            bufferKm = 2.0,
+        )
+        val sites = listOf(
+            siteAt("atStart", start),
+            siteAt("onFirstLeg", start.destination(135.0, 40.0).destination(45.0, 1.5)),
+            siteAt("atTheBend", start.destination(135.0, 80.0).destination(90.0, 1.5)),
+            siteAt("atTheEnd", start.destination(180.0, 140.0)),
+            siteAt("justOutside", start.destination(135.0, 40.0).destination(45.0, 2.5)),
+            siteAt("inTheRoutesBox", start.destination(180.0, 60.0)),
+        )
+        val repository = TiledSiteRepository(ControllableSource(sites), database(), ControllableClock(), testAppScope, testDispatchers.computation)
+
+        val stored = repository.loaded(route).map { it.id }.toSet()
+
+        assertEquals(setOf("atStart", "onFirstLeg", "atTheBend", "atTheEnd"), stored)
     }
 }
