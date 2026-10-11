@@ -24,7 +24,15 @@ data class ChargeSite(
     val connectors: List<Connector>,
     ...                              // address, sources, liveStatusId
     val networkKey: String? = null,  // assigned by the backend
+    val adHocTariffs: List<Tariff> = emptyList(),   // empty when the operator publishes none
 )
+
+// What charging costs without a contract; the components add up.
+data class Tariff(val currency: String, val components: List<PriceComponent>, val connectors: List<ConnectorType>)
+
+// PER_KWH, PER_MINUTE, SESSION or OTHER; the optional fields narrow when the price applies.
+data class PriceComponent(val kind: PriceKind, val price: Double, val fromMinute: Int?, val toMinute: Int?,
+                          val startTime: String?, val endTime: String?, val days: Set<Weekday>)
 
 data class ChargeStop(
     val site: ChargeSite,

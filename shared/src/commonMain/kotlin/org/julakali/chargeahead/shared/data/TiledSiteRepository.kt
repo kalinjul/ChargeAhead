@@ -189,6 +189,7 @@ class TiledSiteRepository(
                     maxPowerKw = site.maxPowerKw,
                     maxDcPowerKw = site.maxDcPowerKw,
                     networkKey = site.networkKey,
+                    adHocTariffs = site.adHocTariffs,
                 )
             },
             tiles = stampKeys.flatMap { key ->
@@ -272,4 +273,5 @@ private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     sources = sources.ifEmpty { setOf(sourceId) },
     liveStatusId = liveStatusId,
     networkKey = networkKey,
+    adHocTariffs = adHocTariffs,
 )

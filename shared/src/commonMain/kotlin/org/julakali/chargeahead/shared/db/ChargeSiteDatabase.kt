@@ -10,6 +10,7 @@ import androidx.room.RoomDatabaseConstructor
 import androidx.room.TypeConverters
 import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.LatLon
+import org.julakali.chargeahead.shared.domain.Tariff
 
 // Charging-station local store (chargeSite) and which area was fetched when
 // (tileCoverage, corridorCoverage).
@@ -38,6 +39,8 @@ data class ChargeSiteEntity(
     val maxDcPowerKw: Double? = null,
     // The backend's network key; null without a known operator.
     val networkKey: String? = null,
+    // Stored as JSON (see Converters).
+    val adHocTariffs: List<Tariff> = emptyList(),
 )
 
 @Entity(tableName = "tileCoverage", primaryKeys = ["sourceId", "networkKey", "tileLat", "tileLon"])
@@ -78,7 +81,7 @@ data class CorridorCoverageEntity(
         VehicleModelEntity::class,
         GarageVehicleEntity::class,
     ],
-    version = 14,
+    version = 15,
     exportSchema = false,
 )
 @ConstructedBy(ChargeSiteDatabaseConstructor::class)

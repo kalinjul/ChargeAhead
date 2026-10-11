@@ -10,7 +10,11 @@ import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.Place
+import org.julakali.chargeahead.shared.domain.PriceComponent
+import org.julakali.chargeahead.shared.domain.PriceKind
 import org.julakali.chargeahead.shared.domain.Reachability
+import org.julakali.chargeahead.shared.domain.Tariff
+import org.julakali.chargeahead.shared.domain.Weekday
 import java.util.Locale
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -405,6 +409,93 @@ class ChargeStopFormatterTest {
         Locale.setDefault(Locale.US)
         assertEquals("After 142 km · 150 kW · 18 → 80% in 25 min", ChargeStopFormatter.plannedStopDetailLine(plannedStop()))
         assertEquals("25 min charging to 80%", ChargeStopFormatter.chargeToLabel(plannedStop()))
+    }
+
+    private fun siteWith(vararg tariffs: Tariff) = site.copy(adHocTariffs = tariffs.toList())
+
+    @Test
+    fun adHocTariffLines_withoutTariffs_isEmpty() {
+        assertEquals(emptyList(), ChargeStopFormatter.adHocTariffLines(site))
+    }
+
+    @Test
+    fun adHocTariffLines_joinTheComponentsOfOneTariff() {
+        val tariff = Tariff(
+            currency = "EUR",
+            components = listOf(
+                PriceComponent(PriceKind.SESSION, 1.0),
+                PriceComponent(PriceKind.PER_MINUTE, 0.1, fromMinute = 240),
+                PriceComponent(PriceKind.PER_KWH, 0.6545),
+            ),
+            connectors = listOf(ConnectorType.CCS2),
+        )
+        assertEquals(
+            listOf("0,65 €/kWh · 0,10 €/min (ab 240 min) · 1,00 € pro Ladevorgang"),
+            ChargeStopFormatter.adHocTariffLines(siteWith(tariff)),
+        )
+    }
+
+    @Test
+    fun adHocTariffLines_nameTheConnectorsWhenTariffsDiffer() {
+        val dc = Tariff("EUR", listOf(PriceComponent(PriceKind.PER_KWH, 0.69)), listOf(ConnectorType.CCS2, ConnectorType.CHADEMO))
+        val ac = Tariff("EUR", listOf(PriceComponent(PriceKind.PER_KWH, 0.489)), listOf(ConnectorType.TYPE2))
+        assertEquals(
+            listOf("CCS / CHAdeMO: 0,69 €/kWh", "Typ 2: 0,49 €/kWh"),
+            ChargeStopFormatter.adHocTariffLines(siteWith(ac, dc)),
+        )
+    }
+
+    @Test
+    fun adHocTariffLines_showTariffsThatReadTheSameOnce() {
+        val perKwh = PriceComponent(PriceKind.PER_KWH, 0.79)
+        val perMinute = PriceComponent(PriceKind.PER_MINUTE, 0.15, fromMinute = 60)
+        val one = Tariff("EUR", listOf(perKwh, perMinute), listOf(ConnectorType.CCS2))
+        val reordered = Tariff("EUR", listOf(perMinute, perKwh), listOf(ConnectorType.CCS2))
+        assertEquals(
+            listOf("0,79 €/kWh · 0,15 €/min (ab 60 min)"),
+            ChargeStopFormatter.adHocTariffLines(siteWith(one, reordered)),
+        )
+    }
+
+    @Test
+    fun adHocTariffLines_spellOutWhenAPriceApplies() {
+        val tariff = Tariff(
+            currency = "CHF",
+            components = listOf(
+                PriceComponent(
+                    PriceKind.PER_KWH, 0.45,
+                    startTime = "22:00:00+01:00", endTime = "06:00:00+01:00",
+                    days = setOf(Weekday.FRIDAY, Weekday.MONDAY, Weekday.TUESDAY, Weekday.WEDNESDAY, Weekday.THURSDAY),
+                ),
+                PriceComponent(PriceKind.PER_KWH, 0.55, days = setOf(Weekday.SUNDAY, Weekday.SATURDAY)),
+                PriceComponent(PriceKind.PER_MINUTE, 0.05, fromMinute = 60, toMinute = 120),
+                PriceComponent(PriceKind.OTHER, 0.5, toMinute = 30),
+            ),
+        )
+        assertEquals(
+            listOf(
+                "0,45 CHF/kWh (Mo–Fr, 22:00–06:00) · 0,55 CHF/kWh (Sa, So) · " +
+                    "0,05 CHF/min (60–120 min) · 0,50 CHF sonstige Gebühr (bis 30 min)",
+            ),
+            ChargeStopFormatter.adHocTariffLines(siteWith(tariff)),
+        )
+    }
+
+    @Test
+    fun english_adHocTariffLines() {
+        Locale.setDefault(Locale.US)
+        val tariff = Tariff(
+            currency = "EUR",
+            components = listOf(
+                PriceComponent(PriceKind.PER_KWH, 0.59, days = setOf(Weekday.SATURDAY)),
+                PriceComponent(PriceKind.SESSION, 1.0),
+                PriceComponent(PriceKind.PER_MINUTE, 0.1, fromMinute = 240),
+            ),
+        )
+        assertEquals(
+            listOf("0.59 €/kWh (Sat) · 0.10 €/min (from 240 min) · 1.00 € per session"),
+            ChargeStopFormatter.adHocTariffLines(siteWith(tariff)),
+        )
     }
 
     @Test

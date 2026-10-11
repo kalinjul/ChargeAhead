@@ -7,8 +7,12 @@ import org.julakali.chargeahead.shared.domain.Connector
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PolylineArea
+import org.julakali.chargeahead.shared.domain.PriceComponent
+import org.julakali.chargeahead.shared.domain.PriceKind
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SectorArea
+import org.julakali.chargeahead.shared.domain.Tariff
+import org.julakali.chargeahead.shared.domain.Weekday
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.post
@@ -23,6 +27,8 @@ import org.julakali.chargeahead.api.ConnectorDto
 import org.julakali.chargeahead.api.ConnectorTypeDto
 import org.julakali.chargeahead.api.LatLonDto
 import org.julakali.chargeahead.api.NetworkFilterDto
+import org.julakali.chargeahead.api.PriceComponentDto
+import org.julakali.chargeahead.api.TariffDto
 
 /** Charging sites from the ChargeAhead backend instead of from a provider directly. */
 class BackendChargeSiteSource(
@@ -76,6 +82,28 @@ internal fun ChargeSiteDto.toDomain() = ChargeSite(
     sources = sources.ifEmpty { setOf(BackendChargeSiteSource.SOURCE_ID) },
     liveStatusId = id.takeIf { hasLiveStatus },
     networkKey = network,
+    adHocTariffs = adHocTariffs.map { it.toDomain() },
+)
+
+private fun TariffDto.toDomain() = Tariff(
+    currency = currency,
+    components = components.map { it.toDomain() },
+    connectors = connectors.map { it.toDomain() },
+)
+
+private fun PriceComponentDto.toDomain() = PriceComponent(
+    kind = when (type) {
+        "per_kwh" -> PriceKind.PER_KWH
+        "per_minute" -> PriceKind.PER_MINUTE
+        "session" -> PriceKind.SESSION
+        else -> PriceKind.OTHER
+    },
+    price = price,
+    fromMinute = fromMinute,
+    toMinute = toMinute,
+    startTime = startTime,
+    endTime = endTime,
+    days = days.mapNotNull { day -> Weekday.entries.firstOrNull { it.name.equals(day, ignoreCase = true) } }.toSet(),
 )
 
 private fun ConnectorDto.toDomain() = Connector(

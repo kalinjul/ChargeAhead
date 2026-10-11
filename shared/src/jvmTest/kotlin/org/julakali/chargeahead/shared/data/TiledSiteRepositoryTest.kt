@@ -15,8 +15,12 @@ import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.PolylineArea
+import org.julakali.chargeahead.shared.domain.PriceComponent
+import org.julakali.chargeahead.shared.domain.PriceKind
 import org.julakali.chargeahead.shared.domain.SectorArea
+import org.julakali.chargeahead.shared.domain.Tariff
 import org.julakali.chargeahead.shared.domain.TimeProvider
+import org.julakali.chargeahead.shared.domain.Weekday
 import org.julakali.chargeahead.shared.domain.BoundingBox
 import org.julakali.chargeahead.shared.domain.destination
 import kotlinx.coroutines.Dispatchers
@@ -83,6 +87,22 @@ class TiledSiteRepositoryTest {
             connectors = listOf(Connector(type, powerKw, 2)),
             networkKey = operator.lowercase(),
         )
+
+    @Test
+    fun adHocTariffsSurviveTheStore() = runBlocking {
+        val tariff = Tariff(
+            currency = "EUR",
+            components = listOf(PriceComponent(PriceKind.PER_MINUTE, 0.1, fromMinute = 240, days = setOf(Weekday.SUNDAY))),
+            connectors = listOf(ConnectorType.CCS2),
+        )
+        val repository = TiledSiteRepository(
+            ControllableSource(listOf(site("a", 0.0, 10.0).copy(adHocTariffs = listOf(tariff)))),
+            database(), ControllableClock(), testAppScope, testDispatchers.computation,
+        )
+        repository.load(area())
+
+        assertEquals(listOf(tariff), repository.storedSitesIn(area()).first().single().adHocTariffs)
+    }
 
     /** Stores [sites], then reads them back through [filter]. */
     private fun storedThrough(filter: MapFilter, vararg sites: ChargeSite): Set<String> = runBlocking {

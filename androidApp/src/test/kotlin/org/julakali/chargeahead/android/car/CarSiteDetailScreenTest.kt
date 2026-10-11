@@ -20,6 +20,10 @@ import org.robolectric.annotation.Config
 import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.car_detail_charge
 import org.julakali.chargeahead.shared.resources.car_detail_navigate
+import org.julakali.chargeahead.shared.resources.fmt_adhoc_price
+import org.julakali.chargeahead.shared.domain.PriceComponent
+import org.julakali.chargeahead.shared.domain.PriceKind
+import org.julakali.chargeahead.shared.domain.Tariff
 import org.julakali.chargeahead.shared.Texts
 import org.jetbrains.compose.resources.StringResource
 
@@ -58,6 +62,28 @@ class CarSiteDetailScreenTest {
         assertEquals(CarColor.PRIMARY, navigate.backgroundColor)
         click(navigate)
         assertEquals(CarContext.ACTION_NAVIGATE, graph.carContext.startCarAppIntents.single().action)
+    }
+
+    @Test
+    fun `a site with a published ad-hoc price shows it`() {
+        val priced = site(1).copy(adHocTariffs = listOf(Tariff("EUR", listOf(PriceComponent(PriceKind.PER_KWH, 0.59)))))
+        val screen = CarSiteDetailScreen(graph.carContext, graph.session, priced)
+        settle()
+
+        val rows = (screen.onGetTemplate() as PaneTemplate).pane.rows
+
+        val priceRow = rows.single { it.title.toString() == string(Res.string.fmt_adhoc_price) }
+        assertTrue(priceRow.texts.single().toString().endsWith("€/kWh"))
+    }
+
+    @Test
+    fun `a site without a published price has no price row`() {
+        val screen = CarSiteDetailScreen(graph.carContext, graph.session, site(1))
+        settle()
+
+        val rows = (screen.onGetTemplate() as PaneTemplate).pane.rows
+
+        assertTrue(rows.none { it.title.toString() == string(Res.string.fmt_adhoc_price) })
     }
 
     @Test
