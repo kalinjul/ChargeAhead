@@ -97,7 +97,7 @@ class TiledSiteRepositoryTest {
         )
         val repository = TiledSiteRepository(
             ControllableSource(listOf(site("a", 0.0, 10.0).copy(adHocTariffs = listOf(tariff)))),
-            database(), ControllableClock(), testAppScope,
+            database(), ControllableClock(), testAppScope, testDispatchers.computation,
         )
         repository.load(area())
 
