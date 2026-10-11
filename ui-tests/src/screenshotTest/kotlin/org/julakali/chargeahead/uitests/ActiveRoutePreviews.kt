@@ -23,7 +23,7 @@ private fun Screen(selection: SectionSelection = SectionSelection(), planning: B
     PreviewScaffold {
         Box(Modifier.width(400.dp).height(560.dp)) {
             ActiveRouteScreen(
-                trip = CommittedTrip(SamplePlan, startSocPercent = 80.0, committedAtEpochMillis = 0L),
+                trip = CommittedTrip(SamplePlan, startSocPercent = 80.0, committedAtEpochMillis = FixedCommitMillis),
                 selection = selection,
                 planning = planning,
                 onToggleSelecting = {},
@@ -73,7 +73,7 @@ fun ActiveRoutePage() {
         Box(Modifier.width(400.dp).height(760.dp)) {
             Scaffold(topBar = { AppTopBar(title = SamplePlan.destination.name, onBack = {}) }) { padding ->
                 ActiveRouteScreen(
-                    trip = CommittedTrip(SamplePlan, startSocPercent = 80.0, committedAtEpochMillis = 0L),
+                    trip = CommittedTrip(SamplePlan, startSocPercent = 80.0, committedAtEpochMillis = FixedCommitMillis),
                     selection = SectionSelection(),
                     planning = false,
                     onToggleSelecting = {},

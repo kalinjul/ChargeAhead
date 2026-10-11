@@ -169,8 +169,12 @@ fun PhoneApp(librariesRes: Int) {
                 },
                 // A stop opened from the active route page belongs to the committed plan, not to one being looked at.
                 tripLineFor = { selected ->
-                    val plan = if (navigator.backStack.lastOrNull() == ActiveRoute) committedUi.trip?.plan else planned?.plan
-                    plan?.stopLine(context, selected, clock())
+                    val committed = committedUi.trip?.takeIf { navigator.backStack.lastOrNull() == ActiveRoute }
+                    if (committed != null) {
+                        committed.plan.stopLine(context, selected, committed.departureTime())
+                    } else {
+                        planned?.plan?.stopLine(context, selected, clock())
+                    }
                 },
                 // No vehicle? Planning reports it as an event.
                 onPick = tripViewModel::plan,
