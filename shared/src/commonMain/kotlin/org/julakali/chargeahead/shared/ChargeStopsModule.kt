@@ -71,6 +71,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.SharingStarted
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.onClose
 import org.koin.core.module.dsl.withOptions
@@ -81,7 +82,7 @@ import org.julakali.chargeahead.shared.domain.usecases.GarageObserver
 import org.julakali.chargeahead.shared.domain.usecases.SelectableNetworksObserver
 import org.julakali.chargeahead.shared.domain.SiteCache
 import org.koin.core.qualifier.named
-import org.koin.core.parameter.parametersOf
+import org.koin.core.scope.Scope
 
 /**
  * The data graph behind both features, declared once for both platforms.
@@ -167,15 +168,24 @@ fun chargeStopsModule(): Module = module {
 
     // A feature per session, on the graph's shared singletons; the caller owns and closes it.
     factory<ChargeStopsFeature>(SessionFeature) { (location: LocationSource, hardware: SoCSource?) ->
-        ChargeStopsFeature(
-            locationSource = location,
-            socSource = CombinedSoCSource(manual = ManualSoCSource(get(), get()), hardware = hardware),
-            parentScope = get(AppScope),
-        )
+        chargeStopsFeature(location, hardware, SharingStarted.Eagerly)
     }
-    // The phone's feature. Never closed.
-    single<ChargeStopsFeature> { get(SessionFeature) { parametersOf(get<LocationSource>(), null) } }
+    // The phone's feature. Never closed, so its location source runs only while a screen collects the fix.
+    single<ChargeStopsFeature> {
+        chargeStopsFeature(get(), hardware = null, SharingStarted.WhileSubscribed(LOCATION_STOP_TIMEOUT_MILLIS))
+    }
 }
+
+private fun Scope.chargeStopsFeature(location: LocationSource, hardware: SoCSource?, locationSharing: SharingStarted) =
+    ChargeStopsFeature(
+        locationSource = location,
+        socSource = CombinedSoCSource(manual = ManualSoCSource(get(), get()), hardware = hardware),
+        parentScope = get(AppScope),
+        locationSharing = locationSharing,
+    )
+
+// Long enough to bridge a rotation or the change from one screen to the next.
+private const val LOCATION_STOP_TIMEOUT_MILLIS = 5_000L
 
 /** A [ChargeStopsFeature] built for one session: `parametersOf(location, hardwareSoCSource)`. */
 val SessionFeature = named("session-feature")

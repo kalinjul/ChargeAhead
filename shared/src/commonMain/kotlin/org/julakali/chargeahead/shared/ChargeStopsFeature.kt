@@ -9,9 +9,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingCommand
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -21,7 +25,7 @@ import kotlin.coroutines.cancellation.CancellationException
  * Where the vehicle is, which way it's heading and how full its battery is —
  * one per location source: the phone's, and one per car session.
  *
- * Lifecycle: [start] begins listening, [close] ends it for good.
+ * Lifecycle: [start] allows listening, [close] ends it for good.
  */
 class ChargeStopsFeature(
     private val locationSource: LocationSource,
@@ -30,6 +34,8 @@ class ChargeStopsFeature(
     parentScope: CoroutineScope,
     /** Called by [close]. */
     private val onClose: () -> Unit = {},
+    /** When the location source is listened to, counted in collectors of [currentFix]. */
+    private val locationSharing: SharingStarted = SharingStarted.Eagerly,
 ) {
 
     private val scope = parentScope.childScope()
@@ -41,7 +47,7 @@ class ChargeStopsFeature(
 
     private val mutableFix = MutableStateFlow<Fix?>(null)
 
-    /** Last location fix, with the best course known. */
+    /** Last location fix, with the best course known. Stays at the last one while [locationSharing] has stopped the source. */
     val currentFix: StateFlow<Fix?> = mutableFix.asStateFlow()
 
     private val mutableEnergy = MutableStateFlow<EnergyState?>(null)
@@ -57,22 +63,21 @@ class ChargeStopsFeature(
     private var locationJob: Job? = null
     private var sensorJob: Job? = null
 
-    /** Starts tracking location and charge state. Idempotent. */
+    /** Starts tracking charge state, and location as far as [locationSharing] asks for it. Idempotent. */
     fun start() {
         if (sensorJob?.isActive != true) {
             sensorJob = scope.launch {
                 socSource?.energy?.collect { mutableEnergy.value = it }
             }
         }
-        if (locationJob?.isActive != true) {
+        // A failed stream is retried: the permission may have been granted since.
+        if (locationJob?.isActive != true || mutableLocationFailed.value) {
+            locationJob?.cancel()
             mutableLocationFailed.value = false
             locationJob = scope.launch {
-                locationSource.updates
-                    .catch { error ->
-                        logWarning("Location stream ended", error)
-                        mutableLocationFailed.value = true
-                    }
-                    .collect(::onFix)
+                locationSharing.command(mutableFix.subscriptionCount)
+                    .distinctUntilChanged()
+                    .collectLatest { command -> if (command == SharingCommand.START) collectLocation() }
             }
         }
     }
@@ -101,6 +106,16 @@ class ChargeStopsFeature(
         locationJob = null
         sensorJob = null
         onClose()
+    }
+
+    private suspend fun collectLocation() {
+        mutableLocationFailed.value = false
+        locationSource.updates
+            .catch { error ->
+                logWarning("Location stream ended", error)
+                mutableLocationFailed.value = true
+            }
+            .collect(::onFix)
     }
 
     private suspend fun onFix(rawFix: Fix) = fixMutex.withLock {
