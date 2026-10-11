@@ -191,7 +191,7 @@ class BackendRouteSiteSourceTest {
 
         source.query(networkKeys = setOf("ionity"))
 
-        assertTrue(url.endsWith("/v1/route/charge-sites"), url)
+        assertTrue(url.endsWith("/v1/route"), url)
         assertTrue(""""lat":48.9""" in sent, sent)
         assertTrue("48.9" !in url, url)
         assertTrue(""""bufferKm":3.0""" in sent, sent)
