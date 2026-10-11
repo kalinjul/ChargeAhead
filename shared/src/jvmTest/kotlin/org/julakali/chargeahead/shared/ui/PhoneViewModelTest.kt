@@ -226,7 +226,7 @@ class PhoneViewModelTest {
         locationTimeoutMillis: Long = HomeViewModel.DEFAULT_LOCATION_TIMEOUT_MILLIS,
         statusSource: ChargePointStatusSource = ChargePointStatusSource { emptyMap() },
     ): HomeViewModel {
-        val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
+        val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope, testDispatchers.computation)
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })
         return main.track(HomeViewModel(
             stubFeature(),
@@ -269,7 +269,7 @@ class PhoneViewModelTest {
             },
             parentScope = CoroutineScope(Dispatchers.Unconfined),
         )
-        val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
+        val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope, testDispatchers.computation)
         val viewModel = main.track(CorridorViewModel(
             feature,
             ChargeStopsObserver(repository, testVehicleRepository(), FakeVehicleCatalog(), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), CorridorPlanner(), testDispatchers),
