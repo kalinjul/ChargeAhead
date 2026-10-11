@@ -17,14 +17,22 @@ enum class Reachability { REACHABLE, MARGINAL, UNREACHABLE, UNKNOWN }
 data class Connector(val type: ConnectorType, val maxPowerKw: Double, val count: Int?)   // count may be unknown
 
 data class ChargeSite(
-    val id: String,                  // source-qualified, e.g. "ocm:12345"; for a merged site, the leading source's
+    val id: String,                  // source-qualified, e.g. "ocm:12345"
     val name: String,
     val operator: String?,
     val position: LatLon,
     val connectors: List<Connector>,
     ...                              // address, sources, liveStatusId
     val networkKey: String? = null,  // assigned by the backend
+    val adHocTariffs: List<Tariff> = emptyList(),   // empty when the operator publishes none
 )
+
+// What charging costs without a contract; the components add up.
+data class Tariff(val currency: String, val components: List<PriceComponent>, val connectors: List<ConnectorType>)
+
+// PER_KWH, PER_MINUTE, SESSION or OTHER; the optional fields narrow when the price applies.
+data class PriceComponent(val kind: PriceKind, val price: Double, val fromMinute: Int?, val toMinute: Int?,
+                          val startTime: String?, val endTime: String?, val days: Set<Weekday>)
 
 data class ChargeStop(
     val site: ChargeSite,

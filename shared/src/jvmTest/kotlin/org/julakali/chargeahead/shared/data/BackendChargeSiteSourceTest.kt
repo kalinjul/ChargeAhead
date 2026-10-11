@@ -3,7 +3,10 @@ package org.julakali.chargeahead.shared.data
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PolylineArea
+import org.julakali.chargeahead.shared.domain.PriceComponent
+import org.julakali.chargeahead.shared.domain.PriceKind
 import org.julakali.chargeahead.shared.domain.SectorArea
+import org.julakali.chargeahead.shared.domain.Weekday
 import io.ktor.client.engine.mock.MockEngine
 import io.ktor.client.engine.mock.respond
 import io.ktor.client.engine.mock.respondError
@@ -84,6 +87,60 @@ class BackendChargeSiteSourceTest {
         assertEquals(4, site.connectors[0].count)
         // Absent means unknown, and must not become 1.
         assertNull(site.connectors[1].count)
+    }
+
+    @Test
+    fun mapsAdHocTariffs() = runBlocking {
+        val source = sourceRespondingWith(
+            """
+            {
+              "sites": [{
+                "id": "mobilithek:1",
+                "name": "A",
+                "position": {"lat": 48.9, "lon": 11.4},
+                "adHocTariffs": [{
+                  "currency": "EUR",
+                  "components": [
+                    {"type": "per_kwh", "price": 0.59, "startTime": "08:00:00+01:00", "endTime": "20:00:00+01:00", "days": ["monday", "friday"]},
+                    {"type": "per_minute", "price": 0.1, "fromMinute": 240},
+                    {"type": "session", "price": 1.0},
+                    {"type": "parking", "price": 2.0}
+                  ],
+                  "connectors": ["ccs2"]
+                }]
+              }],
+              "attribution": ""
+            }
+            """.trimIndent(),
+        )
+
+        val tariff = source.query(area, emptySet()).single().adHocTariffs.single()
+
+        assertEquals("EUR", tariff.currency)
+        assertEquals(listOf(ConnectorType.CCS2), tariff.connectors)
+        assertEquals(
+            listOf(
+                PriceComponent(
+                    PriceKind.PER_KWH, 0.59,
+                    startTime = "08:00:00+01:00", endTime = "20:00:00+01:00",
+                    days = setOf(Weekday.MONDAY, Weekday.FRIDAY),
+                ),
+                PriceComponent(PriceKind.PER_MINUTE, 0.1, fromMinute = 240),
+                PriceComponent(PriceKind.SESSION, 1.0),
+                // A type the app does not know yet.
+                PriceComponent(PriceKind.OTHER, 2.0),
+            ),
+            tariff.components,
+        )
+    }
+
+    @Test
+    fun aSiteWithoutPublishedPricesHasNoTariffs() = runBlocking {
+        val site = sourceRespondingWith(
+            """{"sites": [{"id": "ocm:2", "name": "B", "position": {"lat": 48.9, "lon": 11.5}}], "attribution": ""}""",
+        ).query(area, emptySet()).single()
+
+        assertTrue(site.adHocTariffs.isEmpty())
     }
 
     @Test

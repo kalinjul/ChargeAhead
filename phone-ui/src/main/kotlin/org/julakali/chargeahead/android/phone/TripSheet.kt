@@ -79,11 +79,14 @@ import org.julakali.chargeahead.android.phone.components.ChargeLevelKind
 import org.julakali.chargeahead.android.phone.components.ChargeLevelSheet
 import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import org.julakali.chargeahead.android.phone.theme.tabular
+import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
+import java.time.Instant
 import java.time.LocalTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
 import org.julakali.chargeahead.shared.resources.Res
@@ -159,6 +162,8 @@ fun TripSheetContent(
     /** The charge-level editors behind the start and destination rows; `null` makes both rows read-only. */
     socEditing: SocEditing?,
     modifier: Modifier = Modifier,
+    /** What the stop and arrival times count from: now for a plan, the commit for a trip under way. */
+    departure: LocalTime = LocalNow.current(),
 ) {
     val selecting = selection.selecting
     val selectionA = selection.a
@@ -265,6 +270,7 @@ fun TripSheetContent(
                     onPickPoint = onPickPoint,
                     onOpenStop = onOpenStop,
                     socEditing = socEditing,
+                    departure = departure,
                     modifier = Modifier.fillMaxSize(),
                 )
                 TripListLayout.TILES -> StopTiles(
@@ -272,6 +278,7 @@ fun TripSheetContent(
                     selection = selection,
                     onPickPoint = onPickPoint,
                     onOpenStop = onOpenStop,
+                    departure = departure,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -321,12 +328,12 @@ private fun StopRail(
     onPickPoint: (Int) -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
     socEditing: SocEditing?,
+    departure: LocalTime,
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
     val last = plan.stops.size + 1
     val pen = socEditing?.let { painterResource(R.drawable.ic_pen) }
-    val now = LocalNow.current()
     val context = LocalContext.current
 
     LazyColumn(modifier = modifier.padding(horizontal = 16.dp)) {
@@ -375,8 +382,8 @@ private fun StopRail(
                 MetaLine(
                     stringResource(
                         Res.string.trip_stop_times,
-                        etaText(context, stop.arrivalMinutesFromStart, now),
-                        etaText(context, stop.arrivalMinutesFromStart + stop.chargeMinutes, now),
+                        etaText(context, stop.arrivalMinutesFromStart, departure),
+                        etaText(context, stop.arrivalMinutesFromStart + stop.chargeMinutes, departure),
                     ),
                 )
             }
@@ -399,7 +406,7 @@ private fun StopRail(
                     overflow = TextOverflow.Ellipsis,
                 )
                 MetaLine(
-                    stringResource(Res.string.trip_arr, etaText(context, plan.totalMinutes, now), plan.arrivalSocPercent.roundToInt()),
+                    stringResource(Res.string.trip_arr, etaText(context, plan.totalMinutes, departure), plan.arrivalSocPercent.roundToInt()),
                 )
             }
         }
@@ -504,10 +511,10 @@ private fun StopTiles(
     selection: SectionSelection,
     onPickPoint: (Int) -> Unit,
     onOpenStop: (PlannedStop) -> Unit,
+    departure: LocalTime,
     modifier: Modifier = Modifier,
 ) {
     val selecting = selection.selecting
-    val now = LocalNow.current()
     val context = LocalContext.current
     // Centred in the room the list would take, so the action row stays where it was.
     Box(modifier, contentAlignment = Alignment.Center) {
@@ -532,7 +539,7 @@ private fun StopTiles(
                             overflow = TextOverflow.Ellipsis,
                         )
                         MetaLine(stringResource(Res.string.trip_tile_charge, stop.maxPowerKw.roundToInt(), stop.chargeMinutes.roundToInt()))
-                        MetaLine(stringResource(Res.string.trip_tile_arrival, etaText(context, stop.arrivalMinutesFromStart, now)))
+                        MetaLine(stringResource(Res.string.trip_tile_arrival, etaText(context, stop.arrivalMinutesFromStart, departure)))
                     }
                 }
             }
@@ -688,6 +695,9 @@ fun minutesText(minutes: Double): String {
 
 /** The clock the trip rows read; tests pin it so times don't drift. */
 val LocalNow = staticCompositionLocalOf<() -> LocalTime> { { LocalTime.now() } }
+
+fun CommittedTrip.departureTime(): LocalTime =
+    Instant.ofEpochMilli(committedAtEpochMillis).atZone(ZoneId.systemDefault()).toLocalTime()
 
 /** Wall-clock arrival, from [now] plus the ETA offset, in the device's 12h/24h style. */
 fun etaText(context: Context, minutesFromStart: Double, now: LocalTime): String {

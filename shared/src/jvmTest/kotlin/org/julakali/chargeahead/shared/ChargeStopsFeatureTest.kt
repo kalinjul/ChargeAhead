@@ -15,7 +15,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,10 +45,15 @@ class ChargeStopsFeatureTest {
     private fun fix(position: LatLon = start, bearingDeg: Double? = 180.0) =
         Fix(position, bearingDeg, speedMps = 30.0, timestampMillis = 0L)
 
-    private fun feature(location: LocationSource, socSource: SoCSource? = null) = ChargeStopsFeature(
+    private fun feature(
+        location: LocationSource,
+        socSource: SoCSource? = null,
+        locationSharing: SharingStarted = SharingStarted.Eagerly,
+    ) = ChargeStopsFeature(
         locationSource = location,
         socSource = socSource,
         parentScope = CoroutineScope(Dispatchers.Unconfined),
+        locationSharing = locationSharing,
     )
 
     @Test
@@ -113,6 +120,57 @@ class ChargeStopsFeatureTest {
 
         assertEquals(1, location.fixes.subscriptionCount.value)
         assertFalse(feature.locationFailed.value)
+        feature.close()
+    }
+
+    /** Issue #201. */
+    @Test
+    fun `shared while subscribed, the location source is listened to only while the fix is collected`() = runBlocking {
+        val location = ControllableLocationSource()
+        val feature = feature(location, locationSharing = SharingStarted.WhileSubscribed())
+        feature.start()
+        assertEquals(0, location.fixes.subscriptionCount.value)
+
+        val collector = CoroutineScope(Dispatchers.Unconfined).launch { feature.currentFix.collect {} }
+        assertEquals(1, location.fixes.subscriptionCount.value)
+        location.fixes.emit(fix())
+
+        collector.cancel()
+
+        assertEquals(0, location.fixes.subscriptionCount.value)
+        assertEquals(start, feature.currentFix.value?.position)
+        feature.close()
+    }
+
+    @Test
+    fun `shared while subscribed, the location source is not listened to before start`() {
+        val location = ControllableLocationSource()
+        val feature = feature(location, locationSharing = SharingStarted.WhileSubscribed())
+
+        val collector = CoroutineScope(Dispatchers.Unconfined).launch { feature.currentFix.collect {} }
+
+        assertEquals(0, location.fixes.subscriptionCount.value)
+        collector.cancel()
+        feature.close()
+    }
+
+    @Test
+    fun `starting again retries a failed location stream`() {
+        var attempts = 0
+        val location = object : LocationSource {
+            override suspend fun currentFix(): Fix? = null
+            override val updates: Flow<Fix> = flow {
+                if (attempts++ == 0) throw SecurityException("no permission")
+                emit(fix())
+            }
+        }
+        val feature = feature(location)
+        feature.start()
+
+        feature.start()
+
+        assertFalse(feature.locationFailed.value)
+        assertEquals(start, feature.currentFix.value?.position)
         feature.close()
     }
 

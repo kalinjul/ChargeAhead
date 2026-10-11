@@ -169,13 +169,22 @@ fun PhoneApp(librariesRes: Int) {
                 },
                 // A stop opened from the active route page belongs to the committed plan, not to one being looked at.
                 tripLineFor = { selected ->
-                    val plan = if (navigator.backStack.lastOrNull() == ActiveRoute) committedUi.trip?.plan else planned?.plan
-                    plan?.stopLine(context, selected, clock())
+                    val committed = committedUi.trip?.takeIf { navigator.backStack.lastOrNull() == ActiveRoute }
+                    if (committed != null) {
+                        committed.plan.stopLine(context, selected, committed.departureTime())
+                    } else {
+                        planned?.plan?.stopLine(context, selected, clock())
+                    }
                 },
                 // No vehicle? Planning reports it as an event.
                 onPick = tripViewModel::plan,
                 onClearTrip = tripViewModel::clear,
-                onOpenMaps = { link -> openInMaps(link) },
+                // Navigating to one of the plan's stops is committing, as sending the plan is.
+                onOpenMaps = { stop, link ->
+                    val ofPlan = navigator.backStack.lastOrNull() != ActiveRoute &&
+                        planned?.plan?.stops?.any { it.site.id == stop.site.id } == true
+                    if (openInMaps(link) && ofPlan) tripViewModel.commit()
+                },
                 onFloatingControlsHeight = { floatingControlsHeight = it },
                 // No scaffold padding: the map draws under the status bar.
                 modifier = Modifier

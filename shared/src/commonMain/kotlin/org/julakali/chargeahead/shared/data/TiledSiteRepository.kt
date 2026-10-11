@@ -20,12 +20,14 @@ import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
 import org.julakali.chargeahead.shared.domain.maxDcPowerKw
 import org.julakali.chargeahead.shared.domain.maxPowerKw
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.job
 import kotlinx.coroutines.withContext
@@ -47,6 +49,8 @@ class TiledSiteRepository(
     private val time: TimeProvider,
     /** Runs the fetches, so one survives the caller that started it for the others awaiting it. */
     private val scope: CoroutineScope,
+    /** Maps the stored rows; the collector is usually a ViewModel on main. */
+    private val computation: CoroutineDispatcher,
     private val ttlMillis: Long = DEFAULT_TTL_MILLIS,
     private val prefetchMarginKm: Double = DEFAULT_PREFETCH_MARGIN_KM,
 ) : SiteRepository {
@@ -181,6 +185,7 @@ class TiledSiteRepository(
                     maxPowerKw = site.maxPowerKw,
                     maxDcPowerKw = site.maxDcPowerKw,
                     networkKey = site.networkKey,
+                    adHocTariffs = site.adHocTariffs,
                 )
             },
             tiles = stampKeys.flatMap { key ->
@@ -209,7 +214,7 @@ class TiledSiteRepository(
             minPowerKw = filter.minPowerKw,
             filterNetworks = filter.networks.isActive,
             networkKeys = filter.networks.preferredOperators.toList(),
-        ).map { entities -> entities.map(ChargeSiteEntity::toDomain) }
+        ).map { entities -> entities.map(ChargeSiteEntity::toDomain) }.flowOn(computation)
 
     override fun storedSitesNearest(position: LatLon, box: BoundingBox, filter: MapFilter, limit: Int): Flow<List<ChargeSite>> {
         val cosLat = cos(position.lat * PI / 180.0)
@@ -227,7 +232,7 @@ class TiledSiteRepository(
             lon = position.lon,
             lonScale = cosLat * cosLat,
             limit = limit,
-        ).map { entities -> entities.map(ChargeSiteEntity::toDomain) }
+        ).map { entities -> entities.map(ChargeSiteEntity::toDomain) }.flowOn(computation)
     }
 
     override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> {
@@ -236,6 +241,7 @@ class TiledSiteRepository(
             .map { entities -> entities.map(ChargeSiteEntity::toDomain).filter { it.position in area } }
             // The table changes on every fetch anywhere, mostly without touching this area.
             .distinctUntilChanged()
+            .flowOn(computation)
     }
 
     companion object {
@@ -259,4 +265,5 @@ private fun ChargeSiteEntity.toDomain(): ChargeSite = ChargeSite(
     sources = sources.ifEmpty { setOf(sourceId) },
     liveStatusId = liveStatusId,
     networkKey = networkKey,
+    adHocTariffs = adHocTariffs,
 )

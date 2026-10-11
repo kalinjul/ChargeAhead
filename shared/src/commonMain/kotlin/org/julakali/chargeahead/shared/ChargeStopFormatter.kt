@@ -11,9 +11,16 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LiveConnectorGroup
 import org.julakali.chargeahead.shared.domain.OperatorShortName
 import org.julakali.chargeahead.shared.domain.Place
+import org.julakali.chargeahead.shared.domain.PriceComponent
+import org.julakali.chargeahead.shared.domain.PriceKind
 import org.julakali.chargeahead.shared.domain.Reachability
+import org.julakali.chargeahead.shared.domain.Weekday
 import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.fmt_planned_stop_detail
+import org.julakali.chargeahead.shared.resources.fmt_price_from
+import org.julakali.chargeahead.shared.resources.fmt_price_other
+import org.julakali.chargeahead.shared.resources.fmt_price_per_session
+import org.julakali.chargeahead.shared.resources.fmt_price_until
 import org.julakali.chargeahead.shared.resources.fmt_arrival_about
 import org.julakali.chargeahead.shared.resources.fmt_available_of
 import org.julakali.chargeahead.shared.resources.fmt_charge_point
@@ -22,6 +29,13 @@ import org.julakali.chargeahead.shared.resources.fmt_charge_points_unknown
 import org.julakali.chargeahead.shared.resources.fmt_charge_to
 import org.julakali.chargeahead.shared.resources.fmt_connector_type2
 import org.julakali.chargeahead.shared.resources.fmt_connector_unknown
+import org.julakali.chargeahead.shared.resources.fmt_day_friday
+import org.julakali.chargeahead.shared.resources.fmt_day_monday
+import org.julakali.chargeahead.shared.resources.fmt_day_saturday
+import org.julakali.chargeahead.shared.resources.fmt_day_sunday
+import org.julakali.chargeahead.shared.resources.fmt_day_thursday
+import org.julakali.chargeahead.shared.resources.fmt_day_tuesday
+import org.julakali.chargeahead.shared.resources.fmt_day_wednesday
 import org.julakali.chargeahead.shared.resources.fmt_marginal
 import org.julakali.chargeahead.shared.resources.fmt_out_of_order
 import org.julakali.chargeahead.shared.resources.fmt_reachable
@@ -120,6 +134,69 @@ object ChargeStopFormatter {
                 group.outOfOrder.takeIf { it > 0 }?.let { Texts.string(Res.string.fmt_out_of_order, it) },
             ).joinToString(" · ")
         }
+
+    /**
+     * One line per ad-hoc tariff, e.g. "0,59 €/kWh · 0,10 €/min (ab 240 min)", prices rounded to the cent.
+     * With several tariffs each line names its connectors: "CCS: 0,59 €/kWh".
+     * Tariffs that read the same are shown once.
+     */
+    fun adHocTariffLines(site: ChargeSite): List<String> {
+        val tariffs = site.adHocTariffs
+            .sortedBy { tariff -> tariff.connectors.minOfOrNull { it.ordinal } ?: Int.MAX_VALUE }
+            .map { tariff ->
+                val connectors = tariff.connectors.filter { it != ConnectorType.UNKNOWN }.map(::connectorTypeLabel)
+                val prices = tariff.components.sortedBy { it.kind }.joinToString(" · ") { priceLabel(it, tariff.currency) }
+                connectors.joinToString(" / ") to prices
+            }
+            .distinct()
+        return tariffs.map { (connectors, prices) ->
+            if (tariffs.size > 1 && connectors.isNotEmpty()) "$connectors: $prices" else prices
+        }
+    }
+
+    private fun priceLabel(component: PriceComponent, currency: String): String {
+        val amount = "${formatDecimal(component.price, 2)} ${if (currency == "EUR") "€" else currency}"
+        val price = when (component.kind) {
+            PriceKind.PER_KWH -> "$amount/kWh"
+            PriceKind.PER_MINUTE -> "$amount/min"
+            PriceKind.SESSION -> Texts.string(Res.string.fmt_price_per_session, amount)
+            PriceKind.OTHER -> Texts.string(Res.string.fmt_price_other, amount)
+        }
+        val conditions = listOfNotNull(
+            span(component.fromMinute?.toString(), component.toMinute?.toString())?.let { "$it min" },
+            daysLabel(component.days),
+            span(component.startTime?.take(5), component.endTime?.take(5)),
+        )
+        return if (conditions.isEmpty()) price else "$price (${conditions.joinToString(", ")})"
+    }
+
+    /** "8–20", "ab 8", "bis 20" — `null` when open at both ends. */
+    private fun span(from: String?, until: String?): String? = when {
+        from != null && until != null -> "$from–$until"
+        from != null -> Texts.string(Res.string.fmt_price_from, from)
+        until != null -> Texts.string(Res.string.fmt_price_until, until)
+        else -> null
+    }
+
+    /** "Mo–Fr" for a run of three or more days, otherwise "Sa, So"; `null` for every day. */
+    private fun daysLabel(days: Set<Weekday>): String? {
+        if (days.isEmpty() || days.size == Weekday.entries.size) return null
+        val sorted = days.sorted()
+        val isRun = sorted.size >= 3 && sorted.last().ordinal - sorted.first().ordinal == sorted.size - 1
+        return if (isRun) "${dayLabel(sorted.first())}–${dayLabel(sorted.last())}" else sorted.joinToString(", ", transform = ::dayLabel)
+    }
+
+    private fun dayLabel(day: Weekday): String = Texts.string(
+        when (day) {
+            Weekday.MONDAY -> Res.string.fmt_day_monday
+            Weekday.TUESDAY -> Res.string.fmt_day_tuesday
+            Weekday.WEDNESDAY -> Res.string.fmt_day_wednesday
+            Weekday.THURSDAY -> Res.string.fmt_day_thursday
+            Weekday.FRIDAY -> Res.string.fmt_day_friday
+            Weekday.SATURDAY -> Res.string.fmt_day_saturday
+            Weekday.SUNDAY -> Res.string.fmt_day_sunday
+        },
+    )
 
     /**
      * Where the data came from — e.g. "Bundesnetzagentur · OpenChargeMap".
