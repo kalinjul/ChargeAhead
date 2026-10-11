@@ -11,7 +11,6 @@ import org.julakali.chargeahead.shared.data.BackendNetworkListSource
 import org.julakali.chargeahead.shared.data.BackendRouteSiteSource
 import org.julakali.chargeahead.shared.data.CombinedSoCSource
 import org.julakali.chargeahead.shared.data.ManualSoCSource
-import org.julakali.chargeahead.shared.data.MergingSiteRepository
 import org.julakali.chargeahead.shared.data.RoomNetworkRepository
 import org.julakali.chargeahead.shared.data.RoomVehicleCatalogRepository
 import org.julakali.chargeahead.shared.data.BackendVehicleCatalogSource
@@ -103,19 +102,14 @@ fun chargeStopsModule(): Module = module {
     single<ChargeSiteDatabase> { createChargeSiteDatabase(get(), get<AppCoroutineDispatchers>().io) }
 
     single<SiteRepository> {
-        MergingSiteRepository(
-            listOf(
-                TiledSiteRepository(
-                    source = BackendChargeSiteSource(get()),
-                    database = get(),
-                    time = get(),
-                    scope = get(AppScope),
-                ),
-            ),
+        TiledSiteRepository(
+            source = BackendChargeSiteSource(get()),
+            database = get(),
+            time = get(),
+            scope = get(AppScope),
             computation = get<AppCoroutineDispatchers>().computation,
         )
     }
-
 
     single<Geocoder> { BackendGeocoder(get()) }
 

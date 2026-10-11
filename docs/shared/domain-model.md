@@ -17,7 +17,7 @@ enum class Reachability { REACHABLE, MARGINAL, UNREACHABLE, UNKNOWN }
 data class Connector(val type: ConnectorType, val maxPowerKw: Double, val count: Int?)   // count may be unknown
 
 data class ChargeSite(
-    val id: String,                  // source-qualified, e.g. "ocm:12345"; for a merged site, the leading source's
+    val id: String,                  // source-qualified, e.g. "ocm:12345"
     val name: String,
     val operator: String?,
     val position: LatLon,
