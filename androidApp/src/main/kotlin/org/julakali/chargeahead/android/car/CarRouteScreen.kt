@@ -57,7 +57,7 @@ import org.julakali.chargeahead.shared.Texts
  * The route on the host's map: every charging stop as a numbered marker in
  * the brand colour, the car's position, the destination as the anchor.
  * Navigation goes one stop at a time through the host, and starting it
- * commits a plan made here. A stop opens its detail; the last row still
+ * commits a plan made here, from a stop's detail too. A stop opens its detail; the last row still
  * sends the whole route through the phone, for those who want Maps to hold
  * every waypoint.
  */
@@ -164,7 +164,9 @@ class CarRouteScreen(
             .addText(distanceLine(legKm, suffix = charge, separator = ", "))
             .setMetadata(placeMetadata(stop.site.position, ordinal.toString()))
             .setBrowsable(true)
-            .setOnClickListener { screenManager.push(CarSiteDetailScreen(carContext, session, stop.site, stop)) }
+            .setOnClickListener {
+                screenManager.push(CarSiteDetailScreen(carContext, session, stop.site, stop, onNavigate = ::commitPlanMadeHere))
+            }
             .build()
     }
 
@@ -176,16 +178,19 @@ class CarRouteScreen(
 
     /**
      * The next stop goes to the host's navigation, which is the one hand-off
-     * that keeps the driver in the car. A plan made here becomes the active
-     * route first and the grid takes over, so coming back lands on it.
+     * that keeps the driver in the car.
      */
     private fun startNavigation(plan: TripPlan) {
         val target = plan.stops.firstOrNull()?.site?.let { it.name to it.position } ?: (destination.name to destination.position)
-        if (!activeRoute) {
-            viewModel.onNavigationStarted()
-            screenManager.popToRoot()
-        }
+        commitPlanMadeHere()
         navigateTo(carContext, target.first, target.second)
+    }
+
+    /** A plan made here becomes the active route and the grid takes over, so coming back lands on it. */
+    private fun commitPlanMadeHere() {
+        if (activeRoute) return
+        viewModel.onNavigationStarted()
+        screenManager.popToRoot()
     }
 
     private fun sendAllRow(plan: TripPlan): Row = Row.Builder()

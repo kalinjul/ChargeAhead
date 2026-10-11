@@ -5,6 +5,7 @@ import androidx.car.app.CarContext
 import androidx.car.app.constraints.ConstraintManager
 import androidx.car.app.model.CarColor
 import androidx.car.app.model.MessageTemplate
+import androidx.car.app.model.PaneTemplate
 import androidx.car.app.model.PlaceListMapTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
@@ -177,6 +178,29 @@ class CarRouteScreenTest {
         click(template.itemList!!.items.first() as Row)
 
         assertTrue(graph.screens.screensPushed.last() is CarSiteDetailScreen)
+    }
+
+    @Test
+    fun `navigating to a single stop from its detail commits the plan and returns to the grid`() {
+        val graph = graph()
+        graph.withVehicle()
+        val plan = plan(stops = 2)
+        graph.planner.result = TripPlanResult.Planned(plan)
+        graph.screens.push(CarHomeScreen(graph.carContext, graph.feature, graph.session, graph.permissions))
+        val screen = CarRouteScreen(graph.carContext, graph.session, munich, permissions = graph.permissions)
+        graph.screens.push(screen)
+        // The test manager pops only screens that have a lifecycle, as the host's does.
+        ScreenController(screen).moveToState(Lifecycle.State.STARTED)
+        settle()
+        click((screen.onGetTemplate() as PlaceListMapTemplate).itemList!!.items[1] as Row)
+        val detail = graph.screens.screensPushed.last()
+        ScreenController(detail).moveToState(Lifecycle.State.STARTED)
+
+        click((detail.onGetTemplate() as PaneTemplate).pane.actions.first())
+
+        assertEquals(plan, graph.trips.state.value.committed!!.plan)
+        assertTrue(graph.carContext.startCarAppIntents.single().data.toString().contains("Lader%202"))
+        assertTrue(graph.screens.screensRemoved.contains(screen))
     }
 
     @Test

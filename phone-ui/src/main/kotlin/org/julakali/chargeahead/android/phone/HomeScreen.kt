@@ -130,8 +130,8 @@ fun HomeRoute(
     /** A search hit was picked; the search has closed by then. */
     onPick: (Destination) -> Unit,
     onClearTrip: () -> Unit,
-    /** A link for the navigation app, from a charger's detail sheet. */
-    onOpenMaps: (String) -> Unit,
+    /** A link for the navigation app, from the detail sheet of the given charger. */
+    onOpenMaps: (ChargeStop, String) -> Unit,
     /** How far the floating buttons reach up from the bottom edge, 0 while none are shown. */
     onFloatingControlsHeight: (Dp) -> Unit,
     modifier: Modifier = Modifier,
@@ -180,7 +180,7 @@ fun HomeRoute(
             stop = stop,
             live = uiState.selectedStopLive,
             onDismiss = viewModel::onSelectedStopDismissed,
-            onOpenMaps = onOpenMaps,
+            onOpenMaps = { link -> onOpenMaps(stop, link) },
             tripLine = tripLineFor(stop),
         )
     }

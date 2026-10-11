@@ -41,6 +41,8 @@ class CarSiteDetailScreen(
     session: Scope,
     private val site: ChargeSite,
     private val stop: PlannedStop? = null,
+    /** Runs before the hand-off to navigation. */
+    private val onNavigate: () -> Unit = {},
 ) : Screen(carContext) {
 
     private val viewModel = screenViewModel { session.get<CarSiteDetailViewModel> { parametersOf(site) } }
@@ -64,7 +66,10 @@ class CarSiteDetailScreen(
             Action.Builder()
                 .setTitle(Texts.string(Res.string.car_detail_navigate))
                 .setBackgroundColor(CarColor.PRIMARY)
-                .setOnClickListener { navigateTo(carContext, site.name, site.position) }
+                .setOnClickListener {
+                    onNavigate()
+                    navigateTo(carContext, site.name, site.position)
+                }
                 .build(),
         )
         pane.addAction(
