@@ -5,8 +5,11 @@ Swift reaches it.
 
 ```kotlin
 // Location and charge state, one per location source (phone, car session).
-class ChargeStopsFeature(locationSource, socSource, ...) {
-    val currentFix: StateFlow<Fix?>
+// locationSharing decides when the location source is listened to, counted in
+// collectors of currentFix: Eagerly for a car session, which is closed with
+// the session; WhileSubscribed for the phone's, which is never closed.
+class ChargeStopsFeature(locationSource, socSource, ..., locationSharing = SharingStarted.Eagerly) {
+    val currentFix: StateFlow<Fix?>   // keeps the last fix while the source is stopped
     val currentEnergy: StateFlow<EnergyState?>
     val locationFailed: StateFlow<Boolean>
     fun start(); fun locate(); fun close()
