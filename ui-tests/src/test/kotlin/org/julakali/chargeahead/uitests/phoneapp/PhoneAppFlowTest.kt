@@ -338,6 +338,9 @@ class PhoneAppFlowTest {
         compose.onNodeWithText(compose.string(Res.string.phone_detail_navigate)).performClick()
 
         assertEquals(MapsHandoff.geoUri(stop.position, stop.name), nextStartedUrl())
+        // Navigating to a single stop commits the whole plan.
+        waitForText(compose.string(Res.string.active_route_end))
+        assertNotNull(harness.trips.state.value.committed)
     }
 
     @Test

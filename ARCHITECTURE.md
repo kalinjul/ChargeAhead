@@ -615,7 +615,7 @@ the platform layer does nothing but translate.
 |---|---|---|
 | Home: tiles for destination, "Jetzt laden", charge level, active route; a committed trip pushes the route by itself | `CarHomeScreen`, `GridTemplate` | `CPGridTemplate` |
 | Destination search with recents | `CarDestinationSearchScreen`, `SearchTemplate` | `CPSearchTemplate` |
-| Route: stops as numbered markers on the host's map, "Navigation starten" commits and hands the first stop to the host, "Neu planen" with the car's reading or the picker | `CarRouteScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
+| Route: stops as numbered markers on the host's map, "Navigation starten" commits and hands the first stop to the host, as does navigating to a single stop from its detail, "Neu planen" with the car's reading or the picker | `CarRouteScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
 | Charge now: the best nearby as markers, host refresh after panning | `CarChargeNowScreen`, `PlaceListMapTemplate` | `CPPointOfInterestTemplate` |
 | Site detail: address, distance, charge, live points, "Navigieren" | `CarSiteDetailScreen`, `PaneTemplate` | `CPInformationTemplate` |
 | Manual charge level, also the picker before a re-plan | `CarSoCScreen`, `ListTemplate` | `CPListTemplate` |
