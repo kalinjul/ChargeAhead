@@ -20,10 +20,15 @@ import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.TripPlan
+import java.time.LocalDate
 import java.time.LocalTime
+import java.time.ZoneId
 
 /** The clock every golden reads; wall time must never leak into a reference image. */
 val FixedNow: LocalTime = LocalTime.of(14, 30)
+
+/** [FixedNow] as a commit instant, so a committed trip shows the same times as a planned one. */
+val FixedCommitMillis: Long = FixedNow.atDate(LocalDate.now()).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
 val Hamburg = LatLon(53.5511, 9.9937)
 val Munich = LatLon(48.1351, 11.5820)
