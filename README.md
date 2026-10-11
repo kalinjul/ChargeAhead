@@ -1,16 +1,16 @@
 <div align="center">
 
-# ⚡ ChargeAhead
+# ⚡ PowerTrip
 
 **Plan your EV road trip — charging stops included.**
 
 Pick a destination, get the charging stops that fit your car and battery,
 and drive it with Google Maps. Also on Android Auto and CarPlay.
 
-[![CI](https://github.com/kalinjul/ChargeAhead/actions/workflows/ci.yml/badge.svg)](https://github.com/kalinjul/ChargeAhead/actions/workflows/ci.yml)
+[![CI](https://github.com/kalinjul/PowerTrip/actions/workflows/ci.yml/badge.svg)](https://github.com/kalinjul/PowerTrip/actions/workflows/ci.yml)
 ![Kotlin Multiplatform](https://img.shields.io/badge/Kotlin-Multiplatform-7F52FF?logo=kotlin&logoColor=white)
 ![Android](https://img.shields.io/badge/Android-phone%20%2B%20Auto-3DDC84?logo=android&logoColor=white)
-![iOS](https://img.shields.io/badge/iOS-in%20progress-lightgrey?logo=apple&logoColor=white)
+![iOS](https://img.shields.io/badge/iOS-phone%20%2B%20CarPlay-lightgrey?logo=apple&logoColor=white)
 
 </div>
 
@@ -31,48 +31,21 @@ and drive it with Google Maps. Also on Android Auto and CarPlay.
 
 ---
 
-## What it does
+## Features
 
-| Feature | |
+| | |
 |---|---|
 | 🔎 **Plan a trip** | Type a destination in the search bar; the route and its charging stops appear in a sheet over the map — arrival charge level, charge window and times per stop. |
-| 🚗 **Your car, your numbers** | A garage of vehicle profiles (battery, consumption, connectors, DC peak power) and the current charge level. Without them, reachability stays open instead of being guessed. |
+| 🚗 **Your car, your numbers** | A garage of vehicle profiles, picked from the catalog or typed in (battery, consumption, connectors, DC peak power), plus the current charge level. Without them, reachability stays open instead of being guessed. |
 | 🧭 **Navigate with Google Maps** | Send the whole route, one section, or a single stop to Google Maps. The sent trip stays the active route until you end it, and can be re-planned on the way. |
-| 🗺️ **Chargers on the map** | Charging stations around you with live availability and a filter for power, distance and charging networks. |
-| ⚡ **Jetzt laden** | The three best chargers nearby. If none fit, the filter relaxes step by step: power → networks → distance. |
-| 🖥️ **In the car** | Android Auto (CarPlay to follow) brings the planned route, destination search, charge now and the charge level onto the car's screen — using the car's own battery reading where the head unit provides one. |
-
-The UI is German, on purpose — the app is built for the German market.
-
-## Status
-
-| Platform | State |
-|---|---|
-| **Android** | Everyday use: trip planning, Google Maps hand-off, map, charge now, garage, active route. |
-| **Android Auto** | Run in the car (Pixel + DHU): route, destination search, charge now, charge level, hand-off to navigation. |
-| **iOS** | Core screens on the shared ViewModels; the map is still a placeholder, no garage yet. |
-| **CarPlay** | Code written, waiting on Apple's charging entitlement. Moving to the same screens as Android Auto ([#152](https://github.com/kalinjul/ChargeAhead/issues/152)). |
-
-Milestones and open questions: **[ROADMAP.md](ROADMAP.md)**.
-
-## How it's built
-
-```
-shared/      Kotlin Multiplatform — domain, planning, ViewModels, data layer
-phone-ui/    Compose phone UI (Android library)
-androidApp/  Android app: CarAppService (Android Auto) + MainActivity
-ui-tests/    Robolectric behaviour tests + screenshot goldens
-iosApp/      Swift: SwiftUI phone UI + CarPlay scene
-```
-
-Everything that computes lives once, in `shared`: route planning, reachability,
-formatting and the screen state. Android and iOS only draw it — so the car
-shows the same numbers as the phone, on both platforms. Charging sites, live status, networks,
-routing and the destination search come from the ChargeAhead backend.
+| 🗺️ **Chargers on the map** | Charging stations around you with live availability, ad-hoc prices and a filter for power, distance and charging networks. |
+| ⚡ **Charge now** | The three best chargers nearby. If none fit, the filter relaxes step by step: power → networks → distance. |
+| 🖥️ **In the car** | Android Auto brings the planned route, destination search, charge now and the charge level onto the car's screen — using the car's own battery reading where the head unit provides one. CarPlay is to follow. |
+| 🌍 **English and German** | The app follows the phone's language. |
 
 ## Getting started
 
-**Prerequisites:** JDK 17, an Android SDK with Platform 37,
+**Prerequisites:** JDK 17 or newer, an Android SDK with Platform 37,
 and access to the ChargeAhead backend.
 
 1. Put the SDK path and the backend into `local.properties` (git-ignored):
@@ -108,8 +81,8 @@ key it says so in place of the map. For iOS, the same values go into
 ./gradlew testAll
 ```
 
-That runs the shared unit tests, the Robolectric UI tests and the screenshot
-comparison. The screenshot step needs Docker or Podman: goldens only match where they
+That runs the shared unit tests, the car screen tests, the Robolectric UI tests
+and the screenshot comparison. The screenshot step needs Docker or Podman: goldens only match where they
 were rendered, so `tools/screenshots.sh` validates and records them in the
 Linux container CI uses (`update` to re-record, then look at the PNGs; details
 in [docs/testing.md](docs/testing.md)). The backend mapping can additionally
@@ -120,8 +93,9 @@ CHARGEAHEAD_LIVE=1 ./gradlew :shared:jvmTest --tests '*BackendChargeSiteLiveCont
 ```
 
 Android Auto only runs on real hardware; the Desktop Head Unit makes it
-testable from a desk. Swift can only be syntax-checked on Linux
-(`tools/check-swift.sh`).
+testable from a desk (`tools/start-dhu.sh`). Swift can only be syntax-checked
+on Linux (`tools/check-swift.sh`); on a Mac, `tools/ios-sim.sh run` builds the
+iOS app and starts it in the simulator.
 
 ## Documentation
 
@@ -135,3 +109,4 @@ testable from a desk. Swift can only be syntax-checked on Linux
 | [docs/android-auto-testen.md](docs/android-auto-testen.md) | The app in the Desktop Head Unit |
 | [docs/ci-cd.md](docs/ci-cd.md) | CI, Play Store releases, secrets |
 | [iosApp/README.md](iosApp/README.md) | What to do on a Mac |
+| [brand/README.md](brand/README.md) | Logo sources and where they end up in the app |
