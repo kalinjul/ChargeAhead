@@ -168,7 +168,7 @@ ChargeAhead/
 │   │   ├── domain/                Model, data source and repository interfaces (plain Kotlin, no frameworks)
 │   │   │   └── usecases/          Interactors (*Interactor) + observers (*Observer)
 │   │   ├── core/                  Geo math, range, corridor, dedup
-│   │   ├── data/                  Source adapters, cache, merge
+│   │   ├── data/                  Source adapters, cache
 │   │   ├── settings/              Vehicle profile, network preferences
 │   │   └── ui/                    ViewModels + UiState per screen (KMP)
 │   ├── androidMain/               FusedLocation, CarHardware SoC, Room builder
@@ -450,26 +450,18 @@ tile not yet fetched. Immediately on a heading change > 45°.
 
 ### 5.5 Dedup and merge
 
-The same station appears in both OCM **and** the BNetzA registry. Merged
-via: spatial proximity (< 25 m) **and** overlapping connector signature.
-Field-by-field priority:
+The same station appears in several registers. The backend merges them and
+is the app's only source of sites, so the app shows each site exactly as the
+backend returns it and merges nothing itself. Two sites of different networks
+at the same spot stay two sites.
 
-| Field | Priority |
-|---|---|
-| Position, operator, power | BNetzA (officially reported) |
-| Live availability, photos, comments | OCM |
-| Name/display | OCM, fallback BNetzA |
-
-`SiteId` stays source-qualified (`ocm:12345`, `bnetza:DE*ABC*E001`), the
-merged site carries both in `sources`.
-
-With a backend configured, the BNetzA merge happens there; the app no longer
-queries the register itself and only merges what one source returns.
+`SiteId` stays source-qualified, and a site the backend merged carries every
+register it came from in `sources`.
 
 ### 5.6 Live availability
 
 Sites the backend flags with `hasLiveStatus` keep that id as
-`ChargeSite.liveStatusId` (it survives a merge). The map asks
+`ChargeSite.liveStatusId`. The map asks
 `/v1/charge-point-status` for the visible ones after the markers are drawn,
 caches the answer for 60 s in memory, and never stores it in Room. A pill
 then gets a second line: free/known fast-charging points with a

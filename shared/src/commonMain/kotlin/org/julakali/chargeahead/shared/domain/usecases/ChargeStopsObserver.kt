@@ -9,7 +9,6 @@ import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.RefreshPolicy
 import org.julakali.chargeahead.shared.domain.Route
-import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteStatus
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
@@ -27,10 +26,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -51,7 +47,6 @@ class ChargeStopsObserver(
     private val catalog: VehicleCatalogRepository,
     private val preferences: PreferencesRepository,
     private val trips: TripRepository,
-    private val routeEngine: RouteEngine,
     private val planning: CorridorPlanning,
     private val dispatchers: AppCoroutineDispatchers,
     private val refreshPolicy: RefreshPolicy = RefreshPolicy(),
@@ -71,7 +66,7 @@ class ChargeStopsObserver(
     )
 
     override fun createObservable(params: Params): Flow<ChargeStops?> {
-        val routes = trips.state.map { it.destination }.distinctUntilChanged().flatMapLatest { routeTo(it, params.fixes) }
+        val routes = trips.state.map { it.destination }.distinctUntilChanged().flatMapLatest(::routeTo)
         return combine(
             params.fixes,
             combine(vehicles.vehicle, catalog.presets) { vehicle, presets -> vehicle?.withRoadLoadFrom(presets) },
@@ -90,25 +85,14 @@ class ChargeStopsObserver(
             .flatMapLatest { inputs -> inputs?.let(::search) ?: flowOf(null) }
     }
 
-    private fun routeTo(destination: Destination?, fixes: Flow<Fix?>): Flow<RouteState> {
+    private fun routeTo(destination: Destination?): Flow<RouteState> {
         if (destination == null) return flowOf(RouteState(null, null, RouteStatus.NONE))
-        // A planned or committed trip to the destination brings its route along, so it's fetched only once.
+        // Only a planned or committed trip to the destination has a route; without one the corridor keeps supplying results.
         return trips.state
             .map { it.planned ?: it.committed?.plan }
             .map { plan -> plan?.route?.takeIf { plan.destination.position == destination.position } }
             .distinctUntilChanged()
-            .flatMapLatest { planned ->
-                if (planned != null) return@flatMapLatest flowOf(RouteState(destination, planned, RouteStatus.ACTIVE))
-                flow {
-                    emit(RouteState(destination, null, RouteStatus.CALCULATING))
-                    val from = fixes.filterNotNull().first().position
-                    val route = cancellableRunCatching { routeEngine.route(from, destination.position) }
-                        .onFailure { logWarning("Could not compute route to ${destination.name}", it) }
-                        .getOrNull()
-                    // Without a route the corridor keeps supplying results.
-                    emit(RouteState(destination, route, if (route != null) RouteStatus.ACTIVE else RouteStatus.UNAVAILABLE))
-                }
-            }
+            .map { route -> RouteState(destination, route, if (route != null) RouteStatus.ACTIVE else RouteStatus.UNAVAILABLE) }
     }
 
     private fun search(inputs: Inputs): Flow<ChargeStops> = channelFlow {

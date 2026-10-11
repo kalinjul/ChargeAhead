@@ -33,6 +33,7 @@ class SelectVehicleInteractor : Interactor<Params, Unit>
 class RemoveVehicleInteractor : Interactor<Params, Unit>
 class RefreshVehicleCatalogInteractor : Interactor<Unit, Unit>    // also brings uncustomized catalog cars up to date
 class RestoreCatalogValuesInteractor : Interactor<Unit, Unit>     // drops the driver's changes to the selected catalog car
+class ResetVehicleValueInteractor : Interactor<Params, Unit>      // puts one value of it back on the catalog's
 
 // Start-up
 class StartAppInteractor : Interactor<Unit, Unit>                 // prune the site cache, restore the trip, refresh networks and catalog

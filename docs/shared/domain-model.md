@@ -17,7 +17,7 @@ enum class Reachability { REACHABLE, MARGINAL, UNREACHABLE, UNKNOWN }
 data class Connector(val type: ConnectorType, val maxPowerKw: Double, val count: Int?)   // count may be unknown
 
 data class ChargeSite(
-    val id: String,                  // source-qualified, e.g. "ocm:12345"; for a merged site, the leading source's
+    val id: String,                  // source-qualified, e.g. "ocm:12345"
     val name: String,
     val operator: String?,
     val position: LatLon,
@@ -75,7 +75,9 @@ removes cars by it, never by name.
 is not `customized` takes the catalog's current values, name included
 (`followingCatalog()`). Editing a linked car on the advanced vehicle screen
 sets `customized`; from then on it keeps its values until the driver chooses
-"Katalogwerte übernehmen" (`RestoreCatalogValuesInteractor`). The garage's
+"Katalogwerte übernehmen" (`RestoreCatalogValuesInteractor`) or resets the
+last own battery or power value in its dialog (`ResetVehicleValueInteractor`).
+The garage's
 consumption slider does not count as customizing: it sets `ownConsumption`,
 and that one value survives catalog updates. The planner reads `roadLoad`
 through `modelId` alone.
@@ -110,8 +112,9 @@ data class Route(val points: List<LatLon>, val distanceKm: Double, val durationM
 
 **The route is computed once per destination, not once per location
 update.** A planned or committed trip brings its route along
-(`TripRepository`), so `ChargeStopsObserver` only asks the `RouteEngine`
-when there is no plan to the destination. `PolylineArea.aheadOf()` trims it
-at the front as the drive progresses. `RoutedRouteProvider` falls back to the
-corridor when the driver leaves the route or reaches the destination;
-otherwise the list would sit empty at the end of every drive.
+(`TripRepository`), and `ChargeStopsObserver` searches along it; a
+destination without such a trip is searched in the direction of travel.
+`PolylineArea.aheadOf()` trims the route at the front as the drive
+progresses. `RoutedRouteProvider` falls back to the corridor when the driver
+leaves the route or reaches the destination; otherwise the list would sit
+empty at the end of every drive.

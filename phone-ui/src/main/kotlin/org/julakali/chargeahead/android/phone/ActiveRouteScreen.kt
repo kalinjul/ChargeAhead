@@ -143,6 +143,7 @@ fun ActiveRouteScreen(
     onSocDismiss: () -> Unit = {},
 ) {
     val plan = trip.plan
+    val departure = trip.departureTime()
     // Without a car reading, "Neu planen" asks for the level first.
     socInput?.let { input ->
         ChargeLevelSheet(
@@ -170,7 +171,7 @@ fun ActiveRouteScreen(
                     maxLines = 1,
                 )
                 Text(
-                    stringResource(Res.string.trip_arr, etaText(LocalContext.current, plan.totalMinutes, LocalNow.current()), plan.arrivalSocPercent.roundToInt()),
+                    stringResource(Res.string.trip_arr, etaText(LocalContext.current, plan.totalMinutes, departure), plan.arrivalSocPercent.roundToInt()),
                     style = MaterialTheme.typography.bodyMedium.tabular,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -219,6 +220,7 @@ fun ActiveRouteScreen(
             onSendToMaps = onSendToMaps,
             socEditing = null,
             modifier = Modifier.weight(1f),
+            departure = departure,
         )
     }
 }

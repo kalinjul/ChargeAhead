@@ -294,6 +294,7 @@
     <string name="vehicle_model">Fahrzeug</string>
     <string name="vehicle_model_own">Eigenes Fahrzeug</string>
     <string name="vehicle_catalog_value">Katalog: %1$s</string>
+    <string name="vehicle_reset_to_catalog">Auf Katalogwert zurücksetzen</string>
     <string name="vehicle_name">Name</string>
     <string name="vehicle_consumption">Verbrauch</string>
     <string name="vehicle_battery">Akku nutzbar</string>

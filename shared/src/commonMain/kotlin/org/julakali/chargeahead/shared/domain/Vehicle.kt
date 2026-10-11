@@ -139,6 +139,10 @@ internal fun VehicleProfile.keepingOwn(driver: VehicleProfile, consumption: Bool
     return if (consumption) named.copy(consumptionKwhPer100Km = driver.consumptionKwhPer100Km, ownConsumption = true) else named
 }
 
+/** An own battery or power value takes the car off catalog updates; the catalog's value puts it back. */
+internal fun VehicleProfile.customizedAgainst(catalog: VehicleProfile?): VehicleProfile =
+    copy(customized = catalog != null && (usableBatteryKwh != catalog.usableBatteryKwh || dcPeakPowerKw != catalog.dcPeakPowerKw))
+
 /** The name doesn't count: it is the driver's, not the catalog's. */
 fun VehicleProfile.differsFrom(preset: VehiclePreset): Boolean {
     val catalog = preset.toProfile()

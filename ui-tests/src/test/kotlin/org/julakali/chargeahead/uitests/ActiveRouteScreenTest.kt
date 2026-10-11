@@ -12,9 +12,14 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.julakali.chargeahead.android.phone.ActiveRouteScreen
+import org.julakali.chargeahead.android.phone.etaText
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.SectionSelection
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -26,11 +31,13 @@ import org.julakali.chargeahead.shared.resources.Res
 import org.julakali.chargeahead.shared.resources.active_route_end
 import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
 import org.julakali.chargeahead.shared.resources.soc_dialog_title
+import org.julakali.chargeahead.shared.resources.trip_arr
 import org.julakali.chargeahead.shared.resources.trip_arrival_soc_edit
 import org.julakali.chargeahead.shared.resources.trip_replan
 import org.julakali.chargeahead.shared.resources.trip_select_section
 import org.julakali.chargeahead.shared.resources.trip_send_maps
 import org.julakali.chargeahead.shared.resources.trip_soc_edit
+import org.julakali.chargeahead.shared.resources.trip_stop_times
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "+w600dp-h1000dp")
@@ -46,12 +53,16 @@ class ActiveRouteScreenTest {
         var toggledSelecting = false
     }
 
-    private fun screen(selection: SectionSelection = SectionSelection(), socInput: String? = null): Calls {
+    private fun screen(
+        selection: SectionSelection = SectionSelection(),
+        socInput: String? = null,
+        committedAt: LocalTime = Fixtures.now,
+    ): Calls {
         val calls = Calls()
         compose.setThemedContent {
             Box(Modifier.fillMaxSize()) {
                 ActiveRouteScreen(
-                    trip = CommittedTrip(Fixtures.plan, startSocPercent = 26.0, committedAtEpochMillis = 0L),
+                    trip = CommittedTrip(Fixtures.plan, startSocPercent = 26.0, committedAtEpochMillis = committedAt.todayEpochMillis()),
                     selection = selection,
                     planning = false,
                     onToggleSelecting = { calls.toggledSelecting = true },
@@ -68,6 +79,9 @@ class ActiveRouteScreenTest {
         return calls
     }
 
+    private fun LocalTime.todayEpochMillis(): Long =
+        atDate(LocalDate.now()).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+
     @Test
     fun `the summary card sums the trip up and every stop is listed`() {
         screen()
@@ -77,6 +91,25 @@ class ActiveRouteScreenTest {
         Fixtures.plan.stops.forEach { stop ->
             compose.onNodeWithText(stop.site.operator!!, substring = true).assertIsDisplayed()
         }
+    }
+
+    @Test
+    fun `times count from when the trip was committed, not from the clock`() {
+        val committedAt = LocalTime.of(9, 0)
+        screen(committedAt = committedAt)
+        val plan = Fixtures.plan
+        // The summary card and the destination row both carry the arrival.
+        compose.onAllNodesWithText(
+            compose.string(Res.string.trip_arr, etaText(compose.activity, plan.totalMinutes, committedAt), plan.arrivalSocPercent.roundToInt()),
+        ).assertCountEquals(2)
+        val stop = Fixtures.stopKassel
+        compose.onNodeWithText(
+            compose.string(
+                Res.string.trip_stop_times,
+                etaText(compose.activity, stop.arrivalMinutesFromStart, committedAt),
+                etaText(compose.activity, stop.arrivalMinutesFromStart + stop.chargeMinutes, committedAt),
+            ),
+        ).assertIsDisplayed()
     }
 
     @Test

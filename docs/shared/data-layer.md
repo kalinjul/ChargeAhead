@@ -30,7 +30,6 @@ fun interface ChargePointStatusSource { suspend fun status(siteIds: List<String>
 // for CAR_HARDWARE that's the normal case.
 interface SoCSource { val kind: SoCSourceKind; val energy: Flow<EnergyState?> }
 
-interface RouteEngine { suspend fun route(from: LatLon, to: LatLon): Route? }
 // The route plus the sites within bufferKm of it, each with its kilometre from
 // the start. One backend call that `TripPlanner` plans on; nothing of it is
 // stored, so every plan needs a connection.

@@ -4,7 +4,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
-import org.julakali.chargeahead.shared.data.MergingSiteRepository
 import org.julakali.chargeahead.shared.data.TiledSiteRepository
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.db.createChargeSiteDatabase
@@ -70,8 +69,7 @@ class ChargeNowOverStoreTest {
 
     private suspend fun rankOverStore(): ChargeNowResult {
         val database = createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO)
-        val tiled = TiledSiteRepository(source = source, database = database, time = TimeProvider { 1_000L }, scope = testAppScope)
-        val repository = MergingSiteRepository(listOf(tiled), computation = Dispatchers.Default)
+        val repository = TiledSiteRepository(source, database, TimeProvider { 1_000L }, testAppScope, testDispatchers.computation)
         repository.load(SectorArea.circle(here, 200.0))
         val observe = ChargeNowObserver(repository, statusRepository, preferences, testDispatchers)
         observe(ChargeNowObserver.Params(here))

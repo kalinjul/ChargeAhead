@@ -8,11 +8,9 @@ import org.julakali.chargeahead.shared.data.BackendChargeSiteSource
 import org.julakali.chargeahead.shared.data.BackendDataSourceDirectory
 import org.julakali.chargeahead.shared.data.BackendGeocoder
 import org.julakali.chargeahead.shared.data.BackendNetworkListSource
-import org.julakali.chargeahead.shared.data.BackendRouteEngine
 import org.julakali.chargeahead.shared.data.BackendRouteSiteSource
 import org.julakali.chargeahead.shared.data.CombinedSoCSource
 import org.julakali.chargeahead.shared.data.ManualSoCSource
-import org.julakali.chargeahead.shared.data.MergingSiteRepository
 import org.julakali.chargeahead.shared.data.RoomNetworkRepository
 import org.julakali.chargeahead.shared.data.RoomVehicleCatalogRepository
 import org.julakali.chargeahead.shared.data.BackendVehicleCatalogSource
@@ -49,9 +47,9 @@ import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripIntera
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RemoveVehicleInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EditVehicleInteractor
+import org.julakali.chargeahead.shared.domain.usecases.ResetVehicleValueInteractor
 import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInteractor
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
-import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.RouteSiteSource
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
 import org.julakali.chargeahead.shared.domain.SiteRepository
@@ -104,20 +102,14 @@ fun chargeStopsModule(): Module = module {
     single<ChargeSiteDatabase> { createChargeSiteDatabase(get(), get<AppCoroutineDispatchers>().io) }
 
     single<SiteRepository> {
-        MergingSiteRepository(
-            listOf(
-                TiledSiteRepository(
-                    source = BackendChargeSiteSource(get()),
-                    database = get(),
-                    time = get(),
-                    scope = get(AppScope),
-                ),
-            ),
+        TiledSiteRepository(
+            source = BackendChargeSiteSource(get()),
+            database = get(),
+            time = get(),
+            scope = get(AppScope),
             computation = get<AppCoroutineDispatchers>().computation,
         )
     }
-
-    single<RouteEngine> { BackendRouteEngine(get()) }
 
     single<Geocoder> { BackendGeocoder(get()) }
 
@@ -149,7 +141,7 @@ fun chargeStopsModule(): Module = module {
     factory { UpdateChargeFiltersInteractor(get()) }
     factory { UpdateNetworksInteractor(get()) }
     factory { SetChargeModeInteractor(get(), get(), get()) }
-    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { ChargeStopsObserver(get(), get(), get(), get(), get(), get(), get()) }
     factory { RefreshChargeStopsInteractor(get(), get()) }
     factory { SelectableNetworksObserver(get(), get(), get()) }
     factory { GarageObserver(get<VehicleRepository>(), get()) }
@@ -160,6 +152,7 @@ fun chargeStopsModule(): Module = module {
     factory { RefreshVehicleCatalogInteractor(get(), get<VehicleRepository>()) }
     factory { RestoreCatalogValuesInteractor(get<VehicleRepository>(), get()) }
     factory { EditVehicleInteractor(get<VehicleRepository>(), get()) }
+    factory { ResetVehicleValueInteractor(get<VehicleRepository>(), get()) }
 
     single<SiteCache> {
         SiteCache { keys -> pruneCache(get(), keys, get<TimeProvider>().nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS) }

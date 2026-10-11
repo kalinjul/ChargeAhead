@@ -48,8 +48,6 @@ import org.julakali.chargeahead.shared.domain.usecases.VehiclePresetsObserver
 import org.julakali.chargeahead.shared.domain.usecases.UpdateArrivalSocInteractor
 import org.julakali.chargeahead.shared.domain.usecases.UpdateManualSocInteractor
 import org.julakali.chargeahead.shared.domain.Place
-import org.julakali.chargeahead.shared.domain.Route
-import org.julakali.chargeahead.shared.domain.RouteEngine
 import org.julakali.chargeahead.shared.domain.SearchArea
 import org.julakali.chargeahead.shared.domain.SiteAvailability
 import org.julakali.chargeahead.shared.domain.TimeProvider
@@ -228,7 +226,7 @@ class PhoneViewModelTest {
         locationTimeoutMillis: Long = HomeViewModel.DEFAULT_LOCATION_TIMEOUT_MILLIS,
         statusSource: ChargePointStatusSource = ChargePointStatusSource { emptyMap() },
     ): HomeViewModel {
-        val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
+        val repository = TiledSiteRepository(fixedSource(sites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope, testDispatchers.computation)
         val statuses = CachingChargePointStatusRepository(statusSource, TimeProvider { 0L })
         return main.track(HomeViewModel(
             stubFeature(),
@@ -271,10 +269,10 @@ class PhoneViewModelTest {
             },
             parentScope = CoroutineScope(Dispatchers.Unconfined),
         )
-        val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope)
+        val repository = TiledSiteRepository(fixedSource(mapSites), createChargeSiteDatabase(DatabaseFactory(), Dispatchers.IO), TimeProvider { 0L }, testAppScope, testDispatchers.computation)
         val viewModel = main.track(CorridorViewModel(
             feature,
-            ChargeStopsObserver(repository, testVehicleRepository(), FakeVehicleCatalog(), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), NoRoute, CorridorPlanner(), testDispatchers),
+            ChargeStopsObserver(repository, testVehicleRepository(), FakeVehicleCatalog(), DataStorePreferencesRepository(InMemoryPreferencesDataStore()), TripRepository(), CorridorPlanner(), testDispatchers),
             RefreshChargeStopsInteractor(repository, DataStorePreferencesRepository(InMemoryPreferencesDataStore())),
         ))
 
@@ -328,10 +326,6 @@ class PhoneViewModelTest {
 
     private object NoGeocoder : Geocoder {
         override suspend fun search(query: String, near: LatLon?, limit: Int): List<Place> = emptyList()
-    }
-
-    private object NoRoute : RouteEngine {
-        override suspend fun route(from: LatLon, to: LatLon): Route? = null
     }
 
     private object NoLocation : LocationSource {

@@ -292,6 +292,7 @@
     <string name="vehicle_model">Car</string>
     <string name="vehicle_model_own">Custom car</string>
     <string name="vehicle_catalog_value">Catalog: %1$s</string>
+    <string name="vehicle_reset_to_catalog">Reset to catalog value</string>
     <string name="vehicle_name">Name</string>
     <string name="vehicle_consumption">Consumption</string>
     <string name="vehicle_battery">Usable battery</string>

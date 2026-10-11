@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -70,6 +71,7 @@ import org.julakali.chargeahead.shared.resources.vehicle_remove
 import org.julakali.chargeahead.shared.resources.vehicle_remove_confirm
 import org.julakali.chargeahead.shared.resources.vehicle_remove_text
 import org.julakali.chargeahead.shared.resources.vehicle_remove_title
+import org.julakali.chargeahead.shared.resources.vehicle_reset_to_catalog
 import org.julakali.chargeahead.shared.resources.vehicle_restore_current
 import org.julakali.chargeahead.shared.resources.vehicle_restore_customized
 import org.julakali.chargeahead.shared.resources.vehicle_restore_unavailable
@@ -92,6 +94,7 @@ fun VehicleEditRoute(
             onInputChange = viewModel::onEditorInputChanged,
             onConfirm = viewModel::onEditorConfirmed,
             onDismiss = viewModel::onEditorDismissed,
+            onReset = viewModel::onEditorReset,
             onRestoreCatalogValues = viewModel::onCatalogValuesRestored,
             onRemove = viewModel::onVehicleRemoveRequested,
             onRemoveConfirm = viewModel::onVehicleRemoveConfirmed,
@@ -109,6 +112,7 @@ class VehicleEditActions(
     val onInputChange: (String) -> Unit = {},
     val onConfirm: () -> Unit = {},
     val onDismiss: () -> Unit = {},
+    val onReset: () -> Unit = {},
     val onRestoreCatalogValues: () -> Unit = {},
     val onRemove: () -> Unit = {},
     val onRemoveConfirm: () -> Unit = {},
@@ -124,22 +128,23 @@ fun VehicleEditScreen(
     val vehicle = uiState.vehicle ?: return
     val catalog = uiState.catalog?.toProfile()
 
+    val reset = if (uiState.catalog == null) FieldReset.NONE else if (uiState.canResetEditor) FieldReset.OFFERED else FieldReset.ON_CATALOG
     when (val editor = uiState.editor) {
         null -> Unit
         is VehicleEditor.Consumption -> FieldDialog(
-            stringResource(Res.string.vehicle_consumption), editor.input, stringResource(Res.string.garage_unit_kwh_per_100), editor.applicable, actions,
+            stringResource(Res.string.vehicle_consumption), editor.input, stringResource(Res.string.garage_unit_kwh_per_100), editor.applicable, actions, reset,
             catalogValue = catalog?.let { stringResource(Res.string.garage_kwh_per_100, it.consumptionKwhPer100Km.oneDecimal()) },
         )
         is VehicleEditor.Name -> FieldDialog(
-            stringResource(Res.string.vehicle_name), editor.input, unit = null, editor.applicable, actions,
+            stringResource(Res.string.vehicle_name), editor.input, unit = null, editor.applicable, actions, reset,
             catalogValue = catalog?.displayName,
         )
         is VehicleEditor.Battery -> FieldDialog(
-            stringResource(Res.string.vehicle_battery), editor.input, stringResource(Res.string.garage_unit_kwh), editor.applicable, actions,
+            stringResource(Res.string.vehicle_battery), editor.input, stringResource(Res.string.garage_unit_kwh), editor.applicable, actions, reset,
             catalogValue = catalog?.let { stringResource(Res.string.garage_kwh, it.usableBatteryKwh.oneDecimal()) },
         )
         is VehicleEditor.DcPeak -> FieldDialog(
-            stringResource(Res.string.vehicle_dc), editor.input, stringResource(Res.string.garage_unit_kw), editor.applicable, actions,
+            stringResource(Res.string.vehicle_dc), editor.input, stringResource(Res.string.garage_unit_kw), editor.applicable, actions, reset,
             catalogValue = catalog?.dcPeakPowerKw?.let { stringResource(Res.string.garage_kw, it.roundToInt()) },
         )
     }
@@ -243,6 +248,8 @@ fun VehicleEditScreen(
     }
 }
 
+enum class FieldReset { NONE, ON_CATALOG, OFFERED }
+
 @Composable
 private fun FieldDialog(
     title: String,
@@ -250,19 +257,43 @@ private fun FieldDialog(
     unit: String?,
     applicable: Boolean,
     actions: VehicleEditActions,
+    reset: FieldReset,
     catalogValue: String? = null,
 ) {
     AlertDialog(
         onDismissRequest = actions.onDismiss,
         title = { Text(title) },
         text = {
-            FieldEditor(label = title, initial = input, unit = unit, applicable = applicable, catalogValue = catalogValue, onValueChange = actions.onInputChange)
+            FieldDialogBody(title, input, unit, applicable, reset, actions.onInputChange, actions.onReset, catalogValue)
         },
         confirmButton = {
             TextButton(onClick = actions.onConfirm, enabled = applicable) { Text(stringResource(Res.string.soc_dialog_apply)) }
         },
         dismissButton = { TextButton(onClick = actions.onDismiss) { Text(stringResource(Res.string.soc_dialog_cancel)) } },
     )
+}
+
+/** Public for the previews. */
+@Composable
+fun FieldDialogBody(
+    label: String,
+    initial: String,
+    unit: String?,
+    applicable: Boolean,
+    reset: FieldReset,
+    onValueChange: (String) -> Unit,
+    onReset: () -> Unit,
+    catalogValue: String? = null,
+) {
+    Column {
+        FieldEditor(label = label, initial = initial, unit = unit, applicable = applicable, catalogValue = catalogValue, onValueChange = onValueChange)
+        if (reset != FieldReset.NONE) {
+            TextButton(onClick = onReset, enabled = reset == FieldReset.OFFERED) {
+                Icon(Icons.Outlined.Restore, contentDescription = null, modifier = Modifier.padding(end = 8.dp))
+                Text(stringResource(Res.string.vehicle_reset_to_catalog))
+            }
+        }
+    }
 }
 
 /** Public for the previews. Keeps its own text: a ViewModel round trip could hand back an older value mid-word. */
