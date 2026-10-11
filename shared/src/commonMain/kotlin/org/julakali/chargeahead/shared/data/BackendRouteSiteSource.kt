@@ -14,8 +14,8 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.contentType
 import org.julakali.chargeahead.api.NetworkFilterDto
-import org.julakali.chargeahead.api.RouteChargeSitesRequest
-import org.julakali.chargeahead.api.RouteChargeSitesResponse
+import org.julakali.chargeahead.api.RouteDto
+import org.julakali.chargeahead.api.RouteRequest
 import org.julakali.chargeahead.api.RouteResponse
 
 class BackendRouteSiteSource(
@@ -32,7 +32,7 @@ class BackendRouteSiteSource(
         val response = httpClient.post(PATH) {
             contentType(ContentType.Application.Json)
             setBody(
-                RouteChargeSitesRequest(
+                RouteRequest(
                     from = from.toDto(),
                     to = to.toDto(),
                     bufferKm = bufferKm,
@@ -45,7 +45,7 @@ class BackendRouteSiteSource(
         // 204: no road connection.
         if (response.status == HttpStatusCode.NoContent) return null
 
-        val found: RouteChargeSitesResponse = response.body()
+        val found: RouteResponse = response.body()
         val route = found.route.toDomain() ?: return null
         return RouteWithSites(
             route = route,
@@ -60,12 +60,12 @@ class BackendRouteSiteSource(
     }
 
     private companion object {
-        const val PATH = "v1/route/charge-sites"
+        const val PATH = "v1/route"
     }
 }
 
 /** `null` when the response carries less than a line. */
-internal fun RouteResponse.toDomain(): Route? {
+internal fun RouteDto.toDomain(): Route? {
     // `points` is the fallback for servers without the encoded line.
     val line = encodedPolyline?.let(::decodePolyline)?.takeIf { it.size >= 2 }
         ?: points.map { LatLon(it.lat, it.lon) }
