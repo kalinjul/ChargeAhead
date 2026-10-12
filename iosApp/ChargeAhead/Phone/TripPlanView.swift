@@ -28,6 +28,14 @@ struct TripPlanView: View {
                 }
             }
 
+            if plan.needsReplan {
+                Section {
+                    Text(localized("trip_stop_missing"))
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            }
+
             Section(localized("phone_title_stops")) {
                 ForEach(Array(plan.stops.enumerated()), id: \.element.site.id) { index, stop in
                     NavigationLink {

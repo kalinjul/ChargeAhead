@@ -63,6 +63,8 @@ class ChargeNowViewModelTest {
     )
     private val store = MutableStateFlow<List<ChargeSite>>(emptyList())
     private val repository = object : SiteRepository {
+        override suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean = true
+        override suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite> = emptyMap()
         override suspend fun load(area: SearchArea, networkKeys: Set<String>) {
             store.update { listOf(nearby) }
         }

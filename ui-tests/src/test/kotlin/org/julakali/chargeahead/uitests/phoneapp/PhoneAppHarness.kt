@@ -180,6 +180,8 @@ private class StraightLineRouteSiteSource(private val sites: List<ChargeSite>) :
 }
 
 private class FakeSiteRepository(private val sites: List<ChargeSite>) : SiteRepository {
+    override suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean = true
+    override suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite> = emptyMap()
     override suspend fun invalidate() {}
     override suspend fun load(area: SearchArea, networkKeys: Set<String>) {}
     override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(sites)

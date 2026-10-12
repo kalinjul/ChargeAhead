@@ -44,6 +44,19 @@ data class TripState(
     fun planDismissed(): TripState = copy(planned = null, unreachable = null)
 
     fun ended(): TripState = copy(committed = null)
+
+    /** The planned and the committed trip, whichever exist. */
+    val plans: List<TripPlan> get() = listOfNotNull(planned, committed?.plan)
+
+    fun withSites(sites: Map<String, ChargeSite>, storeIsCurrent: Boolean = false): TripState = copy(
+        planned = planned?.withSites(sites, storeIsCurrent),
+        committed = committed?.let { it.copy(plan = it.plan.withSites(sites, storeIsCurrent)) },
+    )
+}
+
+/** [SiteRepository.storedSites], which is all the trip needs of the site store. */
+fun interface SiteLookup {
+    suspend fun sites(ids: Set<String>): Map<String, ChargeSite>
 }
 
 /** Where the trip state outlives the process. */
@@ -62,7 +75,10 @@ interface TripStorage {
 }
 
 /** The trip state, one per process, so phone and car show the same one. */
-class TripRepository(private val storage: TripStorage = TripStorage.None) {
+class TripRepository(
+    private val storage: TripStorage = TripStorage.None,
+    private val sites: SiteLookup = SiteLookup { emptyMap() },
+) {
     private val current = MutableStateFlow(TripState())
     private val writes = Mutex()
 
@@ -72,8 +88,29 @@ class TripRepository(private val storage: TripStorage = TripStorage.None) {
     suspend fun restore() {
         writes.withLock {
             val stored = storage.read() ?: return
-            current.compareAndSet(TripState(), stored)
+            current.compareAndSet(TripState(), stored.withStoredSites())
         }
+    }
+
+    /**
+     * Takes the stops' sites from the site store again. With [storeIsCurrent], a stop
+     * the store has no site for is marked missing.
+     */
+    suspend fun refreshSites(storeIsCurrent: Boolean = false) {
+        writes.withLock {
+            val refreshed = current.value.withStoredSites(storeIsCurrent)
+            if (refreshed == current.value) return
+            storage.write(refreshed)
+            current.value = refreshed
+        }
+    }
+
+    // A failed lookup leaves the stops as they are.
+    private suspend fun TripState.withStoredSites(storeIsCurrent: Boolean = false): TripState {
+        val ids = plans.flatMapTo(HashSet()) { plan -> plan.stops.map { it.site.id } }
+        if (ids.isEmpty()) return this
+        val stored = cancellableRunCatching { sites.sites(ids) }.getOrElse { return this }
+        return withSites(stored, storeIsCurrent)
     }
 
     /** Stored before it is published, so memory never runs ahead of storage. */

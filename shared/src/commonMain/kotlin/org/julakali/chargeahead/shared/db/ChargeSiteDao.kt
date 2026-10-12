@@ -18,6 +18,9 @@ interface ChargeSiteDao {
     @Query("SELECT EXISTS(SELECT 1 FROM chargeSite WHERE lat BETWEEN :south AND :north AND lon BETWEEN :west AND :east)")
     suspend fun hasSitesInBox(south: Double, north: Double, west: Double, east: Double): Boolean
 
+    @Query("SELECT * FROM chargeSite WHERE id IN (:ids)")
+    suspend fun sitesById(ids: List<String>): List<ChargeSiteEntity>
+
     @RawQuery(observedEntities = [ChargeSiteEntity::class])
     fun observeSites(query: RoomRawQuery): Flow<List<ChargeSiteEntity>>
 

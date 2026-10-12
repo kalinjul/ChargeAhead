@@ -24,6 +24,7 @@ import org.julakali.chargeahead.shared.settings.DataStoreDestinationHistory
 import org.julakali.chargeahead.shared.settings.SettingsLegacyTripSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -33,12 +34,33 @@ class DataStoreTripStorageTest {
     private val storage = DataStoreTripStorage(preferences)
 
     @Test
-    fun `the whole state survives the round trip unchanged`() = runBlocking {
+    fun `the state survives the round trip, each stop's site as a reference`() = runBlocking {
         val state = TripState(destination = munich, planned = plan, committed = committed)
 
         storage.write(state)
 
-        assertEquals(state, DataStoreTripStorage(preferences).read())
+        assertEquals(state.withSites(mapOf(kassel.id to kasselReference)), DataStoreTripStorage(preferences).read())
+    }
+
+    /** #196 */
+    @Test
+    fun `what describes a stop's site is not stored`() = runBlocking {
+        storage.write(TripState(destination = munich, planned = plan))
+
+        val raw = preferences.data.first()[stringPreferencesKey("trip.state")]!!
+        assertTrue("\"id\":\"${kassel.id}\"" in raw)
+        listOf("connectors", "Am Rasthof 1", "sources", "adHocTariffs").forEach { assertFalse(it in raw, it) }
+    }
+
+    @Test
+    fun `a trip stored with whole sites reads as references`() = runBlocking {
+        val raw = persistenceJson.encodeToString(TripState(destination = munich, planned = plan)).replace(
+            "\"id\":\"${kassel.id}\"",
+            "\"id\":\"${kassel.id}\",\"connectors\":[{\"type\":\"CCS2\",\"maxPowerKw\":350.0,\"count\":6}],\"sources\":[\"bnetza\"]",
+        )
+        val stored = DataStoreTripStorage(InMemoryPreferencesDataStore(mapOf("trip.state" to raw)))
+
+        assertEquals(kasselReference, stored.read()!!.planned!!.stops.single().site)
     }
 
     @Test
@@ -48,7 +70,7 @@ class DataStoreTripStorageTest {
         val restored = DataStoreTripStorage(preferences).read()
 
         assertNull(restored?.unreachable)
-        assertEquals(committed, restored?.committed)
+        assertEquals(storedCommitted, restored?.committed)
     }
 
     /** No mirror types: what is on disk is the domain types' own JSON. */
@@ -59,17 +81,6 @@ class DataStoreTripStorageTest {
         storage.write(state)
 
         assertEquals(persistenceJson.encodeToString(state), preferences.data.first()[stringPreferencesKey("trip.state")])
-    }
-
-    /** A connector type from a newer build reads as unknown instead of costing the trip. */
-    @Test
-    fun `an unknown connector type reads as unknown`() = runBlocking {
-        val raw = persistenceJson.encodeToString(TripState(destination = munich, planned = plan))
-            .replace("\"CCS2\"", "\"MCS\"")
-        val stored = DataStoreTripStorage(InMemoryPreferencesDataStore(mapOf("trip.state" to raw)))
-
-        val connector = stored.read()!!.planned!!.stops.single().site.connectors.single()
-        assertEquals(ConnectorType.UNKNOWN, connector.type)
     }
 
     @Test
@@ -83,7 +94,7 @@ class DataStoreTripStorageTest {
 
         storage.write(TripState(destination = munich, committed = committed))
 
-        assertEquals(TripState(destination = munich, committed = committed), storage.read())
+        assertEquals(TripState(destination = munich, committed = storedCommitted), storage.read())
     }
 
     /** A payload from a build that shaped the trip differently must not break the launch. */
@@ -105,7 +116,7 @@ class DataStoreTripStorageTest {
         val legacy = SettingsLegacyTripSource(settingsFile)
         val migrating = DataStoreTripStorage(preferences, legacy = legacy)
 
-        val expected = TripState(destination = Destination("München", LatLon(48.137, 11.575)), committed = committed)
+        val expected = TripState(destination = Destination("München", LatLon(48.137, 11.575)), committed = storedCommitted)
         assertEquals(expected, migrating.read())
         assertEquals(expected, DataStoreTripStorage(preferences).read())
         assertNull(legacy.legacyTrip())
@@ -164,5 +175,9 @@ class DataStoreTripStorageTest {
             stopMinutes = 5.0,
         )
         val committed = CommittedTrip(plan, startSocPercent = 62.0, committedAtEpochMillis = 1_700_000_000_000)
+
+        /** What a stored stop keeps of [kassel]. */
+        val kasselReference = kassel.copy(connectors = emptyList(), address = null, sources = emptySet())
+        val storedCommitted = committed.copy(plan = plan.withSites(mapOf(kassel.id to kasselReference)))
     }
 }

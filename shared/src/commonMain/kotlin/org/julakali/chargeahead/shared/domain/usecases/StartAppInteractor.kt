@@ -15,6 +15,7 @@ class StartAppInteractor(
     private val preferences: PreferencesRepository,
     private val siteCache: SiteCache,
     private val trips: TripRepository,
+    private val refreshTripSites: RefreshTripSitesInteractor,
     private val refreshNetworks: RefreshNetworksInteractor,
     private val refreshVehicleCatalog: RefreshVehicleCatalogInteractor,
 ) : Interactor<Unit, Unit>() {
@@ -22,6 +23,7 @@ class StartAppInteractor(
     override suspend fun doWork(params: Unit) {
         runCatching { siteCache.prune(preferences.networks.first().preferredOperators) }
         runCatching { trips.restore() }
+        refreshTripSites()
         refreshNetworks()
         refreshVehicleCatalog()
     }

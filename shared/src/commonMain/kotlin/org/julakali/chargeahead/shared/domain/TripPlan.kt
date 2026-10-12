@@ -3,11 +3,17 @@ package org.julakali.chargeahead.shared.domain
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
 /** One planned charging stop along a trip. */
 @Serializable
 data class PlannedStop(
+    /** Stored as a reference; a restored stop has no connectors, address or tariffs until the site store supplies them. */
+    @Serializable(with = SiteReferenceSerializer::class)
     val site: ChargeSite,
     /** Position along the route, measured from the start. */
     val kmFromStart: Double,
@@ -27,8 +33,44 @@ data class PlannedStop(
      * here, so a stop kept for a preferred network can save less than zero.
      */
     val savesMinutes: Double? = null,
+    /** The site store was current along the route and had no site under this stop's id. */
+    val siteMissing: Boolean = false,
 ) {
     val arrivalMinutesFromStart: Double get() = etaMinutesFromStart - chargeMinutes - stopMinutes
+}
+
+/** A site's id, and what still shows the stop when the store no longer has the site. */
+@Serializable
+private data class SiteReference(
+    val id: String,
+    val name: String,
+    val operator: String? = null,
+    val operatorId: Long? = null,
+    val position: LatLon,
+    val liveStatusId: String? = null,
+    val networkKey: String? = null,
+)
+
+internal object SiteReferenceSerializer : KSerializer<ChargeSite> {
+    override val descriptor: SerialDescriptor = SiteReference.serializer().descriptor
+
+    override fun serialize(encoder: Encoder, value: ChargeSite) = encoder.encodeSerializableValue(
+        SiteReference.serializer(),
+        SiteReference(value.id, value.name, value.operator, value.operatorId, value.position, value.liveStatusId, value.networkKey),
+    )
+
+    override fun deserialize(decoder: Decoder): ChargeSite = decoder.decodeSerializableValue(SiteReference.serializer()).run {
+        ChargeSite(
+            id = id,
+            name = name,
+            operator = operator,
+            operatorId = operatorId,
+            position = position,
+            connectors = emptyList(),
+            liveStatusId = liveStatusId,
+            networkKey = networkKey,
+        )
+    }
 }
 
 @Serializable
@@ -42,6 +84,24 @@ data class TripPlan(
     val stopMinutes: Double = 0.0,
 ) {
     val totalMinutes: Double get() = driveMinutes + chargeMinutes + stopMinutes
+
+    /** A stop's site is gone, so the plan no longer describes a drivable trip. */
+    val needsReplan: Boolean get() = stops.any { it.siteMissing }
+
+    /**
+     * Each stop with its site from [sites]. A stop whose site is not among them keeps the one it has,
+     * and is marked missing when [storeIsCurrent] says the absence is not just a gap in the store.
+     */
+    fun withSites(sites: Map<String, ChargeSite>, storeIsCurrent: Boolean = false): TripPlan = copy(
+        stops = stops.map { stop ->
+            val site = sites[stop.site.id]
+            when {
+                site != null -> stop.copy(site = site, siteMissing = false)
+                storeIsCurrent -> stop.copy(siteMissing = true)
+                else -> stop
+            }
+        },
+    )
 }
 
 /** Result of planning, including why no plan came out. */
@@ -88,6 +148,9 @@ interface TripPlanning {
         networks: NetworkPreferences = NetworkPreferences(),
     ): TripPlanResult
 }
+
+/** How far from the route a stop may lie, in a straight line. */
+const val STOP_BUFFER_KM = 3.0
 
 /** Assumed start charge when the driver never entered one. */
 const val DEFAULT_ASSUMED_SOC_PERCENT = 80.0

@@ -81,6 +81,8 @@ class ObserveChargeStopsTest {
 
     /** A store that the fetch fills with [sites], or fails while [broken]. */
     private inner class FakeRepository(var sites: List<ChargeSite>) : SiteRepository {
+        override suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean = true
+        override suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite> = emptyMap()
         override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
         private val store = MutableStateFlow<List<ChargeSite>>(emptyList())
         val fetched = mutableListOf<Pair<SearchArea, Set<String>>>()

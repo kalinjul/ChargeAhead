@@ -165,6 +165,8 @@ class CarTestGraph(
 
     /** Stored sites are whatever [stored] holds; [load] only counts. */
     class FakeSiteRepository : SiteRepository {
+        override suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean = true
+        override suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite> = emptyMap()
         val stored = MutableStateFlow<List<ChargeSite>>(emptyList())
         var loads = 0
 

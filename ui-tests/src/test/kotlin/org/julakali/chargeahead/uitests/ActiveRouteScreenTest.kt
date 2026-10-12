@@ -16,6 +16,7 @@ import org.julakali.chargeahead.android.phone.etaText
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.SectionSelection
+import org.julakali.chargeahead.shared.domain.TripPlan
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
@@ -37,6 +38,7 @@ import org.julakali.chargeahead.shared.resources.trip_replan
 import org.julakali.chargeahead.shared.resources.trip_select_section
 import org.julakali.chargeahead.shared.resources.trip_send_maps
 import org.julakali.chargeahead.shared.resources.trip_soc_edit
+import org.julakali.chargeahead.shared.resources.trip_stop_missing
 import org.julakali.chargeahead.shared.resources.trip_stop_times
 
 @RunWith(RobolectricTestRunner::class)
@@ -57,12 +59,13 @@ class ActiveRouteScreenTest {
         selection: SectionSelection = SectionSelection(),
         socInput: String? = null,
         committedAt: LocalTime = Fixtures.now,
+        plan: TripPlan = Fixtures.plan,
     ): Calls {
         val calls = Calls()
         compose.setThemedContent {
             Box(Modifier.fillMaxSize()) {
                 ActiveRouteScreen(
-                    trip = CommittedTrip(Fixtures.plan, startSocPercent = 26.0, committedAtEpochMillis = committedAt.todayEpochMillis()),
+                    trip = CommittedTrip(plan, startSocPercent = 26.0, committedAtEpochMillis = committedAt.todayEpochMillis()),
                     selection = selection,
                     planning = false,
                     onToggleSelecting = { calls.toggledSelecting = true },
@@ -91,6 +94,22 @@ class ActiveRouteScreenTest {
         Fixtures.plan.stops.forEach { stop ->
             compose.onNodeWithText(stop.site.operator!!, substring = true).assertIsDisplayed()
         }
+    }
+
+    @Test
+    fun `a trip with a missing stop says it has to be planned again`() {
+        val stops = Fixtures.plan.stops
+        screen(plan = Fixtures.plan.copy(stops = listOf(stops.first().copy(siteMissing = true)) + stops.drop(1)))
+
+        compose.onNodeWithText(compose.string(Res.string.trip_stop_missing)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.trip_replan)).assertIsDisplayed()
+    }
+
+    @Test
+    fun `a trip whose stops all resolve carries no notice`() {
+        screen()
+
+        compose.onAllNodesWithText(compose.string(Res.string.trip_stop_missing)).assertCountEquals(0)
     }
 
     @Test

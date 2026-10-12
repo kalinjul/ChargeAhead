@@ -42,6 +42,7 @@ import org.julakali.chargeahead.shared.domain.usecases.RefreshVehicleCatalogInte
 import org.julakali.chargeahead.shared.domain.usecases.RefreshMapChargersInteractor
 import org.julakali.chargeahead.shared.domain.usecases.CommitTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.EndTripInteractor
+import org.julakali.chargeahead.shared.domain.usecases.RefreshTripSitesInteractor
 import org.julakali.chargeahead.shared.domain.usecases.DismissPlannedTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanCommittedTripInteractor
 import org.julakali.chargeahead.shared.domain.usecases.ReplanWithArrivalSocInteractor
@@ -52,6 +53,7 @@ import org.julakali.chargeahead.shared.domain.usecases.RestoreCatalogValuesInter
 import org.julakali.chargeahead.shared.domain.usecases.SelectVehicleInteractor
 import org.julakali.chargeahead.shared.domain.RouteSiteSource
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.SiteLookup
 import org.julakali.chargeahead.shared.domain.SiteRepository
 import org.julakali.chargeahead.shared.domain.SoCSource
 import org.julakali.chargeahead.shared.domain.TimeProvider
@@ -116,7 +118,7 @@ fun chargeStopsModule(): Module = module {
 
     single<RouteSiteSource> { BackendRouteSiteSource(get()) }
     single<TripPlanning> { TripPlanner(get()) }
-    single { TripRepository(get()) }
+    single { TripRepository(get(), SiteLookup(get<SiteRepository>()::storedSites)) }
     single<CorridorPlanning> { CorridorPlanner() }
     single<ChargePointStatusRepository> { CachingChargePointStatusRepository(BackendChargePointStatusSource(get()), get()) }
     single<DataSourceDirectory> { BackendDataSourceDirectory(get()) }
@@ -134,6 +136,7 @@ fun chargeStopsModule(): Module = module {
     factory { ReplanWithArrivalSocInteractor(get(), get(), get()) }
     factory { CommitTripInteractor(get(), get()) }
     factory { EndTripInteractor(get()) }
+    factory { RefreshTripSitesInteractor(get(), get(), get()) }
     factory { DismissPlannedTripInteractor(get()) }
     factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { SelectVehicleInteractor(get()) }
@@ -158,7 +161,7 @@ fun chargeStopsModule(): Module = module {
     single<SiteCache> {
         SiteCache { keys -> pruneCache(get(), keys, get<TimeProvider>().nowMillis(), TiledSiteRepository.DEFAULT_TTL_MILLIS) }
     }
-    factory { StartAppInteractor(get(), get(), get(), get(), get()) }
+    factory { StartAppInteractor(get(), get(), get(), get(), get(), get()) }
 
     // A feature per session, on the graph's shared singletons; the caller owns and closes it.
     factory<ChargeStopsFeature>(SessionFeature) { (location: LocationSource, hardware: SoCSource?) ->

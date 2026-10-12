@@ -37,6 +37,7 @@ import org.julakali.chargeahead.shared.resources.car_route_no_charger
 import org.julakali.chargeahead.shared.resources.car_route_no_route
 import org.julakali.chargeahead.shared.resources.car_route_no_vehicle
 import org.julakali.chargeahead.shared.resources.car_route_send_all
+import org.julakali.chargeahead.shared.resources.car_route_stop_missing
 import org.julakali.chargeahead.shared.resources.car_route_send_all_hint
 import org.julakali.chargeahead.shared.resources.car_soc_percent
 import org.julakali.chargeahead.shared.Texts
@@ -224,6 +225,27 @@ class CarRouteScreenTest {
         click(step)
 
         assertEquals(listOf(90.0), graph.planner.startLevels)
+    }
+
+    @Test
+    fun `a missing stop is named in the first row, and tapping it re-plans`() {
+        val graph = graph(energy = EnergyState(42.0, SoCSourceKind.CAR_HARDWARE, 0L))
+        graph.withVehicle()
+        graph.planner.result = TripPlanResult.Planned(plan(stops = 1))
+        val stale = plan(stops = 2).let { plan -> plan.copy(stops = plan.stops.map { it.copy(siteMissing = true) }) }
+        graph.withCommittedTrip(stale)
+        val screen = CarRouteScreen(graph.carContext, graph.session, munich, activeRoute = true, permissions = graph.permissions)
+        settle()
+
+        val rows = (screen.onGetTemplate() as PlaceListMapTemplate).itemList!!.items.map { it as Row }
+        assertEquals(string(Res.string.car_route_stop_missing), rows.first().title.toString())
+        assertEquals(4, rows.size)
+
+        click(rows.first())
+        settle()
+
+        assertEquals(listOf(42.0), graph.planner.startLevels)
+        assertEquals(false, graph.trips.state.value.committed!!.plan.needsReplan)
     }
 
     @Test
