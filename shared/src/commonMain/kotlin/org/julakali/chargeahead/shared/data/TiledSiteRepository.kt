@@ -92,6 +92,9 @@ class TiledSiteRepository(
         if (!dao.hasSitesInBox(south = box.south, north = box.north, west = box.west, east = box.east)) throw fetchFailure
     }
 
+    override suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean =
+        networkKeys.ifEmpty { setOf(ALL_NETWORKS) }.all { isCovered(area, it) }
+
     /** Discards coverage, not the sites themselves: the store stays readable. */
     override suspend fun invalidate() {
         dao.clearCoverage(source.id)
@@ -244,7 +247,13 @@ class TiledSiteRepository(
             .flowOn(computation)
     }
 
+    override suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite> =
+        ids.chunked(MAX_IDS_PER_QUERY).flatMap { dao.sitesById(it) }.associate { it.id to it.toDomain() }
+
     companion object {
+        /** Below SQLite's limit on bound parameters. */
+        private const val MAX_IDS_PER_QUERY = 500
+
         /** Coverage key of a fetch without a network filter. */
         const val ALL_NETWORKS = "*"
 

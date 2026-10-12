@@ -32,6 +32,7 @@
     <string name="car_route_next_stop_only">Next charging stop only</string>
     <string name="car_route_navigate">Start navigation</string>
     <string name="car_route_replan">Replan</string>
+    <string name="car_route_stop_missing">Charging stop no longer found</string>
     <string name="car_route_charge">charge to %1$d%</string>
     <string name="car_detail_navigate">Navigate</string>
     <string name="car_detail_back">Back</string>
@@ -237,6 +238,7 @@
     <string name="trip_maps_sent">Sent to Google Maps</string>
     <string name="trip_replan">Replan</string>
     <string name="trip_unreachable_summary">Couldn't plan this trip</string>
+    <string name="trip_stop_missing">A charging stop on this route can no longer be found. Plan the route again.</string>
     <string name="trip_soc_edit">Change starting battery level</string>
     <string name="trip_arrival_soc_edit">Change arrival battery level</string>
     <string name="trip_soc_confirm">Replan</string>

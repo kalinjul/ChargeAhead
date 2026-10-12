@@ -30,6 +30,8 @@ class RefreshMapChargersTest {
 
     private val refresh = RefreshMapChargersInteractor(
         repository = object : SiteRepository {
+            override suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean = true
+            override suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite> = emptyMap()
             override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
             override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
             override suspend fun invalidate() {}
@@ -74,6 +76,8 @@ class RefreshMapChargersTest {
     fun `a failing fetch comes back as a failure`() = runBlocking<Unit> {
         val failing = RefreshMapChargersInteractor(
             repository = object : SiteRepository {
+                override suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean = true
+                override suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite> = emptyMap()
                 override fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>> = flowOf(emptyList())
                 override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
                 override suspend fun invalidate() {}

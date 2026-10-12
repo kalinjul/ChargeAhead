@@ -56,6 +56,8 @@ interface SiteRepository {
     suspend fun load(area: SearchArea, networkKeys: Set<String>)
     fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>>
     fun storedSitesIn(box: BoundingBox, filter: MapFilter): Flow<List<ChargeSite>>
+    suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean   // fetched recently enough that load() would not fetch
+    suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite>   // by id, no fetch; a missing id is absent
     suspend fun invalidate()
 }
 fun interface SiteCache { suspend fun prune(preferredNetworkKeys: Set<String>) }   // run once at app start
@@ -103,8 +105,18 @@ interface CarDiagnosticsRepository {              // what the car last reported,
 // Destination, planned trip (on the map) and committed trip (sent to Maps),
 // one per process, in its own DataStore file. Every transition is one write
 // of the whole state; only the trip interactors call update().
+// A stored stop holds its site as a reference: id, name, operator, position,
+// liveStatusId and networkKey. restore() and refreshSites() replace it with
+// the site the store has under that id; a stop whose site the store lacks
+// keeps the reference, without connectors, address or tariffs. When the
+// store is current along the route and still lacks it, the stop is marked
+// siteMissing and TripPlan.needsReplan tells the screens to say so.
 data class TripState(val destination: Destination?, val planned: TripPlan?, val committed: CommittedTrip?, val unreachable: UnreachableTrip?)
-class TripRepository(storage: TripStorage) { val state: StateFlow<TripState>; suspend fun restore() }
+class TripRepository(storage: TripStorage, sites: SiteLookup) {
+    val state: StateFlow<TripState>
+    suspend fun restore()
+    suspend fun refreshSites(storeIsCurrent: Boolean)
+}
 ```
 
 **One settings file per process.** The settings repositories all read and

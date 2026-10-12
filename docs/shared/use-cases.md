@@ -25,6 +25,7 @@ class CommitTripInteractor : Interactor<Params, CommittedTrip>             // "A
 class ReplanCommittedTripInteractor : Interactor<Params, TripPlanResult?>  // plans the active route anew and commits it
 class DismissPlannedTripInteractor : Interactor<Unit, Unit>
 class EndTripInteractor : Interactor<Unit, Unit>
+class RefreshTripSitesInteractor : Interactor<Unit, Unit>                  // refills the store along the trips' routes, gives the stops its sites, marks the ones it lacks
 
 // Garage and catalog
 class GarageObserver : SubjectInteractor<Params, Garage>
@@ -36,7 +37,7 @@ class RestoreCatalogValuesInteractor : Interactor<Unit, Unit>     // drops the d
 class ResetVehicleValueInteractor : Interactor<Params, Unit>      // puts one value of it back on the catalog's
 
 // Start-up
-class StartAppInteractor : Interactor<Unit, Unit>                 // prune the site cache, restore the trip, refresh networks and catalog
+class StartAppInteractor : Interactor<Unit, Unit>                 // prune the site cache, restore the trip and its sites, refresh networks and catalog
 class RefreshNetworksInteractor : Interactor<Unit, Unit>
 ```
 

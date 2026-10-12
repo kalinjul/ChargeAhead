@@ -37,6 +37,7 @@ import kotlinx.coroutines.yield
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -93,6 +94,33 @@ class TiledSiteRepositoryTest {
             connectors = listOf(Connector(type, powerKw, 2)),
             networkKey = operator.lowercase(),
         )
+
+    @Test
+    fun `stored sites are found by id, and an unknown id is left out`() = runBlocking {
+        val repository = TiledSiteRepository(
+            ControllableSource(listOf(site("a", 0.0, 10.0), site("b", 90.0, 10.0))),
+            database(), ControllableClock(), testAppScope, testDispatchers.computation,
+        )
+        repository.load(area())
+
+        assertEquals(mapOf("a" to site("a", 0.0, 10.0).copy(sources = setOf("test"))), repository.storedSites(setOf("a", "gone")))
+    }
+
+    @Test
+    fun `an area is covered once fetched, not when the fetch failed over older sites`() = runBlocking {
+        val source = ControllableSource(listOf(site("a", 0.0, 10.0)))
+        val clock = ControllableClock()
+        val repository = TiledSiteRepository(source, database(), clock, testAppScope, testDispatchers.computation)
+
+        assertFalse(repository.covers(area()))
+        repository.load(area())
+        assertTrue(repository.covers(area()))
+
+        clock.now += TiledSiteRepository.DEFAULT_TTL_MILLIS + 1
+        source.broken = true
+        repository.load(area())
+        assertFalse(repository.covers(area()))
+    }
 
     @Test
     fun adHocTariffsSurviveTheStore() = runBlocking {

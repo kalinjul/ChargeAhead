@@ -111,6 +111,7 @@ import org.julakali.chargeahead.shared.resources.trip_select_section
 import org.julakali.chargeahead.shared.resources.trip_send_maps
 import org.julakali.chargeahead.shared.resources.trip_soc_confirm
 import org.julakali.chargeahead.shared.resources.trip_soc_edit
+import org.julakali.chargeahead.shared.resources.trip_stop_missing
 import org.julakali.chargeahead.shared.resources.trip_start
 import org.julakali.chargeahead.shared.resources.trip_summary_charging
 import org.julakali.chargeahead.shared.resources.trip_summary_distance
@@ -169,6 +170,18 @@ fun TripSheetContent(
     socEditing?.let { SocEditors(it) }
 
     Column(modifier = modifier.fillMaxWidth()) {
+        if (plan.needsReplan) {
+            Text(
+                stringResource(Res.string.trip_stop_missing),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.errorContainer, MaterialTheme.shapes.extraSmall)
+                    .padding(9.dp),
+            )
+        }
         if (selecting) {
             val sectionOutline = ChargeAheadColors.sectionOutline
             val bothPicked = selectionA != null && selectionB != null

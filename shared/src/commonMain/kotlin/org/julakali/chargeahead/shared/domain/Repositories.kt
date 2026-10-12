@@ -31,6 +31,12 @@ interface SiteRepository {
     fun storedSitesNearest(position: LatLon, box: BoundingBox, filter: MapFilter, limit: Int): Flow<List<ChargeSite>> =
         storedSitesIn(box, filter).map { sites -> sites.sortedBy { position.distanceKmTo(it.position) }.take(limit) }
 
+    /** Whether the stock for [area] was fetched recently enough that [load] would not fetch again. */
+    suspend fun covers(area: SearchArea, networkKeys: Set<String> = emptySet()): Boolean
+
+    /** The stored sites with the given ids, no fetch; an id the store lacks is absent from the result. */
+    suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite>
+
     /**
      * Discards the stock so the next access actually queries.
      */

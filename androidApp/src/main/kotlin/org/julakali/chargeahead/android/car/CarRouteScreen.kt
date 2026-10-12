@@ -48,7 +48,9 @@ import org.julakali.chargeahead.shared.resources.car_route_no_route
 import org.julakali.chargeahead.shared.resources.plan_failed_no_connection
 import org.julakali.chargeahead.shared.resources.car_route_no_vehicle
 import org.julakali.chargeahead.shared.resources.car_route_planning
+import org.julakali.chargeahead.shared.resources.car_route_replan
 import org.julakali.chargeahead.shared.resources.car_route_send_all
+import org.julakali.chargeahead.shared.resources.car_route_stop_missing
 import org.julakali.chargeahead.shared.resources.car_route_send_all_hint
 import org.julakali.chargeahead.shared.resources.car_waiting_for_location
 import org.julakali.chargeahead.shared.Texts
@@ -123,7 +125,9 @@ class CarRouteScreen(
             .getContentLimit(ConstraintManager.CONTENT_LIMIT_TYPE_PLACE_LIST)
         // Every stop is a marker; the whole-route send takes the last slot.
         val itemList = ItemList.Builder()
-        plan.stops.take(contentLimit - 1).forEachIndexed { index, stop ->
+        if (plan.needsReplan) itemList.addItem(stopMissingRow())
+        val stopSlots = contentLimit - 1 - if (plan.needsReplan) 1 else 0
+        plan.stops.take(stopSlots).forEachIndexed { index, stop ->
             val previousKm = plan.stops.getOrNull(index - 1)?.kmFromStart ?: 0.0
             itemList.addItem(stopRow(index + 1, stop, legKm = stop.kmFromStart - previousKm))
         }
@@ -169,6 +173,14 @@ class CarRouteScreen(
             }
             .build()
     }
+
+    /** Says that the plan no longer holds; tapping it plans anew, as the strip's action does. */
+    private fun stopMissingRow(): Row = Row.Builder()
+        .setTitle(Texts.string(Res.string.car_route_stop_missing))
+        .addText(Texts.string(Res.string.car_route_replan))
+        .setImage(icon(R.drawable.ic_refresh, CarColor.RED), Row.IMAGE_TYPE_ICON)
+        .setOnClickListener(::requestReplan)
+        .build()
 
     /** Strip actions render icon-only on most hosts. */
     private fun navigateAction(plan: TripPlan): Action = Action.Builder()
@@ -272,12 +284,14 @@ class CarRouteScreen(
      */
     private fun replanAction(): Action = Action.Builder()
         .setIcon(icon(R.drawable.ic_refresh))
-        .setOnClickListener {
-            if (!viewModel.onReplanRequested()) {
-                screenManager.push(CarSoCScreen(carContext, session, permissions, onPicked = viewModel::onReplanWith))
-            }
-        }
+        .setOnClickListener(::requestReplan)
         .build()
+
+    private fun requestReplan() {
+        if (!viewModel.onReplanRequested()) {
+            screenManager.push(CarSoCScreen(carContext, session, permissions, onPicked = viewModel::onReplanWith))
+        }
+    }
 
     /** Destination in reach without charging: no list to show, just the handoff. */
     private fun directTemplate(): Template =

@@ -59,8 +59,6 @@ data class Tariff(
     val connectors: List<ConnectorType> = emptyList(),
 )
 
-// Stored in Room and inside the saved trip: a new field needs a default.
-@Serializable
 data class ChargeSite(
     /** Source-qualified: "ocm:12345", "bnetza:1141226". For a merged site, the leading source's id. */
     val id: String,

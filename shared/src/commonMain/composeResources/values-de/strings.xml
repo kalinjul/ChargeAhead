@@ -32,6 +32,7 @@
     <string name="car_route_next_stop_only">Nur nächster Ladestopp</string>
     <string name="car_route_navigate">Navigation starten</string>
     <string name="car_route_replan">Neu planen</string>
+    <string name="car_route_stop_missing">Ladestopp nicht mehr gefunden</string>
     <string name="car_route_charge">laden bis %1$d%</string>
     <string name="car_detail_navigate">Navigieren</string>
     <string name="car_detail_back">Zurück</string>
@@ -239,6 +240,7 @@
     <string name="trip_maps_sent">An Google Maps übergeben</string>
     <string name="trip_replan">Neu planen</string>
     <string name="trip_unreachable_summary">Fahrt nicht planbar</string>
+    <string name="trip_stop_missing">Ein Ladestopp dieser Route wurde nicht mehr gefunden. Plane die Route neu.</string>
     <string name="trip_soc_edit">Ladestand am Start ändern</string>
     <string name="trip_arrival_soc_edit">Ladestand am Ziel ändern</string>
     <string name="trip_soc_confirm">Neu planen</string>

@@ -28,6 +28,14 @@ struct TripPlanView: View {
                 }
             }
 
+            if plan.needsReplan {
+                Section {
+                    Text(localized("trip_stop_missing"))
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                }
+            }
+
             Section(localized("phone_title_stops")) {
                 TripEndRow(
                     title: plan.startAddress ?? localized("trip_start"),

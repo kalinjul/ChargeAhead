@@ -86,6 +86,8 @@ class CarScreenViewModelsTest {
         )
         val store = MutableStateFlow<List<ChargeSite>>(emptyList())
         val repository = object : SiteRepository {
+            override suspend fun covers(area: SearchArea, networkKeys: Set<String>): Boolean = true
+            override suspend fun storedSites(ids: Set<String>): Map<String, ChargeSite> = emptyMap()
             override fun storedSitesIn(area: SearchArea): Flow<List<ChargeSite>> = flowOf(emptyList())
             override suspend fun invalidate() {}
             override suspend fun load(area: SearchArea, networkKeys: Set<String>) {

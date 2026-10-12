@@ -13,6 +13,7 @@ import org.julakali.chargeahead.shared.domain.PlannedStop
 import org.julakali.chargeahead.shared.domain.Route
 import org.julakali.chargeahead.shared.domain.RouteSite
 import org.julakali.chargeahead.shared.domain.RouteSiteSource
+import org.julakali.chargeahead.shared.domain.STOP_BUFFER_KM
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanning
 import org.julakali.chargeahead.shared.domain.TripPlanResult
@@ -238,7 +239,5 @@ class TripPlanner(
         /** Pace of the way off the route and back, priced both ways. */
         const val DETOUR_SPEED_KMH = 30.0
 
-        /** Max straight-line distance from the route. */
-        const val STOP_BUFFER_KM = 3.0
     }
 }
