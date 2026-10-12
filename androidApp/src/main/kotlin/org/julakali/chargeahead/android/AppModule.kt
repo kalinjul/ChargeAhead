@@ -2,11 +2,13 @@ package org.julakali.chargeahead.android
 
 import org.julakali.chargeahead.shared.AppScope
 import org.julakali.chargeahead.shared.BackendConfig
+import org.julakali.chargeahead.shared.data.AndroidReverseGeocoder
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.data.FusedLocationSource
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.ReverseGeocoder
 import org.julakali.chargeahead.shared.domain.TripStorage
 import org.julakali.chargeahead.shared.settings.createSettingsDataStore
 import org.julakali.chargeahead.shared.settings.createTripDataStore
@@ -24,6 +26,7 @@ val appModule = module {
 
     // The phone's location; a car session passes its own.
     single<LocationSource> { FusedLocationSource(androidContext()) }
+    single<ReverseGeocoder> { AndroidReverseGeocoder(androidContext(), get<AppCoroutineDispatchers>().io) }
     single { DatabaseFactory(androidContext()) }
 
     single {

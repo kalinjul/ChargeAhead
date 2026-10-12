@@ -145,6 +145,7 @@ class TripLifecycleInteractorsTest {
             vehicles = vehicles,
             catalog = FakeVehicleCatalog(),
             preferences = DataStorePreferencesRepository(settings),
+            addresses = { null },
             trips = trips,
             updateManualSoc = UpdateManualSocInteractor(vehicles),
             time = time,

@@ -42,6 +42,7 @@ import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkPreferences
 import org.julakali.chargeahead.shared.domain.NetworkRepository
+import org.julakali.chargeahead.shared.domain.ReverseGeocoder
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.PlannedStop
@@ -114,6 +115,7 @@ class CarTestGraph(
     private fun fakes() = module {
         single { AppCoroutineDispatchers(Dispatchers.Unconfined, Dispatchers.Unconfined, Dispatchers.Unconfined) }
         single<TripPlanning> { planner }
+        single<ReverseGeocoder> { ReverseGeocoder { null } }
         single<TripStorage> { TripStorage.None }
         single<SiteRepository> { sites }
         single<NetworkRepository> { NoNetworks }

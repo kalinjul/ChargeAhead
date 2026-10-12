@@ -89,6 +89,7 @@ import org.koin.core.scope.Scope
  * The data graph behind both features, declared once for both platforms.
  *
  * The platform modules supply [LocationSource] (the phone's),
+ * [org.julakali.chargeahead.shared.domain.ReverseGeocoder],
  * [org.julakali.chargeahead.shared.db.DatabaseFactory], the settings
  * repositories (`settingsModule`), [org.julakali.chargeahead.shared.domain.TripStorage]
  * and [BackendConfig].
@@ -131,14 +132,14 @@ fun chargeStopsModule(): Module = module {
     factory { ChargeNowObserver(get(), get(), get(), get()) }
     factory { RefreshChargeNowInteractor(get(), get(), get()) }
     factory { DestinationSearchObserver(get(), get()) }
-    factory { PlanTripInteractor(get(), get(), get(), get(), get(), get(), get()) }
+    factory { PlanTripInteractor(get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { UpdateArrivalSocInteractor(get()) }
     factory { ReplanWithArrivalSocInteractor(get(), get(), get()) }
     factory { CommitTripInteractor(get(), get()) }
     factory { EndTripInteractor(get()) }
     factory { RefreshTripSitesInteractor(get(), get(), get()) }
     factory { DismissPlannedTripInteractor(get()) }
-    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get(), get(), get(), get()) }
+    factory { ReplanCommittedTripInteractor(get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     factory { SelectVehicleInteractor(get()) }
     factory { RemoveVehicleInteractor(get()) }
     factory { UpdateManualSocInteractor(get()) }

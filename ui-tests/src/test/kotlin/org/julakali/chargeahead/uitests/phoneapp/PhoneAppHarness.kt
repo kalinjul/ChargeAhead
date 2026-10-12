@@ -29,6 +29,7 @@ import org.julakali.chargeahead.shared.domain.LocationSource
 import org.julakali.chargeahead.shared.domain.MapFilter
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkRepository
+import org.julakali.chargeahead.shared.domain.ReverseGeocoder
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.VehiclePreset
 import org.julakali.chargeahead.shared.domain.Place
@@ -107,6 +108,7 @@ class PhoneAppHarness {
 
     private fun fakes(allSites: List<ChargeSite>) = module {
         single<LocationSource> { FakeLocationSource(fix) }
+        single<ReverseGeocoder> { ReverseGeocoder { null } }
         single<Geocoder> { FakeGeocoder(Place("München", "München, Bayern", muenchen)) }
         single<RouteSiteSource> { StraightLineRouteSiteSource(allSites) }
         single<SiteRepository> { FakeSiteRepository(allSites) }

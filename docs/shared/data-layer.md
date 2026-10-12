@@ -37,6 +37,9 @@ interface RouteSiteSource {
     suspend fun routeWithSites(from: LatLon, to: LatLon, bufferKm: Double, networkKeys: Set<String>, minPowerKw: Double): RouteWithSites?
 }
 interface Geocoder    { suspend fun search(query: String, near: LatLon?, limit: Int): List<Place> }
+// The platform's own geocoder (Android Geocoder, CLGeocoder). Planning asks it
+// for the start's address and stores "street, town" in TripPlan.startAddress.
+fun interface ReverseGeocoder { suspend fun addressAt(position: LatLon): Address? }
 fun interface TimeProvider { fun nowMillis(): Long }
 ```
 

@@ -10,17 +10,15 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -30,10 +28,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.material.icons.automirrored.filled.ArrowRightAlt
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.ViewWeek
@@ -57,12 +54,13 @@ import org.julakali.chargeahead.android.phone.theme.ChargeAheadMotion
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -81,6 +79,7 @@ import org.julakali.chargeahead.android.phone.theme.ChargeAheadColors
 import org.julakali.chargeahead.android.phone.theme.tabular
 import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.PlannedStop
+import org.julakali.chargeahead.shared.domain.TripLeg
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.SectionSelection
 import org.julakali.chargeahead.shared.ui.TripListLayout
@@ -94,11 +93,11 @@ import org.julakali.chargeahead.shared.resources.trip_unreachable_summary
 import org.julakali.chargeahead.shared.ui.TripUiState
 import org.julakali.chargeahead.shared.resources.garage_arrival_sheet_hint
 import org.julakali.chargeahead.shared.resources.garage_arrival_title
+import org.julakali.chargeahead.shared.resources.garage_kw
+import org.julakali.chargeahead.shared.resources.garage_percent
 import org.julakali.chargeahead.shared.resources.soc_dialog_car_silent
 import org.julakali.chargeahead.shared.resources.soc_dialog_title
-import org.julakali.chargeahead.shared.resources.trip_arr
 import org.julakali.chargeahead.shared.resources.trip_arrival_soc_edit
-import org.julakali.chargeahead.shared.resources.trip_dep_now
 import org.julakali.chargeahead.shared.resources.trip_dep_now_unknown
 import org.julakali.chargeahead.shared.resources.trip_duration_hours_minutes
 import org.julakali.chargeahead.shared.resources.trip_duration_minutes
@@ -114,8 +113,6 @@ import org.julakali.chargeahead.shared.resources.trip_soc_confirm
 import org.julakali.chargeahead.shared.resources.trip_soc_edit
 import org.julakali.chargeahead.shared.resources.trip_stop_missing
 import org.julakali.chargeahead.shared.resources.trip_start
-import org.julakali.chargeahead.shared.resources.trip_stop_charge
-import org.julakali.chargeahead.shared.resources.trip_stop_times
 import org.julakali.chargeahead.shared.resources.trip_summary_charging
 import org.julakali.chargeahead.shared.resources.trip_summary_distance
 import org.julakali.chargeahead.shared.resources.trip_summary_stops
@@ -142,8 +139,8 @@ class SocEditing(
 )
 
 /**
- * The planned trip as sheet content: section hint, then the stops as an
- * itinerary rail (or a tile row), the send actions at the end.
+ * The planned trip as sheet content: section hint, then the stops as
+ * cards (or a tile row), the send actions at the end.
  *
  * Section selection works on the point sequence start → stops → destination:
  * tap two of them and exactly that section goes to Maps.
@@ -276,7 +273,7 @@ fun TripSheetContent(
             modifier = Modifier.fillMaxWidth().weight(1f),
         ) { shown ->
             when (shown) {
-                TripListLayout.LIST -> StopRail(
+                TripListLayout.LIST -> StopCards(
                     plan = plan,
                     startSocPercent = startSocPercent,
                     selection = selection,
@@ -332,9 +329,9 @@ private fun SocEditors(socEditing: SocEditing) {
 }
 
 
-/** Start, stops and destination on one vertical line. */
+/** Start, stops and destination as rows, with the drive between two of them written in between. */
 @Composable
-private fun StopRail(
+private fun StopCards(
     plan: TripPlan,
     startSocPercent: Double?,
     selection: SectionSelection,
@@ -346,175 +343,251 @@ private fun StopRail(
 ) {
     val selecting = selection.selecting
     val last = plan.stops.size + 1
-    val pen = socEditing?.let { painterResource(R.drawable.ic_pen) }
+    val legs = plan.legs
     val context = LocalContext.current
+    fun picked(index: Int) = selecting && selection.includes(index)
 
-    LazyColumn(modifier = modifier.padding(horizontal = 16.dp)) {
+    LazyColumn(modifier = modifier, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
         item(key = "start") {
-            RailRow(
-                index = 0,
-                last = last,
-                selected = selecting && selection.includes(0),
-                selectionShape = selection.spanShape(0),
-                onClick = { if (selecting) onPickPoint(0) else socEditing?.onEditStartSoc?.invoke() },
-                dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
-                trailing = pen,
-                trailingDescription = stringResource(Res.string.trip_soc_edit),
-            ) {
-                Text(stringResource(Res.string.trip_start), style = MaterialTheme.typography.titleSmall)
-                MetaLine(
-                    startSocPercent?.let { stringResource(Res.string.trip_dep_now, it.roundToInt()) }
-                        ?: stringResource(Res.string.trip_dep_now_unknown),
-                )
-            }
+            EndRow(
+                title = plan.startAddress ?: stringResource(Res.string.trip_start),
+                time = etaText(context, 0.0, departure),
+                level = startSocPercent,
+                levelUnknown = stringResource(Res.string.trip_dep_now_unknown),
+                selected = picked(0),
+                onClick = if (selecting) ({ onPickPoint(0) }) else socEditing?.onEditStartSoc,
+                editDescription = socEditing?.let { stringResource(Res.string.trip_soc_edit) },
+            )
         }
         itemsIndexed(plan.stops, key = { _, stop -> stop.site.id }) { i, stop ->
             val index = i + 1
-            RailRow(
-                index = index,
-                last = last,
-                selected = selecting && selection.includes(index),
-                selectionShape = selection.spanShape(index),
-                onClick = { if (selecting) onPickPoint(index) else onOpenStop(stop) },
-                dot = { RankBadge(index, operatorColor(stop.site)) },
-            ) {
-                Text(
-                    stop.site.operator ?: stop.site.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                MetaLine(
-                    stringResource(
-                        Res.string.trip_stop_charge,
-                        stop.maxPowerKw.roundToInt(),
-                        stop.arrivalSocPercent.roundToInt(),
-                        stop.departureSocPercent.roundToInt(),
-                    ),
-                )
-                MetaLine(
-                    stringResource(
-                        Res.string.trip_stop_times,
-                        etaText(context, stop.arrivalMinutesFromStart, departure),
-                        etaText(context, stop.arrivalMinutesFromStart + stop.chargeMinutes, departure),
-                    ),
+            Column {
+                LegRow(legs[i], inSection = picked(i) && picked(index))
+                StopCard(
+                    index = index,
+                    stop = stop,
+                    arrival = etaText(context, stop.arrivalMinutesFromStart, departure),
+                    selected = picked(index),
+                    onClick = { if (selecting) onPickPoint(index) else onOpenStop(stop) },
                 )
             }
         }
         item(key = "destination") {
-            RailRow(
-                index = last,
-                last = last,
-                selected = selecting && selection.includes(last),
-                selectionShape = selection.spanShape(last),
-                onClick = { if (selecting) onPickPoint(last) else socEditing?.onEditArrivalSoc?.invoke() },
-                dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
-                trailing = pen,
-                trailingDescription = stringResource(Res.string.trip_arrival_soc_edit),
-            ) {
-                Text(
-                    plan.destination.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                MetaLine(
-                    stringResource(Res.string.trip_arr, etaText(context, plan.totalMinutes, departure), plan.arrivalSocPercent.roundToInt()),
+            Column {
+                LegRow(legs.last(), inSection = picked(last - 1) && picked(last))
+                EndRow(
+                    title = plan.destination.name,
+                    time = etaText(context, plan.totalMinutes, departure),
+                    level = plan.arrivalSocPercent,
+                    selected = picked(last),
+                    onClick = if (selecting) ({ onPickPoint(last) }) else socEditing?.onEditArrivalSoc,
+                    editDescription = socEditing?.let { stringResource(Res.string.trip_arrival_soc_edit) },
                 )
             }
         }
     }
 }
 
-/** One rail row: the line segment, the dot, the text; a picked section tints the row. */
+/** The trip's start or destination: a pin, the name and one time, the charge level below. */
 @Composable
-private fun RailRow(
-    index: Int,
-    last: Int,
+private fun EndRow(
+    title: String,
     onClick: (() -> Unit)?,
-    dot: @Composable () -> Unit,
+    /** Names what a tap edits and shows the pen; `null` on a row that edits nothing. */
+    editDescription: String?,
+    time: String? = null,
+    level: Double? = null,
+    /** Stands in for an unknown [level]; without either the row has no second line. */
+    levelUnknown: String? = null,
     selected: Boolean = false,
-    /** Rounded only where the picked span begins or ends. */
-    selectionShape: Shape = RectangleShape,
-    trailing: androidx.compose.ui.graphics.painter.Painter? = null,
-    trailingDescription: String? = null,
-    /** Body text beside an icon: centred on it, where a title sits on the dot by its line height. */
-    centerOnDot: Boolean = false,
-    content: @Composable () -> Unit,
 ) {
-    val lineColor = MaterialTheme.colorScheme.outlineVariant
-    Row(
-        verticalAlignment = Alignment.Top,
+    val hasLevelLine = level != null || levelUnknown != null
+    Column(
+        verticalArrangement = Arrangement.spacedBy(LINE_GAP),
         modifier = Modifier
             .fillMaxWidth()
-            // The rail box fills the row's height, so the row needs one.
-            .height(IntrinsicSize.Min)
-            .then(
-                if (selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer, selectionShape) else Modifier,
-            )
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+            .clip(MaterialTheme.shapes.large)
+            .then(if (selected) Modifier.background(MaterialTheme.colorScheme.primaryContainer) else Modifier)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = CARD_PADDING, vertical = ROW_PADDING),
     ) {
-        Box(
-            Modifier
-                .width(RAIL_WIDTH)
-                .fillMaxHeight()
-                .drawBehind {
-                    val x = size.width / 2
-                    val dotCenter = DOT_TOP.toPx() + DOT_SIZE.toPx() / 2
-                    val top = if (index == 0) dotCenter else 0f
-                    val bottom = if (index == last) dotCenter else size.height
-                    drawLine(lineColor, Offset(x, top), Offset(x, bottom), strokeWidth = 2.dp.toPx())
-                }
-                .padding(top = DOT_TOP),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            // A ring in the surface color lifts the dot off the line.
-            Box(
-                Modifier.size(DOT_SIZE).background(MaterialTheme.colorScheme.surface, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) { dot() }
-        }
-        Column(Modifier.weight(1f)) {
-            Column(
-                if (centerOnDot) {
-                    Modifier.padding(top = DOT_TOP, bottom = ROW_PADDING, end = 8.dp).heightIn(min = DOT_SIZE)
-                } else {
-                    Modifier.padding(top = ROW_PADDING, bottom = ROW_PADDING, end = 8.dp)
-                },
-                verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
-            ) {
-                content()
-            }
-            if (index != last) HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
-        }
-        trailing?.let {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                it,
-                contentDescription = trailingDescription,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 12.dp, end = 6.dp).size(14.dp),
+                Icons.Filled.LocationOn,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(MARKER_SIZE),
             )
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(start = MARKER_GAP).weight(1f),
+            )
+            if (!hasLevelLine) EditPen(editDescription)
+            time?.let { ClockText(it) }
+        }
+        if (hasLevelLine) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(start = SECOND_LINE_INSET),
+            ) {
+                if (level != null) {
+                    BatteryIcon(level)
+                    LevelText(level)
+                } else if (levelUnknown != null) {
+                    MetaLine(levelUnknown)
+                }
+                EditPen(editDescription)
+            }
         }
     }
 }
 
-/** The tint reads as one block: corners only at the span's ends. */
 @Composable
-private fun SectionSelection.spanShape(index: Int): Shape {
-    val radius = 10.dp
-    val top = if (includes(index - 1)) 0.dp else radius
-    val bottom = if (includes(index + 1)) 0.dp else radius
-    return RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom)
+private fun StopCard(index: Int, stop: PlannedStop, arrival: String, selected: Boolean, onClick: () -> Unit) {
+    AppCard(onClick = onClick, selected = selected, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(LINE_GAP),
+            modifier = Modifier.padding(horizontal = CARD_PADDING, vertical = ROW_PADDING),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StopBadge(index)
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = MARKER_GAP).weight(1f)) {
+                    Text(
+                        stop.site.operator ?: stop.site.name,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    stop.site.address?.town?.let { town ->
+                        Text(
+                            town,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                }
+                ClockText(arrival)
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(start = SECOND_LINE_INSET),
+            ) {
+                BatteryIcon(stop.arrivalSocPercent)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    LevelText(stop.arrivalSocPercent)
+                    Icon(Icons.AutoMirrored.Filled.ArrowRightAlt, contentDescription = null, modifier = Modifier.size(14.dp))
+                    LevelText(stop.departureSocPercent)
+                }
+                MetaLine("·")
+                MetaLine(stringResource(Res.string.garage_kw, stop.maxPowerKw.roundToInt()))
+                Spacer(Modifier.weight(1f))
+                MetaLine(minutesText(stop.chargeMinutes))
+            }
+        }
+    }
+}
+
+/** The drive to the row below: a dotted line under the markers, time and distance beside it. */
+@Composable
+private fun LegRow(leg: TripLeg, inSection: Boolean) {
+    val dots = if (inSection) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+    Text(
+        listOf(
+            minutesText(leg.driveMinutes),
+            stringResource(Res.string.trip_summary_distance, leg.distanceKm.roundToInt()),
+        ).joinToString(" · "),
+        style = MaterialTheme.typography.labelSmall.tabular,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                val x = (CARD_PADDING + MARKER_SIZE / 2).toPx()
+                val dot = 2.dp.toPx()
+                drawLine(
+                    color = dots,
+                    start = Offset(x, dot),
+                    end = Offset(x, size.height - dot),
+                    strokeWidth = dot,
+                    cap = StrokeCap.Round,
+                    // Zero-length dashes with round caps come out as dots.
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(0f, 2.5f * dot)),
+                )
+            }
+            .padding(start = CARD_PADDING + SECOND_LINE_INSET, top = 6.dp, bottom = 6.dp),
+    )
 }
 
 @Composable
-private fun TerminusDot(color: Color, square: Boolean) {
-    Box(Modifier.size(12.dp).background(color, if (square) RoundedCornerShape(2.dp) else CircleShape))
+private fun StopBadge(index: Int) {
+    RankBadge(index, MaterialTheme.colorScheme.primary, textColor = MaterialTheme.colorScheme.onPrimary)
+}
+
+@Composable
+private fun ClockText(time: String) {
+    Text(time, style = MaterialTheme.typography.titleSmall.tabular, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+}
+
+@Composable
+private fun LevelText(percent: Double) {
+    Text(stringResource(Res.string.garage_percent, percent.roundToInt()), style = MaterialTheme.typography.labelMedium.tabular, maxLines = 1)
+}
+
+@Composable
+private fun EditPen(description: String?) {
+    if (description == null) return
+    Icon(
+        painterResource(R.drawable.ic_pen),
+        contentDescription = description,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.size(14.dp),
+    )
+}
+
+/** A horizontal battery, filled to [percent]. */
+@Composable
+private fun BatteryIcon(percent: Double) {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    Canvas(Modifier.size(width = 20.dp, height = 11.dp)) {
+        val stroke = 1.5.dp.toPx()
+        val nub = 2.dp.toPx()
+        val bodyWidth = size.width - nub
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(stroke / 2, stroke / 2),
+            size = Size(bodyWidth - stroke, size.height - stroke),
+            cornerRadius = CornerRadius(2.5.dp.toPx()),
+            style = Stroke(stroke),
+        )
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(bodyWidth, size.height * 0.3f),
+            size = Size(nub, size.height * 0.4f),
+            cornerRadius = CornerRadius(1.dp.toPx()),
+        )
+        val inset = stroke + 1.5.dp.toPx()
+        val level = (percent / 100).coerceIn(0.0, 1.0).toFloat()
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(inset, inset),
+            size = Size((bodyWidth - 2 * inset) * level, size.height - 2 * inset),
+            cornerRadius = CornerRadius(1.dp.toPx()),
+        )
+    }
 }
 
 @Composable
 private fun MetaLine(text: String) {
-    Text(text, style = MaterialTheme.typography.bodySmall.tabular, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(text, style = MaterialTheme.typography.bodySmall.tabular, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
 }
 
 /** The stops as a swipeable row for the collapsed sheet. */
@@ -544,7 +617,7 @@ private fun StopTiles(
                     modifier = Modifier.width(136.dp),
                 ) {
                     Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        RankBadge(index, operatorColor(stop.site))
+                        StopBadge(index)
                         Text(
                             stop.site.operator ?: stop.site.name,
                             style = MaterialTheme.typography.titleSmall,
@@ -642,47 +715,37 @@ fun UnreachableTripSummary(onReplan: () -> Unit) {
 @Composable
 fun UnreachableTripContent(trip: TripUiState.Unreachable, socEditing: SocEditing, modifier: Modifier = Modifier) {
     SocEditors(socEditing)
-    val pen = painterResource(R.drawable.ic_pen)
     // The sheet stays at its peek here, so a large font scrolls instead of cutting the destination off.
-    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
-        RailRow(
-            index = 0,
-            last = 2,
+    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 4.dp)) {
+        EndRow(
+            title = stringResource(Res.string.trip_start),
+            level = trip.startSocPercent,
+            levelUnknown = stringResource(Res.string.trip_dep_now_unknown),
             onClick = socEditing.onEditStartSoc,
-            dot = { TerminusDot(MaterialTheme.colorScheme.tertiary, square = false) },
-            trailing = pen,
-            trailingDescription = stringResource(Res.string.trip_soc_edit),
+            editDescription = stringResource(Res.string.trip_soc_edit),
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = CARD_PADDING, vertical = 6.dp),
         ) {
-            Text(stringResource(Res.string.trip_start), style = MaterialTheme.typography.titleSmall)
-            MetaLine(
-                trip.startSocPercent?.let { stringResource(Res.string.trip_dep_now, it.roundToInt()) }
-                    ?: stringResource(Res.string.trip_dep_now_unknown),
+            Icon(
+                Icons.Outlined.ErrorOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(MARKER_SIZE),
             )
-        }
-        RailRow(
-            index = 1,
-            last = 2,
-            onClick = null,
-            dot = { Icon(Icons.Outlined.ErrorOutline, contentDescription = null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp)) },
-            centerOnDot = true,
-        ) {
-            Text(trip.why.message(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-        }
-        RailRow(
-            index = 2,
-            last = 2,
-            onClick = socEditing.onEditArrivalSoc,
-            dot = { TerminusDot(MaterialTheme.colorScheme.error, square = true) },
-            trailing = pen,
-            trailingDescription = stringResource(Res.string.trip_arrival_soc_edit),
-        ) {
             Text(
-                trip.destination.name,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+                trip.why.message(),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = MARKER_GAP),
             )
         }
+        EndRow(
+            title = trip.destination.name,
+            onClick = socEditing.onEditArrivalSoc,
+            editDescription = stringResource(Res.string.trip_arrival_soc_edit),
+        )
     }
 }
 
@@ -729,10 +792,11 @@ fun etaText(context: Context, minutesFromStart: Double, now: LocalTime): String 
 @Composable
 fun tripPeekHeight(): Dp = (LocalConfiguration.current.screenHeightDp / 3).dp
 
-private val RAIL_WIDTH = 36.dp
+private val MARKER_SIZE = 24.dp
+private val MARKER_GAP = 10.dp
+private val CARD_PADDING = 12.dp
+private val ROW_PADDING = 9.dp
+private val LINE_GAP = 3.dp
 
-private val DOT_SIZE = 28.dp
-private val ROW_PADDING = 10.dp
-
-/** Puts the dot's centre on the title line. */
-private val DOT_TOP = ROW_PADDING - 2.dp
+/** Puts a row's second line under its title, past the marker. */
+private val SECOND_LINE_INSET = MARKER_SIZE + MARKER_GAP
