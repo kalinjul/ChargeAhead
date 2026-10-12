@@ -1,6 +1,7 @@
 package org.julakali.chargeahead.shared
 
 import androidx.lifecycle.SavedStateHandle
+import org.julakali.chargeahead.shared.data.CoreLocationReverseGeocoder
 import org.julakali.chargeahead.shared.data.CoreLocationSource
 import org.julakali.chargeahead.shared.data.DataStoreTripStorage
 import org.julakali.chargeahead.shared.db.DatabaseFactory
@@ -8,6 +9,7 @@ import org.julakali.chargeahead.shared.domain.AppCoroutineDispatchers
 import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.ReverseGeocoder
 import org.julakali.chargeahead.shared.domain.usecases.PlanTripInteractor
 import org.julakali.chargeahead.shared.domain.TripPlan
 import org.julakali.chargeahead.shared.domain.TripPlanResult
@@ -64,6 +66,7 @@ private fun buildGraph(backend: BackendConfig): Koin =
             module {
                 single<TripStorage> { DataStoreTripStorage(createTripDataStore(dataStoreScope()), legacy = get()) }
                 single<LocationSource> { CoreLocationSource() }
+                single<ReverseGeocoder> { CoreLocationReverseGeocoder() }
                 single { DatabaseFactory() }
                 single { backend }
             },

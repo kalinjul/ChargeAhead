@@ -9,6 +9,7 @@ import org.julakali.chargeahead.shared.domain.Destination
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.ReverseGeocoder
 import org.julakali.chargeahead.shared.domain.Network
 import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.TripRepository
@@ -79,6 +80,7 @@ class AppStartAndSessionsTest {
                 settingsModule { InMemoryPreferencesDataStore() },
                 module {
                     single<LocationSource> { location }
+                    single<ReverseGeocoder> { ReverseGeocoder { null } }
                     single { DatabaseFactory() }
                     single<TripStorage> { storage }
                     single { BackendConfig("https://backend.invalid", "token") }

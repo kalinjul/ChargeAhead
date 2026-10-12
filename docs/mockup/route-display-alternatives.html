@@ -1,0 +1,182 @@
+<title>Route display alternatives</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,650&family=Roboto:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0">
+<style>
+  /* Layout: the two screens that show a trip as phone mockups in the app's own theme tokens, with the notes beside them. */
+  :root {
+    --bg: #F5F7FA; --surface: #FFFFFF; --surface-var: #F1F3F4; --on: #202124; --on-var: #5F6368; --faint: #80868B;
+    --outline: #DADCE0; --primary: #7F77DD; --on-primary: #FFFFFF; --primary-c: #ECEAFB; --on-primary-c: #26215C; --error: #D93025;
+    --map-a: #8FD3E8; --map-b: #BFE6CF; --shadow: rgba(32, 33, 36, .16);
+    --display: "Bricolage Grotesque", Roboto, system-ui, sans-serif;
+    --body: Roboto, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121212; --surface: #1E1F22; --surface-var: #2A2B2F; --on: #E8EAED; --on-var: #9AA0A6; --faint: #80868B;
+      --outline: #3C4043; --primary: #AFA9EC; --on-primary: #26215C; --primary-c: #3B3684; --on-primary-c: #E5E2FA; --error: #F28B82;
+      --map-a: #17323B; --map-b: #1F3A2C; --shadow: rgba(0, 0, 0, .5); color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #121212; --surface: #1E1F22; --surface-var: #2A2B2F; --on: #E8EAED; --on-var: #9AA0A6; --faint: #80868B;
+    --outline: #3C4043; --primary: #AFA9EC; --on-primary: #26215C; --primary-c: #3B3684; --on-primary-c: #E5E2FA; --error: #F28B82;
+    --map-a: #17323B; --map-b: #1F3A2C; --shadow: rgba(0, 0, 0, .5); color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; padding-block: 32px 56px; padding-inline: 20px; background: var(--bg); color: var(--on); font-family: var(--body); font-size: 14px; line-height: 1.45; }
+  .page { max-width: 1000px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+  h1, h2 { font-family: var(--display); margin: 0; text-wrap: balance; }
+  h1 { font-size: 30px; font-weight: 650; letter-spacing: -.01em; }
+  h2 { font-size: 17px; font-weight: 650; }
+  p { margin: 0; }
+  .lede { color: var(--on-var); max-width: 68ch; margin-top: 6px; font-size: 15px; }
+  .eyebrow { font-size: 11px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--primary); }
+  .foot { color: var(--on-var); font-size: 13px; max-width: 72ch; }
+
+  .refined { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .refined .shot { flex: 0 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+  .shot .cap { font-size: 13px; color: var(--on-var); }
+  .shot .cap b { color: var(--on); font-weight: 500; }
+  .notes { flex: 1 1 320px; min-width: 0; max-width: 62ch; display: flex; flex-direction: column; gap: 12px; }
+  .notes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+  .notes li { color: var(--on-var); }
+  .notes li b { color: var(--on); font-weight: 500; }
+
+  /* ---------- phone ---------- */
+  .phone { width: 100%; max-width: 320px; border-radius: 26px; overflow: hidden; background: var(--bg); box-shadow: 0 8px 28px var(--shadow); font-variant-numeric: tabular-nums; font-size: 13px; line-height: 1.35; }
+  .map { position: relative; background: linear-gradient(160deg, var(--map-a) 0 46%, var(--map-b) 46% 100%); padding: 34px 12px 26px; }
+  .pill { position: relative; background: var(--surface); border-radius: 22px; padding: 8px 16px; box-shadow: 0 2px 8px var(--shadow); display: flex; align-items: center; gap: 8px; }
+  .pill div { flex: 1; min-width: 0; }
+  .pill b { display: block; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pill small { color: var(--on-var); font-size: 12px; }
+  .pill .ms { font-size: 20px; }
+  .sheet { position: relative; margin-top: -16px; background: var(--bg); border-radius: 20px 20px 0 0; }
+  .handle { width: 28px; height: 3px; border-radius: 2px; background: var(--faint); margin: 0 auto; position: relative; top: 9px; }
+  .summary { display: flex; align-items: center; gap: 8px; padding: 20px 14px 10px; border-bottom: 1px solid var(--outline); color: var(--on-var); font-size: 12px; }
+  .summary .sp { flex: 1; }
+  .chip { background: var(--surface-var); color: var(--on); font-weight: 500; border-radius: 8px; padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+  .body { padding: 10px 14px 4px; }
+  .actions { display: flex; gap: 8px; padding: 10px 14px 14px; }
+  .btn { border-radius: 8px; padding: 10px 12px; font-weight: 500; font-size: 13px; text-align: center; white-space: nowrap; }
+  .btn.fill { flex: 1; background: var(--primary); color: var(--on-primary); }
+  .btn.line { background: var(--surface); border: 1px solid var(--outline); color: var(--on); }
+
+  .bar { display: flex; align-items: center; gap: 12px; padding: 30px 16px 10px; }
+  .bar .ms { font-size: 22px; }
+  .bar b { font-weight: 500; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tripcard { margin: 4px 14px 2px; background: var(--surface); border-radius: 14px; padding: 14px; box-shadow: 0 1px 2px var(--shadow); }
+  .tripcard > b { display: block; font-weight: 500; font-size: 15px; }
+  .tripcard .row { display: flex; gap: 8px; margin-top: 12px; }
+  .tripcard .btn { flex: 1; padding: 9px 6px; }
+  .btn.tonal { background: var(--primary-c); color: var(--on-primary-c); }
+  .btn.end { background: none; border: 1px solid var(--outline); color: var(--error); }
+
+  .marker { width: 22px; height: 22px; flex: none; display: flex; align-items: center; justify-content: center; }
+  .marker.num { border-radius: 50%; background: var(--primary); color: var(--on-primary); font-size: 11px; font-weight: 700; line-height: 1; font-variant-numeric: proportional-nums; }
+  .ms { font-size: 18px; line-height: 1; flex: none; color: var(--on-var); user-select: none; }
+  .marker .ms { font-size: 22px; color: var(--primary); }
+  .meta { color: var(--on-var); font-size: 12px; }
+  .name { flex: 1; min-width: 0; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* 22px puts the dotted line under the markers' centre: 12px card padding plus half the 22px marker, minus half the line. */
+  .leg { margin-left: 22px; padding: 4px 0 4px 20px; border-left: 2px dotted var(--outline); color: var(--on-var); font-size: 11px; }
+  .card { background: var(--surface); border-radius: 12px; padding: 9px 12px; display: flex; flex-direction: column; gap: 3px; box-shadow: 0 1px 2px var(--shadow); min-width: 0; }
+  .card.plain { background: none; box-shadow: none; }
+  .card .l1 { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .card .l1 b { font-weight: 500; font-size: 14px; white-space: nowrap; }
+  .card .l2 { padding-left: 32px; color: var(--on-var); font-size: 12px; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .card .l2 b { color: var(--on); font-weight: 500; }
+  .card .l2 .ms { margin: -3px 0; font-size: 20px; }
+  .card .l1.ends .name { flex: 0 1 auto; }
+  .grow { flex: 1; min-width: 0; }
+  .ms.edit { font-size: 14px; margin: 0; }
+  .card .l2 .ms.edit { margin: 0; font-size: 14px; }
+  .card .l2 .span { display: inline-flex; align-items: center; gap: 3px; }
+  .card .l2 .ms.arrow { margin: 0; font-size: 14px; color: var(--on); }
+  .soc { display: inline-flex; align-items: center; gap: 2px; flex: none; font-size: 12px; font-weight: 500; color: var(--on); white-space: nowrap; }
+  .soc { gap: 6px; }
+</style>
+
+<div class="page">
+  <header>
+    <p class="eyebrow">Phone UI · trip sheet</p>
+    <h1>Route display: stop cards</h1>
+    <p class="lede">The trip as one compact card per stop, with the driving leg written between the cards, on both screens that list it. Shown with the trip that was on the Pixel 7: 928 km to Garmisch-Partenkirchen, five charging stops.</p>
+  </header>
+
+  <section class="refined">
+    <div class="shot"><p class="cap"><b>Trip sheet</b> · planning, before the trip is committed</p><div id="sheet"></div></div>
+    <div class="shot"><p class="cap"><b>Active route</b> · the committed trip's page</p><div id="active"></div></div>
+    <div class="notes">
+      <h2>What a row shows</h2>
+      <ul>
+        <li><b>One time per row, always top right.</b> Start shows the departure, stops and destination the arrival, so the right edge reads as a schedule.</li>
+        <li><b>The battery is Material's horizontal battery frame.</b> It shows the level on arrival in the nearest of its steps, in the neutral grey of the secondary text. Beside it stand the level on arrival and the level you leave with, "18% → 67%", then the charging power.</li>
+        <li><b>Charging time sits under the arrival time.</b> The right edge reads as when you arrive and how long you stay.</li>
+        <li><b>Start and destination carry a location pin.</b> The start row leads with its address instead of the word "Start". Below it sits the battery with the charge level, in the same place as on the stop cards. On the trip sheet the start address and both levels have a pencil; on the active route nothing is editable.</li>
+        <li><b>Markers in one colour.</b> The numbered circles and both pins use the app's primary colour instead of one colour per operator.</li>
+        <li><b>Same rows on the active route.</b> The committed trip's page keeps its summary card with "Neu planen" and "Navigieren beenden" and lists the stops with the same cards.</li>
+        <li><b>Not on the card:</b> departure time. It belongs to the stop detail.</li>
+      </ul>
+    </div>
+  </section>
+
+  <p class="foot">Leg distances, place names and the start address are placeholders. Planning from an address other than the current position does not exist in the app today, so an editable start address is a new function, not only a new row. The plan already holds what the stop cards and the destination row show (position along the route, charge level on arrival, charging minutes, site name, destination address). The start is only a position today, so its address would have to be looked up.</p>
+</div>
+
+<script>
+  const trip = { start: '17:06', startSoc: 100, dest: 'Garmisch-Partenkirchen', arr: '04:33', arrSoc: 18, startName: 'Musterstraße 1', startCity: 'Kiel' };
+  const stops = [
+    { n: 1, op: 'Aral pulse', place: 'Bispingen',  kw: 300, a: 18, d: 67, arr: '19:11', min: 20, leg: '2h 05m', legKm: 200 },
+    { n: 2, op: 'EnBW',       place: 'Hildesheim', kw: 300, a: 10, d: 65, arr: '20:40', min: 21, leg: '1h 09m', legKm: 110 },
+    { n: 3, op: 'EWE Go',     place: 'Kassel',     kw: 300, a: 11, d: 76, arr: '22:19', min: 28, leg: '1h 18m', legKm: 125 },
+    { n: 4, op: 'IONITY',     place: 'Fulda',      kw: 350, a: 10, d: 62, arr: '23:50', min: 19, leg: '1h 03m', legKm: 101 },
+    { n: 5, op: 'EnBW',       place: 'Ulm',        kw: 400, a: 11, d: 63, arr: '02:13', min: 19, leg: '2h 04m', legKm: 198 },
+  ];
+  const lastLeg = { leg: '2h 01m', legKm: 194 };
+
+  const ms = name => `<span class="material-symbols-outlined ms" aria-hidden="true">${name}</span>`;
+  // Material's horizontal battery frame comes in six bars, then full.
+  const batt = p => { const bars = Math.round(p / 100 * 7); return ms(bars >= 7 ? 'battery_android_frame_full' : `battery_android_frame_${Math.max(1, bars)}`); };
+  const leg = l => `<div class="leg">${l.leg} · ${l.legKm} km</div>`;
+  const pencil = `<span class="material-symbols-outlined ms edit" aria-hidden="true">edit</span>`;
+  const endRow = (start, editable) => {
+    const name = start ? `${trip.startName}, ${trip.startCity}` : trip.dest, level = start ? trip.startSoc : trip.arrSoc;
+    return `<div class="card plain">
+      <div class="l1 ends"><span class="marker">${ms('location_on')}</span><span class="name">${name}</span>${start && editable ? pencil : ''}<span class="grow"></span><b>${start ? trip.start : trip.arr}</b></div>
+      <div class="l2"><span class="soc">${batt(level)}${level}%</span>${editable ? pencil : ''}</div>
+    </div>`;
+  };
+  const stopCard = s => `<div class="card">
+      <div class="l1"><span class="marker num">${s.n}</span><span class="name">${s.op} <span class="meta">${s.place}</span></span><b>${s.arr}</b></div>
+      <div class="l2">${batt(s.a)}<b class="span">${s.a}%<span class="material-symbols-outlined ms arrow" aria-hidden="true">arrow_right_alt</span>${s.d}%</b><span>·</span><span>${s.kw} kW</span><span class="grow"></span><span>${s.min} min</span></div>
+    </div>`;
+  const rows = editable => endRow(true, editable) + stops.map(s => leg(s) + stopCard(s)).join('') + leg(lastLeg) + endRow(false, editable);
+
+  const actions = `<div class="actions"><div class="btn fill">An Maps senden</div><div class="btn line">Abschnitt wählen</div></div>`;
+
+  document.getElementById('sheet').innerHTML = `
+    <div class="phone">
+      <div class="map">
+        <div class="pill">${ms('menu')}<div><b>${trip.dest}</b><small>928 km · 11h 27m</small></div>${ms('close')}</div>
+      </div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="summary"><span>5 Stopps · 1h 48m laden</span><span class="sp"></span><span class="chip">Neu planen</span></div>
+        <div class="body">${rows(true)}</div>
+        ${actions}
+      </div>
+    </div>`;
+
+  document.getElementById('active').innerHTML = `
+    <div class="phone">
+      <div class="bar">${ms('arrow_back')}<b>${trip.dest}</b></div>
+      <div class="tripcard">
+        <b>928 km · 11h 27m · 5 Stopps</b>
+        <span class="meta">Ankunft ${trip.arr} · ${trip.arrSoc}%</span>
+        <div class="row"><div class="btn tonal">Neu planen</div><div class="btn end">Navigieren beenden</div></div>
+      </div>
+      <div class="body">${rows(false)}</div>
+      ${actions}
+    </div>`;
+</script>

@@ -49,6 +49,7 @@ val AralSite = site("ocm:3", "Aral pulse Nürnberg-Feucht", "Aral pulse", 300.0,
 
 /** Hamburg → München, three stops. */
 val SamplePlan = TripPlan(
+    startAddress = "Feldstraße 66, Hamburg",
     route = Route(points = listOf(Hamburg, Munich), distanceKm = 776.0, durationMinutes = 452.0),
     destination = Destination(name = "München", position = Munich, address = "Marienplatz 1, 80331 München"),
     stops = listOf(

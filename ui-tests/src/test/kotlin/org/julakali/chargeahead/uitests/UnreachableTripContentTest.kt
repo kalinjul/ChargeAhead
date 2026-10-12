@@ -19,7 +19,7 @@ import org.julakali.chargeahead.shared.resources.plan_failed_no_charger
 import org.julakali.chargeahead.shared.resources.plan_failed_no_charger_at_start
 import org.julakali.chargeahead.shared.resources.plan_failed_no_connection
 import org.julakali.chargeahead.shared.resources.plan_failed_no_route
-import org.julakali.chargeahead.shared.resources.trip_dep_now
+import org.julakali.chargeahead.shared.resources.garage_percent
 import org.julakali.chargeahead.shared.resources.trip_send_maps
 
 /** No plan came out: the sheet says why and keeps both levels a tap away. */
@@ -54,7 +54,7 @@ class UnreachableTripContentTest {
     fun `the start level, the reason and the destination show, and nothing to send`() {
         content()
 
-        compose.onNodeWithText(compose.string(Res.string.trip_dep_now, 5)).assertIsDisplayed()
+        compose.onNodeWithText(compose.string(Res.string.garage_percent, 5)).assertIsDisplayed()
         compose.onNodeWithText(compose.string(Res.string.plan_failed_no_charger_at_start)).assertIsDisplayed()
         compose.onNodeWithText(Fixtures.plan.destination.name).assertIsDisplayed()
         compose.onNodeWithText(compose.string(Res.string.trip_send_maps)).assertDoesNotExist()
@@ -85,7 +85,7 @@ class UnreachableTripContentTest {
     fun `start and destination open their level editors`() {
         content()
 
-        compose.onNodeWithText(compose.string(Res.string.trip_dep_now, 5)).performClick()
+        compose.onNodeWithText(compose.string(Res.string.garage_percent, 5)).performClick()
         compose.onNodeWithText(Fixtures.plan.destination.name).performClick()
 
         assertTrue(editStart)

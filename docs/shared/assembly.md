@@ -26,8 +26,8 @@ data class ChargeStopsState(
 )
 
 // The data graph (Koin), declared once for both platforms. Platform modules
-// supply LocationSource, DatabaseFactory, settingsModule, TripStorage and
-// BackendConfig; one HttpClient, database and repository per process, shared
+// supply LocationSource, ReverseGeocoder, DatabaseFactory, settingsModule,
+// TripStorage and BackendConfig; one HttpClient, database and repository per process, shared
 // by phone and car.
 fun chargeStopsModule(): Module
 

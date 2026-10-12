@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared.domain.usecases
 import org.julakali.chargeahead.shared.FakeVehicleCatalog
 import org.julakali.chargeahead.shared.testPresets
 import org.julakali.chargeahead.shared.testDispatchers
+import org.julakali.chargeahead.shared.domain.Address
 import org.julakali.chargeahead.shared.domain.ChargeFilters
 import org.julakali.chargeahead.shared.domain.ConnectorType
 import org.julakali.chargeahead.shared.domain.Destination
@@ -43,6 +44,7 @@ class PlanTripTest {
 
     private val calls = mutableListOf<Call>()
     private var plannedWith: VehicleProfile? = null
+    private var startAddress: Address? = null
     private var outcome: (Destination) -> TripPlanResult = { destination -> TripPlanResult.Planned(plan(destination)) }
 
     private val planner = object : TripPlanning {
@@ -61,12 +63,12 @@ class PlanTripTest {
         }
     }
 
-    private val planTrip = PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, history, trips, testDispatchers)
+    private val planTrip = PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, { startAddress }, history, trips, testDispatchers)
     private val replanWithArrivalSoc =
         ReplanWithArrivalSocInteractor(UpdateArrivalSocInteractor(vehicles), trips, planTrip)
     private val commitTrip = CommitTripInteractor(trips) { 7L }
     private val replanCommitted =
-        ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers)
+        ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, { startAddress }, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers)
 
     private fun plan(destination: Destination) = TripPlan(
         route = Route(listOf(from, destination.position), distanceKm = 170.0, durationMinutes = 100.0),
@@ -76,6 +78,37 @@ class PlanTripTest {
         chargeMinutes = 0.0,
         arrivalSocPercent = 40.0,
     )
+
+    @Test
+    fun `the plan carries the start's street and town`() = runBlocking<Unit> {
+        vehicles.setVehicle(vehicle)
+        startAddress = Address(street = "Feldstraße 66", postalCode = "20359", town = "Hamburg")
+
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+
+        assertEquals("Feldstraße 66, Hamburg", trips.state.value.planned?.startAddress)
+    }
+
+    @Test
+    fun `a start without an address still plans`() = runBlocking<Unit> {
+        vehicles.setVehicle(vehicle)
+
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+
+        assertNull(trips.state.value.planned!!.startAddress)
+    }
+
+    @Test
+    fun `a re-planned committed trip carries its new start address`() = runBlocking<Unit> {
+        vehicles.setVehicle(vehicle)
+        planTrip(PlanTripInteractor.Params(from, munich)).getOrThrow()
+        commitTrip(CommitTripInteractor.Params(trips.state.value.planned!!, 60.0)).getOrThrow()
+        startAddress = Address(street = "Autohof 2", town = "Kassel")
+
+        replanCommitted(ReplanCommittedTripInteractor.Params(from)).getOrThrow()
+
+        assertEquals("Autohof 2, Kassel", trips.state.value.committed?.plan?.startAddress)
+    }
 
     @Test
     fun `a car from the catalog is planned with the catalog's curve`() = runBlocking<Unit> {

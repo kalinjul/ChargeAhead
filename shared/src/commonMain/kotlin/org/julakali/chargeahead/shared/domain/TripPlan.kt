@@ -1,8 +1,11 @@
 package org.julakali.chargeahead.shared.domain
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.Serializable
 
 /** One planned charging stop along a trip. */
@@ -40,9 +43,27 @@ data class TripPlan(
     val chargeMinutes: Double,
     val arrivalSocPercent: Double,
     val stopMinutes: Double = 0.0,
+    /** e.g. "Feldstraße 66, Hamburg"; null when no address was found for the start. */
+    val startAddress: String? = null,
 ) {
     val totalMinutes: Double get() = driveMinutes + chargeMinutes + stopMinutes
+
+    /** The drives between start, stops and destination, one more than there are stops. */
+    val legs: List<TripLeg>
+        get() {
+            var departedMinutes = 0.0
+            var departedKm = 0.0
+            val toStops = stops.map { stop ->
+                TripLeg(stop.arrivalMinutesFromStart - departedMinutes, stop.kmFromStart - departedKm).also {
+                    departedMinutes = stop.etaMinutesFromStart
+                    departedKm = stop.kmFromStart
+                }
+            }
+            return toStops + TripLeg(totalMinutes - departedMinutes, route.distanceKm - departedKm)
+        }
 }
+
+data class TripLeg(val driveMinutes: Double, val distanceKm: Double)
 
 /** Result of planning, including why no plan came out. */
 sealed interface TripPlanResult {
@@ -98,12 +119,14 @@ val SOC_RANGE = 1..100
 /**
  * Plans with the selected vehicle and the stored preferences. A null
  * [startSocPercent] takes the stored manual level, and without one
- * [DEFAULT_ASSUMED_SOC_PERCENT].
+ * [DEFAULT_ASSUMED_SOC_PERCENT]. The plan carries the address of [from]
+ * when [addresses] finds one in time.
  */
 suspend fun TripPlanning.planWithSettings(
     vehicles: VehicleRepository,
     catalog: VehicleCatalogRepository,
     preferences: PreferencesRepository,
+    addresses: ReverseGeocoder,
     from: LatLon,
     destination: Destination,
     startSocPercent: Double?,
@@ -116,7 +139,23 @@ suspend fun TripPlanning.planWithSettings(
     val arrivalSoc = vehicles.arrivalSocPercent.first()
     val filters = preferences.chargeFilters.first()
     val networks = preferences.networks.first()
-    return withContext(computation) {
-        plan(from, destination, vehicle, soc, arrivalSoc, filters, networks)
+    return coroutineScope {
+        val startAddress = async {
+            withTimeoutOrNull(START_ADDRESS_TIMEOUT_MILLIS) { cancellableRunCatching { addresses.addressAt(from) }.getOrNull() }
+        }
+        val result = withContext(computation) {
+            plan(from, destination, vehicle, soc, arrivalSoc, filters, networks)
+        }
+        if (result is TripPlanResult.Planned) {
+            TripPlanResult.Planned(result.plan.copy(startAddress = startAddress.await()?.startLine()))
+        } else {
+            startAddress.cancel()
+            result
+        }
     }
 }
+
+private fun Address.startLine(): String? = listOfNotNull(street, town).joinToString(", ").takeIf { it.isNotBlank() }
+
+// The plan is not held back by a slow address lookup.
+private const val START_ADDRESS_TIMEOUT_MILLIS = 3_000L

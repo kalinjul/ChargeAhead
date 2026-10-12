@@ -81,8 +81,7 @@ data class RouteOverlay(
     val destination: LatLon,
 )
 
-/** A numbered stop marker in its network's colour, like in the list. */
-data class RouteStop(val index: Int, val position: LatLon, val color: Color)
+data class RouteStop(val index: Int, val position: LatLon)
 
 /** The home camera, owned by the screen so its controls can drive it. */
 @Composable
@@ -178,6 +177,7 @@ fun HomeGoogleMap(
         if (darkMap) MapStyleOptions.loadRawResourceStyle(context, R.raw.map_style_dark) else null
     }
     val routeColor = MaterialTheme.colorScheme.primary
+    val onRouteColor = MaterialTheme.colorScheme.onPrimary
 
     GoogleMap(
         cameraPositionState = cameraPositionState,
@@ -210,13 +210,13 @@ fun HomeGoogleMap(
             route.stops.forEach { stop ->
                 key(stop.index) {
                     MarkerComposable(
-                        keys = arrayOf<Any>(stop.index, stop.color.value),
+                        keys = arrayOf<Any>(stop.index, routeColor.value),
                         state = rememberMarkerState(position = stop.position.toLatLng()),
                         anchor = Offset(0.5f, 0.5f),
                         onClick = { onStopTapped(stop.index); true },
                     ) {
-                        ChargeBadge(color = stop.color) {
-                            Text(text = "${stop.index}", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                        ChargeBadge(color = routeColor) {
+                            Text(text = "${stop.index}", color = onRouteColor, style = MaterialTheme.typography.labelLarge)
                         }
                     }
                 }

@@ -22,3 +22,9 @@ interface Geocoder {
         const val DEFAULT_LIMIT = 5
     }
 }
+
+/** Names the address at a position. */
+fun interface ReverseGeocoder {
+    /** `null` when nothing is known there. */
+    suspend fun addressAt(position: LatLon): Address?
+}
