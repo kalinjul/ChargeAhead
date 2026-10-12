@@ -37,7 +37,6 @@ import org.julakali.chargeahead.shared.resources.trip_replan
 import org.julakali.chargeahead.shared.resources.trip_select_section
 import org.julakali.chargeahead.shared.resources.trip_send_maps
 import org.julakali.chargeahead.shared.resources.trip_soc_edit
-import org.julakali.chargeahead.shared.resources.trip_stop_times
 
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "+w600dp-h1000dp")
@@ -98,18 +97,13 @@ class ActiveRouteScreenTest {
         val committedAt = LocalTime.of(9, 0)
         screen(committedAt = committedAt)
         val plan = Fixtures.plan
-        // The summary card and the destination row both carry the arrival.
-        compose.onAllNodesWithText(
-            compose.string(Res.string.trip_arr, etaText(compose.activity, plan.totalMinutes, committedAt), plan.arrivalSocPercent.roundToInt()),
-        ).assertCountEquals(2)
-        val stop = Fixtures.stopKassel
         compose.onNodeWithText(
-            compose.string(
-                Res.string.trip_stop_times,
-                etaText(compose.activity, stop.arrivalMinutesFromStart, committedAt),
-                etaText(compose.activity, stop.arrivalMinutesFromStart + stop.chargeMinutes, committedAt),
-            ),
+            compose.string(Res.string.trip_arr, etaText(compose.activity, plan.totalMinutes, committedAt), plan.arrivalSocPercent.roundToInt()),
         ).assertIsDisplayed()
+        // Start, a stop and the destination each carry their own time.
+        listOf(0.0, Fixtures.stopKassel.arrivalMinutesFromStart, plan.totalMinutes).forEach { minutes ->
+            compose.onNodeWithText(etaText(compose.activity, minutes, committedAt)).assertIsDisplayed()
+        }
     }
 
     @Test

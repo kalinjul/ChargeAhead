@@ -107,8 +107,8 @@ class CarRouteViewModelTest {
             feature,
             muenchen,
             activeRoute,
-            PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, history, trips, testDispatchers),
-            ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers),
+            PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, { null }, history, trips, testDispatchers),
+            ReplanCommittedTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, { null }, trips, UpdateManualSocInteractor(vehicles), { 9L }, testDispatchers),
             CommitTripInteractor(trips) { 9L },
             trips,
         ))

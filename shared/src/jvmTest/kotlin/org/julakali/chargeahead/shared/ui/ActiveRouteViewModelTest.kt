@@ -112,6 +112,7 @@ class ActiveRouteViewModelTest {
             vehicles,
             FakeVehicleCatalog(),
             DataStorePreferencesRepository(InMemoryPreferencesDataStore()),
+            { null },
             trips,
             UpdateManualSocInteractor(vehicles),
             { 42L },

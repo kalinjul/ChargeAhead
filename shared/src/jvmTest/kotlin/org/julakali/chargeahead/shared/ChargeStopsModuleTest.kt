@@ -3,6 +3,7 @@ package org.julakali.chargeahead.shared
 import org.julakali.chargeahead.shared.db.DatabaseFactory
 import org.julakali.chargeahead.shared.domain.Fix
 import org.julakali.chargeahead.shared.domain.LocationSource
+import org.julakali.chargeahead.shared.domain.ReverseGeocoder
 import org.julakali.chargeahead.shared.domain.NetworkRepository
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.usecases.ChargeNowObserver
@@ -47,6 +48,7 @@ class ChargeStopsModuleTest {
                 settingsModule { InMemoryPreferencesDataStore() },
                 module {
                     single<LocationSource> { fakeLocationSource }
+                    single<ReverseGeocoder> { ReverseGeocoder { null } }
                     single { DatabaseFactory() }
                     single<TripStorage> { TripStorage.None }
                     single { BackendConfig("https://backend.invalid", "token") }

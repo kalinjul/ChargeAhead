@@ -520,7 +520,7 @@ private const val GLOW_BREATH_FLOOR = 0.75f
 
 private fun TripPlan.toRouteOverlay() = RouteOverlay(
     points = route.points,
-    stops = stops.mapIndexed { index, stop -> RouteStop(index + 1, stop.site.position, operatorColor(stop.site)) },
+    stops = stops.mapIndexed { index, stop -> RouteStop(index + 1, stop.site.position) },
     destination = destination.position,
 )
 

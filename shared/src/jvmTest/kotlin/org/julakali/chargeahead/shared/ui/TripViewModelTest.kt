@@ -104,7 +104,7 @@ class TripViewModelTest {
     )
 
     private fun viewModel(feature: ChargeStopsFeature): TripViewModel {
-        val planTrip = PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, history, trips, testDispatchers)
+        val planTrip = PlanTripInteractor(planner, vehicles, FakeVehicleCatalog(), preferences, { null }, history, trips, testDispatchers)
         return main.track(
             TripViewModel(
                 feature = feature,

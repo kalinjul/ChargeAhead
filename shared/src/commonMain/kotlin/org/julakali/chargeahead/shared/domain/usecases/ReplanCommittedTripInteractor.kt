@@ -5,6 +5,7 @@ import org.julakali.chargeahead.shared.domain.CommittedTrip
 import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.ReverseGeocoder
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.TimeProvider
@@ -24,6 +25,7 @@ class ReplanCommittedTripInteractor(
     private val vehicles: VehicleRepository,
     private val catalog: VehicleCatalogRepository,
     private val preferences: PreferencesRepository,
+    private val addresses: ReverseGeocoder,
     private val trips: TripRepository,
     private val updateManualSoc: UpdateManualSocInteractor,
     private val time: TimeProvider,
@@ -39,7 +41,7 @@ class ReplanCommittedTripInteractor(
     override suspend fun doWork(params: Params): TripPlanResult? {
         val destination = trips.state.value.committed?.plan?.destination ?: return null
         params.socPercent?.takeIf { params.storeSoc }?.let { updateManualSoc(UpdateManualSocInteractor.Params(it)).getOrThrow() }
-        val result = planner.planWithSettings(vehicles, catalog, preferences, params.from, destination, params.socPercent, dispatchers.computation)
+        val result = planner.planWithSettings(vehicles, catalog, preferences, addresses, params.from, destination, params.socPercent, dispatchers.computation)
         if (result is TripPlanResult.Planned) {
             val plannedWith = params.socPercent ?: vehicles.manualSocPercent.first()
             val trip = CommittedTrip(result.plan, plannedWith, time.nowMillis())

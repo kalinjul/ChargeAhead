@@ -6,6 +6,7 @@ import org.julakali.chargeahead.shared.domain.Interactor
 import org.julakali.chargeahead.shared.domain.LatLon
 import org.julakali.chargeahead.shared.domain.DestinationHistory
 import org.julakali.chargeahead.shared.domain.PreferencesRepository
+import org.julakali.chargeahead.shared.domain.ReverseGeocoder
 import org.julakali.chargeahead.shared.domain.VehicleCatalogRepository
 import org.julakali.chargeahead.shared.domain.VehicleRepository
 import org.julakali.chargeahead.shared.domain.TripPlanResult
@@ -25,6 +26,7 @@ class PlanTripInteractor(
     private val vehicles: VehicleRepository,
     private val catalog: VehicleCatalogRepository,
     private val preferences: PreferencesRepository,
+    private val addresses: ReverseGeocoder,
     private val history: DestinationHistory,
     private val trips: TripRepository,
     private val dispatchers: AppCoroutineDispatchers,
@@ -42,7 +44,7 @@ class PlanTripInteractor(
 
     override suspend fun doWork(params: Params): TripPlanResult {
         val result = cancellableRunCatching {
-            planner.planWithSettings(vehicles, catalog, preferences, params.from, params.destination, params.startSocPercent, dispatchers.computation)
+            planner.planWithSettings(vehicles, catalog, preferences, addresses, params.from, params.destination, params.startSocPercent, dispatchers.computation)
         }.getOrDefault(TripPlanResult.NoConnection)
         val why = result.unreachable()
         trips.update { state ->

@@ -136,7 +136,8 @@ class PhoneAppFlowTest {
         waitForTrip()
 
         compose.onNodeWithText("München", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("km", substring = true).assertIsDisplayed()
+        // The header's distance and every leg carry one.
+        compose.onAllNodesWithText("km", substring = true).onFirst().assertIsDisplayed()
         compose.onNodeWithText("Stopp", substring = true).assertIsDisplayed()
         compose.onNodeWithText(" laden", substring = true).assertIsDisplayed()
         compose.onNodeWithText(chargeNowPill()).assertDoesNotExist()
